@@ -194,14 +194,18 @@ def wait_for_controller(port, timeout=20.0, disconnected_identity=None):
     deadline = time.monotonic() + timeout
     last_error = None
     if disconnected_identity is not None:
-        while time.monotonic() < deadline:
+        # Firmware 2.0.18 does not cycle its USB device on RESTART, so a missing
+        # disconnect is normal and must not abort the run. Watching for one is
+        # still worth doing: when it happens it tells us exactly when the device
+        # went away, instead of racing the reconnect against a stale handle.
+        grace = min(deadline, time.monotonic() + 3.0)
+        while time.monotonic() < grace:
             if device_identity(port) != disconnected_identity:
                 break
             time.sleep(0.05)
         else:
-            raise wolfmix.WolfmixError(
-                "Wolfmix USB device did not disconnect during restart"
-            )
+            print("warning: the Wolfmix stayed connected across the restart request",
+                  file=sys.stderr)
     while time.monotonic() < deadline:
         connection = None
         try:

@@ -647,13 +647,31 @@ def require_success(payload, operation):
     return status
 
 
-def store_experiment_project(connection, label, data, version=None):
+def store_experiment_project(connection, label, data, version=None, attempts=3):
+    """Upload a project, retrying when the controller rejects the transfer.
+
+    The link corrupts large transfers in both directions. A corrupted upload is
+    refused outright by the firmware — observed as "invalid wire_type" on a
+    43 KB project — so a rejection is retried rather than treated as fatal. The
+    firmware stores nothing on a failed status, and the caller verifies by
+    downloading afterwards.
+    """
     project_uuid, name = experiment_identity(label)
     version = int(time.time() * 1000) if version is None else version
     payload = encode_project(project_uuid, version, name, data)
-    status = require_success(
-        connection.request(SET_PROJECT, payload), "Storing experiment project"
-    )
+    for attempt in range(1, attempts + 1):
+        try:
+            status = require_success(
+                connection.request(SET_PROJECT, payload), "Storing experiment project"
+            )
+            break
+        except ProtocolError as error:
+            if attempt == attempts:
+                raise ProtocolError(
+                    f"Upload rejected {attempts} times, last: {error}"
+                ) from error
+            print(f"warning: upload attempt {attempt} rejected ({error}); retrying",
+                  file=sys.stderr)
     return {
         "uuid": project_uuid,
         "name": name,

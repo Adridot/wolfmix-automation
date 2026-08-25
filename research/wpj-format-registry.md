@@ -85,6 +85,78 @@ valeur par défaut ?), champ 4 = 135 octets à faible densité. Statut : observe
   hex. Candidats : HMAC, hash du clair, clé dérivée. Non prioritaire :
   ces fichiers (profils fixtures, marques) seront traités après le .wpj.
 
+## Type 102 — flash FX settings (16 bytes, fixed size)
+
+*(Section written in English per the repository rule; the French sections above
+predate it.)*
+
+Wire content, identical layout in all readable corpus files:
+
+```
+22 06 <6 bytes>   field 4, length-delimited, always 6 bytes
+28 64             field 5  = 100
+30 64             field 6  = 100
+48 50             field 9  = 80   (75 or 72 in other files)
+58 64             field 11 = 100
+```
+Some files also carry `field 2 = 1`, `field 3 = 2`, `field 7 = 2`.
+
+### Field 4 = release mode of the six flash FX — **[device-confirmed]**
+
+One byte per flash key, in the order guide 10 lists them:
+
+| Index | Key |
+|---|---|
+| 0 | `WOLF` (chevrons) |
+| 1 | `STROBE` |
+| 2 | `BLINDER` |
+| 3 | `SPEED` |
+| 4 | `BLACKOUT` |
+| 5 | `SMOKE` |
+
+Values: **0 = FLASH**, **1 = TOGGLE**. Guide 10 documents five release modes
+(FLASH, TOGGLE, 1 s, 5 s, 10 s timer), and `corpus/projects/rig-c.wpj`
+carries a **4** at index 5, so the domain is **[hypothesized]** 0–4 with 2/3/4
+the three timers.
+
+**Experiment FX-01, 2026-08-25, W1 serial withheld, fw 2.0.18.**
+Request: `GET_PROJECT` on `73d06df4-9b5d-5cd1-9645-51ba125f71a5`
+(`WMX EXP format-lab`, the dedicated experiment project) before and after the
+operator moved **STROBE only** from FLASH to TOGGLE with the fourth encoder
+and saved on the controller.
+
+- Before: `corpus/experiments/FX-01/before.wpj`, size 43337, version
+  1787654382431, sha256 `171ae1c5…`, field 4 = `01 00 00 00 00 01`.
+- After: `corpus/experiments/FX-01/after-strobe-toggle.wpj`, size 43295,
+  version 1787654382432, field 4 = `01 01 00 00 00 01`.
+- **Exactly one byte of field 4 changed, at index 1 = STROBE, 00 → 01.**
+
+Independent cross-check: the operator reported *before the experiment* that
+the `WOLF` key was set to TOGGLE, and index 0 was already `01` in the baseline.
+Two facts, two indices, one consistent encoding.
+
+Certainty: **device-confirmed** for indices 0 and 1 and for values 0/1.
+Indices 2–5 follow the guide's ordering and are **[hypothesized]**; the timer
+encoding is **[hypothesized]**. Restoring is a symmetric operation: set the
+mode back and save.
+
+### Other diffs produced by a controller-side save — **[observed]**
+
+Saving on the W1 also rewrote two things unrelated to the experiment:
+
+- **Type 115** shrank 329 → 287 bytes. Its 20 repeated `field 5` items each
+  lost `field 6` and `field 7` and gained a sequential `field 9` (1…0x13).
+  The firmware re-serialises this record into its own canonical form; the
+  incoming file had been produced by the WTOOLS-era pipeline.
+- Two prefix counters incremented by one: absolute offsets **40** (`5f`→`60`)
+  and **50** (`0a`→`0b`).
+
+**Consequence for the method**: a controller-side save is *not* byte-preserving,
+so a round-trip through the W1 cannot be verified by file hash. Differential
+experiments must compare record by record and expect this canonicalisation
+noise. **[hypothesized]** re-saving a project twice in a row would isolate the
+noise exactly; worth doing once.
+
 ## Sources externes
 
 - wpj-toolkit `2bd0ee3` : digest complet dans `research/wpj-toolkit-digest.md`.

@@ -296,9 +296,12 @@ def describe_change(record_type, before, after):
 def diff_projects(before, after):
     lines = []
     if before.prefix != after.prefix:
+        # Prefix bytes 20..27 are the uint64 project version, already reported
+        # in the header line; showing its low byte as a diff is pure noise.
         lines += [
             f"  prefix byte {i} {x:02x}->{y:02x}"
-            for i, (x, y) in enumerate(zip(before.prefix, after.prefix)) if x != y
+            for i, (x, y) in enumerate(zip(before.prefix, after.prefix))
+            if x != y and not 20 <= i < 28
         ]
     if [t for t, _ in before.records] != [t for t, _ in after.records]:
         lines.append("  record layout changed")

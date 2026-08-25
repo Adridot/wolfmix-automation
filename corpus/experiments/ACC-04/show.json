@@ -1,0 +1,7 @@
+{
+  "base": "corpus/projects/rig-a.wpj",
+  "nom": "WMX TEST ACC-04",
+  "presets": [
+    {"id": 33, "nom": "ACC04 Chaser", "color_fx1": {"effet": 2}}
+  ]
+}

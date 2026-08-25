@@ -75,3 +75,15 @@ et son flag color_fx_actif=[0]. Palette non encore vérifiée.
 que le W1 lit. Écrire des valeurs dans une section masquée est sans
 effet. ACC-03 en deux candidats : a) f4=25 (bit couleur ajouté, flag
 laissé à 0) ; b) f4=255 + color_fx_actif=[255].
+
+## Journal — ACC-03 (2026-08-25) : activation couleur non résolue par f4/flag
+
+a (f4=25, flag 0) : valeur de masque illégitime → bug d'affichage UI sur
+le W1 (case du preset disparaît au clic) ; pas de Color FX. b (f4=255 +
+color_fx_actif=255) : accepté, pas de bug UI, mais Color FX et dimmers
+toujours ignorés. → f4=25 hors du vocabulaire ; f17=dimmer affaibli ;
+nouveau suspect : 1er varint de f16 = masque de groupes du moteur
+couleur (255 sur tous les presets ColorFX usine, 0 sur statiques/beam —
+correlated sur le bloc 20-39). ACC-04 : édition en place d'un preset
+ColorFX existant (id 33 « Carnival », effet 3→2) — teste le mapping FX
+seul, sans la question d'activation.

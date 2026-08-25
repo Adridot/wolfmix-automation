@@ -43,8 +43,11 @@ beam) + presets utilisateur en queue.
 
 ## Corrections et types frères
 
-- **Type 140 ×8 = 8 pages de 20 pads de couleur statique** {R,G,B,+W/A/L/UV
-  candidats} — pages 4-8 usine identiques 5/5, pages 1-3 éditées.
+- **Type 140 ×8 = les palettes de couleur statique, une par groupe A–H**,
+  20 pads, champs 1–7 = R, G, B, W, A, L, UV en 0–255. **device-confirmed**,
+  voir le registre : la vue `RGB+` de l'écran imprime les octets stockés.
+  Les 8 « pages » sont les groupes, pas des pages. Le pad 6 est **Red**, ce qui
+  ancre la lecture de `f31` (bit n → pad n+1).
   **Corrige l'hypothèse antérieure** (« configs FX par groupe ») : faux.
 - **Type 145 ×8 = 8 pages de 20 boutons à glyphe** (char police d'icônes,
   id, nom optionnel) ; pages 2-8 vides partout. | hypothesized

@@ -25,7 +25,7 @@ _PATCH = {1: ("profil", "v"), 4: ("adresse", "v"), 5: ("fixture", "v"),
           6: ("categorie", "v"), 7: ("nb_canaux", "v")}
 _PROFIL = {2: ("nb_canaux", "v"), 8: ("nom", "str"), 9: ("hash", "hex"),
            11: ("timestamp", "v")}
-# Ordre des 7 canaux d'un pad : wpj-toolkit (correlated)
+# Ordre des 7 canaux d'un pad : device-confirmed (vue RGB+ du W1, brut 0-255)
 _PAD = {1: ("rouge", "v"), 2: ("vert", "v"), 3: ("bleu", "v"),
         4: ("blanc", "v"), 5: ("ambre", "v"), 6: ("lime", "v"), 7: ("uv", "v")}
 

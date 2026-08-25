@@ -43,3 +43,8 @@ bonus la migration complète du format.
 ## Journal
 
 _(vide — aucune expérience exécutée)_
+
+## EXP-07..09 — validation du type 165 (ajoutées 2026-08-25)
+
+Voir research/preset-format-165.md §Expériences : type d'un Beam FX
+(f1.f7), position d'un seul groupe (f28), couleur statique mono-pad (f31).

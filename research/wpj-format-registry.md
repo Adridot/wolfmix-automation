@@ -87,3 +87,10 @@ valeur par défaut ?), champ 4 = 135 octets à faible densité. Statut : observe
   (protobuf sans TLV) n'y figurent pas. Son conteneur TLV = notre variante A.
   Ne pas reproduire le writer privé de WPJ Studio (avertissement explicite
   du dépôt).
+
+## Type 165 (presets) et types frères
+
+Structure complète décodée le 2026-08-25 : voir `research/preset-format-165.md`
+(enveloppe correlated, sous-message preset et FX largement correlated,
+correction : type 140 = pads couleur statique, pas configs FX ;
+type 161 = état volatil, pas du contenu de show).

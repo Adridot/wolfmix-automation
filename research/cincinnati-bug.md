@@ -60,7 +60,8 @@ idx 21 (motif légitime, vu ailleurs) ; 2 entrées de patch vides
 | 125 | 9 groupes : nom + bitmask des profils membres | correlated |
 | 130 | constant 5/5 (défauts usine ?) | observed |
 | 135 | palette ColorFX | correlated (wpj-toolkit) |
-| 140/145 ×8 | configs FX par groupe A–H | hypothesized |
+| 140 ×8 | pages de pads couleur statique (20/page) | correlated (voir preset-format-165.md) |
+| 145 ×8 | pages de boutons à glyphe | hypothesized |
 | 150 ×8 | positions pan/tilt 16 bits nommées (« <nom du groupe A> »…) | correlated |
 | 160 | macros/boutons statiques nommés (« Prism », « Co2 On »…) | correlated |
 | 151, 155, 161 | inconnus | observed |

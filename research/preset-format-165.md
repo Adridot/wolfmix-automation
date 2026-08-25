@@ -1,0 +1,73 @@
+# Type 165 — conteneur presets (variante A) — relevé 2026-08-25
+
+Corpus : 5 fichiers A, 406 presets analysés. Statuts : observed /
+hypothesized / correlated (aucune validation différentielle encore).
+
+## Enveloppe [correlated]
+
+Protobuf : `f1 varint = nombre de presets` (82 rig-c, 80 cc21/cd21),
+puis `f5` répété = un sous-message par preset. Organisation : 4 pages
+usine ×20 (bloc 1 « full presets », bloc 2 couleurs, bloc 3 move, bloc 4
+beam) + presets utilisateur en queue.
+
+## Sous-message preset
+
+| Champ | Sémantique | Statut |
+|---|---|---|
+| f19 | id du preset = (page-1)·20+(slot-1), séquentiel, 0 omis | correlated 5/5 |
+| f25 | nom UTF-8 (« Startup », « <nom utilisateur> »…) | correlated (82 noms) |
+| f1/f2 | Beam FX 1/2 (sous-msg FX) | correlated (la page beam ne touche que f1) |
+| f5/f6 | Color FX 1/2 | correlated (presets ColorFX ne touchent que f5) |
+| f21/f22 | Move FX 1/2 (f3 supplémentaire, déf. 50) | correlated |
+| f28 | index de position (type 150) par groupe A–H, 8 varints | correlated (« Floor »=[0]⁸, « Center »=[1]⁸, « Crowd »=[3]⁸, « Ceiling »=[4]⁸) |
+| f31 | couleur statique : 4 rép. × 5 varints, bitmasks de pads du type 140 (« Deep Red » mask 32 = pad 6 {R:255}) ; 4 rép. = candidat groupes A–D | hypothesized |
+| f17 | dimmer par groupe A–H (packé, déf. [255]⁸) | hypothesized |
+| f8 / f24 | flag Color FX actif / Move FX actif (0\|255) | correlated |
+| f4 | masque de contenu (255 full, 8 couleur, 17 beam, 5 move ; b3=couleur b4=beam b2=position ?) | hypothesized |
+| f16 | ~13 varints : masques de banques FX par groupe en paires complémentaires + 1 varint global recopié | hypothesized |
+| f11 | 500/2000/4000 — candidat fondu ms | hypothesized |
+| f10 | candidat version librairie usine | observed |
+| f9=1, f15=1000 (même constante que champ 2 des presets B/C), f13 ×6, f18, f3/f7/f14/f23/f26/f27/f29/f30 | inconnus (tableaux par groupe) | observed |
+
+## Sous-message FX (commun Beam/Color/Move)
+
+| Champ | Sémantique | Statut |
+|---|---|---|
+| f7 | type d'effet : Sparkle=1, Chaser=2, CanCan=3, Heartbeat=4, Wolf Rider=5, FX Seq1=6 (0=Sin Wave omis) | correlated (6 noms) |
+| f4 | linkOrder {10,11,12,13} = Group/Fwd-Rev-Out-In, déf. 10 | correlated (enum wpj-toolkit) |
+| f10 | speedSource {1 micro, 2 audio/BPM} (0 Clock omis) | correlated |
+| f1 | bpmDivision {1,2,3}, déf. 3 | correlated |
+| f2 | speed % (observé jusqu'à 200 — dépasse le 0-100 du toolkit) | correlated |
+| f8 / f6 / f9 | size % / fade % / phase % (déf. 100/25/50) — attribution size/fade permutable | hypothesized |
+| f5 | ColorFX : 2 varints (candidat maskRaw pads) ; MoveFX : 1 varint 0-6 | hypothesized |
+
+## Corrections et types frères
+
+- **Type 140 ×8 = 8 pages de 20 pads de couleur statique** {R,G,B,+W/A/L/UV
+  candidats} — pages 4-8 usine identiques 5/5, pages 1-3 éditées.
+  **Corrige l'hypothèse antérieure** (« configs FX par groupe ») : faux.
+- **Type 145 ×8 = 8 pages de 20 boutons à glyphe** (char police d'icônes,
+  id, nom optionnel) ; pages 2-8 vides partout. | hypothesized
+- Type 150 ×8 : 8 pages de 20 positions {f3,f4 = pan/tilt 16 bits,
+  f6-f8 = 16 bits supplémentaires}, entrées usine nommées. | correlated
+- Type 151 (64 o) : 4 entrées uint16 centrées 32767, vide dans cc21/cd21 —
+  candidat état pan/tilt Move FX par groupe A–D. | hypothesized
+- Type 155 (562 o) : 4 séquences, grilles 8 groupes × 16 pas, décalages
+  par groupe — candidat séquenceur FX Seq. | hypothesized
+- Type 161 : change à chaque révision (cinci≠bug≠f2737) → état volatil
+  UI/machine, pas du contenu de show. | observed
+
+## Diff f2737ec3 → rig-c-bug sur le 165
+
+Varint global de f16 40→16 sur les 82 presets + retouches live sur
+« Get Moving » et « Aim » (micro, phase/size, dimmer groupe B 255→64/71).
+Rien qui explique le blackout → renforce le diagnostic type 120.
+
+## Expériences de validation minimales (à ajouter au plan)
+
+- EXP-07 : changer le type d'un Beam FX (Sin Wave → Sparkle) → seul
+  165[preset].f1.f7 doit passer 0→1.
+- EXP-08 : position du seul groupe A (Center → Ceiling) → f28
+  [1,…]→[4,1,…] ; valide l'ordre A–H.
+- EXP-09 : couleur statique mono-pad (pad 6 rouge, groupe A) → localise
+  l'encodage de f31 et tranche « 4 répétitions = groupes A–D ? ».

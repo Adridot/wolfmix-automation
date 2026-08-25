@@ -257,6 +257,96 @@ def restore_previous(port, label, previous, disconnected_identity=None):
         connection.close()
 
 
+def record_fields(payload):
+    """Top-level protobuf fields of a record, or None when it does not parse."""
+    try:
+        return {
+            number: (value.hex(" ") if isinstance(value, bytes) else value)
+            for number, _, value in wolfmix.protobuf_fields(payload)
+        }
+    except (wolfmix.ProtocolError, IndexError):
+        return None
+
+
+def describe_change(record_type, before, after):
+    """One human-readable line per changed field, or per changed byte."""
+    lines = []
+    old_fields, new_fields = record_fields(before), record_fields(after)
+    if old_fields is not None and new_fields is not None:
+        for number in sorted(set(old_fields) | set(new_fields)):
+            old = old_fields.get(number)
+            new = new_fields.get(number)
+            if old != new:
+                lines.append(
+                    f"  type {record_type} field {number}: "
+                    f"{'absent' if old is None else old} -> "
+                    f"{'absent' if new is None else new}"
+                )
+    if lines:
+        return lines
+    if len(before) == len(after):
+        changed = [
+            f"byte {i} {x:02x}->{y:02x}"
+            for i, (x, y) in enumerate(zip(before, after)) if x != y
+        ]
+        return [f"  type {record_type}: " + ", ".join(changed[:12])]
+    return [f"  type {record_type}: {len(before)} -> {len(after)} bytes"]
+
+
+def diff_projects(before, after):
+    lines = []
+    if before.prefix != after.prefix:
+        lines += [
+            f"  prefix byte {i} {x:02x}->{y:02x}"
+            for i, (x, y) in enumerate(zip(before.prefix, after.prefix)) if x != y
+        ]
+    if [t for t, _ in before.records] != [t for t, _ in after.records]:
+        lines.append("  record layout changed")
+        return lines
+    for (record_type, old), (_, new) in zip(before.records, after.records):
+        if old != new:
+            lines += describe_change(record_type, old, new)
+    return lines
+
+
+def watch(args):
+    """Report what each controller-side save changes, as it happens.
+
+    Polls the project list, which is cheap, and downloads only when the
+    experiment project's version moves. Read-only: nothing is written to the
+    controller.
+    """
+    root, _, state = load_state(args.state_dir, args.label)
+    destination = root / "watch"
+    destination.mkdir(exist_ok=True)
+    previous, previous_version = None, None
+    print(f"Watching {state['name']}; save on the W1 to see a diff. Ctrl-C to stop.",
+          file=sys.stderr)
+    with connect(args.port, args.timeout) as connection:
+        while True:
+            item = next(
+                (i for i in project_list(connection) if i.get("uuid") == state["uuid"]),
+                None,
+            )
+            if item is None:
+                raise wolfmix.WolfmixError("Experiment project is no longer on the W1")
+            if item["version"] != previous_version:
+                data = download_project(connection, state["uuid"])["data"]
+                current = wpjlib.Wpj.from_bytes(data, "downloaded project")
+                snapshot = destination / f"{item['version']}.wpj"
+                if not snapshot.exists():
+                    snapshot.write_bytes(data)
+                if previous is None:
+                    print(f"baseline version {item['version']} ({len(data)} bytes)")
+                else:
+                    lines = diff_projects(previous, current)
+                    print(f"version {previous_version} -> {item['version']}")
+                    print("\n".join(lines) if lines else "  no record changed")
+                sys.stdout.flush()
+                previous, previous_version = current, item["version"]
+            time.sleep(args.interval)
+
+
 def initialize(args):
     project_uuid, name = wolfmix.experiment_identity(args.label)
     project_path, data = validate_project(args.project, name)
@@ -454,6 +544,12 @@ def self_test(_args):
         value = {"sha256": sha256(data), "size": len(data)}
         atomic_json(target, value)
         assert read_json(target) == value
+    changes = describe_change(102, bytes.fromhex("2802"), bytes.fromhex("2803"))
+    assert changes == ["  type 102 field 5: 2 -> 3"], changes
+    appeared = describe_change(102, b"", bytes.fromhex("2807"))
+    assert appeared == ["  type 102 field 5: absent -> 7"], appeared
+    opaque = describe_change(99, b"\xff\x00", b"\xff\x01")
+    assert opaque == ["  type 99: byte 1 00->01"], opaque
     experiment_uuid, name = wolfmix.experiment_identity("self-test")
     assert experiment_uuid == "d1cd1fd9-2559-5692-be1c-6526d52f3123"
     assert name.startswith(wolfmix.EXPERIMENT_NAME_PREFIX)
@@ -488,6 +584,12 @@ def parser():
     campaign_parser.add_argument("manifest")
     campaign_parser.add_argument("--label", required=True)
     campaign_parser.set_defaults(handler=campaign)
+
+    watch_parser = commands.add_parser("watch")
+    watch_parser.add_argument("--label", required=True)
+    watch_parser.add_argument("--interval", type=float, default=1.0,
+                              help="project-list polling period in seconds")
+    watch_parser.set_defaults(handler=watch)
 
     status_parser = commands.add_parser("status")
     status_parser.add_argument("--label", required=True)

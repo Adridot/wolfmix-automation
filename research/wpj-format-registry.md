@@ -489,12 +489,34 @@ experiment project**, loaded on the controller, and compared.
 tested. It is *not* proof of inertness in every state: the capture exercised one
 static lighting look with no effect running and no flash key held.
 
-**The one condition not yet tested is the interesting one.** `field 11` = 100 in
-every corpus file and has no UI control — exactly what a **BLINDER level** would
-look like, since guide 10 describes BLINDER as setting everything to full power.
-A flash effect only alters the output while it is active, so a capture taken
-with no flash key held cannot see it. **Next: capture with BLINDER on, at
-`field 11` = 0 and = 100.**
+**The BLINDER hypothesis is refuted.** `field 11` = 100 in every corpus file and
+has no UI control, which is exactly what a BLINDER level would look like — guide
+10 describes BLINDER as setting everything to full power. Two further envelopes
+were captured **with the blinder active**, once at `field 11` = 100 and once at
+0, each 200 frames in mode 32:
+
+| | frames | non-zero channels | channels differing |
+|---|---|---|---|
+| blinder on, `f11` = 100 | 200 | 144 | — |
+| blinder on, `f11` = 0 | 200 | 144 | **0** |
+
+The blinder itself is plainly visible in the data — enabling it moves 48
+channels, driving dimmers from 127 or 0 up to 255 — so the capture is sensitive
+to exactly the kind of change the hypothesis predicted. It shows none.
+
+### Verdict on `field 11`
+
+**[correlated]** Inert in every condition tested: idle static output, and with
+the blinder active. No UI control moves it, the 2.0 reference manual lists no
+setting it could correspond to, it predates firmware 2.0 (present in a
+schema-8 file), and forcing it from 100 to 0 changes neither the display nor a
+single one of the 2048 DMX channels.
+
+It is recorded as **unattributed and inert**, and the search is stopped here
+rather than continued speculatively. A writer should preserve it verbatim,
+treating absent and 0 as the same value. Conditions never exercised, for
+whoever picks this up: strobe or smoke active, effects running, a second
+universe in use, MK2/MK3 hardware.
 
 ### Side findings
 

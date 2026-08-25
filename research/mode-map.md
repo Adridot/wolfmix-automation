@@ -88,6 +88,7 @@ enum; where 2.0.2 renamed one, both are given.
 | 33 | `BLACKOUT` | `BLACKOUT` |
 | 34 | PRESET → magic wand | `HUNGRY_WOLF` → **`INTELLIGENT_PRESET`** |
 | 36 | DMX VALUES → beam editor | `BEAM_EDITOR` |
+| 41 | LIVE EDIT → SHIFT + one of the first three encoders | **`LIVE_EDIT_MACRO_EDIT`** (new) — present on MK1 |
 | 43 | main menu → Mappings | **`MAPPING`** (new) — present on MK1 |
 | 44 | HOME → touch the tempo readout | **`BPM`** (new) |
 
@@ -96,8 +97,10 @@ three names that vanished from the SDK are renames at their original values
 (8, 12, 34); the six genuinely new modes live at 39–44, of which `BPM` = 44 is
 confirmed and 43 is seen but unnamed.
 
-Still unmeasured: `FILE_BROWSER`, `LIVE_EDIT_MACRO_EDIT`, `SEQ_POSITION_PICKER`
-and `USB_STICK` share the four remaining slots 39–42. Neither picker showed up
+Still unmeasured: `FILE_BROWSER`, `SEQ_POSITION_PICKER` and `USB_STICK` share
+the three remaining slots 39, 40 and 42. The macro editor turned out to exist
+on MK1 (feature list: PRISM ROT., SMOKE, STROBE, ZOOM, DIMMER, EFFECT, FOCUS,
+GOBO ROT., IRIS; value 0–100 %; per-fixture selection) and sits at 41. Neither picker showed up
 inside its parent editor: the whole sequence session (group toggle, step
 buttons, settings sub-page) stayed at 21, and the gobo edit stayed at 14. `USB_STICK` and
 `FILE_BROWSER` are probably unreachable here (the USB-A socket is MK2+).

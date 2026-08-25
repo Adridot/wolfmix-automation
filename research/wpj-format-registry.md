@@ -205,6 +205,44 @@ i.e. a fixture index per channel.
 In FX-03 the first item's array grew to **129 bytes** with a `01` prepended and
 its `f3` went 4 → 16. Not attributable — see the confound above.
 
+## Type 102, remaining fields — **FX-04**
+
+Four consecutive controller saves (strobe 100 %, speed 8×, group A excluded
+from strobe, speed 2×). Only the final state could be downloaded, but the three
+net changes landed in three distinct fields, so they stay separable. **Record
+102 was the only record that changed**, which also refutes an earlier guess.
+
+| Field | Before | After | Reading |
+|---|---|---|---|
+| 9 | 1 | **100** | STROBE speed. 0 % wrote 1, 100 % wrote 100 → stored range **1–100**. **[device-confirmed]** |
+| 7 | absent (0) | **2** | SPEED multiplier, set to 2×. **[correlated]** |
+| 8 | absent (0) | **1** | appeared exactly when group A was excluded from STROBE → **[hypothesized]** excluded-group bitmask, bit 0 = group A |
+
+Unchanged throughout: `field 4` (release modes), `field 5` = 100, `field 6` =
+100, `field 11` = 100. Those three remain unattributed; blinder fade-out,
+smoke intensity and smoke fan are the documented candidates.
+
+**Open on `field 7`**: the multiplier list is FREEZE, 0.5×, 2×, 4×, 8×. A value
+of 2 for "2×" fits both a list index (0,1,2,3,4) and the literal multiplier.
+Setting **4×** discriminates: index would write 3, literal would write 4.
+
+**Open on `field 8`**: one field appeared for one exclusion, but six effects can
+each exclude groups. Either `field 8` is STROBE's own mask and the other five
+live in their own fields, or it is shared. Excluding **A + C** from STROBE
+(expect 5 if bit-per-group) then moving the exclusion to another effect
+separates the two readings.
+
+**Refuted**: type 115 `field 6` is **not** the SPEED multiplier. The multiplier
+changed twice across these saves and record 115 did not move at all. What set
+it to 4 during FX-02 is still unknown.
+
+## Prefix offset 40 = save counter — **[device-confirmed]**
+
+The byte at absolute offset **40** increments by exactly one per controller-side
+save: `5f → 60` (one save), `60 → 61`, `61 → 62`, then `62 → 66` across four
+consecutive saves. Offset 50 moved once, during the first save only, and is
+something else.
+
 ## Type 115 — a 20-slot list, `field 6` moves as a block — **[observed]**
 
 The record holds 20 repeated `field 5` items plus a 20-byte `field 6` on the

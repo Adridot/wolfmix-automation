@@ -899,3 +899,128 @@ This corrects the earlier guess that the list read as 4 columns × 5 rows.
 - Whether a pad's **name** can be changed at all, and where it would be stored.
 - Whether any group can hold a **different number of pads** than 20 (`field 1`
   is 20 in every record of every file).
+
+## Type 145 ×8 — the static GOBO palettes — **[correlated]**
+
+Same family as 140 and 150: one record per group, top-level `field 2` = group
+index 0…7 (absent for A), 20 repeated `field 5` items. **Unlike 140 and 150 it
+carries no `field 1` count** — the 20 slots are implicit.
+
+```
+field 2 = 0…7                    group index, absent for A
+field 5 × 20                     one per gobo pad
+  f1  glyph   one character; ' ' (0x20) = empty slot
+  f2  gobo id see below — absent on an empty slot
+  f3  name    UTF-8, optional, operator-assigned
+```
+
+In the whole corpus only **group A** is ever populated, with 17 gobos and pads
+18–20 empty. Groups B–H hold 20 fully empty items. Note the two flavours of
+empty: an empty slot inside a populated palette is stored as `f1 = ' '`, while
+a wholly empty palette stores bare empty items (`2a 00`). A writer must
+reproduce both.
+
+### `f2` is a gobo image id, and the palette is generated from the patch
+
+Record **111** is the range/capability table. On the gobo-wheel channel of the
+profile `Lyre ZQ02244` (record 110 channel 10, `f4 = 8`), the 20 ranges are:
+
+```
+   0–  6  f3=14            no f4   "open"
+   7– 13  f3=14  f4=425 ┐
+  14– 20  f3=14  f4=424 │
+  …                     │ 17 ranges carrying an image id
+ 119–127  f3=14  f4=352 ┘
+ 128–191  f3=26            gobo shake
+ 192–255  f3=26            gobo shake
+```
+
+Those 17 `f4` values, **in that order**, are exactly the 17 `f2` values of the
+type-145 items. The odd-looking sequence in the palette — 425, 424, 423, 422,
+421, 420 then 342 … 352 — is simply the order the ranges appear on the fixture's
+gobo wheel; it is not a counter.
+
+Two identities, checked mechanically on **25/25** variant-A files
+(`research/` script kept out of the repo; the check is reproduced below):
+
+| Identity | Meaning |
+|---|---|
+| `110[c].f2 == len(111 slice of c)` | `110.f2` is the **range count**, not a feature enum |
+| `[145 items].f2 == [111 ranges with f3 == 14].f4` | the gobo palette is the fixture's gobo wheel |
+
+The second is not vacuous: `cc21` and `cd21` have **no** gobo-wheel fixture, and
+their gobo palettes are empty on both sides — 0 = 0.
+
+So the static gobo palette is **derived from the patch**: the firmware fills it
+with one pad per image-bearing gobo range of the group's fixtures, skipping the
+"open" range and the shake ranges. `f2` is a **global gobo-image id**, not a
+project-local index — 342…352 and 420…425 are outside record 111's own indexing
+(120 entries) and must live in the fixture library (`wmProfiles.wmx`).
+
+### `f1` is an icon-font glyph, and the corpus cannot say more
+
+Filled slots carry consecutive characters `!` `"` `#` … `1` (0x21…0x31) in slot
+order, empty slots carry `' '` (0x20). Two readings fit and the corpus cannot
+separate them, because this palette has never been reordered:
+
+- a glyph index into a per-project gobo icon atlas, 0 = blank, allocated in
+  order as the palette was built — in which case it identifies the **image**;
+- a pure function of the slot index for filled slots — in which case it is
+  **redundant** and a writer can regenerate it.
+
+Discriminator: clear or reorder one gobo pad and see whether the remaining
+glyphs keep their characters or renumber.
+
+### Side findings on the patch side — **[correlated]**
+
+`110.f4` (channel feature) and `111.f3` (range function) are nearly one-to-one
+across the corpus:
+
+| `110.f4` | `111.f3` seen | Reading |
+|---|---|---|
+| 1 / 2 | 1 / 3 | pan / tilt |
+| 5 | 9, 10, 11 | colour wheel + scrolls |
+| 7 | 12 (+32, 33) | dimmer |
+| **8** | **14, 26** | **gobo wheel + gobo shake** |
+| 15 | 32, 33, 34, 37 | shutter / strobe |
+| 25, 26, 27 | 50, 51, 52 | red, green, blue |
+| 31, 32, 33 | 56, 57, 58 | the extra colour channels |
+
+`111.f4` is therefore a **capability id whose namespace depends on the feature**:
+a gobo image id under `f3 = 14`, a colour id under `f3 = 9` (small integers
+1…19 there, not 342…425).
+
+### An open contradiction on record 105 — **[observed]**
+
+`115[r].f2` reads as the **0-based DMX start address** and agrees with the
+profile channel counts: the six `Lyre ZQ02244` (16 ch) sit at 0, 16, 32, 48,
+64, 80 and the ten `6x18W` (10 ch) at 99, 109 … 189. The current reading of
+record 105 (`f4` = start address, `f7` = channels consumed) disagrees with both:
+it gives spacing 10 for the 16-channel lyres and 8 for the 10-channel pars.
+One of the two attributions is wrong. Flagged here, not resolved.
+
+### Prediction published before measuring
+
+STATIC GOBO on group A (`Beam`), which is the only populated palette:
+
+- **17 pads filled, pads 18, 19 and 20 empty.** With the grid order confirmed on
+  type 140 — bottom row first, 5 columns × 4 rows — the **top row should read
+  `[pad 16] [pad 17] [empty] [empty] [empty]`** and the other three rows should
+  be full.
+- **Pad 10 is the only named one, and its name is `points`.** The other 16 have
+  no stored name, so whatever the screen shows for them comes from the firmware
+  or the library, not from the `.wpj`.
+- Pressing pad *n* on group A should drive the lyres' gobo channel into a
+  distinct DMX band, no two overlapping:
+
+| pad | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|---|---|---|---|---|---|---|---|---|---|
+| band | 7–13 | 14–20 | 21–27 | 28–34 | 35–41 | 42–48 | 49–55 | 56–62 | 63–69 |
+
+| pad | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 |
+|---|---|---|---|---|---|---|---|---|
+| band | 70–76 | 77–83 | 84–90 | 91–97 | 98–104 | 105–111 | 112–118 | 119–127 |
+
+Pad 10 is `points`, so **`points` should land in 70–76**. Gobo channels are not
+subject to the movement limits that made the position palette unreadable from
+DMX, so the oracle can read this one directly.

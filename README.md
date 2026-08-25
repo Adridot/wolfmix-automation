@@ -31,11 +31,30 @@ tools/           scripts d'inspection lecture seule (pas de writer tant que
                  la règle 2 n'est pas satisfaite)
 ```
 
+## Pipeline cible (création de show de bout en bout)
+
+```
+show.json (patch + presets + FX, éditable)
+   │  wpj_codec (encode, fidélité octet prouvée type par type)
+   ▼
+wpjlib (conteneur TLV + SHA-1, round-trip octet-identique garanti)
+   ▼
+nouveau .wpj → acceptation WTOOLS → synchro W1 (toujours par l'utilisateur)
+```
+
+Chaque étage n'écrit que ce que l'étage de validation a prouvé ; tout le
+reste transite en octets bruts préservés.
+
 ## Outils
 
-- `tools/wpj_inspect.py fichier.wpj` — parcourt le wire format protobuf,
-  émet un arbre JSON. Refuse (exit 2) ce qui ne parse pas plutôt que de
-  deviner. `python3 tools/wpj_inspect.py` seul = self-check.
+- `tools/wpjlib.py` — cœur lecture/écriture variante A : découpe TLV,
+  réassemblage, SHA-1 recalculé, écriture sans écrasement. Self-check :
+  round-trip octet-identique sur tout le corpus variante A.
+- `tools/wpj_inspect.py fichier.wpj` — parcourt le wire format protobuf
+  (variantes B/C), émet un arbre JSON. Refuse (exit 2) ce qui ne parse
+  pas plutôt que de deviner. Sans argument = self-check.
+- `tools/tlv.py`, `tools/dump.py` — extracteur TLV variante A + dumps
+  d'analyse.
 
 ## État (2026-08-25)
 

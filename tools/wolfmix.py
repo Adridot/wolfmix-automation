@@ -12,6 +12,7 @@ Usage:
   python3 tools/wolfmix.py profiles
   python3 tools/wolfmix.py dmx
   python3 tools/wolfmix.py dmx --seconds 10
+  python3 tools/wolfmix.py watch-mode
   python3 tools/wolfmix.py self-test
 
 WTOOLS must be closed because the serial port is exclusive.
@@ -522,6 +523,30 @@ def monitor_dmx(connection, seconds):
                 print(f"warning: could not disable USB DMX: {error}", file=sys.stderr)
 
 
+def watch_mode(connection, interval, seconds):
+    """Report every change of Settings.wolfmixMode; never writes to the W1.
+
+    Ground truth for the WM_MODE_* enum: the operator walks the controller
+    through its screens while this polls GET_SETTINGS, which is read-only.
+    """
+    previous = None
+    deadline = time.monotonic() + seconds if seconds > 0 else None
+    while deadline is None or time.monotonic() < deadline:
+        settings = decode_settings(connection.request(GET_SETTINGS))
+        mode = settings["wolfmixMode"]
+        if mode != previous:
+            print_json({
+                "timestamp": datetime.datetime.now(
+                    datetime.timezone.utc
+                ).isoformat(),
+                "wolfmixMode": mode,
+                "previousMode": previous,
+                "projectChanged": settings["projectChanged"],
+            }, compact=True)
+            previous = mode
+        time.sleep(interval)
+
+
 def encode_varint(value):
     result = bytearray()
     while value > 0x7F:
@@ -698,6 +723,13 @@ def build_parser():
         "experiment-uuid", help="show the deterministic UUID for an experiment label"
     )
     identity.add_argument("label")
+    watch = commands.add_parser(
+        "watch-mode", help="log every UI mode change reported by the controller"
+    )
+    watch.add_argument("--interval", type=float, default=0.2,
+                       help="polling period in seconds (default: 0.2)")
+    watch.add_argument("--seconds", type=float, default=0,
+                       help="stop after this duration; 0 runs until Ctrl-C")
     dmx = commands.add_parser("dmx", help="stream changed DMX channel values")
     dmx.add_argument("--seconds", type=float, default=0,
                      help="stop after this duration; 0 runs until Ctrl-C")
@@ -716,8 +748,10 @@ def main(argv=None):
         return 0
     if args.timeout <= 0:
         raise WolfmixError("--timeout must be greater than zero")
-    if args.command == "dmx" and args.seconds < 0:
+    if args.command in ("dmx", "watch-mode") and args.seconds < 0:
         raise WolfmixError("--seconds cannot be negative")
+    if args.command == "watch-mode" and args.interval <= 0:
+        raise WolfmixError("--interval must be greater than zero")
 
     port = args.port or discover_port()
     with WolfmixConnection(port, timeout=args.timeout) as connection:
@@ -744,6 +778,8 @@ def main(argv=None):
             print_json(project)
         elif args.command == "dmx":
             monitor_dmx(connection, args.seconds)
+        elif args.command == "watch-mode":
+            watch_mode(connection, args.interval, args.seconds)
     return 0
 
 

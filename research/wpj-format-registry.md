@@ -24,7 +24,12 @@ Corpus de preuve : `corpus/SHA256SUMS`, relevé du 2026-08-25, WTOOLS 1.6.3.
   6→7 a introduit le digest SHA-1. Candidat alternatif : champ sans lien,
   coïncidence. À trancher par un fichier v6 avec digest ou v7 sans.
 
-### Variante A — SHA-1 + conteneur TLV (3 fichiers, dumps 2025-09-20)
+### Variante A — SHA-1 + conteneur TLV (dumps device + imports)
+
+Statut global : conteneur + SHA-1 + record 101 **device-confirmed**
+(ACC-01, 2026-08-25 : fichier généré accepté par WTOOLS 1.6.3 et W1
+fw 2.0.18, stocké octet-identique). Octets 20–35 : PAS une clé
+d'identité à l'import (nouveau projet créé sans les modifier).
 - **[correlated]** Octets 0–19 = SHA-1 de bytes[20:EOF] (idem B).
 - **[observed]** Octets 20–63 : zone d'en-tête contenant notamment
   `cc 21 80 71` (répété, = moitié de l'UUID du nom de fichier) —

@@ -48,3 +48,19 @@ _(vide — aucune expérience exécutée)_
 
 Voir research/preset-format-165.md §Expériences : type d'un Beam FX
 (f1.f7), position d'un seul groupe (f28), couleur statique mono-pad (f31).
+
+## Journal — ACC-01 (2026-08-25) : PREMIÈRE ACCEPTATION COMPLÈTE
+
+Fichier généré par wpjlib+wpj_codec (copie de « rig-a », record 101
+réécrit : nom → « WMX TEST ACC-01 », seul record différent, SHA-1 recalculé).
+- Import WTOOLS 1.6.3 : accepté, affiché comme projet séparé (pas de
+  confusion avec rig-a malgré les octets 20–35 inchangés).
+- Stockage wlinkData : octet pour octet IDENTIQUE à notre fichier, sous
+  un nouveau nom de fichier d43f1fc0-a05f-11f1-… (UUID attribué par
+  WTOOLS ; les octets internes 20–35 ne servent donc pas de clé
+  d'identité à l'import).
+- Synchro W1 fw 2.0.18 : acceptée, projet ouvert sur l'appareil
+  (rapporté par l'utilisateur).
+→ Conteneur variante A + SHA-1 + encodage du record 101 :
+  **device-confirmed**. Chaîne d'écriture wpjlib/codec : acceptée
+  WTOOLS + W1 pour ce périmètre.

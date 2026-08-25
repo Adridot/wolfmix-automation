@@ -114,9 +114,7 @@ def project_list(connection):
 
 
 def download_project(connection, project_uuid):
-    return wolfmix.decode_project(connection.request(
-        wolfmix.GET_PROJECT, wolfmix.encode_request_uuid(project_uuid)
-    ))
+    return wolfmix.fetch_project(connection, project_uuid)
 
 
 def verify_project(connection, expected_uuid, expected_data):

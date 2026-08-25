@@ -135,10 +135,29 @@ Independent cross-check: the operator reported *before the experiment* that
 the `WOLF` key was set to TOGGLE, and index 0 was already `01` in the baseline.
 Two facts, two indices, one consistent encoding.
 
-Certainty: **device-confirmed** for indices 0 and 1 and for values 0/1.
-Indices 2–5 follow the guide's ordering and are **[hypothesized]**; the timer
-encoding is **[hypothesized]**. Restoring is a symmetric operation: set the
-mode back and save.
+**Experiment FX-02, same session, one save.** Prediction published before
+measuring: `01 00 01 02 03 04`. The operator set STROBE back to FLASH, BLINDER
+to TOGGLE, SPEED to the 1 s timer, BLACKOUT to 5 s, SMOKE to 10 s, left WOLF
+on TOGGLE, and saved once.
+
+- Result: `01 00 01 02 03 04`. **Exact match, five bytes at once.**
+
+The whole field is therefore settled:
+
+| Value | Release mode |
+|---|---|
+| 0 | `FLASH` |
+| 1 | `TOGGLE` |
+| 2 | `1 s` timer |
+| 3 | `5 s` timer |
+| 4 | `10 s` timer |
+
+Independent corroboration from the operator: on each flash screen the value can
+also be set with the right-hand pad column, top to bottom FLASH → 10 s, i.e.
+the UI exposes the enumeration in its natural order.
+
+Certainty: **device-confirmed**, all six indices and all five values.
+Restoring is symmetric: set the mode back and save.
 
 ### Other diffs produced by a controller-side save — **[observed]**
 
@@ -156,6 +175,45 @@ so a round-trip through the W1 cannot be verified by file hash. Differential
 experiments must compare record by record and expect this canonicalisation
 noise. **[hypothesized]** re-saving a project twice in a row would isolate the
 noise exactly; worth doing once.
+
+## Type 115 — a 20-slot list, `field 6` moves as a block — **[observed]**
+
+The record holds 20 repeated `field 5` items plus a 20-byte `field 6` on the
+record itself, whose content is a permutation
+(`00 01 02 03 0f 10 04 05 06 07 08 09 0a 0b 0c 0d 0e 11 12 13`) — a display
+order. Each item carries `f2` (16, 32, 48, 99, 109, 119, 129 …), sometimes
+`f3`/`f4` = 1, `f5` = 0x3FFFF (18 bits set), and a trailing `f9` = its index.
+
+Across the three FX-01/FX-02 saves, each item's **`field 6` moved as a block**:
+
+| Snapshot | Item `field 6` | Item `field 7` |
+|---|---|---|
+| `before.wpj` (WTOOLS-era pipeline) | 44 on every item | 41 on every item |
+| after the first controller save | absent (default 0) | absent |
+| after the second controller save | **4 on every item** | absent |
+
+`field 7` was dropped by the firmware and never came back. `field 6` is a
+single value applied uniformly to all 20 slots, so it is a **global setting
+stored per slot**. **[hypothesized]** candidates, from what the operator did
+between the two saves: the FADE time of the STATIC POSITION screen (guide 8:
+"Move the encoder to set a FADE time between the positions"), or the STEP 1/4
+control of the MOVE FX sequence editor. Both were touched. Discriminating
+experiment: set the STATIC POSITION fade encoder to a distinctive value, save,
+and check whether all 20 items take it.
+
+## Serial transfer integrity — **[device-confirmed]**
+
+The USB serial link is **not** error-free. In one session two of four
+`GET_PROJECT` transfers of a 43 KB project failed: one raised
+`Unsupported protobuf wire type 4` while parsing the response, and one returned
+the correct length with wrong bytes and a SHA-1 header that did not match its
+own body. Two subsequent transfers agreed byte for byte and verified.
+
+`tools/wolfmix.py fetch_project` now retries: it accepts a transfer whose SHA-1
+header matches (variants A and B carry one), otherwise requires two identical
+consecutive transfers, and gives up after three attempts. Every project
+download in the CLI and in the experiment runner goes through it. **Never
+trust a single download of a project.**
 
 ## Sources externes
 

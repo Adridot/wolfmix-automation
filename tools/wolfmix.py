@@ -22,6 +22,7 @@ import argparse
 import datetime
 import fcntl
 import glob
+import hashlib
 import json
 import os
 import select
@@ -607,6 +608,36 @@ def encode_project(project_uuid, version, name, data):
     ))
 
 
+def fetch_project(connection, project_uuid, attempts=3):
+    """Download one project, guarding against serial corruption.
+
+    The link is not error-free: a 43 KB transfer has been observed returning
+    the right length with wrong bytes, and another returning an unparsable
+    payload. Variant A and B files carry a SHA-1 of their own body, so verify
+    it; for anything else, require two identical consecutive downloads.
+    """
+    previous = None
+    last_error = None
+    for _ in range(attempts):
+        try:
+            project = decode_project(connection.request(
+                GET_PROJECT, encode_request_uuid(project_uuid)
+            ))
+        except ProtocolError as error:
+            last_error = error
+            continue
+        data = project["data"]
+        if len(data) > 20 and data[:20] == hashlib.sha1(data[20:]).digest():
+            return project
+        if previous == data:
+            return project
+        previous = data
+        last_error = ProtocolError("Downloaded project failed its SHA-1 header")
+    raise ProtocolError(
+        f"Project download did not verify after {attempts} attempts: {last_error}"
+    )
+
+
 def require_success(payload, operation):
     status = decode_status(payload)
     if not status["success"]:
@@ -704,6 +735,33 @@ def self_test():
         raise AssertionError("The outgoing event allowlist was bypassed")
     except ProtocolError:
         pass
+
+    class FakeConnection:
+        """Replays a scripted list of project payloads, one per request."""
+
+        def __init__(self, bodies):
+            self.bodies = list(bodies)
+
+        def request(self, event, payload=b""):
+            body = self.bodies.pop(0)
+            return b"".join((
+                encode_protobuf_field(1, 2, uuid.UUID(experiment_uuid).bytes),
+                encode_protobuf_field(5, 2, body),
+            ))
+
+    good = hashlib.sha1(b"body").digest() + b"body"
+    corrupt = bytes(20) + b"body"
+    # A corrupt first transfer is discarded once the next one verifies.
+    assert fetch_project(FakeConnection([corrupt, good]), experiment_uuid)["data"] == good
+    # Without a valid SHA-1 header, two identical transfers are accepted.
+    assert fetch_project(
+        FakeConnection([corrupt, corrupt]), experiment_uuid
+    )["data"] == corrupt
+    try:
+        fetch_project(FakeConnection([corrupt, bytes(21), bytes(22)]), experiment_uuid)
+        raise AssertionError("Three unverifiable transfers were accepted")
+    except ProtocolError:
+        pass
     print("self-test OK")
 
 
@@ -764,9 +822,7 @@ def main(argv=None):
                 connection.request(GET_PROFILE_LIST), profile=True
             ))
         elif args.command == "project":
-            project = decode_project(connection.request(
-                GET_PROJECT, encode_request_uuid(args.uuid)
-            ))
+            project = fetch_project(connection, args.uuid)
             try:
                 with open(args.output, "xb") as output:
                     output.write(project.pop("data"))

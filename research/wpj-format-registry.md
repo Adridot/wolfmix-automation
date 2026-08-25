@@ -222,9 +222,12 @@ Unchanged throughout: `field 4` (release modes), `field 5` = 100, `field 6` =
 100, `field 11` = 100. Those three remain unattributed; blinder fade-out,
 smoke intensity and smoke fan are the documented candidates.
 
-**Open on `field 7`**: the multiplier list is FREEZE, 0.5×, 2×, 4×, 8×. A value
-of 2 for "2×" fits both a list index (0,1,2,3,4) and the literal multiplier.
-Setting **4×** discriminates: index would write 3, literal would write 4.
+**`field 7` = SPEED multiplier, stored literally — [device-confirmed].**
+FX-05: the operator moved SPEED from 2× to **4×** in a single save and
+`field 7` went **2 → 4**. A list index would have written 3, so the value is the
+multiplier itself. Normal speed leaves the field absent (0). Still open: how
+**FREEZE** and the fractional **0.5×** are encoded, since neither fits an
+integer multiplier.
 
 **Open on `field 8`**: one field appeared for one exclusion, but six effects can
 each exclude groups. Either `field 8` is STROBE's own mask and the other five

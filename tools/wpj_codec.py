@@ -213,7 +213,7 @@ def projet_vers_dict(path):
 
 def demo():
     import glob, os
-    files = sorted(glob.glob("corpus/projects/*.wpj"))
+    files = sorted(glob.glob("corpus/**/*.wpj", recursive=True))
     extra = os.path.expanduser("~/Library/Application Support/WTOOLS/wlinkData/projects")
     files += sorted(glob.glob(os.path.join(extra, "*.wpj")))  # lecture seule
     stats, nb_fichiers = {}, 0

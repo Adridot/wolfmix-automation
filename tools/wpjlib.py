@@ -81,7 +81,7 @@ class Wpj:
 
 def demo():
     import glob
-    files = sorted(glob.glob("corpus/projects/*.wpj"))
+    files = sorted(glob.glob("corpus/**/*.wpj", recursive=True))
     tested = 0
     for path in files:
         try:

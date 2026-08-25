@@ -255,12 +255,52 @@ separates the two readings.
 changed twice across these saves and record 115 did not move at all. What set
 it to 4 during FX-02 is still unknown.
 
-## Prefix offset 40 = save counter — **[device-confirmed]**
+## Prefix offsets 40 and 50 — **[device-confirmed]**, earlier reading corrected
 
-The byte at absolute offset **40** increments by exactly one per controller-side
-save: `5f → 60` (one save), `60 → 61`, `61 → 62`, then `62 → 66` across four
-consecutive saves. Offset 50 moved once, during the first save only, and is
-something else.
+**Offset 40 is a little-endian `uint64`, and it is the project version** — the
+same number `GET_PROJECT_LIST` reports. Verified exactly on five snapshots:
+
+| File | `uint64` @ 40 | version from the project list |
+|---|---|---|
+| `before.wpj` | 1787654382431 | 1787654382431 |
+| `after-strobe-toggle.wpj` | 1787654382432 | 1787654382432 |
+| `after-fx02.wpj` | 1787654382433 | 1787654382433 |
+| `after-speed-exclusion.wpj` | 1787654382438 | 1787654382438 |
+| `after-speed-half.wpj` | 1787654382440 | — |
+
+An earlier entry in this registry called offset 40 a one-byte save counter. That
+was wrong: what was observed (`5f → 60 → 61 → 62 → 66`) is the **low byte** of
+this `uint64`, which the firmware increments by one per save. The value looks
+like an epoch-ms stamp at creation and is then bumped as a counter. **A writer
+must treat offsets 40–47 as one 64-bit field**; touching only the low byte
+corrupts the file at every wrap.
+
+**Offset 50 is a `uint16` writer/schema version**: 10 in files produced by the
+WTOOLS-era pipeline, **11** as soon as firmware 2.0.18 saves the project, and 11
+in every save after that. This lines up exactly with the type 115
+re-serialisation observed in FX-01, which is a schema change, not noise.
+
+## Patch-side structure — six record types locked together — **[correlated]**
+
+Five arithmetic identities hold **exactly on 19/19 variant-A files**, with
+widely different values per project (Σ 22/50, 30/114, 37/153, 80/201), so they
+are not trivially satisfied. Records store their repeated items under
+**field 5**.
+
+| Identity | Meaning |
+|---|---|
+| `Σ 116[p].f2 == count(110)` | 116 = profile catalogue, `f2` = channel count per profile |
+| `116[p].f3 == Σ_{q<p} 116[q].f2` | `f3` = running offset into 110 |
+| `Σ 105[e].f7 == count(106)` | 105 = DMX patch, 106 = one entry per patched channel |
+| `max(105.f5) + 1 == count(115)` | 115 = fixture instances |
+| `Σ 116[115[r].f3].f2 == count(120)` | 120 = flat per-fixture-channel table |
+
+116 items also carry `f8` = profile name (e.g. a fixture model string), `f9` =
+a 16-byte UUID and `f11` = a timestamp, which corroborates the catalogue
+reading.
+
+Full derivation, plus record 125 (9 category masks, reproduced bit-for-bit from
+105/115/116) and the refutations, in `research/corpus-mining-2026-08-25.md`.
 
 ## Type 115 — a 20-slot list, `field 6` moves as a block — **[observed]**
 

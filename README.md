@@ -62,3 +62,33 @@ Trois variantes de `.wpj` identifiées dans le corpus local, en-tête SHA-1
 confirmé sur 8/9 fichiers, corps protobuf localisé, nom de projet et liste
 de 100 presets repérés. Voir `research/wpj-format-registry.md`. Prochaine
 étape : expériences EXP-01…05 (`research/experiments.md`).
+
+## Couche publique (dépôt encore privé)
+
+Base préparée pour que d'autres puissent s'en servir, sans publication pour
+l'instant. Langue : anglais pour cette couche, français conservé dans
+`research/`.
+
+- `SPEC.md` — le format `.wpj` au niveau octet, chaque affirmation avec son
+  statut de preuve. Couvre les trois variantes, les 20 types
+  d'enregistrement, le sous-message preset et FX, les règles d'écriture et
+  six pistes ouvertes. Rien d'équivalent n'existe publiquement : `wpj-toolkit`
+  publie des enums sans encodage wire et s'arrête à 3 types.
+- `PROVENANCE.md` — sources, licences, ce qui est réutilisable et sous quelles
+  conditions ; sous-ensemble du corpus publiable (14 fichiers variante A,
+  `rig-c*` exclu) ; position sur le writer privé de WPJ Studio.
+- `LICENSE` — MIT, comme `wpj-toolkit`, pour que la réutilisation croisée
+  marche dans les deux sens. Une ligne à changer si l'arbitrage évolue.
+- `tools/wpj_api.py` — inspect JSON à la forme du schéma `wpj-toolkit`
+  (`modelVersion`, `project`, `presets[]`, `fixtures`, `validation`,
+  `unknown_tlvs`), en local et hors ligne. Tout outil écrit contre l'API
+  WPJ Studio fonctionne contre ce CLI, sans upload. Extensions additives :
+  `fixtures.status: "partial"` (types 105/116 décodés là où l'amont annonce
+  `unsupported`) et `x_records` (décodage complet du codec).
+- `make check` — lance les cinq self-checks (round-trip octet, fidélité du
+  codec, parcours B/C, compilateur de show, inspect JSON).
+
+Deux pistes neuves sont nées du croisement de notre décodage octet avec les
+enums MIT de `wpj-toolkit` — voir `SPEC.md` §10 : L1 (le `feature` des Beam FX
+est probablement `f5`, inoccupé chez nous et sans emplacement wire chez eux) et
+L2 (`beamGroupMask` limité à A–D contraint la lecture de `f16`).

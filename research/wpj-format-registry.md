@@ -302,6 +302,59 @@ reading.
 Full derivation, plus record 125 (9 category masks, reproduced bit-for-bit from
 105/115/116) and the refutations, in `research/corpus-mining-2026-08-25.md`.
 
+## FX-07 — one save, seven settings; type 102 nearly closed
+
+Settings applied together then saved once: SPEED → FREEZE, BLINDER fade-out →
+2 s, SMOKE intensity → 40, SMOKE fan → 70, STROBE excludes A (already set),
+BLINDER excludes C, STATIC POSITION fade → 37. **Record 102 was the only record
+that changed.**
+
+| Field | Before | After | Reading |
+|---|---|---|---|
+| 5 | 100 | **70** | **SMOKE fan speed** — [device-confirmed], unique value |
+| 6 | 100 | **40** | **SMOKE intensity** — [device-confirmed], unique value |
+| 4[5] | 04 | **01** | SMOKE release mode back to TOGGLE, see below |
+| 7 | 1 | **absent (0)** | **FREEZE writes 0**, indistinguishable from normal speed in this field alone |
+| 2 | absent | **4** | new — see the collision below |
+| 3 | absent | **4** | new — see the collision below |
+| 8 | 1 | 1 | **unchanged**, so BLINDER's group exclusion is *not* stored here |
+| 9, 11 | 100, 100 | 100, 100 | unchanged; `f9` = STROBE speed, `f11` still unattributed |
+
+### The one thing this save could not separate — **[hypothesized]**
+
+Two fields appeared at once, `f2 = 4` and `f3 = 4`, and two of the applied
+settings both encode as 4:
+
+- BLINDER fade-out set to **2 s**, which is index **4** of the list the operator
+  read off the device (0, 0.2, 0.5, 1 s, 2 s);
+- BLINDER excluding **group C**, which is bit 2 = **4** in a per-group mask.
+
+The experiment design is at fault: the prediction promised distinct values but
+the fade index and the group bit collided. Both assignments fit, and `f8`
+staying at 1 shows exclusions are **per effect**, in separate fields.
+
+Corpus support, either way: `cc21` and `cd21` carry `f2 = 1` and `f3 = 2`.
+
+**Discriminator (one save)**: set BLINDER fade to **1 s** (index 3) and SPEED
+to **2×**. Whichever of `f2`/`f3` becomes **3** is the fade-out; the other is
+BLINDER's exclusion mask. `f7` should return to 2, and any field that changes
+in step with leaving FREEZE belonged to FREEZE instead.
+
+### Negative results
+
+- **STATIC POSITION fade did not land in type 115**, which did not change by a
+  single byte. Either the value never took, or that fade lives elsewhere.
+- The three fields sitting at 100 were expected to be BLINDER fade, SMOKE
+  intensity and SMOKE fan. Two matched (`f5`, `f6`) but the BLINDER fade turned
+  out to be a **new** field, so **`f11 = 100` is still unattributed**.
+
+### SMOKE release mode reverted on its own — **[observed]**
+
+`f4[5]` went from 4 (10 s timer) back to 1 (TOGGLE) without the operator
+choosing it. If confirmed, the 10 s timer is not persistent for SMOKE, which
+would explain why no corpus file carries a 2 or 3 at that index while
+`rig-c.wpj` does carry a 4.
+
 ## Type 115 — a 20-slot list, `field 6` moves as a block — **[observed]**
 
 The record holds 20 repeated `field 5` items plus a 20-byte `field 6` on the

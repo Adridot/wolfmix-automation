@@ -739,7 +739,7 @@ Structure complète décodée le 2026-08-25 : voir `research/preset-format-165.m
 correction : type 140 = pads couleur statique, pas configs FX ;
 type 161 = état volatil, pas du contenu de show).
 
-## Type 140 ×8 — the static COLOUR palettes, one per group — **[correlated]**
+## Type 140 ×8 — the static COLOUR palettes, one per group — **[device-confirmed]**
 
 Same family shape as type 150: eight copies, `field 1` = 20, top-level
 `field 2` = group index 0…7 (absent for A), and 20 repeated `field 5` items.
@@ -779,8 +779,8 @@ Read as RGB, the 20 factory pads land on a clean hue sweep — 0°, 30°, 60°, 
 120°, 150°, 180°, 210°, 240°, 300°, 330° — with saturation and value at 100 %
 on the pure ones. Read with the fields permuted, they do not.
 
-Status is **correlated**, not device-confirmed: the argument is internal
-consistency plus one external document, and no screen has been read yet.
+Status was **correlated** when written — internal consistency plus one external
+document. The device then confirmed it exactly; see below.
 
 ### Prediction published before measuring — group B, experiment project
 
@@ -812,12 +812,90 @@ pad 1 → **30°**, all at saturation 100 % except pad 16 at 96.9 %.
 
 Either display shape is decisive. The two readings cannot both be right.
 
-### Not settled by the corpus
 
-- **The pad grid order.** Pad 1…20 is the wire order; the physical 4 × 5 layout
-  is unknown, and reading the list as 5 rows × 4 columns puts the pure primaries
-  in one column, which is suggestive but not proof.
-- **Whether a pad can be renamed.** No `string` field ever appears in a 140 item,
-  unlike the position palette's `f5`. Static colour pads may simply have no name.
-- **Absent vs 0.** As everywhere in this format, the firmware omits defaults; a
-  writer must treat them alike.
+### Measured — **[device-confirmed]**, and the editor turned out to have five views
+
+The operator opened SHIFT + pad 1 on group B (`<group-B name>`, the name record 125 gives
+group index 1) and photographed all five views of the picker. The header reads
+`<group-B name> / ITEM B1` — the group's name and the item's group letter plus 1-based
+index, which corroborates the A–H group ordering a third time.
+
+Pad 1 stores `f1 = 255, f2 = 127, f5 = 255`. What the screen showed:
+
+| View | Screen | Matches |
+|---|---|---|
+| `RGB+` | RED **255**, AMBER **255**, GREEN **127**, LIME 000, BLUE 000, UV 000, WHITE 000 | **the stored bytes, exactly** |
+| `RGBW` | RED 100 %, GREEN **49 %**, BLUE 0 %, WHITE 0 % | 127/255 |
+| `CMY` | CYAN 0, MAGENTA **128**, YELLOW **255** | 255 − G, 255 − B |
+| `HUE` | HUE **29**, SATURATION 100 %, RGB 100 %, W A L 0 % | predicted 29.9° |
+| `GRID` | the 20 pads by name — see below | |
+
+The `RGB+` view is the decisive one: it prints the **raw 0–255 channel values**,
+not percentages, and it names all seven channels in exactly the order of fields
+1–7. Field → channel is settled:
+
+```
+f1 RED   f2 GREEN   f3 BLUE   f4 WHITE   f5 AMBER   f6 LIME   f7 UV
+```
+
+The four encoders carry two channels each in `RGB+` (`RED|AMBER`,
+`GREEN|LIME`, `BLUE|UV`, `WHITE`), which is why a MK1 with four encoders can
+still reach seven channels.
+
+**The display truncates, it does not round.** 127/255 = 49.8 % showed as **49**,
+and hue 29.93° showed as **29**. The earlier prediction of "50 %" and the
+"23–24" hedge were both off by that one rule. Percentages read off this screen
+are `floor(v / 255 × 100)`, so they are lossy — **always read `RGB+`**.
+
+### The 20 pads are named, and the wire order is the grid order — **[device-confirmed]**
+
+The `GRID` view lists the palette by name. Every name matches the decoded
+channels, 20 for 20:
+
+| # | Name | Stored | # | Name | Stored |
+|---|---|---|---|---|---|
+| 1 | Amber | R255 G127 **A255** | 11 | Orange | R255 G63 |
+| 2 | Lime | R127 G255 **L127** | 12 | Pale Green | R41 G255 B30 **L41** |
+| 3 | Cyan | G255 B255 | 13 | Mint | R81 G255 B110 **L81** |
+| 4 | UV | R60 B255 **UV255** | 14 | Purple | R20 B255 |
+| 5 | Pink | R255 B128 | 15 | Pink Panther | R255 G91 B193 |
+| 6 | Red | R255 | 16 | Coral | R255 G127 B80 |
+| 7 | Green | G255 | 17 | Yellow | R255 G255 **L127** |
+| 8 | Turquoise | G255 B127 **L40** | 18 | Lemon | R255 G245 B80 **L127** |
+| 9 | Blue | B255 | 19 | Sky Blue | G127 B255 **L20** |
+| 10 | Magenta | R255 B255 | 20 | White | R255 G255 B255 **W255 L255** |
+
+The pad named **UV** is the only pad carrying `f7`, and the pad named **Amber**
+is the only factory pad carrying `f5`. The names are **not stored in the file** —
+no string field ever appears in a 140 item — so they are firmware labels tied to
+the slot index, unlike the position palette where `f5` holds a per-slot name.
+
+**Grid layout**: the physical matrix is 5 columns × 4 rows, and the wire order
+fills it **bottom row first, left to right**:
+
+```
+row 1 (top)      16 Coral   17 Yellow      18 Lemon   19 Sky Blue  20 White
+row 2            11 Orange  12 Pale Green  13 Mint    14 Purple    15 Pink Panther
+row 3             6 Red      7 Green        8 Turq.    9 Blue      10 Magenta
+row 4 (bottom)    1 Amber     2 Lime         3 Cyan     4 UV         5 Pink
+```
+
+This corrects the earlier guess that the list read as 4 columns × 5 rows.
+
+### Consequences for the other records
+
+- Type **135** (16 items, the same sub-message, externally documented as the
+  ColorFX palette) inherits the field → channel mapping. Its pad 15 is the same
+  RGB+W+Lime white signature as 140's pad 20. **[correlated]**
+- `research/preset-format-165.md` reads preset `f31` as bitmasks of type-140
+  pads, citing "Deep Red" → mask 32 → pad 6. Pad 6 is now confirmed to be
+  **Red** (`f1 = 255` alone), so a **bit `n` of that mask selects pad `n + 1`**
+  in this same order. Still **[hypothesized]** overall, but the anchor holds.
+- The static colour picker is mode **11** (`STATIC_COLOR_PICKER`) in
+  `mode-map.md`, reached with SHIFT + a pad from mode 7.
+
+### Still open on type 140
+
+- Whether a pad's **name** can be changed at all, and where it would be stored.
+- Whether any group can hold a **different number of pads** than 20 (`field 1`
+  is 20 in every record of every file).

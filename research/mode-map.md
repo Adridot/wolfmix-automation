@@ -72,7 +72,9 @@ enum; where 2.0.2 renamed one, both are given.
 | 9 | STATIC `POSITION` | `STATIC_POSITION` |
 | 10 | STATIC `LIVE EDIT` | `LIVE_EDIT` |
 | 12 | SHIFT + a position pad | `POSITION_PICKER` → **`STATIC_POSITION_PICKER`** |
-| 15 | LIVE EDIT → edit a pad | `LIVE_EDIT_EDIT` (see open question) |
+| 14 | STATIC GOBO → SHIFT + a gobo pad | `GOBO_EDIT` |
+| 15 | LIVE EDIT → fixture grid → EDIT | `LIVE_EDIT_EDIT` |
+| 21 | MOVE FX → sequence editor | `MOVE_SEQ` |
 | 16 | gear icon | `SETUP` — the main menu, parent of 19/23/25/26/43 |
 | 17 | main menu → Fixtures | `FIXTURE_SETUP` |
 | 19 | main menu → New, or Fixtures → ADD | `FIXTURE_SELECTION` |
@@ -95,7 +97,9 @@ three names that vanished from the SDK are renames at their original values
 confirmed and 43 is seen but unnamed.
 
 Still unmeasured: `FILE_BROWSER`, `LIVE_EDIT_MACRO_EDIT`, `SEQ_POSITION_PICKER`
-and `USB_STICK` share the four remaining slots 39–42. `USB_STICK` and
+and `USB_STICK` share the four remaining slots 39–42. Neither picker showed up
+inside its parent editor: the whole sequence session (group toggle, step
+buttons, settings sub-page) stayed at 21, and the gobo edit stayed at 14. `USB_STICK` and
 `FILE_BROWSER` are probably unreachable here (the USB-A socket is MK2+).
 `MAPPING` turned out to exist on MK1 after all, at 43 — operator-confirmed by
 toggling between it and the main menu with the back button. Also unreached:
@@ -229,6 +233,24 @@ project only ever existed in RAM; nothing was saved over anything.
 **Lesson for future probes**: on this firmware a menu entry acts immediately,
 there is no confirmation dialog. Never ask the operator to "open and leave" an
 entry whose name implies a state change.
+
+## MODE-01 round 4 — sub-editors, on a project that has fixtures
+
+**[device-confirmed]**, operator narrating each gesture:
+
+- **21 = `MOVE_SEQ`** — MOVE FX → sequence editor. Everything done inside it
+  (gear sub-page, enabling then disabling the sequence on group A, a pad, the
+  STEP 1/4 touch button) stayed at 21.
+- **14 = `GOBO_EDIT`** — STATIC GOBO → SHIFT + a gobo pad, 27 s, back to 8.
+- **15 = `LIVE_EDIT_EDIT`** — reached through the fixture grid → EDIT → channel
+  list. Toggling a live edit pad on and off does **not** leave mode 10, which
+  corrects the round-3 reading.
+
+`LIVE_EDIT_MACRO_EDIT` is still unmeasured. Guide 9 describes a different
+screen from the one reached here: SHIFT + press one of the first three
+encoders should open a **feature chooser** (first encoder picks which feature
+the macro controls, third filters the fixture grid by group), not the channel
+list. Whether a MK1 exposes it is unknown.
 
 ## Flash FX buttons — project data worth decoding
 

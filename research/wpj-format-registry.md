@@ -940,8 +940,8 @@ type-145 items. The odd-looking sequence in the palette — 425, 424, 423, 422,
 421, 420 then 342 … 352 — is simply the order the ranges appear on the fixture's
 gobo wheel; it is not a counter.
 
-Two identities, checked mechanically on **25/25** variant-A files
-(`research/` script kept out of the repo; the check is reproduced below):
+Two identities, checked mechanically on **25/25** variant-A files by
+`tools/wpj_identities.py` (part of `make check`):
 
 | Identity | Meaning |
 |---|---|

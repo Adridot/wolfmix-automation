@@ -53,8 +53,10 @@ SCHEMAS = {
     125: {5: ("groupes", {8: ("nom", "str")})},
     135: {5: ("pads", _PAD)},
     140: {2: ("page", "v"), 5: ("pads", _PAD)},
-    145: {5: ("boutons", {1: ("f1", "str"), 3: ("f3", "str")})},  # glyphe + nom :
-    # clés neutres (sémantique hypothesized), décodés UTF-8
+    # 145 : palette gobo. f1 = glyphe police d'icônes (' ' = vide), f2 = id
+    # d'image gobo (= 111[plage].f4), f3 = nom optionnel. Voir le registre.
+    145: {5: ("gobos", {1: ("glyphe", "str"), 2: ("gobo_id", "v"),
+                        3: ("nom", "str")})},
     150: {5: ("positions", {5: ("nom", "str")})},
     160: {5: ("macros", {6: ("nom", "str")})},
     165: {5: ("presets", _PRESET)},

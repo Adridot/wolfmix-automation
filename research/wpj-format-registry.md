@@ -738,3 +738,86 @@ Structure complète décodée le 2026-08-25 : voir `research/preset-format-165.m
 (enveloppe correlated, sous-message preset et FX largement correlated,
 correction : type 140 = pads couleur statique, pas configs FX ;
 type 161 = état volatil, pas du contenu de show).
+
+## Type 140 ×8 — the static COLOUR palettes, one per group — **[correlated]**
+
+Same family shape as type 150: eight copies, `field 1` = 20, top-level
+`field 2` = group index 0…7 (absent for A), and 20 repeated `field 5` items.
+Every value in every item is ≤ 255 across the whole corpus (25 variant-A files,
+4000 pads), so the items are byte-wide channel levels, not 16-bit like the
+position palette.
+
+### The item is the same sub-message as type 135
+
+Record **135** carries 16 items of exactly the same shape, and wpj-toolkit
+documents 135 as the global ColorFX palette whose pads hold
+`red / green / blue / white / amber / lime / uv`, absent = omitted. Fields 1–7
+in that order. Record 140 reuses that sub-message with 20 items instead of 16.
+
+```
+field 1 = 20                     pad count
+field 2 = 0…7                    group index, absent for A
+field 5 × 20                     one per colour pad
+  f1 red    f2 green   f3 blue   f4 white
+  f5 amber  f6 lime    f7 uv     — 0…255, absent = 0
+```
+
+### Why the corpus alone already argues for it
+
+Only **26 distinct pads** exist corpus-wide, and the four "extra" channels
+appear only on the hues that would actually use them:
+
+| Pad | Stored | Reading | Sense |
+|---|---|---|---|
+| 20 | `f1..f4 = 255, f6 = 255` | R G B W L all full | the **white** pad, and the only pad with `f4` in a factory page |
+| 1 | `f1=255 f2=127 f5=255` | R 100 G 50 **A 100** | orange — the one pad that drives **amber** |
+| 4 | `f1=60 f3=255 f7=255` | R 24 B 100 **UV 100** | violet — the only pad with `f7`, and `f7` is **255 or absent, never anything else** |
+| 6 | `f1=255` | pure red | matches `preset-format-165.md`: preset "Deep Red" points at pad 6 |
+| 2, 8, 12, 13, 17, 18, 19 | carry `f6` | green/yellow/cyan family | **lime** appears on exactly the hues a lime LED helps |
+
+Read as RGB, the 20 factory pads land on a clean hue sweep — 0°, 30°, 60°, 90°,
+120°, 150°, 180°, 210°, 240°, 300°, 330° — with saturation and value at 100 %
+on the pure ones. Read with the fields permuted, they do not.
+
+Status is **correlated**, not device-confirmed: the argument is internal
+consistency plus one external document, and no screen has been read yet.
+
+### Prediction published before measuring — group B, experiment project
+
+The eight groups are identical in the experiment project except pads 2 (group A)
+and 11, 16 (group B). Group B carries the only edited pads with a `f4`, so it is
+the one to read. `field 11` of record 102 aside, record 140 has not moved once
+across the 25 snapshots, so these are the values on the device right now.
+
+Expected on SHIFT + pad, if the picker shows per-channel percentages
+(`round(v / 255 × 100)`):
+
+| Group B pad | Stored | R | G | B | W | A | L | UV |
+|---|---|---|---|---|---|---|---|---|
+| 16 | `f1=255 f2=105 f3=8 f4=64` | **100** | **41** | **3** | **25** | 0 | 0 | 0 |
+| 11 | `f1=255 f2=64 f4=52` | **100** | **25** | 0 | **20** | 0 | 0 | 0 |
+| 8 | `f2=255 f3=127 f6=40` | 0 | **100** | **50** | 0 | 0 | **16** | 0 |
+| 4 | `f1=60 f3=255 f7=255` | **23–24** | 0 | **100** | 0 | 0 | 0 | **100** |
+| 1 | `f1=255 f2=127 f5=255` | **100** | **50** | 0 | 0 | **100** | 0 | 0 |
+
+Pad 16 alone separates `f1`, `f2`, `f3` and `f4` with four distinct values
+(100 / 41 / 3 / 25) — no collision. Pads 8, 4 and 1 then pin `f6`, `f7` and
+`f5`; each has one unique value (16, 23, and amber's presence) and the rest are
+already pinned by pad 16.
+
+If the picker is a colour wheel instead (mode **11 = `STATIC_COLOR_PICKER`**
+exists in `mode-map.md`), the same five pads predict distinct hues:
+pad 16 → **23.6°**, pad 11 → **15.1°**, pad 8 → **150°**, pad 4 → **254°**,
+pad 1 → **30°**, all at saturation 100 % except pad 16 at 96.9 %.
+
+Either display shape is decisive. The two readings cannot both be right.
+
+### Not settled by the corpus
+
+- **The pad grid order.** Pad 1…20 is the wire order; the physical 4 × 5 layout
+  is unknown, and reading the list as 5 rows × 4 columns puts the pure primaries
+  in one column, which is suggestive but not proof.
+- **Whether a pad can be renamed.** No `string` field ever appears in a 140 item,
+  unlike the position palette's `f5`. Static colour pads may simply have no name.
+- **Absent vs 0.** As everywhere in this format, the firmware omits defaults; a
+  writer must treat them alike.

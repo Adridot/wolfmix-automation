@@ -399,6 +399,33 @@ This matches guide 8, which says the static screens' values are "saved
 globally". **[hypothesized]** the fade is controller-global state, stored
 outside the project — a candidate for `wmPersistent.wmx` rather than `.wpj`.
 
+## FX-09 — the mask is a real bitmask, and two more negatives
+
+One save: BLACKOUT excludes group **D**, STROBE excludes **A and B**, master
+brightness set to **80 %**. Record 102 only.
+
+- **`f8`: 1 → 3** — A + B together. The excluded-group field is genuinely a
+  **bitmask**, bit 0 = A, bit 1 = B. **[device-confirmed]**
+- **`f1` = 8 appeared** — BLACKOUT's own mask, group D = bit 3.
+  **[device-confirmed]**
+
+Field numbers do not follow the effect order: BLACKOUT = 1, BLINDER = 3,
+STROBE = 8. Two effects have no mask yet, WOLF and SPEED, and the operator
+reports **SMOKE has no exclusion control at all** on this MK1.
+
+### Negatives
+
+- **Master brightness is not project data.** Set to 80 %, saved, and `f11`
+  stayed at 100 — nothing anywhere in the file moved except the two mask
+  fields. Like the STATIC POSITION fade, it is controller-global or live-only
+  state.
+- **WOLF has no adjustable parameter** on the first encoder, so `f11` cannot be
+  a WOLF setting.
+
+`f11 = 100` is still unattributed, and is now the last unknown in record 102.
+**[hypothesized]** a BLINDER level, since the guide describes BLINDER as
+setting everything to full power and the value sits at exactly 100.
+
 ## Type 115 — a 20-slot list, `field 6` moves as a block — **[observed]**
 
 The record holds 20 repeated `field 5` items plus a 20-byte `field 6` on the

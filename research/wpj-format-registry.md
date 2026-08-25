@@ -38,7 +38,8 @@ Corpus de preuve : `corpus/SHA256SUMS`, relevé du 2026-08-25, WTOOLS 1.6.3.
   (types connus 101 / 135 / 165). **[hypothesized]** format « device /
   MK2-era », produit par la synchro WLINK.
 - **[correlated]** Inventaire des types TLV, identique sur 5/5 fichiers A
-  (41 enregistrements) : 101, 102 (16 o fixe), 105, 106, 110, 111, 115,
+  à une exception près : le type 160 (macros) est optionnel — absent de
+  cc21/cd21/47c10d40 (40 enregistrements), présent ailleurs (41) : 101, 102 (16 o fixe), 105, 106, 110, 111, 115,
   116, 120, 125, 130, 135, 140 ×8, 145 ×8, 150 ×8, 151, 155, 160, 161,
   165 (le plus gros, ~30 Ko — conteneur presets selon wpj-toolkit).
   ×8 : candidat groupes A–H. Sémantique des 17 types non documentés par

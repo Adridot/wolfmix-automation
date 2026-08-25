@@ -37,6 +37,19 @@ Corpus de preuve : `corpus/SHA256SUMS`, relevé du 2026-08-25, WTOOLS 1.6.3.
 - Concordance directe avec le conteneur documenté par wpj-toolkit
   (types connus 101 / 135 / 165). **[hypothesized]** format « device /
   MK2-era », produit par la synchro WLINK.
+- **[correlated]** Inventaire des types TLV, identique sur 5/5 fichiers A
+  (41 enregistrements) : 101, 102 (16 o fixe), 105, 106, 110, 111, 115,
+  116, 120, 125, 130, 135, 140 ×8, 145 ×8, 150 ×8, 151, 155, 160, 161,
+  165 (le plus gros, ~30 Ko — conteneur presets selon wpj-toolkit).
+  ×8 : candidat groupes A–H. Sémantique des 17 types non documentés par
+  wpj-toolkit : inconnue.
+- **[observed]** En-tête : octets 20–35 = UUID du projet (= nom de
+  fichier wlinkData) ; octet 0x28 diffère entre deux révisions du même
+  projet (0x07 → 0x0f) — candidat compteur de révision/sauvegarde.
+- Paire différentielle disponible : `f2737ec3….wpj` et
+  `rig-c-bug.wpj` = même UUID, deux révisions (16 records diffèrent,
+  type 101/nom identique). Trop de changements simultanés pour valider
+  des champs — utile comme corpus, pas comme expérience minimale.
 
 ## Corps protobuf (variantes B et C) — structure top-level
 

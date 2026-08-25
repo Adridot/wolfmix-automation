@@ -25,6 +25,8 @@ sont jamais modifiés ; les copies sont en lecture seule.
 | 00000000-…-cc21….wpj « rig-a » | 38 787 | 2025-09-20 | A — SHA-1 + conteneur TLV type 100 |
 | 00000000-…-cd21….wpj | 40 391 | 2025-09-20 | A |
 | f2737ec3….wpj | 43 329 | 2025-09-20 | A |
+| rig-c.wpj | 39 737 | déposé 2026-08-25 en cours de session, provenance à confirmer | A |
+| rig-c-bug.wpj | 44 729 | idem — même UUID que f2737ec3… (autre révision) | A |
 | 8b58abca….wm | 550 310 | 2023-10-16 | conteneur hex ASCII (chiffré ?) |
 | f4a5d15f….wm | 551 142 | 2023-10-16 | idem |
 | wmx/wmBrands.wmx, wmProfiles.wmx, wmProjects.wmx, wmPersistent.wmx | — | — | conteneur hex ASCII versionné (001–003), payload haute entropie |

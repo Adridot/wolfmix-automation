@@ -355,6 +355,50 @@ choosing it. If confirmed, the 10 s timer is not persistent for SMOKE, which
 would explain why no corpus file carries a 2 or 3 at that index while
 `rig-c.wpj` does carry a 4.
 
+## FX-08 — the collision resolved; type 102 is now readable end to end
+
+One save: BLINDER fade-out 2 s → **1 s**, SPEED FREEZE → **2×**. Record 102 was
+again the only record touched.
+
+- `f2`: **4 → 3** — it tracked the fade-out, so **`f2` = BLINDER fade-out**,
+  an index into the list the device offers (0, 0.2, 0.5, 1 s, 2 s).
+- `f3`: **stayed 4** — so **`f3` = BLINDER's excluded-group mask**, group C =
+  bit 2 = 4.
+- `f7`: **absent → 2**, confirming both the SPEED multiplier mapping and that
+  FREEZE stores 0.
+
+### Type 102 as it now stands
+
+| Field | Meaning | Encoding | Status |
+|---|---|---|---|
+| 2 | BLINDER fade-out | index into 0 / 0.2 / 0.5 / 1 s / 2 s | device-confirmed |
+| 3 | BLINDER excluded groups | bitmask, bit 0 = A | device-confirmed |
+| 4 | release mode ×6 | WOLF, STROBE, BLINDER, SPEED, BLACKOUT, SMOKE; 0=FLASH 1=TOGGLE 2=1s 3=5s 4=10s | device-confirmed |
+| 5 | SMOKE fan speed | 0–100 | device-confirmed |
+| 6 | SMOKE intensity | 0–100 | device-confirmed |
+| 7 | SPEED multiplier | absent/0 = normal **and** FREEZE, 1 = 0.5×, 2 = 2×, 4 = 4×, 8 = 8× | device-confirmed |
+| 8 | STROBE excluded groups | bitmask, bit 0 = A | device-confirmed |
+| 9 | STROBE speed | 1–100 | device-confirmed |
+| 11 | unknown, 100 in every file | — | unattributed |
+
+Missing: the excluded-group masks for WOLF, SPEED, BLACKOUT and SMOKE. Since
+BLINDER's and STROBE's live in separate fields, four more field numbers should
+exist and appear only once a group is actually excluded.
+
+**FREEZE is not distinguishable from normal speed inside record 102.** Either
+it is not persisted, or it lives in another record.
+
+## STATIC POSITION fade is not project data — **[correlated]**
+
+The operator set the fade to **37 s**, saved, and not one byte moved anywhere in
+the file; then to **46 s**, saved, and again only record 102 changed, for
+unrelated reasons. The encoder offers 0–60 s in 1 s steps, so both values were
+reachable and displayed.
+
+This matches guide 8, which says the static screens' values are "saved
+globally". **[hypothesized]** the fade is controller-global state, stored
+outside the project — a candidate for `wmPersistent.wmx` rather than `.wpj`.
+
 ## Type 115 — a 20-slot list, `field 6` moves as a block — **[observed]**
 
 The record holds 20 repeated `field 5` items plus a 20-byte `field 6` on the

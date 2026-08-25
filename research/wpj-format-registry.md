@@ -426,6 +426,50 @@ reports **SMOKE has no exclusion control at all** on this MK1.
 **[hypothesized]** a BLINDER level, since the guide describes BLINDER as
 setting everything to full power and the value sits at exactly 100.
 
+## Type 102 — final map, FX-10
+
+`field 10` appeared at **32** when WOLF excluded group F. The record is closed
+except for one field.
+
+| Field | Meaning | Encoding | Status |
+|---|---|---|---|
+| 1 | BLACKOUT excluded groups | bitmask, bit 0 = A … bit 7 = H | device-confirmed |
+| 2 | BLINDER fade-out | index into 0 / 0.2 / 0.5 / 1 s / 2 s | device-confirmed |
+| 3 | BLINDER excluded groups | bitmask | device-confirmed |
+| 4 | release mode ×6 | order WOLF, STROBE, BLINDER, SPEED, BLACKOUT, SMOKE; 0=FLASH 1=TOGGLE 2=1 s 3=5 s 4=10 s | device-confirmed |
+| 5 | SMOKE fan speed | 0–100 | device-confirmed |
+| 6 | SMOKE intensity | 0–100 | device-confirmed |
+| 7 | SPEED multiplier | 0 = normal **and** FREEZE, 1 = 0.5×, 2 = 2×, 4 = 4×, 8 = 8× | device-confirmed |
+| 8 | STROBE excluded groups | bitmask; A+B wrote 3 | device-confirmed |
+| 9 | STROBE speed | 1–100 | device-confirmed |
+| 10 | WOLF excluded groups | bitmask | device-confirmed |
+| 11 | **unknown**, 100 in every corpus file | — | unattributed |
+
+A mask field only exists once a group is actually excluded; absent means none.
+Only four effects can exclude groups — the operator confirms **SPEED and SMOKE
+have no exclusion control** on this MK1, which is why exactly four mask fields
+exist.
+
+### What `field 11` is not
+
+Ruled out by measurement or by the absence of a control: SMOKE intensity and
+fan (`f5`/`f6`), BLINDER fade-out (`f2`) and any other BLINDER value (the
+screen has no second parameter), any WOLF parameter (the screen has none),
+STROBE speed (`f9`), and master brightness (set to 80 %, wrote nothing). Look
+for it in Settings → Project, where the group exclusions also live.
+
+### Settings that are NOT project data — **[correlated]**
+
+Three controller settings were changed and saved without writing a single byte
+anywhere in the `.wpj`:
+
+- STATIC POSITION fade (37 s, then 46 s)
+- master brightness (80 %)
+
+Guide 8 calls the static screens' values "saved globally". These belong to
+controller-global storage, a candidate for `wmPersistent.wmx`. A show generator
+cannot set them through a project file.
+
 ## Type 115 — a 20-slot list, `field 6` moves as a block — **[observed]**
 
 The record holds 20 repeated `field 5` items plus a 20-byte `field 6` on the

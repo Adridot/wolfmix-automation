@@ -195,15 +195,66 @@ two other records moved (type 115 `field 6` back to absent, type 155 first item
 grew by one byte and its `field 3` went 4 → 16). Those changes cannot be
 attributed. Single-variable saves only from now on.
 
-## Type 155 — 4 × 128 byte arrays, likely the DMX patch map — **[observed]**
+## Type 155 — the four FX sequences — **[device-confirmed]**
 
-`field 1` = 4, then four `field 5` items. Each item carries `f1 = 8`,
-`f2` ∈ {1, 2}, `f3` ∈ {2, 4}, and `f4` = a **128-byte array**. 4 × 128 = 512,
-one DMX universe. The first item's array reads `00×9, 01×8, 02×8, 03×8 …`,
-i.e. a fixture index per channel.
+Earlier entries in this registry called this record a DMX patch map and then a
+set of 128-byte arrays. Both were wrong. It is the **sequencer**, and it is now
+decoded end to end.
 
-In FX-03 the first item's array grew to **129 bytes** with a `01` prepended and
-its `f3` went 4 → 16. Not attributable — see the confound above.
+### Structure
+
+```
+field 1 = 4                      number of sequences
+field 5 × 4                      one per sequence
+  field 1 = 8                    constant in every file
+  field 2 ∈ {1, 2}               sequence kind
+  field 3                        step count, 1…16
+  field 4                        PACKED VARINTS — 128 values, not raw bytes
+```
+
+**The `field 4` blob is a packed varint array, not a byte array.** That is why
+its length varies: 128 in most files, 133 when five values need two bytes.
+Verified on **25/25** corpus and experiment files: every one holds exactly four
+sequences of exactly 128 varints.
+
+### Layout: step-major, 16 steps × 8 groups
+
+Index = `step × 8 + group`, group 0 = A. Each value is a **position index into
+that group's own palette**, and **255 means "no position"**.
+
+The value domain is **0–19**: the static position palette holds 20 slots, shown
+on the device as 5 entries × 4 pages. 255 is a sentinel outside that range.
+
+### How it was confirmed
+
+The operator photographed the SEQUENCER screen at every step from 1/16 to
+16/16 while the file was in a known state. The decoded array predicts each
+screen exactly:
+
+| Step | Decoded row | Screen |
+|---|---|---|
+| 1 | A = 255, C = 255, rest 0 | no highlight on the A or C rows |
+| 2 | all = 1 | "Center" highlighted on every group |
+| 3 | all = 2 | "Center Point" |
+| 4 | all = 3 | "Crowd" |
+| 5 | A = 255, C = 255 | no highlight again |
+| 6 | all = 0 | `<group-A name>` on A, "Floor" on C — the same index, each group's own name |
+
+Reading the same array as 8 groups × 16 steps produces ragged nonsense, so the
+step-major order is not a coin flip.
+
+### Sequencer UI, for future experiments
+
+- The pad matrix is 4 columns × 5 rows. **Row 1 activates the sequence per
+  group**; rows 2–5 are the **16 steps**.
+- **SHIFT + a step pad sets the step count** to that step: the operator did
+  SHIFT + step 1 and `field 3` went 16 → 1.
+- The screen lists 5 position names per group with a PAGE 1/4 indicator, and
+  each group carries its own names for the same index.
+
+**No hardware experiment was needed.** The photographs plus the bytes already
+in hand were enough, which is worth remembering: describing the UI is often
+cheaper than another write-and-save cycle.
 
 ## Type 102, remaining fields — **FX-04**
 

@@ -242,14 +242,43 @@ alone could not have caught it: group C's PAN reads 50 % on every named slot, so
 pan and the neutral fields are indistinguishable in this rig. Only the device's
 own screen separated them.
 
-Still open: **PAN**, **FOCUS OFFSET** and **CROSS** share `f4`, `f6` and `f8`,
-all sitting at 32768 for group C. FOCUS OFFSET displays **0 %** while its field
-holds 32768, so that value is **signed with 32768 as zero**, unlike TILT and FAN.
+Resolved with one more screen. Group A's `<group-A name>` is the only slot in the
+corpus where these fields disagree, and it reads **PAN 13, TILT 23, FOCUS
+OFFSET 100, FAN|CROSS 50**:
 
-**One screenshot resolves all three.** Group A's `<group-A name>` is the only slot in
-the corpus where these fields disagree: `f4` = 65535, `f6` = 8519 (13 %),
-`f8` = 32767. SHIFT + `<group-A name>` on group A and reading PAN, FOCUS OFFSET and
-CROSS off the screen assigns each field in one shot.
+| Field | Value | Unsigned | Screen |
+|---|---|---|---|
+| `f3` | 32768 | 50 % | FAN\|CROSS **50** |
+| `f4` | 65535 | 100 % | FOCUS OFFSET **100** |
+| `f6` | 8519 | **13 %** | PAN **13** |
+| `f7` | 15073 | **23 %** | TILT **23** |
+| `f8` | 32767 | 50 % | — |
+
+### Slot layout — **[device-confirmed]**
+
+```
+field 3   FAN            unsigned, percent × 65535
+field 4   FOCUS OFFSET   signed, 32768 = 0 %, 65535 = +100 %
+field 5   name           UTF-8, absent when the slot is empty
+field 6   PAN            unsigned, percent × 65535
+field 7   TILT           unsigned, percent × 65535, absent = 0
+field 8   CROSS          [hypothesized] — see below
+```
+
+`f4` is the one signed field: group C shows **FOCUS OFFSET 0 %** while holding
+32768, and group A shows **100 %** holding 65535. Both fit `(v − 32768) / 32767`.
+Every other field is a plain unsigned fraction of 65535, and each matched its
+screen percentage to the unit across four slots and two groups.
+
+**`f8` stays [hypothesized] = CROSS.** The editor labels one encoder
+`FAN | CROSS` and shows a single percentage, which always tracked `f3`, so
+CROSS is presumably the other half revealed by pushing that encoder. `f8` is
+50 % in both photographed groups and takes only three values corpus-wide
+(32767, 32768, 36044 = 55 %), consistent with a rarely-touched control. It
+needs a slot where CROSS is actually set.
+
+`field 1` = 4 appears on exactly one slot in the corpus, group A's first, and is
+still unexplained.
 
 ### Why the DMX cross-check could not settle it
 

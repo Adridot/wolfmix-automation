@@ -33,13 +33,13 @@ beam) + presets utilisateur en queue.
 
 | Champ | Sémantique | Statut |
 |---|---|---|
-| f7 | type d'effet : Sparkle=1, Chaser=2, CanCan=3, Heartbeat=4, Wolf Rider=5, FX Seq1=6 (0=Sin Wave omis) | correlated (6 noms) |
+| f7 | type d'effet : Sparkle=1, Chaser=2, CanCan=3, Heartbeat=4, Wolf Rider=5, FX Seq1=6 (0=Sin Wave omis) | **device-confirmed** (ACC-04 : 3→2 = Chaser constaté sur W1) |
 | f4 | linkOrder {10,11,12,13} = Group/Fwd-Rev-Out-In, déf. 10 | correlated (enum wpj-toolkit) |
 | f10 | speedSource {1 micro, 2 audio/BPM} (0 Clock omis) | correlated |
 | f1 | bpmDivision {1,2,3}, déf. 3 | correlated |
 | f2 | speed % (observé jusqu'à 200 — dépasse le 0-100 du toolkit) | correlated |
 | f8 / f6 / f9 | size % / fade % / phase % (déf. 100/25/50) — attribution size/fade permutable | hypothesized |
-| f5 | ColorFX : 2 varints (candidat maskRaw pads) ; MoveFX : 1 varint 0-6 | hypothesized |
+| f5 | ColorFX : 2 varints = masque 16 bits des pads (v1=pads 1-8, v2=pads 9-16 : Rainbow [224,10]=6-8+10/12, Carnival [240,4]=5-8+11) ; MoveFX : 1 varint 0-6 | correlated (ACC-05 en cours) |
 
 ## Corrections et types frères
 

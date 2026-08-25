@@ -87,3 +87,14 @@ couleur (255 sur tous les presets ColorFX usine, 0 sur statiques/beam —
 correlated sur le bloc 20-39). ACC-04 : édition en place d'un preset
 ColorFX existant (id 33 « Carnival », effet 3→2) — teste le mapping FX
 seul, sans la question d'activation.
+
+## Journal — ACC-04 (2026-08-25) : effet FX device-confirmed
+
+Édition en place de « Carnival » (id 33) : f7 3→2. Sur W1 : Chaser de
+couleurs constaté, mode audio conservé. → FX f7 (effet)
+**device-confirmed** ; chaîne d'édition de presets validée de bout en
+bout. Observations UI : vitesse affichée « 1 » quand f2 est absent ;
+pads de couleur « désactivés partout » sur ce preset alors que f5=[240,4]
+inchangé — relation f5↔UI pads à trancher (ACC-05 : f5 [240,0]→[3,0] sur
+« Wipeout », attendu pads 1+2 ; vitesse 50→200 sur « Insane Colors »,
+attendu chaser nettement plus rapide).

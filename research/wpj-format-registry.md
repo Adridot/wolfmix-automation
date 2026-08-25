@@ -195,6 +195,66 @@ two other records moved (type 115 `field 6` back to absent, type 155 first item
 grew by one byte and its `field 3` went 4 → 16). Those changes cannot be
 attributed. Single-variable saves only from now on.
 
+## Type 150 ×8 — the static POSITION palettes, one per group — **[device-confirmed]**
+
+Found by searching the corpus for the position names the operator photographed
+on the SEQUENCER screen. Record 150 appears **eight times**, and:
+
+- the **first** copy contains `<group-A name>`, the seven others contain `Floor`;
+- `<group-A name>` is exactly what the operator's **group A** shows where every other
+  group shows the factory default `Floor`.
+
+That settles it: **the ×8 record families are the eight groups A–H**, indexed by
+top-level `field 2` = 0…7 (absent for group A). An earlier survey concluded the
+opposite; it was wrong.
+
+### Structure
+
+```
+field 1 = 20                     slot count — matches "20 slots per group"
+field 2 = 0…7                    group index, absent for A
+field 5 × 20                     one per palette slot
+  field 3   pan     16-bit, 0…65535
+  field 4   ?       32768 or 65535 in the whole corpus
+  field 5   name    UTF-8, absent when the slot is empty
+  field 6   ?       9 distinct values corpus-wide
+  field 7   tilt    16-bit, 0…65535, absent = 0
+  field 8   ?       32767 / 32768 / 36044
+```
+
+### Why `field 3` = pan and `field 7` = tilt — **[correlated]**
+
+Group C, the moving heads, holds five named positions whose values are **exact
+whole percentages of 65535**:
+
+| Slot | `f3` | | `f7` | |
+|---|---|---|---|---|
+| Floor | 32768 | 50 % | absent | **0 %** |
+| Center | 39321 | 60 % | 32768 | 50 % |
+| Center Point | 19660 | 30 % | 26214 | 40 % |
+| Crowd | 45874 | 70 % | 45874 | 70 % |
+| Ceiling | 32768 | **50 %** | 65535 | **100 %** |
+
+The names read as a coherent rig: *Floor* is tilt at 0 with pan centred —
+straight down. *Ceiling* is tilt at 100 with pan centred — straight up. *Crowd*
+tilts up toward the audience. Nothing else in the record behaves like an angle:
+`f4`, `f6` and `f8` sit at 32768 for every slot of that group, the neutral
+midpoint expected of the focus-offset, FAN and CROSS controls guide 8
+describes.
+
+**[hypothesized]** `f4`, `f6`, `f8` = focus offset, FAN, CROSS in some order.
+They are at their neutral value in this rig, so the corpus alone cannot order
+them.
+
+### Confirming experiment, read-only
+
+Recalling a position changes the DMX output immediately, so no save and no
+write is needed. On the STATIC POSITION screen with the moving-head group
+selected, tap **Floor**, capture an envelope, then tap **Ceiling** and capture
+again. Prediction: the heads' **tilt channel goes from 0 to full**, pan
+unchanged. `wolfmix.py dmx-envelope` is the oracle, and this also pins which
+DMX channel of the profile carries tilt.
+
 ## Type 155 — the four FX sequences — **[device-confirmed]**
 
 Earlier entries in this registry called this record a DMX patch map and then a

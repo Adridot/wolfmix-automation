@@ -222,12 +222,28 @@ Unchanged throughout: `field 4` (release modes), `field 5` = 100, `field 6` =
 100, `field 11` = 100. Those three remain unattributed; blinder fade-out,
 smoke intensity and smoke fan are the documented candidates.
 
-**`field 7` = SPEED multiplier, stored literally — [device-confirmed].**
-FX-05: the operator moved SPEED from 2× to **4×** in a single save and
-`field 7` went **2 → 4**. A list index would have written 3, so the value is the
-multiplier itself. Normal speed leaves the field absent (0). Still open: how
-**FREEZE** and the fractional **0.5×** are encoded, since neither fits an
-integer multiplier.
+**`field 7` = SPEED multiplier — mapping [device-confirmed], meaning open.**
+Four single-variable saves:
+
+| Setting | `field 7` |
+|---|---|
+| normal | absent (0) |
+| 0.5× | 1 |
+| 2× | 2 |
+| 4× | 4 |
+| 8× | not yet measured |
+| FREEZE | not yet measured |
+
+FX-05 (2× → 4×) ruled out a plain list index, which would have written 3. FX-06
+(4× → 0.5×) then ruled out the literal multiplier, which would have needed a
+fraction: it wrote **1**. The measured values are **1, 2, 4, 8-shaped** — powers
+of two. Two readings still fit all four points: the literal multiplier with 0.5
+rounded up to 1, or a rank encoded as `1 << rank` (0.5× = rank 0, 2× = rank 1,
+4× = rank 2). They coincide on 2 and 4 by accident.
+
+Discriminator: **FREEZE**. The rank reading predicts 16 (the next bit) or a
+sentinel; the literal reading predicts 0 or a sentinel distinct from "normal".
+Measuring 8× as well would confirm whichever survives.
 
 **Open on `field 8`**: one field appeared for one exclusion, but six effects can
 each exclude groups. Either `field 8` is STROBE's own mask and the other five

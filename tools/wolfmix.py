@@ -566,9 +566,16 @@ def dmx_envelope(connection, seconds):
     deadline = time.monotonic() + seconds
     try:
         while time.monotonic() < deadline:
-            _, _, event, payload = connection.read_frame(
-                max(0.001, min(connection.timeout, deadline - time.monotonic()))
-            )
+            try:
+                _, _, event, payload = connection.read_frame(
+                    max(0.001, min(connection.timeout, deadline - time.monotonic()))
+                )
+            except WolfmixError:
+                # The residual wait shrinks to nothing at the end of the window;
+                # that is the window closing, not a dead controller.
+                if time.monotonic() >= deadline:
+                    break
+                raise
             if event != DMX_PACKET:
                 continue
             data = decode_dmx_packet(payload)["data"]

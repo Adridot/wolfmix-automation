@@ -501,12 +501,12 @@ with no flash key held cannot see it. **Next: capture with BLINDER on, at
 - **Writing 0 stores the field as absent.** The firmware omits protobuf
   defaults, so "absent" and 0 are the same value. Any writer must treat them
   alike.
-- **Loading a project resets the flash release modes.** `field 4` came back as
-  `01 00 00 00 00 00` after a load-and-save cycle, losing the BLINDER TOGGLE,
-  SPEED 1 s and BLACKOUT 5 s that had been stored, and `field 7` was cleared
-  too. This generalises the SMOKE reversion seen in FX-07: **release modes and
-  the speed multiplier are runtime state that a project load resets**, even
-  though they are persisted.
+- ~~Loading a project resets the flash release modes.~~ **Retracted.** The
+  `field 4` value came back as `01 00 00 00 00 00` because **the operator reset
+  those modes by hand**, not because loading a project clears them. Nothing here
+  supports an automatic reset, and the SMOKE reversion noted in FX-07 remains a
+  single unexplained observation rather than the general behaviour this entry
+  claimed.
 - **RESTART (event 44) does not always cycle the USB device** on firmware
   2.0.18. One run kept the port open throughout; a later one reconnected
   normally. Automation must not require the disconnect.

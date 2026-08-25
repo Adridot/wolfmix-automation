@@ -25,18 +25,22 @@ class Wpj:
 
     @classmethod
     def load(cls, path):
-        d = open(path, "rb").read()
+        return cls.from_bytes(open(path, "rb").read(), str(path))
+
+    @classmethod
+    def from_bytes(cls, d, source="<bytes>"):
+        """Parse a variant-A project from bytes without creating a file."""
         if d[:20] != hashlib.sha1(d[20:]).digest():
-            raise ValueError(f"{path}: en-tête SHA-1 invalide")
+            raise ValueError(f"{source}: invalid SHA-1 header")
         root_len, root_type = struct.unpack_from("<IH", d, BODY_OFF)
         if root_type != ROOT_TYPE or BODY_OFF + 6 + root_len != len(d):
-            raise ValueError(f"{path}: pas un conteneur racine type 100 "
-                             f"(type={root_type}, len={root_len})")
+            raise ValueError(f"{source}: not a root container type 100 "
+                             f"(type={root_type}, length={root_len})")
         records, i, end = [], BODY_OFF + 6, len(d)
         while i < end:
             ln, typ = struct.unpack_from("<IH", d, i)
             if i + 6 + ln > end:
-                raise ValueError(f"{path}: enregistrement tronqué à {i}")
+                raise ValueError(f"{source}: truncated record at {i}")
             records.append((typ, d[i + 6 : i + 6 + ln]))
             i += 6 + ln
         return cls(d[20:BODY_OFF], records)

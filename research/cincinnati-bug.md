@@ -18,6 +18,16 @@ Si le type 120 porte les niveaux par canal (défaut/statique — dimmer,
 shutter…), cet effacement reproduit exactement le symptôme. Statuts :
 effacement **observed** ; causalité **hypothesized** (à valider).
 
+Mécanisme : une entrée vidée `2a 00` (message protobuf de longueur 0) se
+relit champ par champ comme **0** — exactement le « default channel
+values saved to 0 » du forum, en polarité inverse (ici la première
+fixture survit, tout le reste est à 0). Contre-vérifications : le type
+106 n'a AUCUNE entrée vide dans les deux révisions et les 48 canaux
+lasers y ont des défauts sains (255…) ; le type 111 est sain ; dans les
+révisions saines les pars ont bien `{1:255, 4:1}` ×7 (dimmer 255) là où
+le bug lit 0. Le record 120 de rig-c et f2737ec3 est sha-identique
+(07982a6d…), ce qui fait de f2737ec3 un donneur fiable.
+
 Corrélation forum (research/forum-findings-2026-08-25.md) : famille de
 bugs 2.0.x documentée — l'ajout de plusieurs fixtures d'un coup force à 0
 des valeurs par défaut de canaux (dimmer/shutter), la 2.0.18 corrigeait

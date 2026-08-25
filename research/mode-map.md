@@ -118,6 +118,59 @@ The key silkscreened `GROUPS` reports **28**, whose legacy name is
 setup, probably under the main menu); (b) WTOOLS renamed things and the panel
 key is a shortcut. Resolve by finding what produces 24.
 
+## MODE-01 round 2 — touchscreen and menu paths, same session
+
+**[device-confirmed]** new findings:
+
+| Value | Path | Name | Note |
+|---|---|---|---|
+| 44 | HOME → touch the tempo readout | `WM_MODE_BPM` | **first value above the legacy range** |
+| 34 | PRESET → magic-wand icon | `WM_MODE_INTELLIGENT_PRESET` | legacy `HUNGRY_WOLF` **renamed in place** |
+| 12 | STATIC POSITION → SHIFT + a position pad | `WM_MODE_STATIC_POSITION_PICKER` | legacy `POSITION_PICKER` renamed in place |
+| 19 | main menu → Fixtures → ADD | `WM_MODE_FIXTURE_SELECTION` | unchanged |
+| 23 | main menu → DMX VALUES | `WM_MODE_DMX_LEVELS` | unchanged |
+| 36 | DMX VALUES → beam editor | `WM_MODE_BEAM_EDITOR` | unchanged |
+| 28 | `GROUPS` key (chevrons) | `WM_MODE_WOLF` | **operator-confirmed**: it is the wolf auto-effect, not a groups screen |
+
+**[observed]**, name still open:
+
+- **43** — a project-menu entry (New / Open / Save), reached twice from mode 16.
+  The three entries were visited in one pass so the pairing is not yet
+  unambiguous. Round-3 target.
+- **15** — LIVE EDIT → editing screen. Both `WM_MODE_LIVE_EDIT_EDIT` (legacy 15)
+  and the new `WM_MODE_LIVE_EDIT_MACRO_EDIT` exist in 2.0.2, so they must hold
+  different values; which one is 15 depends on whether the pad or the encoder
+  was used. Round-3 target.
+
+**[device-confirmed]** operator report: `WM_MODE_GROUPS` (24) was still not
+reached. Group banks A–D / E–H are switched with SHIFT + `BPM TAP`, which
+produces no mode change. On a MK1 there may be no groups screen at all.
+
+**Unreachable on this hardware (MK1)**: `USB_STICK`, `FILE_BROWSER` (USB-A
+socket is MK2+), and probably `MAPPING` (MIDI is MK2+).
+
+## Flash FX buttons — project data worth decoding
+
+Guide 10 documents the six flash keys (`WOLF`, `STROBE`, `BLINDER`, `SPEED`,
+`BLACKOUT`, `SMOKE`) and three settings each, all of which must live inside
+the project file:
+
+- **Release mode**, set with the fourth encoder: `FLASH` (on press, off on
+  release), `TOGGLE`, or a `1s` / `5s` / `10s` timer.
+- **Per-effect parameters**: strobe speed, blinder fade-out time, speed
+  multiplier (FREEZE / 0.5× / 2× / 4× / 8×), smoke intensity and fan speed.
+- **Group exclusion**, from main menu → Settings → Project → pick the flash
+  effect → fourth encoder selects the excluded group(s).
+- The flash screens themselves can be disabled in the settings; they are then
+  reached with SHIFT + the flash key.
+
+**[hypothesized]** These six effects × (release mode, parameters, excluded
+group mask) are a compact, highly structured block — an ideal differential
+target. Six unknown TLV types are still unattributed (110, 111, 115, 116, 120,
+125, 130, 151, 155, 161). Planned experiment **FX-01**: download the
+experiment project, change exactly one release mode on the W1, save, download
+again, diff records.
+
 ### Navigation facts extracted from the embedded guides (WTOOLS 2.0.2)
 
 The W1 screen is a **touchscreen**, which is how the remaining modes are

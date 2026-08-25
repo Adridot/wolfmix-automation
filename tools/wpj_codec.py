@@ -19,7 +19,8 @@ import sys
 import wpjlib
 
 # Schémas : champ → (nom, genre). genre : "v" varint, "str" UTF-8,
-# "hex" octets bruts, dict = sous-message (répété pour les listes d'entrées).
+# "hex" octets bruts, "packed" = varints packés (liste d'ints),
+# dict = sous-message (répété pour les listes d'entrées).
 _PATCH = {1: ("profil", "v"), 4: ("adresse", "v"), 5: ("fixture", "v"),
           6: ("categorie", "v"), 7: ("nb_canaux", "v")}
 _PROFIL = {2: ("nb_canaux", "v"), 8: ("nom", "str"), 9: ("hash", "hex"),
@@ -27,6 +28,20 @@ _PROFIL = {2: ("nb_canaux", "v"), 8: ("nom", "str"), 9: ("hash", "hex"),
 # Ordre des 7 canaux d'un pad : wpj-toolkit (correlated)
 _PAD = {1: ("rouge", "v"), 2: ("vert", "v"), 3: ("bleu", "v"),
         4: ("blanc", "v"), 5: ("ambre", "v"), 6: ("lime", "v"), 7: ("uv", "v")}
+
+# Sous-message FX (commun Beam/Color/Move) — research/preset-format-165.md.
+# f8/f6/f9 (size/fade/phase, attribution permutable) et f3/f5 : clés neutres.
+_FX = {7: ("effet", "v"), 4: ("link_order", "v"), 10: ("speed_source", "v"),
+       1: ("bpm_division", "v"), 2: ("vitesse", "v")}
+_PRESET = {
+    19: ("id", "v"), 25: ("nom", "str"),
+    1: ("beam_fx1", _FX), 2: ("beam_fx2", _FX),
+    5: ("color_fx1", _FX), 6: ("color_fx2", _FX),
+    21: ("move_fx1", _FX), 22: ("move_fx2", _FX),
+    28: ("positions", "packed"),          # index de position par groupe A–H
+    17: ("dimmers", "packed"),            # dimmer par groupe A–H
+    8: ("color_fx_actif", "packed"), 24: ("move_fx_actif", "packed"),
+}
 
 SCHEMAS = {
     101: {1: ("nom", "str")},
@@ -37,10 +52,14 @@ SCHEMAS = {
     120: {5: ("canaux", {})},                 # entrée vide {} = `2a 00` = tout à 0
     125: {5: ("groupes", {8: ("nom", "str")})},
     135: {5: ("pads", _PAD)},
+    140: {2: ("page", "v"), 5: ("pads", _PAD)},
+    145: {5: ("boutons", {1: ("f1", "str"), 3: ("f3", "str")})},  # glyphe + nom :
+    # clés neutres (sémantique hypothesized), décodés UTF-8
     150: {5: ("positions", {5: ("nom", "str")})},
     160: {5: ("macros", {6: ("nom", "str")})},
+    165: {5: ("presets", _PRESET)},
 }
-# passthrough volontaire : 106, 110, 111, 130, 140, 145, 151, 155, 161, 165
+# passthrough volontaire : 106, 110, 111, 130, 151, 155, 161
 
 
 # --- wire protobuf -----------------------------------------------------------
@@ -85,6 +104,14 @@ def _decode_msg(buf, schema):
                     v = chunk.decode("utf-8")
                 except UnicodeDecodeError:
                     v = {"hex": chunk.hex()}
+            elif genre == "packed":
+                try:
+                    v, j = [], 0
+                    while j < len(chunk):
+                        x, j = _rvarint(chunk, j)
+                        v.append(x)
+                except ValueError:
+                    v = {"hex": chunk.hex()}
             elif genre == "hex":
                 v = chunk.hex()
             elif isinstance(genre, dict):
@@ -125,7 +152,12 @@ def _encode_msg(d, schema):
             f, genre = int(nom[1:]), None
         else:
             raise ValueError(f"clé inconnue {nom!r}")
-        for v in (val if isinstance(val, list) else [val]):
+        if genre == "packed" and isinstance(val, list) and \
+                not (val and isinstance(val[0], (list, dict))):
+            vals = [val]                     # une occurrence = une liste d'ints
+        else:
+            vals = val if isinstance(val, list) else [val]
+        for v in vals:
             out += _emit(f, genre, v)
     return bytes(out)
 
@@ -139,6 +171,8 @@ def _emit(f, genre, v):
         return _wvarint(f << 3) + _wvarint(v)
     if isinstance(v, dict) and set(v) == {"hex"}:
         pl = bytes.fromhex(v["hex"])
+    elif genre == "packed" and isinstance(v, list):
+        pl = b"".join(_wvarint(x) for x in v)
     elif genre == "hex":
         pl = bytes.fromhex(v)
     elif genre == "str" or isinstance(v, str):

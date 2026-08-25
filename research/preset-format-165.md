@@ -71,3 +71,13 @@ Rien qui explique le blackout → renforce le diagnostic type 120.
   [1,…]→[4,1,…] ; valide l'ordre A–H.
 - EXP-09 : couleur statique mono-pad (pad 6 rouge, groupe A) → localise
   l'encodage de f31 et tranche « 4 répétitions = groupes A–D ? ».
+
+## Corrections post-codec (2026-08-25)
+
+- **[observed]** f28/f17/f8/f24 sont des varints **packés** (wire type 2,
+  concaténation de varints), pas des varints répétés ; f8/f24 « flags »
+  sont packés à 1 élément ([255]), pas des varints nus.
+- **[observed]** f3 des boutons du type 145 = nom UTF-8 optionnel
+  (confirmé : « points »).
+- Codec : 165/140/145 fidèles octet sur 9 fichiers, 649 presets, zéro
+  repli raw (python3 tools/wpj_codec.py pour la preuve).

@@ -64,3 +64,14 @@ réécrit : nom → « WMX TEST ACC-01 », seul record différent, SHA-1 recalcu
 → Conteneur variante A + SHA-1 + encodage du record 101 :
   **device-confirmed**. Chaîne d'écriture wpjlib/codec : acceptée
   WTOOLS + W1 pour ce périmètre.
+
+## Journal — ACC-02 (2026-08-25) : acceptation structurelle OK, sémantique partielle
+
+Import WTOOLS + synchro W1 : OK. Sur l'appareil : nom du preset 78
+appliqué (**f25/nom device-confirmed**), mais Color FX et dimmers
+ignorés — le preset garde son masque de contenu f4=17 (bloc beam-only)
+et son flag color_fx_actif=[0]. Palette non encore vérifiée.
+→ Hypothèse renforcée : f4 (et/ou le flag f8) conditionne les sections
+que le W1 lit. Écrire des valeurs dans une section masquée est sans
+effet. ACC-03 en deux candidats : a) f4=25 (bit couleur ajouté, flag
+laissé à 0) ; b) f4=255 + color_fx_actif=[255].

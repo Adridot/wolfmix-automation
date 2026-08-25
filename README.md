@@ -71,12 +71,18 @@ l'instant. Langue : anglais pour cette couche, français conservé dans
 
 - `SPEC.md` — le format `.wpj` au niveau octet, chaque affirmation avec son
   statut de preuve. Couvre les trois variantes, les 20 types
-  d'enregistrement, le sous-message preset et FX, les règles d'écriture et
-  six pistes ouvertes. Rien d'équivalent n'existe publiquement : `wpj-toolkit`
-  publie des enums sans encodage wire et s'arrête à 3 types.
+  d'enregistrement, le modèle de patch (8 identités exactes sur 6 types),
+  le sous-message preset et FX, les règles d'écriture et huit pistes
+  ouvertes. Consolide `wpj-format-registry.md`, `preset-format-165.md` et
+  `corpus-mining-2026-08-25.md`, dont trois corrections : l'octet 40 est le
+  LSB d'un uint64 de version, le type 155 est le séquenceur FX et non le
+  patch DMX, le type 115 n'a pas 20 slots fixes. Rien d'équivalent n'existe
+  publiquement : `wpj-toolkit` publie des enums sans encodage wire et
+  s'arrête à 3 types.
 - `PROVENANCE.md` — sources, licences, ce qui est réutilisable et sous quelles
-  conditions ; sous-ensemble du corpus publiable (14 fichiers variante A,
-  `rig-c*` exclu) ; position sur le writer privé de WPJ Studio.
+  conditions ; sous-ensemble du corpus publiable (9 fichiers sûrs, 7 à
+  arbitrer car dérivés du rig rig-c) ; position sur le writer privé
+  de WPJ Studio.
 - `LICENSE` — MIT, comme `wpj-toolkit`, pour que la réutilisation croisée
   marche dans les deux sens. Une ligne à changer si l'arbitrage évolue.
 - `tools/wpj_api.py` — inspect JSON à la forme du schéma `wpj-toolkit`

@@ -86,7 +86,7 @@ enum; where 2.0.2 renamed one, both are given.
 | 33 | `BLACKOUT` | `BLACKOUT` |
 | 34 | PRESET → magic wand | `HUNGRY_WOLF` → **`INTELLIGENT_PRESET`** |
 | 36 | DMX VALUES → beam editor | `BEAM_EDITOR` |
-| 43 | a main-menu entry, not yet isolated | unknown, new |
+| 43 | main menu → Mappings | **`MAPPING`** (new) — present on MK1 |
 | 44 | HOME → touch the tempo readout | **`BPM`** (new) |
 
 **Result: the legacy 0–38 numbering is unchanged in firmware 2.0.18.** The
@@ -94,8 +94,12 @@ three names that vanished from the SDK are renames at their original values
 (8, 12, 34); the six genuinely new modes live at 39–44, of which `BPM` = 44 is
 confirmed and 43 is seen but unnamed.
 
-Not reached, and probably unreachable on a MK1: `USB_STICK` and `FILE_BROWSER`
-(the USB-A socket is MK2+), `MAPPING` (MIDI is MK2+), and `GROUPS` (24) — the
+Still unmeasured: `FILE_BROWSER`, `LIVE_EDIT_MACRO_EDIT`, `SEQ_POSITION_PICKER`
+and `USB_STICK` share the four remaining slots 39–42. `USB_STICK` and
+`FILE_BROWSER` are probably unreachable here (the USB-A socket is MK2+).
+`MAPPING` turned out to exist on MK1 after all, at 43 — operator-confirmed by
+toggling between it and the main menu with the back button. Also unreached:
+`GROUPS` (24) — the
 A–D / E–H bank switch is SHIFT + `BPM TAP`, which changes no mode.
 
 ## MODE-01 results — 2026-08-25, W1 serial withheld, fw 2.0.18
@@ -204,10 +208,10 @@ socket is MK2+), and probably `MAPPING` (MIDI is MK2+).
 - main menu → **New** = **19**: creating a project drops straight into fixture
   selection. → **Open** = **26**. → **Save** changes no mode at all; it is a
   dialog drawn inside mode 16.
-- **43 is still unidentified.** It was reached twice from the main menu, in
-  round 1 right after leaving Settings and in round 2 as the first entry
-  opened. It is neither New, nor Open, nor Save, nor Fixtures, nor DMX Values,
-  nor Settings.
+- **43 = `WM_MODE_MAPPING`**, main menu → Mappings. Identified by the operator
+  in a self-driven session: 16 and 43 alternate cleanly as Mappings is entered
+  and left with the back button. It is the second value confirmed above the
+  legacy range, and it shows MK1 hardware does expose the Mappings screen.
 
 **Invalidated by the operator's own report**: `New` created an empty project,
 so steps 4–7 of round 3 ran with **no fixtures patched**. LIVE EDIT pad edit

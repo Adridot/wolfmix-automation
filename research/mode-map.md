@@ -54,6 +54,84 @@ with a compatibility shim in WTOOLS, sparse values) are not excluded.
  9 STATIC_POSITION   19 FIXTURE_SELECTION     29 STROBE
 ```
 
+## MODE-01 results — 2026-08-25, W1 serial withheld, fw 2.0.18
+
+Method: `tools/wolfmix.py watch-mode --interval 0.15` (GET_SETTINGS polling
+only, zero writes) while the operator walked the front panel, returning to
+HOME between each  step so the capture self-synchronises on mode 0. Raw capture:
+`research/mode-01-session.jsonl`. Controller state before and after:
+`wolfmixMode 0`, `projectChanged false`, unlocked.
+
+**[device-confirmed]** — front-panel key → value, unambiguous (one key, one
+transition, HOME on both sides):
+
+| Value | Key pressed | Legacy 1.x name | Verdict |
+|---|---|---|---|
+| 0 | (idle) / `HOME` | `WM_MODE_HOME` | unchanged |
+| 1 | `COLOR FX` | `WM_MODE_COLOR` | unchanged |
+| 3 | `MOVE FX` | `WM_MODE_MOVE` | unchanged |
+| 4 | `BEAM FX` | `WM_MODE_BEAM` | unchanged |
+| 5 | `PRESET` | `WM_MODE_PRESETS` | unchanged |
+| 7 | STATIC `COLOR` | `WM_MODE_STATIC_COLOR` | unchanged |
+| 8 | STATIC `GOBO` | `WM_MODE_STATIC_GOBO` | **renamed in place** to `WM_MODE_GOBO` |
+| 9 | STATIC `POSITION` | `WM_MODE_STATIC_POSITION` | unchanged |
+| 10 | STATIC `LIVE EDIT` | `WM_MODE_LIVE_EDIT` | unchanged |
+| 16 | main menu (gear icon) | `WM_MODE_SETUP` | unchanged; parent of 17/25/26/43 |
+| 17 | main menu → fixture patch | `WM_MODE_FIXTURE_SETUP` | unchanged |
+| 25 | main menu → settings | `WM_MODE_SETTINGS` | unchanged |
+| 26 | main menu → projects | `WM_MODE_PROJECTS` | unchanged |
+| 28 | `GROUPS` key (wolf chevrons) | `WM_MODE_WOLF` | see open question below |
+
+**[correlated]** — FX keys, mapping rests on the press order being the panel
+order (STROBE, BLINDER, SPEED, BLACKOUT top to bottom). Every value then lands
+on its legacy name, which a wrong order would not produce:
+
+| Value | Key | Legacy name |
+|---|---|---|
+| 29 | `STROBE` | `WM_MODE_STROBE` |
+| 30 | `SPEED` | `WM_MODE_SPEED` |
+| 32 | `BLINDER` | `WM_MODE_BLINDER` |
+| 33 | `BLACKOUT` (toggles, observed twice) | `WM_MODE_BLACKOUT` |
+
+**[observed]** — one value outside the legacy range:
+
+- **43**, entered from the main menu (16) right after leaving Settings, held
+  1.4 s, returned to 16. Which menu entry produced it is not yet known. It
+  falls in the 39–44 window predicted for the six genuinely new modes.
+
+**[observed]** — keys that changed no mode: `SMOKE` and `BPM TAP` (single tap)
+and `SHIFT` alone. `BPM TAP` is a tap-tempo key; the guides say the BPM
+*screen* is reached by touching the tempo readout in the HOME toolbar.
+
+### Conclusion so far
+
+The hypothesis holds where it was tested: **legacy values 0–38 are unchanged
+in firmware 2.0.18**, 14 of them device-confirmed, 4 more correlated, and one
+removed name (`STATIC_GOBO`) is a pure rename at its original value 8. New
+modes live above 38; 43 is the first one seen.
+
+### Open question
+
+The key silkscreened `GROUPS` reports **28**, whose legacy name is
+`WM_MODE_WOLF`, while `WM_MODE_GROUPS = 24` was not reached. Two candidates:
+(a) the firmware calls this screen WOLF and 24 is a different screen (group
+setup, probably under the main menu); (b) WTOOLS renamed things and the panel
+key is a shortcut. Resolve by finding what produces 24.
+
+### Navigation facts extracted from the embedded guides (WTOOLS 2.0.2)
+
+The W1 screen is a **touchscreen**, which is how the remaining modes are
+reached:
+
+- BPM screen: touch the tempo readout in the HOME toolbar.
+- Intelligent Preset: magic-wand icon, top right of the PRESET screen.
+- Mappings (MIDI/DMX): main menu → Mappings.
+- USB stick export/import: USB icon on the main menu (FAT32 stick required).
+- Live Edit Macro edit: on the LIVE EDIT screen, SHIFT + press one of the
+  first three encoders.
+- Static position picker: SHIFT + one of the position pads on the STATIC
+  POSITION screen.
+
 ## How to measure without mutating anything (planned, MODE-01)
 
 `Settings.wolfmixMode` (protobuf field 17, already decoded by

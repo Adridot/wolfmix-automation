@@ -176,6 +176,35 @@ experiments must compare record by record and expect this canonicalisation
 noise. **[hypothesized]** re-saving a project twice in a row would isolate the
 noise exactly; worth doing once.
 
+## Type 102 `field 9` = STROBE speed — **[correlated]**
+
+**Experiment FX-03.** The operator set the STROBE screen's first encoder — the
+speed, per guide 10 — to **0 %** and saved. `field 9` went **80 → 1**, and
+`field 4`, `field 5`, `field 6` and `field 11` did not move.
+
+Corpus values for `field 9`: 80 (`f2737ec3`), 75 (`cc21`, `rig-c`), 72
+(`cd21`). A per-project percentage-shaped number, consistent with a speed.
+
+**[hypothesized]** the stored range is 1–100 rather than 0–100, since 0 % on
+screen wrote 1. One more point (set the encoder to 100 %) would settle both the
+range and whether the mapping is affine.
+
+**Confounded in the same save**: the operator also visited the STATIC POSITION,
+LIVE EDIT macro and Settings → Project screens while answering questions, and
+two other records moved (type 115 `field 6` back to absent, type 155 first item
+grew by one byte and its `field 3` went 4 → 16). Those changes cannot be
+attributed. Single-variable saves only from now on.
+
+## Type 155 — 4 × 128 byte arrays, likely the DMX patch map — **[observed]**
+
+`field 1` = 4, then four `field 5` items. Each item carries `f1 = 8`,
+`f2` ∈ {1, 2}, `f3` ∈ {2, 4}, and `f4` = a **128-byte array**. 4 × 128 = 512,
+one DMX universe. The first item's array reads `00×9, 01×8, 02×8, 03×8 …`,
+i.e. a fixture index per channel.
+
+In FX-03 the first item's array grew to **129 bytes** with a `01` prepended and
+its `f3` went 4 → 16. Not attributable — see the confound above.
+
 ## Type 115 — a 20-slot list, `field 6` moves as a block — **[observed]**
 
 The record holds 20 repeated `field 5` items plus a 20-byte `field 6` on the

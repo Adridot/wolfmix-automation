@@ -54,6 +54,50 @@ with a compatibility shim in WTOOLS, sparse values) are not excluded.
  9 STATIC_POSITION   19 FIXTURE_SELECTION     29 STROBE
 ```
 
+## Confirmed map (W1 MK1, serial withheld, firmware 2.0.18)
+
+All values below are **[device-confirmed]**: the operator drove the front
+panel while `watch-mode` polled `GET_SETTINGS`. Legacy names are the 1.x SDK
+enum; where 2.0.2 renamed one, both are given.
+
+| Value | Reached by | Name |
+|---|---|---|
+| 0 | idle, `HOME` | `HOME` |
+| 1 | `COLOR FX` | `COLOR` |
+| 3 | `MOVE FX` | `MOVE` |
+| 4 | `BEAM FX` | `BEAM` |
+| 5 | `PRESET` | `PRESETS` |
+| 7 | STATIC `COLOR` | `STATIC_COLOR` |
+| 8 | STATIC `GOBO` | `STATIC_GOBO` → **`GOBO`** |
+| 9 | STATIC `POSITION` | `STATIC_POSITION` |
+| 10 | STATIC `LIVE EDIT` | `LIVE_EDIT` |
+| 12 | SHIFT + a position pad | `POSITION_PICKER` → **`STATIC_POSITION_PICKER`** |
+| 15 | LIVE EDIT → edit a pad | `LIVE_EDIT_EDIT` (see open question) |
+| 16 | gear icon | `SETUP` — the main menu, parent of 19/23/25/26/43 |
+| 17 | main menu → Fixtures | `FIXTURE_SETUP` |
+| 19 | main menu → New, or Fixtures → ADD | `FIXTURE_SELECTION` |
+| 23 | main menu → DMX VALUES | `DMX_LEVELS` |
+| 25 | main menu → Settings | `SETTINGS` |
+| 26 | main menu → Open | `PROJECTS` |
+| 28 | `GROUPS` key (chevrons) | `WOLF` — the paparazzi flash effect |
+| 29 | `STROBE` | `STROBE` |
+| 30 | `SPEED` | `SPEED` |
+| 32 | `BLINDER` | `BLINDER` |
+| 33 | `BLACKOUT` | `BLACKOUT` |
+| 34 | PRESET → magic wand | `HUNGRY_WOLF` → **`INTELLIGENT_PRESET`** |
+| 36 | DMX VALUES → beam editor | `BEAM_EDITOR` |
+| 43 | a main-menu entry, not yet isolated | unknown, new |
+| 44 | HOME → touch the tempo readout | **`BPM`** (new) |
+
+**Result: the legacy 0–38 numbering is unchanged in firmware 2.0.18.** The
+three names that vanished from the SDK are renames at their original values
+(8, 12, 34); the six genuinely new modes live at 39–44, of which `BPM` = 44 is
+confirmed and 43 is seen but unnamed.
+
+Not reached, and probably unreachable on a MK1: `USB_STICK` and `FILE_BROWSER`
+(the USB-A socket is MK2+), `MAPPING` (MIDI is MK2+), and `GROUPS` (24) — the
+A–D / E–H bank switch is SHIFT + `BPM TAP`, which changes no mode.
+
 ## MODE-01 results — 2026-08-25, W1 serial withheld, fw 2.0.18
 
 Method: `tools/wolfmix.py watch-mode --interval 0.15` (GET_SETTINGS polling
@@ -148,6 +192,39 @@ produces no mode change. On a MK1 there may be no groups screen at all.
 
 **Unreachable on this hardware (MK1)**: `USB_STICK`, `FILE_BROWSER` (USB-A
 socket is MK2+), and probably `MAPPING` (MIDI is MK2+).
+
+## MODE-01 round 3 — menu entries isolated, and a lesson
+
+**[device-confirmed]**
+
+- The chevrons key gives **28** again, on its own, isolated from any other
+  action. The operator describes it as the wolf auto-effect with a TOGGLE
+  release, which matches guide 10. `34` therefore stays with the magic wand:
+  it was entered from the PRESET screen and returned to it.
+- main menu → **New** = **19**: creating a project drops straight into fixture
+  selection. → **Open** = **26**. → **Save** changes no mode at all; it is a
+  dialog drawn inside mode 16.
+- **43 is still unidentified.** It was reached twice from the main menu, in
+  round 1 right after leaving Settings and in round 2 as the first entry
+  opened. It is neither New, nor Open, nor Save, nor Fixtures, nor DMX Values,
+  nor Settings.
+
+**Invalidated by the operator's own report**: `New` created an empty project,
+so steps 4–7 of round 3 ran with **no fixtures patched**. LIVE EDIT pad edit
+and SHIFT + encoder both reported 15, MOVE FX stayed at 3, and SHIFT + a gobo
+pad stayed at 8 — all inconclusive, because those sub-screens have nothing to
+edit in an empty project. `LIVE_EDIT_MACRO_EDIT`, `MOVE_SEQ` (21),
+`GOBO_EDIT` (14) and `SEQ_POSITION_PICKER` must be retested on a project with
+fixtures.
+
+**Controller integrity after the incident**: the five stored projects are
+unchanged and `WMX EXP format-lab` re-downloads byte-identical
+(`171ae1c5acf1baa1de8947fc250f3c0a1c7b07e912fce69c6203f744db3bcd99`). The new
+project only ever existed in RAM; nothing was saved over anything.
+
+**Lesson for future probes**: on this firmware a menu entry acts immediately,
+there is no confirmation dialog. Never ask the operator to "open and leave" an
+entry whose name implies a state change.
 
 ## Flash FX buttons — project data worth decoding
 

@@ -470,6 +470,50 @@ Guide 8 calls the static screens' values "saved globally". These belong to
 controller-global storage, a candidate for `wmPersistent.wmx`. A show generator
 cannot set them through a project file.
 
+## F11-01 — writing type 102 `field 11` ourselves
+
+The observation route was exhausted: the 2.0 reference manual shows Settings →
+Project holds only the four group exclusions, and the operator found no control
+that moves the field. So we wrote it.
+
+**A project identical in every byte except `field 11` was uploaded to the
+experiment project**, loaded on the controller, and compared.
+
+- The operator reports **no visible change anywhere** in the UI.
+- **DMX output is identical.** Two 12-second envelopes, ~300 frames each, 2048
+  channels: `field 11` = 0 and `field 11` = 100 agree on **every channel**, in
+  both min and max. The output was fully static (0 animated channels, 122
+  non-zero), so there was no animation noise to hide a difference.
+
+**[correlated]** `field 11` is inert for the rendered output in the state
+tested. It is *not* proof of inertness in every state: the capture exercised one
+static lighting look with no effect running and no flash key held.
+
+**The one condition not yet tested is the interesting one.** `field 11` = 100 in
+every corpus file and has no UI control — exactly what a **BLINDER level** would
+look like, since guide 10 describes BLINDER as setting everything to full power.
+A flash effect only alters the output while it is active, so a capture taken
+with no flash key held cannot see it. **Next: capture with BLINDER on, at
+`field 11` = 0 and = 100.**
+
+### Side findings
+
+- **Writing 0 stores the field as absent.** The firmware omits protobuf
+  defaults, so "absent" and 0 are the same value. Any writer must treat them
+  alike.
+- **Loading a project resets the flash release modes.** `field 4` came back as
+  `01 00 00 00 00 00` after a load-and-save cycle, losing the BLINDER TOGGLE,
+  SPEED 1 s and BLACKOUT 5 s that had been stored, and `field 7` was cleared
+  too. This generalises the SMOKE reversion seen in FX-07: **release modes and
+  the speed multiplier are runtime state that a project load resets**, even
+  though they are persisted.
+- **RESTART (event 44) does not always cycle the USB device** on firmware
+  2.0.18. One run kept the port open throughout; a later one reconnected
+  normally. Automation must not require the disconnect.
+- **Uploads are corruptible like downloads.** A 43 KB `SET_PROJECT` was refused
+  by the firmware with its own message, "invalid wire_type", and succeeded on
+  retry. Nothing is stored on a failed status.
+
 ## Type 115 — a 20-slot list, `field 6` moves as a block — **[observed]**
 
 The record holds 20 repeated `field 5` items plus a 20-byte `field 6` on the

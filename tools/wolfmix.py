@@ -13,6 +13,7 @@ Usage:
   python3 tools/wolfmix.py dmx
   python3 tools/wolfmix.py dmx --seconds 10
   python3 tools/wolfmix.py watch-mode
+  python3 tools/wolfmix.py dmx-envelope before.json --seconds 12
   python3 tools/wolfmix.py self-test
 
 WTOOLS must be closed because the serial port is exclusive.
@@ -548,6 +549,54 @@ def watch_mode(connection, interval, seconds):
         time.sleep(interval)
 
 
+def dmx_envelope(connection, seconds):
+    """Per-channel min/max of the DMX output over a window.
+
+    A single frame is not comparable between runs because effects animate. The
+    envelope is: a static channel has min == max, an animated one keeps its
+    range whatever the phase. This is the oracle for differential experiments —
+    it answers "did this project change alter the output at all".
+    """
+    settings = decode_settings(connection.request(GET_SETTINGS))
+    enabled_by_us = not settings["dmxUsbSendState"]
+    if enabled_by_us:
+        require_success(connection.request(ENABLE_USB_DMX), "Enabling USB DMX")
+    low = high = None
+    frames = 0
+    deadline = time.monotonic() + seconds
+    try:
+        while time.monotonic() < deadline:
+            _, _, event, payload = connection.read_frame(
+                max(0.001, min(connection.timeout, deadline - time.monotonic()))
+            )
+            if event != DMX_PACKET:
+                continue
+            data = decode_dmx_packet(payload)["data"]
+            if low is None:
+                low, high = list(data), list(data)
+            else:
+                for index, value in enumerate(data):
+                    if value < low[index]:
+                        low[index] = value
+                    if value > high[index]:
+                        high[index] = value
+            frames += 1
+    finally:
+        if enabled_by_us:
+            connection.request(DISABLE_USB_DMX)
+    if not frames:
+        raise WolfmixError("No DMX frame was received")
+    return {
+        "frames": frames,
+        "channels": len(low),
+        "wolfmixMode": settings["wolfmixMode"],
+        "animatedChannels": sum(1 for a, b in zip(low, high) if a != b),
+        "nonZeroChannels": sum(1 for value in high if value),
+        "min": low,
+        "max": high,
+    }
+
+
 def encode_varint(value):
     result = bytearray()
     while value > 0x7F:
@@ -806,6 +855,11 @@ def build_parser():
                        help="polling period in seconds (default: 0.2)")
     watch.add_argument("--seconds", type=float, default=0,
                        help="stop after this duration; 0 runs until Ctrl-C")
+    envelope = commands.add_parser(
+        "dmx-envelope", help="per-channel min/max of the output over a window"
+    )
+    envelope.add_argument("output", help="new JSON file; existing files are refused")
+    envelope.add_argument("--seconds", type=float, default=12.0)
     dmx = commands.add_parser("dmx", help="stream changed DMX channel values")
     dmx.add_argument("--seconds", type=float, default=0,
                      help="stop after this duration; 0 runs until Ctrl-C")
@@ -826,6 +880,8 @@ def main(argv=None):
         raise WolfmixError("--timeout must be greater than zero")
     if args.command in ("dmx", "watch-mode") and args.seconds < 0:
         raise WolfmixError("--seconds cannot be negative")
+    if args.command == "dmx-envelope" and args.seconds <= 0:
+        raise WolfmixError("--seconds must be greater than zero")
     if args.command == "watch-mode" and args.interval <= 0:
         raise WolfmixError("--interval must be greater than zero")
 
@@ -852,6 +908,16 @@ def main(argv=None):
             print_json(project)
         elif args.command == "dmx":
             monitor_dmx(connection, args.seconds)
+        elif args.command == "dmx-envelope":
+            result = dmx_envelope(connection, args.seconds)
+            try:
+                with open(args.output, "x", encoding="utf-8") as output:
+                    json.dump(result, output)
+            except FileExistsError as error:
+                raise WolfmixError(
+                    f"Output already exists and was not overwritten: {args.output}"
+                ) from error
+            print_json({k: v for k, v in result.items() if k not in ("min", "max")})
         elif args.command == "watch-mode":
             watch_mode(connection, args.interval, args.seconds)
     return 0

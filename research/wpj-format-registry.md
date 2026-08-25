@@ -222,38 +222,47 @@ field 5 × 20                     one per palette slot
   field 8   ?       32767 / 32768 / 36044
 ```
 
-### Why `field 3` = pan and `field 7` = tilt — **[correlated]**
+### Field meanings, read off the device's own edit screen — **[device-confirmed]**
 
-Group C, the moving heads, holds five named positions whose values are **exact
-whole percentages of 65535**:
+SHIFT + a position pad opens an editor showing **PAN, TILT, FOCUS OFFSET and
+FAN | CROSS** as percentages. The operator photographed three slots of group C,
+and every displayed percentage matches a stored field exactly:
 
-| Slot | `f3` | | `f7` | |
+| Slot | screen FAN\|CROSS | `f3` | screen TILT | `f7` |
 |---|---|---|---|---|
-| Floor | 32768 | 50 % | absent | **0 %** |
-| Center | 39321 | 60 % | 32768 | 50 % |
-| Center Point | 19660 | 30 % | 26214 | 40 % |
-| Crowd | 45874 | 70 % | 45874 | 70 % |
-| Ceiling | 32768 | **50 %** | 65535 | **100 %** |
+| Center | 60 % | 39321 = **60 %** | 50 % | 32768 = **50 %** |
+| Center Point | 30 % | 19660 = **30 %** | 40 % | 26214 = **40 %** |
+| Floor | 50 % | 32768 = **50 %** | 0 % | absent = **0 %** |
 
-The names read as a coherent rig: *Floor* is tilt at 0 with pan centred —
-straight down. *Ceiling* is tilt at 100 with pan centred — straight up. *Crowd*
-tilts up toward the audience. Nothing else in the record behaves like an angle:
-`f4`, `f6` and `f8` sit at 32768 for every slot of that group, the neutral
-midpoint expected of the focus-offset, FAN and CROSS controls guide 8
-describes.
+So **`field 3` = FAN | CROSS** and **`field 7` = TILT**, both 16-bit with
+value = percent × 65535.
 
-**[hypothesized]** `f4`, `f6`, `f8` = focus offset, FAN, CROSS in some order.
-They are at their neutral value in this rig, so the corpus alone cannot order
-them.
+**An earlier entry here called `field 3` pan. That was wrong**, and the corpus
+alone could not have caught it: group C's PAN reads 50 % on every named slot, so
+pan and the neutral fields are indistinguishable in this rig. Only the device's
+own screen separated them.
 
-### Confirming experiment, read-only
+Still open: **PAN**, **FOCUS OFFSET** and **CROSS** share `f4`, `f6` and `f8`,
+all sitting at 32768 for group C. FOCUS OFFSET displays **0 %** while its field
+holds 32768, so that value is **signed with 32768 as zero**, unlike TILT and FAN.
 
-Recalling a position changes the DMX output immediately, so no save and no
-write is needed. On the STATIC POSITION screen with the moving-head group
-selected, tap **Floor**, capture an envelope, then tap **Ceiling** and capture
-again. Prediction: the heads' **tilt channel goes from 0 to full**, pan
-unchanged. `wolfmix.py dmx-envelope` is the oracle, and this also pins which
-DMX channel of the profile carries tilt.
+**One screenshot resolves all three.** Group A's `<group-A name>` is the only slot in
+the corpus where these fields disagree: `f4` = 65535, `f6` = 8519 (13 %),
+`f8` = 32767. SHIFT + `<group-A name>` on group A and reading PAN, FOCUS OFFSET and
+CROSS off the screen assigns each field in one shot.
+
+### Why the DMX cross-check could not settle it
+
+Recalling Floor then Ceiling moved **exactly four channels**, a 16-bit pair on
+each of two fixtures, and left pan untouched — the right shape. But the values
+ran 255 → 198 where the palette says 0 % → 100 %, both inverted and compressed
+into 57 DMX steps.
+
+The operator confirms **movement limits are set on these fixtures**. The Fixture
+Limit screen remaps the palette's full range into a restricted band, so DMX
+output is *not* a direct image of the stored value and cannot be used to read
+these fields. It stays useful for locating which channel carries tilt, and it
+makes the limits themselves a target worth decoding.
 
 ## Type 155 — the four FX sequences — **[device-confirmed]**
 

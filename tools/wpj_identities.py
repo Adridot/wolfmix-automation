@@ -280,6 +280,10 @@ def tranches_151(w):
             f"{pos} entrées de 151 consommées"
         pos += n
     assert pos == n151, f"151 : {pos} entrées référencées, {n151} présentes"
+    nfx = len(_items(w, 115))
+    for k, e in enumerate(_items(w, 151) if w.get(151) else []):
+        assert e.get("f1", 0) < nfx, \
+            f"151[{k}].f1 = {e.get('f1', 0)} hors des {nfx} fixtures"
 
 
 IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,

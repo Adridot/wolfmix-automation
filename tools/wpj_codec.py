@@ -74,8 +74,8 @@ SCHEMAS = {
     # 151 : positions des fixtures « détachées » d'un slot de 150, découpées
     # par 150.f1/f2. Trois offsets signés, valeur = (v - 32768) / 32767 —
     # device-confirmed sur l'écran POSITION. Voir le registre, « POS-04 ».
-    151: {5: ("detachees", {2: ("focus_offset", "v"), 3: ("pan_offset", "v"),
-                            4: ("tilt_offset", "v")})},
+    151: {5: ("detachees", {1: ("fixture", "v"), 2: ("focus_offset", "v"),
+                            3: ("pan_offset", "v"), 4: ("tilt_offset", "v")})},
     160: {5: ("macros", {6: ("nom", "str")})},
     165: {5: ("presets", _PRESET)},
 }

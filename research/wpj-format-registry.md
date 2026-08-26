@@ -2717,3 +2717,72 @@ count and the order, but not the identity. `Orchestre`'s four entries are four
 of six lyres, and which four is unknown. Detaching a second, known fixture on a
 slot with an empty slice would settle whether the order is the fixture index,
 the DMX address, or the `115.f6` display order.
+
+## POS-06 — `151.f1` is the fixture index, and it was there all along
+
+A second detach, on group A's `Crowd`, with a large `TILT OFFSET`. Version
+1787670974706 → 707. Three records moved: `150` gained the slice on `Crowd`,
+`151` gained a sixth entry, and `115` picked up `f6 = 18` on **all twenty**
+fixtures at once.
+
+### The mapping was in the file from the first dump
+
+```
+Orchestre  offset 0, 4 entries   f1 = 2, 3, 0, 1
+Ceiling    offset 4, 1 entry     f1 absent = 0
+Crowd      offset 5, 1 entry     f1 = 2
+```
+
+`151.f1` is the **fixture index**, absent meaning fixture 0. `Ceiling`'s entry
+carries no `f1`, so fixture 0 — the lyre at DMX 0, which is exactly the fixture
+POS-05 identified by watching four channels move. The measurement and the field
+agree, and the field did not need the measurement.
+
+`Orchestre`'s four entries are fixtures **2, 3, 0, 1** — the lyres at DMX 32,
+48, 0 and 16, stored in neither index nor address order. That is why the slice
+needs an explicit index rather than an implied position.
+
+**Retracted**, from POS-05, written earlier today: *"Nothing in the project has
+been shown to map a 151 entry to a fixture — the slice gives the count and the
+order, but not the identity."* It does, through `f1`. The very first dump of
+this record printed `{"f1": 2, ...}, {"f1": 3, ...}, {...}, {"f1": 1, ...}` and
+that reading called `f1` an item index, noting it "was not in order" — the
+disorder was the answer, not a curiosity. A field whose values are a permutation
+of small integers, on a record with no other identifier, deserved one more
+question.
+
+`tools/wpj_codec.py` names it `fixture`; `tranches_151` now also checks that
+every `f1` is a valid fixture index — 11 identities, 32 files.
+
+### `115.f6` = 18 on every fixture
+
+The field reappeared simultaneously on all twenty fixtures, having been absent
+since before this session. Corpus values are 231, 232, 110, 4 and now 18 — one
+value per project, replicated per slot, never varying between fixtures of the
+same file. It is the "global stored per slot" shape already noted on `115.f6`/
+`f7`, and this save re-stamped it. **[observed]**, and it carries no per-fixture
+information.
+
+### The next prediction, published before measuring — **[planned]**
+
+`Crowd`'s new entry is fixture **2**, the lyre at DMX 32, with `PAN OFFSET 0 %`
+and `TILT OFFSET +91 %`. Recall `Crowd` and only channels 32, 33, 34, 35 should
+differ from the POS-01 capture.
+
+Its group tilt is 70 %, so the offset asks for **161 %**. Two outcomes, and they
+are far apart:
+
+| | tilt on channel 33 |
+|---|---|
+| clamped at 100 % | **77** |
+| not clamped, wrapping or overflowing | anything else |
+
+The pan is the second question, and it is independent. `Crowd` has `FAN = 70 %`,
+which put fixture 2 at 46 % of its band — DMX **176**. With a zero pan offset:
+
+| | pan on channel 32 |
+|---|---|
+| the fan still applies to a detached fixture | **176** |
+| detaching removes it from the fan | **178** |
+
+One capture answers both.

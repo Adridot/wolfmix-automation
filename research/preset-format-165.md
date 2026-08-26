@@ -21,7 +21,7 @@ beam) + presets utilisateur en queue.
 | f21/f22 | Move FX 1/2 (f3 supplémentaire, déf. 50) | correlated |
 | f28 | index de position (type 150) par groupe A–H, 8 varints | correlated (« Floor »=[0]⁸, « Center »=[1]⁸, « Crowd »=[3]⁸, « Ceiling »=[4]⁸) |
 | f29 | index de gobo (type 145) par groupe A–H, 8 varints packés, **0-based**, 255 = aucun | **device-confirmed** (F29-01 : f29[A]=9 → DMX 70, f29[A]=2 → DMX 21, deux prédictions exactes) |
-| f30 | mode d'étalement de la couleur statique (0 alterné, 1 dégradé miroir, 2 pas franc miroir, 5 dégradé droit, 9 aucun) ; scalaire répliqué 8× | **device-confirmed** (F30-01, quatre modes mesurés au DMX) |
+| f30 | `PATTERN` de la couleur statique **par groupe A–H** ; énumération 0-10 = 4 directions (extérieur, intérieur, droite, gauche) × 2 rendus (dégradé, franc), plus 0 alterné, 9 SINGLE, 10 FLASH | **device-confirmed** pour 9/0/1/2/5 (F30-01, mesures DMX) ; correlated pour 3/4/6/7/8/10 (liste lue à l'encodeur) |
 | f31 | couleur statique : 4 rép. × 5 octets, chaque rép. = **deux masques de 20 bits** des pads du type 140 (bit n → pad n+1 ; « Deep Red » = bit 5 = pad 6 Red). Masques A et B identiques partout sauf « Purple Rain » | correlated (layout) / hypothesized (rôle du masque B et des 4 rép.) |
 | f17 | dimmer par groupe A–H (packé, déf. [255]⁸) | hypothesized |
 | f8 / f24 | flag Color FX actif / Move FX actif (0\|255) | correlated |

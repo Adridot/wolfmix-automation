@@ -1448,14 +1448,49 @@ written and nothing saved.
 - **Each group's fixtures are spread independently**, over that group's own
   ordered list: the six lyres and the ten pars each carry the full pattern.
 
+### The full enumeration, read off the encoder — **[correlated]**
+
+The operator stepped the `PATTERN` encoder clockwise one detent at a time and
+described each entry. The list is **eleven entries and it wraps**. Eight of them
+are **four directions × two renderings**, the rendering shown by whether a run
+of overlapping circles — a blend indicator — accompanies the chevrons:
+
+| Screen order | Icon | `f30` | How it was fixed |
+|---|---|---|---|
+| 1 | `SINGLE` | **9** | **measured** — one colour, all fixtures identical |
+| 2 | `FLASH` | 10 | derived |
+| 3 | four dots, filled / empty / filled / empty | **0** | **measured** — alternating one fixture in two |
+| 4 | chevrons pointing **outward** + circles | **1** | **measured** — gradient, symmetric about the centre |
+| 5 | chevrons pointing **outward**, alone | **2** | **measured** — hard split, symmetric |
+| 6 | chevrons pointing **inward** + circles | 3 | derived |
+| 7 | chevrons pointing **inward**, alone | 4 | derived |
+| 8 | chevron pointing **right** + circles | **5** | **measured** — gradient running par 1 → par 10 |
+| 9 | chevron pointing **right**, alone | 6 | derived |
+| 10 | chevron pointing **left** + circles | 7 | derived |
+| 11 | chevron pointing **left**, alone | 8 | derived |
+
+The alignment is `value = (screen position − 3) mod 11`. **Five of the eleven
+entries were measured on DMX before the list was read, and all five land
+exactly**, with no collision and nothing left over. The six values the corpus
+never shows — 3, 4, 6, 7, 8 and 10 — are precisely the modes no factory preset
+uses: both "inward", both "left", the hard "right", and `FLASH`.
+
+The two axes visible in the DMX captures now factor properly. It was never
+gradient-against-stepped crossed with mirrored-against-straight; it is
+**direction** (outward, inward, right, left) × **rendering** (blended, hard),
+with `SINGLE`, `FLASH` and the alternating pattern sitting outside that grid.
+
+Status: the five measured rows are **device-confirmed**; the six derived rows
+are **correlated** — they follow from an alignment pinned by five independent
+points, but none has been driven and watched. Measuring one of them, say `3`
+(inward, blended, the mirror image of the measured `1`), would settle the whole
+table.
+
 ### Still open
 
-The domain is not a contiguous enum in the corpus — `3`, `4`, `6`, `7` and `8`
-appear on no factory preset, so either they are unused modes or the encoding is
-not a plain index. The mirrored/straight and stepped/gradient axes do not
-factor into clean bits either (`0` is stepped and unmirrored, yet `2` is
-stepped and mirrored while `4` never appears). Reading the control off the
-STATIC COLOUR screen would name the list and settle its length in one look.
+`FLASH` = 10 is the one entry whose *behaviour* nothing here predicts: every
+other entry is a spatial layout, while a flash is presumably temporal. A capture
+of it would say whether the field carries anything beyond geometry.
 
 ### `f31` — the wire layout, corrected — **[correlated]**
 

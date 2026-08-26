@@ -3680,3 +3680,44 @@ longer a positional argument to lean on; each needs its own latch.
 
 **State note**: `BLINDER`'s release mode is now `TOGGLE` where it was `FLASH`,
 one more divergence from `corpus/experiments/FX-01/before.wpj`.
+
+## FLASH-03 — `BLACKOUT` is slice 8, and the two coexist
+
+`BLACKOUT` switched to `TOGGLE` and latched, preset 82 overwritten, one save,
+version 713 → 714. `102.f4` gained a 1 in its **fifth** byte — `BLACKOUT` under
+that record's order, the independent check again.
+
+`f16` slice **8** went 0 → 511. **`BLACKOUT` is slice 8.**
+
+Slice 9 stayed at 511: `BLINDER` was still latched when the preset was captured,
+and the operator released it afterwards. So the preset now carries **two** flash
+engines at once, which is the first proof that the slices are independent rather
+than a one-of-N selector.
+
+The published prediction had two halves and split cleanly:
+
+- *"exactly one slice among 3, 4, 8, 10 will rise"* — **correct**, slice 8.
+- *"slice 9 will fall back to 0"* — **wrong**, and the reason is ordinary: the
+  key was still down. Not a fault in the reading, a fault in assuming the
+  operator's sequence.
+
+### Three measured points, and still no order
+
+| `102.f4` index | Key | `f16` slice |
+|---|---|---|
+| 0 | `WOLF` | **6** |
+| 2 | `BLINDER` | **9** |
+| 4 | `BLACKOUT` | **8** |
+
+`0 → 6`, `2 → 9`, `4 → 8`. Not monotone, not an offset, not the panel's
+left-to-right order either. **The flash engines are not laid out in `102.f4`'s
+order, and three points are now enough to say so rather than to guess a fourth.**
+
+Remaining: slices **3, 4, 7, 10**, and three keys — `STROBE`, `SPEED`, `SMOKE`.
+Slice 7 is already read as a strobe from `Fire!` and `Strobe`, which would leave
+`SPEED` and `SMOKE` in 3, 4 or 10 — or absent, since those two are also the
+only flash keys with no group-exclusion mask in record 102. Each needs its own
+latch; there is nothing left to infer from.
+
+**State note**: `BLACKOUT`'s release mode is now `TOGGLE`, alongside `WOLF` and
+`BLINDER`. Three of the six differ from `corpus/experiments/FX-01/before.wpj`.

@@ -22,7 +22,7 @@ beam) + presets utilisateur en queue.
 | f28 | index de position (type 150) par groupe A–H, 8 varints | correlated (« Floor »=[0]⁸, « Center »=[1]⁸, « Crowd »=[3]⁸, « Ceiling »=[4]⁸) |
 | f29 | index de gobo (type 145) par groupe A–H, 8 varints packés, **0-based**, 255 = aucun | **device-confirmed** (F29-01 : f29[A]=9 → DMX 70, f29[A]=2 → DMX 21, deux prédictions exactes) |
 | f30 | `PATTERN` de la couleur statique **par groupe A–H** ; 0 alterné, 1/2 extérieur dégradé/franc, 3/4 intérieur, 5/6 droite, 7/8 gauche, 9 SINGLE, 10 FLASH (pads momentanés) | comportement **device-confirmed** sur les 11 entrées (F30-02) ; valeur stockée device-confirmed sur 9/0/1/2/5, arithmétique pour les six autres |
-| f31 | couleur statique : 20 octets = 160 bits = **huit masques de 20 bits, un par groupe A–H** (bit n du groupe g → pad n+1 ; « Deep Red » = bit 5 = pad 6 Red). Rétracte la lecture « 4 rép. × deux masques » | correlated |
+| f31 | couleur statique : 20 octets = 160 bits = **huit masques de 20 bits, un par groupe A–H** (bit n du groupe g → pad n+1 ; « Deep Red » = bit 5 = pad 6 Red). Rétracte la lecture « 4 rép. × deux masques » | **device-confirmed** (« Milky Way » : A = White uni sur les six lyres, B = UV/Pink alterné sur les dix pars) |
 | f17 | dimmer par groupe A–H (packé, déf. [255]⁸) | hypothesized |
 | f8 / f24 | flag Color FX actif / Move FX actif (0\|255) | correlated |
 | f4 | masque de contenu (255 full, 8 couleur, 17 beam, 5 move ; b3=couleur b4=beam b2=position ?) | hypothesized |

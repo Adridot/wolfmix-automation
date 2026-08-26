@@ -1570,7 +1570,7 @@ four repetitions of `f31`:
 to show groups E–H. Nothing in the project file has yet been shown to carry the
 fixture → group assignment; where it lives is still open.
 
-### `f31` — one 20-pad mask per group A–H — **[correlated]**
+### `f31` — one 20-pad mask per group A–H — **[device-confirmed]**
 
 `f31` is 20 packed varints = **160 bits = eight 20-bit masks**, one per group
 A–H, little-endian, bit *n* of group *g* selecting pad *n+1* of that group's
@@ -1600,6 +1600,25 @@ each holding two 20-bit masks*. It was cutting eight 20-bit groups into four
 of the other and why `Purple Rain` looked like a lone anomaly. It is not an
 anomaly; it is a preset with three different colour selections across its
 groups.
+
+### Measured — `Milky Way`, the preset that separates the two readings
+
+`Milky Way` carries `White` on group A and `UV + Pink` on groups B–H, with
+`f30` = 0, alternating. The two readings disagree sharply about it: the correct
+one says group A holds a single pad and group B two, the retracted one put both
+selections on group A. Recalling it settled the matter.
+
+| | Predicted | Measured |
+|---|---|---|
+| six lyres, group A | one colour, all six identical | colour wheel **0** on all six |
+| ten pars, group B | alternating UV / Pink, UV first | odd pars `R60 B255 UV255`, even pars `R255 B128 UV0` |
+
+`UV` is pad 4 and `Pink` pad 5, and the lower index came first, as everywhere
+else. The pars' channels were animated by the preset's beam FX, so the maxima
+are the colour; the alternation itself is unmistakable.
+
+Side finding: the `6x18W` profile's `110.f4` = 33 is its **UV** channel — the
+one that carried 255 on exactly the UV pars.
 
 **Consequence for the pad-count table above.** The "pads in `f31`" column was
 computed from the first 20 bits, which under the correct reading is **group A's

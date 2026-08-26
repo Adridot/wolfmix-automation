@@ -140,8 +140,38 @@ def moteurs_f16(w):
             f"{actif} dans {h['hex']}"
 
 
+def plages_111(w):
+    """111.f1/f2 = bornes DMX d'une plage, et tout canal tombe dans un cas.
+
+    Trichotomie exhaustive sur le corpus : un canal de 110 est soit
+    **non attribué** (pas de `f4`, une unique plage vide), soit le motif
+    isolé `f4 = 18` (une unique plage `{f1: 255, f3: 41}`), soit ses plages
+    **pavent [0, 255]** — `f1` du premier à 0, `f1` de chacune suivant le
+    `f2` de la précédente, `f2` de la dernière à 255.
+    """
+    c110, c111 = _items(w, 110), _items(w, 111)
+    pos = 0
+    for i, c in enumerate(c110):
+        n = c.get("f2", 0)
+        tr, pos = c111[pos:pos + n], pos + n
+        if n == 1 and not tr[0]:
+            assert "f4" not in c, \
+                f"110[{i}] : plage vide mais le canal porte f4 = {c['f4']}"
+            continue
+        att = 0
+        for r in tr:
+            if r.get("f1", 0) != att:
+                break
+            att = r.get("f2", 0) + 1
+        else:
+            if att == 256:
+                continue                       # le cas courant : les plages pavent
+        assert c.get("f4") == 18 and n == 1 and tr[0] == {"f1": 255, "f3": 41}, \
+            f"110[{i}] : plages ni pavantes ni du motif f4 = 18 : {tr}"
+
+
 IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
-              groupe_fixture, moteurs_f16)
+              groupe_fixture, moteurs_f16, plages_111)
 
 
 def demo():

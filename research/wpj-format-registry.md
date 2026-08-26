@@ -2166,3 +2166,44 @@ firmware followed `f16`. The suspicion recorded at the time — *"nouveau suspec
 **duplicates** of slices 0 and 1. Writing one without the other produces a
 preset the device renders differently from what the file appears to say. This is
 the second redundant pair found in this format, after `115.f4` / `105.f6`.
+
+## Record 111 — `f1`/`f2` are the DMX bounds of a range — **[correlated, 30/30]**
+
+The tell was in the value distributions: `f1` and `f2` are drawn from paired
+sets — `16/15`, `32/31`, `56/55`, `64/63`, `96/95`, `128/127`, `192/191` — with
+`f2 = 255` on 944 items. Those are the boundaries of a channel's function
+ranges, `f1` = first DMX value, `f2` = last.
+
+Prediction published before the test: for each channel, the ranges tile
+`[0, 255]` — first `f1` = 0, each `f1` following the previous `f2`, last
+`f2` = 255. **944 channels tile exactly.** Every one of the 1026 channels in
+the corpus then falls into one of three cases, with nothing left over:
+
+| Case | Count | Shape |
+|---|---|---|
+| the ranges tile `[0, 255]` | **944** | the ordinary channel |
+| **unassigned channel** | **53** | `110` carries no `f4`, and its single `111` item is **empty** |
+| the isolated `f4 = 18` pattern | **29** | a single range `{f1: 255, f3: 41}`, which the start/end reading does not cover |
+
+944 + 53 + 29 = 1026. `plages_111` in `tools/wpj_identities.py` checks the
+trichotomy on every channel of every file — 7 identities, 30 files. It is not
+vacuous: it fails immediately if `f1` and `f2` are swapped, or if a channel's
+range slice is taken from the wrong offset.
+
+### The `f4 = 18` pattern is worth an experiment
+
+`110.f4 = 18` and `111.f3 = 41` are both **absent from the feature table**
+recorded earlier under "side findings on the patch side". The 29 channels
+carrying it belong to moving heads only — `Lyre ZQ02244` (21) and `MH-100 BEAM`
+(8) — and the same profiles also carry a `{f2: 255, f3: 41}` variant that tiles
+normally. A single range anchored at DMX 255 on a moving head, on a feature the
+rest of the corpus never names, is the shape of a **reset or a special
+function**. It is one `dmx-envelope` away from being settled, and the operator
+owns six `Lyre ZQ02244`.
+
+### An unassigned channel is explicit, not missing
+
+The 53 channels with no `f4` still carry a `111` item — an **empty** one. The
+format does not omit the slot; it fills it with a message whose every field is
+absent. That is the same convention as `120`'s empty entries (`2a 00`), and it
+is why `count(111)` stays derivable from `110.f2` on every file.

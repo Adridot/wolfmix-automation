@@ -4348,3 +4348,40 @@ frame comparison:
 
 Predicted: form 1 returns success and the next DMX frame shows the Deep Red
 signature (red channels driven, others near zero).
+
+### SETP-01 measured — recall by id works; missing ids are silent no-ops — **[device-confirmed]**
+
+`SET_PRESET` with `f1 = varint(id)` returned success and repainted the DMX
+frame on two targets (id 23 Deep Red, id 22 Deep Green — the green par
+channels rise to 255 under 22). An out-of-range id (150) also returns
+success but changes nothing: **RETURN_STATUS cannot discriminate a missing
+preset; the DMX frame can.** Remote recall is closed; the reload is the
+remaining half of hands-off activation.
+
+## PRESET-07 + SETP-02 — sparse layout, and the delete-store-restart reload chain
+
+The operator rejects the gap fillers (rightly: the device's own save writes
+a 99 → 114 gap — their panel-created "Test" sits at id 114 = page 6
+slot 15, confirming the id formula on page 6 and making the fillers
+pointless). Candidate: the device's own save minus entries 85–98 —
+87 presets, tail `… 84, 99 "preset test auto", 114 "Test"`, `f1` = 87
+(count, the rule the device's writer just demonstrated).
+
+Reload hypothesis: RESTART alone leaves the NVRAM live copy in charge
+(FLASH-08), but **deleting the open project should invalidate that copy**;
+re-storing the same UUID before the restart keeps the boot pointer valid,
+so the reboot must re-read storage — the new bytes.
+
+### Predictions, published before the run
+
+1. Deploy of the sparse candidate: store + both verifies pass.
+2. After the deploy's own RESTART, `SET_PRESET(92)` still repaints the
+   frame — the live copy is stale and still holds the fillers (FLASH-08
+   re-confirmed in-band, no panel needed).
+3. After DELETE_PROJECT → SET_PROJECT → RESTART: `SET_PRESET(92)` leaves
+   the frame unchanged (filler gone) while `SET_PRESET(99)` repaints it —
+   the live project is now the sparse file, **activation with zero panel
+   touches**. Rival: 92 still recalls → the NVRAM copy survives even
+   deletion, and the allowlist holds no reload lever.
+4. Panel, look only: page 5 shows 5 pads plus "preset test auto" bottom
+   right; page 6 slot 15 shows "Test"; no filler pads anywhere.

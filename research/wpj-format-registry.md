@@ -3124,3 +3124,87 @@ and has nothing further to say about them.
 | record 130 | byte-identical in all 32 files |
 | record 161 | one bit moved in seven saves |
 | MIDI mapping | never located |
+
+## The vendor manual, read — several fields named at once
+
+`Wolfmix W1 Reference Manual`, version 2.0, fetched from the manufacturer's own
+distribution URL and read for the screens this registry had already
+photographed. Nothing is reproduced here beyond field names; the document is
+not redistributed.
+
+### `f18` = the preset's Live Edit mask — **[correlated]**
+
+The `LIVE EDIT` screen is **4 pages of 20 buttons**. Eighty buttons, and `f18`
+is **10 packed varints = 80 bits**, the same byte-field construction as `f16`
+and `f31`. Decoded that way, every preset in the corpus lands on plausible
+button numbers and nothing else:
+
+| Preset | Live Edits |
+|---|---|
+| `Aim`, `Candy Floss Swing`, `D A N C E`, `J U M P`, `Point to Point`, `Lights to the Siren` | 1, 2 |
+| `Get Moving` | 1, 2, 5 — and 1, 20 in one file |
+| `Runway` | 5 |
+| `valse` | 1, 2, 4 → 1, 4 |
+| page 5 slot 2 | 4, 5 → 4 |
+
+**Out of 80 possible bits the corpus only ever sets 1, 2, 4, 5 and 20** — the
+top of page 1, which is exactly what a factory preset set would use. A wrong
+reading would scatter bits across the range.
+
+This also explains why `f18` refused to correlate with `f10`: they are different
+things. `f10`'s `LIVE EDIT` bit says *whether* the preset carries Live Edits;
+`f18` says *which*. The manual is explicit that a preset stores "the parts of
+the project" the toggles select, and Live Edits are one of those parts.
+
+**Retracted**: the F18 entry's framing as "eight values on movement presets, not
+a strided bit field". The strided reading was tried at 9 bits, `f16`'s stride,
+and failed. The right stride is **1** — it is a flat bit field, and the
+movement flavour of the presets was a coincidence of which factory presets
+happen to use Live Edits.
+
+### `f3`, `f7`, `f14`, `f23`, `f27` = the five gobo features — **[hypothesized]**
+
+The `STATIC GOBO` screen carries a **per-group feature value**: its bottom row
+reads `A ROTATE 6%  B ROTATE 6%  C ROTATE 6%  D ROTATE 6%`, and a toolbar
+switches the feature between **Rotation, Prism, Focus, Zoom and Iris** — five
+features, each a percentage, each per group.
+
+Record 165 has exactly **five** per-group arrays with no meaning attached:
+`f3`, `f7`, `f14`, `f23`, `f27`. The cardinality matches exactly, and the two
+non-zero examples fit:
+
+- `70's Paradise` carries `f14 = [6]×8` — the same value on all eight groups,
+  which is what setting one feature with no per-group differentiation looks
+  like, and `6` is the number the manual's own screenshot shows on `ROTATE`.
+- `Get Moving` carries `f7 = [0,1,0,0,0,0,0,0]` — **group B only**, at 1 %.
+
+Which array is which feature is **not** settled: the manual gives the five
+names and the corpus gives five arrays, but only two are ever non-zero. Setting
+`Prism` to a distinctive value on one group, then `Zoom` on another, names two
+per save.
+
+### Confirmations, and one negative closed
+
+- **`f10`'s six toggles**, verbatim from the manual: `COLOR` includes Color FX
+  **and static colours**, `MOVE` includes Move FX **and static positions**,
+  `BEAM` includes Beam FX, `GOBO` and `LIVE EDIT` the corresponding parts, and
+  **`OTHER` includes the group dimmer values**. That names `OTHER` — and record
+  165's `f17`, already decoded as `dimmers`, is what it gates.
+- **Record 151 is `Fixture Offset Mode`**, reached from the Position Picker. Its
+  screen carries `PAN OFFSET`, `TILT OFFSET`, `FOCUS OFFSET` and a
+  `FIXTURE | ON` selector — the three fields decoded in POS-04, under the
+  manufacturer's own names, in the same order.
+- **`110.f5`**: the Live Edit value grid lists channels as `01 Pan  02 Tilt
+  03 uPan  04 uTilt` — the fine halves are named `uPan`/`uTilt`, which is the
+  coarse/fine pairing that `f5` encodes.
+- **The preset grid is 10 pages of 20**, so 200 presets, not 100. Preset ids run
+  to 199.
+- **Negative closed**: the `COLOR` line on the `PRESET EDIT` screen is the
+  **colour of the preset's button in the matrix**, settable or `AUTO`. It was
+  never expected to match `f31`, and the earlier entry recording that mismatch
+  as a puzzle can rest. Which field stores it is still unlocated.
+- **`Flash`** is a per-preset boolean set from the `PRESET EDIT` toolbar: the
+  preset is triggered on press and the previous one recalled on release.
+  Unlocated in the file.
+
+Source: <https://storage.googleapis.com/nicolaudie-us-litterature/Release/wolfmix_w1_reference_manual_en.pdf>

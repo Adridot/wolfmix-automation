@@ -21,14 +21,15 @@ beam) + presets utilisateur en queue.
 | f21/f22 | Move FX 1/2 (f3 supplémentaire, déf. 50) | correlated |
 | f28 | index de position (type 150) par groupe A–H, 8 varints | correlated (« Floor »=[0]⁸, « Center »=[1]⁸, « Crowd »=[3]⁸, « Ceiling »=[4]⁸) |
 | f29 | index de gobo (type 145) par groupe A–H, 8 varints packés, **0-based**, 255 = aucun | **device-confirmed** (F29-01 : f29[A]=9 → DMX 70, f29[A]=2 → DMX 21, deux prédictions exactes) |
-| f31 | couleur statique : 4 rép. × 5 varints, bitmasks de pads du type 140 (« Deep Red » mask 32 = pad 6 {R:255}) ; 4 rép. = candidat groupes A–D | hypothesized |
+| f30 | mode d'étalement de la couleur statique (0 alterné, 1 dégradé miroir, 2 pas franc miroir, 5 dégradé droit, 9 aucun) ; scalaire répliqué 8× | **device-confirmed** (F30-01, quatre modes mesurés au DMX) |
+| f31 | couleur statique : 4 rép. × 5 octets, chaque rép. = **deux masques de 20 bits** des pads du type 140 (bit n → pad n+1 ; « Deep Red » = bit 5 = pad 6 Red). Masques A et B identiques partout sauf « Purple Rain » | correlated (layout) / hypothesized (rôle du masque B et des 4 rép.) |
 | f17 | dimmer par groupe A–H (packé, déf. [255]⁸) | hypothesized |
 | f8 / f24 | flag Color FX actif / Move FX actif (0\|255) | correlated |
 | f4 | masque de contenu (255 full, 8 couleur, 17 beam, 5 move ; b3=couleur b4=beam b2=position ?) | hypothesized |
 | f16 | ~13 varints : masques de banques FX par groupe en paires complémentaires + 1 varint global recopié | hypothesized |
 | f11 | 500/2000/4000 — candidat fondu ms | hypothesized |
 | f10 | candidat version librairie usine | observed |
-| f9=1, f15=1000 (même constante que champ 2 des presets B/C), f13 ×6, f18, f3/f7/f14/f23/f26/f27/f30 | inconnus (tableaux par groupe) | observed |
+| f9=1, f15=1000 (même constante que champ 2 des presets B/C), f13 ×6, f18, f3/f7/f14/f23/f26/f27 | inconnus (tableaux par groupe) | observed |
 | f32/f33/f34/f35 | tableaux par groupe ajoutés au schéma 10 (déf. 50/0/100/100) ; zéros dans le projet migré depuis le schéma 8 | correlated (voir le registre) |
 
 ## Sous-message FX (commun Beam/Color/Move)

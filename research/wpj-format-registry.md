@@ -1364,3 +1364,98 @@ fault and cannot cause it. One candidate removed, not added.
 A generator targeting schema 10 or 11 should emit `50 / 0 / 100 / 100` rather
 than copying the zeros of the experiment project, which are an upgrade artefact
 rather than a chosen value.
+
+
+## Preset `f30` — the static-colour spread mode — **[device-confirmed]**
+
+### It is not a per-group array
+
+`f30` is stored like `f28`/`f29` — eight packed varints — but across **2033
+presets in 25 files it is never non-uniform**: all eight groups always carry the
+same value. It is one scalar replicated eight times, the same "global setting
+stored per slot" shape as type 115 `field 6`.
+
+Its domain is small: `9` (1618 presets), `1` (239), `0` (100), `2` (50), `5` (25).
+
+### The corpus pins it to the static colour
+
+On the factory **colour page** (preset ids 20–39, content mask `f4` = 8), a
+preset carries exactly **two** payload fields, `f30` and `f31`. Everything else
+is identical across the whole page. So `f30` belongs to the static colour,
+next to the pad selection.
+
+And it is only ever non-9 when at least **two** pads are selected:
+
+| pads in `f31` | `f30` seen |
+|---|---|
+| 0 | 9 ×1336 |
+| 1 | 9 ×257 |
+| 2 | 0 ×75, 1 ×189, 2 ×25, 5 ×25, 9 ×25 |
+| 3 | 0 ×25, 1 ×25, 2 ×25 |
+| 4 | 1 ×25 |
+
+The single exception is `Purple Rain`, and it has a structure of its own: it is
+the one preset in the corpus whose **two 20-bit masks differ** (`UV + Purple`
+against `UV + Pink`), so its "two pads" are not two pads of one selection.
+
+### Measured — **F30-01**, four modes, four read-only captures
+
+Predictions were published before each recall. Ten `6x18W` pars at DMX bases
+99, 109 … 189 (`R` = base+1, `G` = base+2, `B` = base+3) and six
+`Lyre ZQ02244`, whose colour arrives on their **colour wheel** at DMX 8, 24, 40,
+56, 72, 88. Nothing was written and nothing was saved.
+
+| `f30` | preset | pads | pars 1 → 10 |
+|---|---|---|---|
+| **0** | `Sizzle` | Red, Orange | green only on the **even** pars — **alternating, one in two** |
+| **1** | `Moulin rouge` | Red, Magenta | blue `255 191 127 63 0 0 63 127 191 255` — **gradient, mirrored** |
+| **2** | `Neon Rave` | Lime, Pink | `Pink Pink Lime Lime Lime Lime Lime Lime Pink Pink` — **hard step, mirrored** |
+| **5** | `Jet Set` | Lime, Turquoise | red `122 104 94 82 67 52 40 27 13 0`, blue the complement — **gradient, not mirrored** |
+| **9** | `Startup` | Amber only | all ten identical — **no spread, one colour** |
+
+So `f30` is the **spread mode of a multi-pad static colour selection**, and two
+axes are visible in it: interpolated against stepped, and mirrored about the
+centre against running straight across.
+
+| Value | Reading |
+|---|---|
+| 0 | stepped, alternating fixture by fixture |
+| 1 | gradient, mirrored about the middle |
+| 2 | stepped, mirrored about the middle |
+| 5 | gradient, straight across |
+| 9 | none — one colour or no static colour |
+
+### Two things it settles beyond `f30`
+
+- **A static colour reaches a fixture with no RGB through its colour wheel.**
+  The lyres took discrete wheel positions under every mode — `72 / 0` under
+  mode 2, `56 72 8 8 72 56` under mode 1 — and the controller emits each
+  range's **lower bound**, the same rule already confirmed for gobos.
+- **Each group's fixtures are spread independently**, over that group's own
+  ordered list: the six lyres and the ten pars each carry the full pattern.
+
+### Still open
+
+The domain is not a contiguous enum in the corpus — `3`, `4`, `6`, `7` and `8`
+appear on no factory preset, so either they are unused modes or the encoding is
+not a plain index. The mirrored/straight and stepped/gradient axes do not
+factor into clean bits either (`0` is stepped and unmirrored, yet `2` is
+stepped and mirrored while `4` never appears). Reading the control off the
+STATIC COLOUR screen would name the list and settle its length in one look.
+
+### `f31` — the wire layout, corrected — **[correlated]**
+
+Read while chasing `f30`, and it corrects `research/preset-format-165.md`.
+`f31` is 20 packed varints = **4 repetitions of 5 bytes**, and each repetition
+is **40 bits carrying two 20-bit masks** of the type-140 pads, low mask first:
+
+```
+rep = 5 bytes, little-endian
+  bits  0…19   mask A — pad n selected  (bit n → pad n+1)
+  bits 20…39   mask B — same shape
+```
+
+The two masks are identical on every preset in the corpus except `Purple Rain`.
+The anchor still holds: `Deep Red` is a single bit 5 in mask A = pad 6 = Red.
+What mask B is for, and whether the 4 repetitions are groups A–D, remain
+**[hypothesized]** — the spread measurements above used only mask A.

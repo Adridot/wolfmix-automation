@@ -1480,17 +1480,95 @@ gradient-against-stepped crossed with mirrored-against-straight; it is
 **direction** (outward, inward, right, left) × **rendering** (blended, hard),
 with `SINGLE`, `FLASH` and the alternating pattern sitting outside that grid.
 
-Status: the five measured rows are **device-confirmed**; the six derived rows
-are **correlated** — they follow from an alignment pinned by five independent
-points, but none has been driven and watched. Measuring one of them, say `3`
-(inward, blended, the mirror image of the measured `1`), would settle the whole
-table.
+### Every entry then measured — **F30-02**, eight captures, no write at all
 
-### Still open
+The six derived rows did not stay derived. The `PATTERN` control can be driven
+**live** from the STATIC COLOUR screen, so the whole list was walked one detent
+at a time on **group B** — ten `6x18W` pars, the most readable group on this rig
+— with `Amber` (pad 1) and `Cyan` (pad 3) selected. Every step's DMX was
+predicted in writing before the operator turned the encoder. Nothing was
+written to the controller and nothing was saved.
 
-`FLASH` = 10 is the one entry whose *behaviour* nothing here predicts: every
-other entry is a spatial layout, while a flash is presumably temporal. A capture
-of it would say whether the field carries anything beyond geometry.
+Amber is `R255 G127 A255`, Cyan is `G255 B255`, so R and B separate them cleanly.
+
+| Element | Predicted | Measured | |
+|---|---|---|---|
+| 4 outward blended | R `0 64 128 191 255 …` | R `0 63 127 191 255 255 191 127 63 0` | exact, firmware **truncates** |
+| 5 outward hard | Cyan 1,2,9,10 · Amber 3–8 | identical | exact |
+| 6 inward blended | mirror of 4 | R `255 191 127 63 0 0 63 127 191 255` | exact |
+| 7 inward hard | Amber 1,2,9,10 · Cyan 3–8 | **Amber 1,2,3,8,9,10 · Cyan 4–7** | direction right, **shares wrong** |
+| 8 right blended | R `255 226 198 170 141 113 85 56 28 0` | same, one value off by 1 | exact |
+| 9 right hard | Amber 1–5 · Cyan 6–10 | identical | exact |
+| 10 left blended | reverse of 8 | identical | exact |
+| 11 left hard | Cyan 1–5 · Amber 6–10 | identical | exact |
+
+### The share rule, corrected by element 7
+
+Element 7 was the one miss, and it is worth keeping. The prediction mirrored the
+*positions* of element 5; the firmware instead re-runs the sequence from the
+other end, and **the share belongs to the colour, not to the position**:
+
+> Over the run of positions a direction defines — the half-length for the
+> mirrored directions, the full length for the straight ones — the colours are
+> dealt in order and **the first colour takes the larger share**.
+
+Two colours over a half-length of 5 gives 3 then 2. Outward deals from the
+centre outward: 3+3 = six central pars Amber, 2+2 = four edge pars Cyan.
+Inward deals from the edges inward: 3+3 = six edge pars Amber, 2+2 = four
+central pars Cyan. Both measured, both fit. Ten positions straight gives 5 and
+5, also measured.
+
+### `FLASH` is not a geometry — **[device-confirmed]**
+
+Every other entry lays colours out in space. `FLASH` does not: it makes the
+group's colour pads **momentary**. The operator tapped a second colour on a
+group set to `FLASH`, the output changed while the pad was held and reverted on
+release — and the group was then left with **no colour at all**, its first pad
+having become momentary too. Confirmed in DMX: with `FLASH` and a single pad
+latched the output was byte-identical to the baseline on all 2048 channels, and
+after the flash the group's six fixtures sat at their no-colour value.
+
+### The final table
+
+| Screen | Icon | `f30` | Behaviour |
+|---|---|---|---|
+| 1 | `SINGLE` | 9 | one colour, every fixture the same |
+| 2 | `FLASH` | 10 | pads momentary, not a spatial layout |
+| 3 | four dots, filled/empty/filled/empty | 0 | alternating, one fixture in two |
+| 4 | outward + circles | 1 | blended, dealt centre → edges |
+| 5 | outward | 2 | hard, dealt centre → edges |
+| 6 | inward + circles | 3 | blended, dealt edges → centre |
+| 7 | inward | 4 | hard, dealt edges → centre |
+| 8 | right + circles | 5 | blended, dealt first → last |
+| 9 | right | 6 | hard, dealt first → last |
+| 10 | left + circles | 7 | blended, dealt last → first |
+| 11 | left | 8 | hard, dealt last → first |
+
+**What is measured and what is not.** The *behaviour* of all eleven entries is
+now device-confirmed. The *stored value* is device-confirmed at five points —
+9, 0, 1, 2 and 5, each read out of a preset whose DMX was then measured. The
+other six rows get their stored value from the alignment
+`value = (screen position − 3) mod 11`, which is the unique order-preserving
+cyclic map fitting those five points. That is very strong but it is arithmetic,
+not a byte read: **saving one preset with, say, element 6 and reading `f30` = 3
+would close the last gap.**
+
+### Group membership, read off the DMX — **[device-confirmed]**
+
+Setting three groups to different patterns at once made the group layout visible
+for the first time, since every factory preset carries the same value on all
+four repetitions of `f31`:
+
+| Group | Fixtures |
+|---|---|
+| A | the six `Lyre ZQ02244` at DMX 0, 16, 32, 48, 64, 80 |
+| B | the ten `6x18W` at DMX 99, 109 … 189 |
+| C | two `Lyre ZQ02344` (operator's own report; they did not move in this capture) |
+
+**Correction to an earlier assumption**: the `GROUPS` key (SHIFT + BPM TAP) does
+**not** display group membership. The operator reports it only pages the display
+to show groups E–H. Nothing in the project file has yet been shown to carry the
+fixture → group assignment; where it lives is still open.
 
 ### `f31` — the wire layout, corrected — **[correlated]**
 

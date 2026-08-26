@@ -1875,3 +1875,93 @@ Preset 82's screen read `HOLD 00:01.00` and its `f15` is `1000`. But `f15` is
 `1000` on **2197/2197 presets in 27 files** — nobody has ever changed a hold
 time, so the corpus contributes nothing beyond that single anchor. Falsifiable
 in one glance: every `PRESET EDIT` screen should read `HOLD 00:01.00`.
+
+## F4-01 — `f4` is a bitmask after all, and three of its bits are named
+
+Six `PRESET EDIT` screens, photographed. **No write, no save**: the file was not
+touched, and the six presets cover all four `f4` values the corpus contains.
+
+| Preset | Page, slot | `f4` | Binary | Top row lit |
+|---|---|---|---|---|
+| `Searchlight` | 1, 6 (id 5) | 255 | `11111111` | `COLOR` + `MOVE` + `BEAM` |
+| `1982` | 2, 6 (id 25) | 8 | `00001000` | `COLOR` |
+| `Rise up` | 3, 5 (id 44) | 5 | `00000101` | `MOVE` |
+| `Split The Atom` | 3, 6 (id 45) | 5 | `00000101` | `MOVE` |
+| `Wander The Forest` | 3, 7 (id 46) | 5 | `00000101` | `MOVE` |
+| `Pulse Out` | 4, 6 (id 65) | 17 | `00010001` | `BEAM` |
+
+### An enumeration is refuted
+
+`Searchlight` lights `COLOR`, `MOVE` and `BEAM` **at the same time**, each in its
+own category colour. A closed vocabulary of preset kinds cannot do that. `f4` is
+a bitmask.
+
+**Retracted, same session**: "the ACC-03 display bug argues for `f4` being read
+against a closed vocabulary rather than eight free bits", written earlier today.
+It does not. Under the mask reading, ACC-03's `25` = `1 | 8 | 16` = bit 0 +
+`COLOR` + `BEAM` is a perfectly legitimate combination — a beam preset with
+colour added, which is exactly what ACC-03 was trying to build. So the W1's
+display bug had **another cause**, still open; `color_fx_actif = 0` and `f16`
+are the remaining suspects from that experiment.
+
+### Three bits named, and one that is not
+
+| Bit | Value | Toggle | How it is pinned |
+|---|---|---|---|
+| 3 | 8 | **`COLOR`** | `1982` carries `8` alone and lights `COLOR` alone |
+| 2 | 4 | **`MOVE`** | page 3 is `5` = bit 0 + bit 2 and lights `MOVE`; bit 0 cannot be `MOVE` because `Pulse Out` carries bit 0 and shows `MOVE` **unlit** |
+| 4 | 16 | **`BEAM`** | symmetric: page 4 is `17` = bit 0 + bit 4, and page 3 carries bit 0 with `BEAM` unlit |
+| 0 | 1 | **unnamed** | set on the move and beam pages, clear on the colour page |
+| 1, 5, 6, 7 | | **unnamed** | never observed outside `255` |
+
+`GOBO`, `LIVE EDIT` and `OTHER` were rendered the same orange on **all six**
+screens, including on `1982` where bit 0 is clear. So these photographs name
+none of their bits, and — per the rule paid for three times already — nothing is
+inferred here about what that orange means. An orange tile has simply never been
+seen in any other state.
+
+Status: `COLOR`, `MOVE`, `BEAM` **[device-confirmed]**; the mask shape
+**[device-confirmed]**; bit 0 **[observed]**.
+
+## F11-02 — `f11` is FADE in milliseconds — **[device-confirmed]**
+
+Four distinct values on six screens, every one as predicted before the
+photographs were taken:
+
+| Preset | `f11` | Predicted | On screen |
+|---|---|---|---|
+| `Split The Atom` | 4000 | `00:04.00` | `00:04.00` |
+| `Wander The Forest` | 2000 | `00:02.00` | `00:02.00` |
+| `1982` | 500 | `00:00.50` | `00:00.50` |
+| `Searchlight`, `Rise up`, `Pulse Out` | absent | `00:00.00` | `00:00.00` |
+
+**Absent = 0**, once more, in a format that never writes an explicit zero.
+
+*Correction to the request that produced these photographs*: its table listed
+`Rise up` at `f11 = 500`. The dump it was built from says `f11` is **absent** on
+`Rise up`, and the screen agrees. The prediction that was actually derived from
+the data was right; the line transcribing it was not.
+
+### `f15` = HOLD — **[correlated]**, still one value
+
+Six screens, six times `HOLD 00:01.00`, and `f15` = 1000 on all six. It is 1000
+on 2197/2197 presets corpus-wide, so the millisecond scale still rests on the
+single ratio 1000 ↔ 1.00 s. Consistent, not yet varied.
+
+### Negative — the screen's `COLOR` line is not `f31`
+
+`PRESET EDIT` shows one named colour at the fourth encoder. It does not read the
+preset's static-colour mask:
+
+| Preset | Screen | `f31`, group A |
+|---|---|---|
+| `Searchlight` | `-` | **Red** |
+| `1982` | `Cyan` | Lime + Cyan + Pink |
+| `Rise up`, `Split The Atom`, `Wander The Forest` | `Green` | **empty** |
+| `Pulse Out` | `Magenta` | **empty** |
+
+Four presets show a colour while `f31` is empty, and the one preset with a
+single clean `f31` pad shows nothing. No top-level scalar of the preset carries
+the pad index either (3 = Cyan, 7 = Green, 10 = Magenta were searched for, and
+`f10` — which is page-constant like `f4` — is 6 / 5 / 3 on those pages). Where
+that line reads from is **open**.

@@ -1368,12 +1368,22 @@ rather than a chosen value.
 
 ## Preset `f30` — the static-colour spread mode — **[device-confirmed]**
 
-### It is not a per-group array
+### It is a per-group array, and the corpus alone said otherwise
 
-`f30` is stored like `f28`/`f29` — eight packed varints — but across **2033
+`f30` is stored like `f28`/`f29` — eight packed varints — and across **2033
 presets in 25 files it is never non-uniform**: all eight groups always carry the
-same value. It is one scalar replicated eight times, the same "global setting
-stored per slot" shape as type 115 `field 6`.
+same value.
+
+**An earlier version of this entry read that as "one scalar replicated eight
+times". That was wrong.** The device shows the control, named **`PATTERN`**,
+once per group on the STATIC COLOUR screen, and the operator photographed a
+state where **group A reads `SINGLE`, group B reads `FLASH` and group C reads
+`SINGLE`** — three groups, two different values, side by side. `f30` is a
+genuine per-group array; the corpus is uniform only because no factory preset
+ever varies it between groups.
+
+Worth keeping as a method note: uniformity across 2033 samples is evidence about
+the *corpus*, not about the *field*. One screen refuted it.
 
 Its domain is small: `9` (1618 presets), `1` (239), `0` (100), `2` (50), `5` (25).
 

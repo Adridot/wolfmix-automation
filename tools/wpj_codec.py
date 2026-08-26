@@ -43,8 +43,8 @@ _PRESET = {
     28: ("positions", "packed"),          # index de position par groupe A–H
     29: ("gobos", "packed"),              # index de gobo (type 145) par groupe,
                                           # 0-based, 255 = aucun — device-confirmed
-    30: ("spread_couleur", "packed"),     # mode d'étalement de la couleur statique,
-                                          # scalaire répliqué 8× — device-confirmed
+    30: ("pattern_couleur", "packed"),    # PATTERN de la couleur statique par groupe
+                                          # A–H (nom lu sur l'écran) — device-confirmed
     17: ("dimmers", "packed"),            # dimmer par groupe A–H
     8: ("color_fx_actif", "packed"), 24: ("move_fx_actif", "packed"),
 }

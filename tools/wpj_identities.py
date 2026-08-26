@@ -218,9 +218,49 @@ def ordre_fixtures_115(w):
         f"115.f6 : {liste} n'est pas une permutation de 0..{len(d['items']) - 1}"
 
 
+# Fonction 111.f3 de la plage que chaque rôle 106 utilise, quand il en vise
+# une seule. Les roues (11, 12) n'en visent aucune et les rôles 1/2/10/21/22
+# débordent ou portent une constante — voir le registre, « record 106 f1/f3 ».
+PLAGE_DU_ROLE = {0: 12, 3: 50, 4: 51, 5: 52, 6: 56, 7: 57, 8: 58,
+                 9: 34, 14: 48, 15: 38}
+
+
+def bornes_106(w):
+    """106.f1/f3 = les bornes DMX de la plage que le rôle pilote.
+
+    Quand `[f1, f3]` coïncide avec une plage de 111 du canal — 2643 entrées du
+    corpus sur 3775 — la fonction de cette plage est celle qu'impose le rôle :
+    le rôle « rouge » tombe sur la plage `f3 = 50`, « dimmer » sur `12`, et
+    ainsi de suite. L'identité ne contraint que ce cas ; les autres motifs sont
+    décrits au registre et volontairement laissés libres.
+    """
+    p105, p106 = _items(w, 105), _items(w, 106)
+    p110, p111 = _items(w, 110), _items(w, 111)
+    p115, p116 = _items(w, 115), _items(w, 116)
+    deb = [c.get("f3", 0) for c in p110]
+    for e in p105:
+        fx = p115[e.get("f5", 0)]
+        base = fx.get("f2", 0)
+        off = p116[fx.get("f3", 0)].get("f3", 0)
+        for k in range(e.get("f4", 0), e.get("f4", 0) + e.get("f7", 0)):
+            ent = p106[k]
+            ci = off + ent.get("f2", 0) - base
+            tranche = p111[deb[ci]:deb[ci] + p110[ci].get("f2", 0)]
+            cible = (ent.get("f1", 0), ent.get("f3", 0))
+            for r in tranche:
+                if (r.get("f1", 0), r.get("f2", 0)) != cible:
+                    continue
+                role = ent.get("f4", 0)
+                if role in PLAGE_DU_ROLE:
+                    assert r.get("f3") == PLAGE_DU_ROLE[role], \
+                        f"106 : rôle {role} sur la plage {r.get('f3')}, " \
+                        f"attendu {PLAGE_DU_ROLE[role]}"
+                break
+
+
 IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
               groupe_fixture, moteurs_f16, plages_111, roles_106,
-              ordre_fixtures_115)
+              ordre_fixtures_115, bornes_106)
 
 
 def demo():

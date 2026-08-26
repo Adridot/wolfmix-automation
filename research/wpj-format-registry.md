@@ -2510,3 +2510,42 @@ FAN, PAN, TILT = stored / 65536                    n = fixtures in the group
 53-step band, so an intermediate rounding inside the ramp would explain it —
 that remains **[hypothesized]**, and one more capture at a different `FAN` would
 pin it. The tilt column, which has no ramp in it, never misses.
+
+## Record 106 `f1`/`f3` — the DMX window the role drives — **[correlated, 30/30]**
+
+`[f1, f3]` is **exactly one of the channel's `111` ranges** on 2643 of the 3775
+entries, and the range it picks is always the one the role calls for:
+
+| Role | Range `111.f3` | | Role | Range `111.f3` |
+|---|---|---|---|---|
+| 0 dimmer | 12 | | 6 extra 1 | 56 |
+| 3 red | 50 | | 7 extra 2 | 57 |
+| 4 green | 51 | | 8 extra 3 | 58 |
+| 5 blue | 52 | | 9 shutter | 34 |
+| 14 *unnamed* | 48 | | 15 *unnamed* | 38 |
+
+That is a second, independent confirmation of the role table: the roles were
+derived from `110.f4`, the profile's channel feature, and they land on the
+matching `111.f3`, the range's own function, through a completely different
+path. `bornes_106` checks it — 10 identities, 30 files.
+
+### The 1132 that do not match are four named patterns, not noise
+
+| Count | Role | `[f1, f3]` | What the channel has |
+|---|---|---|---|
+| 412 | **1 pan, 2 tilt** | `(0, 127)` | one range `(0, 255)` |
+| 378 | **11 colour wheel, 12 gobo wheel** | `(0, 0)` — absent | 17 to 20 ranges |
+| 174 | **10 strobe** | `(0, 241)`, `(0, 251)`, `(0, 16)` | spans several ranges |
+| 126 | 21, 22 | `(190, 255)`, `(0, 32)` | — |
+
+Each is coherent with the reading. A **wheel** has no single range to point at —
+its slots are chosen through the gobo and colour palettes — so the window is
+left absent. **Strobe** is a continuous speed that legitimately spans several
+ranges. Only **pan and tilt** are odd: a flat `(0, 127)` on every one of the 206
+fixtures in the corpus, against a channel whose single range is `(0, 255)`.
+Those are the two roles carried on a 16-bit pair, and `127` is the one constant
+here that nothing explains yet. **[observed]**
+
+Note that this window is *not* the travel limit: the limits are `f5`/`f6`, they
+are per fixture, and on pan they run to 201 or 204 — well past the 127 in `f3`.
+The two pairs of fields do different jobs, which is why both exist.

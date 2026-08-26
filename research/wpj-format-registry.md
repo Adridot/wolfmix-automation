@@ -3488,3 +3488,16 @@ wheels — which the role table's duplicate feature ids already hinted at.
   and no preset in this corpus has ever forced it — which is why no field
   exists for it. Forcing one colour on one preset and saving would make the
   field appear.
+
+## F11-03 — `Button brightness`, prediction published before the download
+
+`Settings → General → Button brightness` set to **14 %**, from the 100 % the
+manual's screenshot shows and the 100 every corpus file carries in `102.f11`.
+
+**Predicted**: `102.f11` reads **14**, and nothing else in the file moves except
+the version counter and the per-save globals `115.f6`/`f7`.
+
+**Refutation branch**: several Settings values have already been shown *not* to
+be project data — master brightness was set to 80 % and wrote nothing. If `f11`
+stays at 100, `Button brightness` joins that list and the field is elsewhere;
+`Display brightness` and `Audio input level` are the neighbours to try next.

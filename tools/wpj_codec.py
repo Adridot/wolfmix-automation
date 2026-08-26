@@ -71,10 +71,15 @@ SCHEMAS = {
     145: {5: ("gobos", {1: ("glyphe", "str"), 2: ("gobo_id", "v"),
                         3: ("nom", "str")})},
     150: {5: ("positions", {5: ("nom", "str")})},
+    # 151 : positions des fixtures « détachées » d'un slot de 150, découpées
+    # par 150.f1/f2. Trois offsets signés, valeur = (v - 32768) / 32767 —
+    # device-confirmed sur l'écran POSITION. Voir le registre, « POS-04 ».
+    151: {5: ("detachees", {2: ("focus_offset", "v"), 3: ("pan_offset", "v"),
+                            4: ("tilt_offset", "v")})},
     160: {5: ("macros", {6: ("nom", "str")})},
     165: {5: ("presets", _PRESET)},
 }
-# passthrough volontaire : 106, 110, 111, 130, 151, 155, 161
+# passthrough volontaire : 106, 110, 111, 130, 155, 161
 
 
 # --- wire protobuf -----------------------------------------------------------

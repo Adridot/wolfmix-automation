@@ -2608,3 +2608,54 @@ The two hypotheses are 40 to 60 DMX steps apart on every band, so one capture
 separates them and identifies the detached lyre at the same time. Under
 `f4` = TILT, its pan (`f3` = 56.5 %) would read 171, 165, 181, 181, 170, 170
 depending on which lyre it is.
+
+## POS-04 — record 151 decoded end to end — **[device-confirmed]**
+
+Two photographs of the `POSITION` editor on group A's `Ceiling` settled it
+without any measurement.
+
+The second screen is the **group** view: `PAN 50 %`, `TILT 100 %`,
+`FOCUS OFFSET 0 %`, `FAN | CROSS 50 %` — which is exactly `150[A][Ceiling]`
+(`f6` = 32768, `f7` = 65535, `f4` = 32768, `f3` = 32768). Four fields, four
+matches, and an independent confirmation of the type 150 layout.
+
+The first screen is the **detached fixture** view: `FIXTURE | ON — Lyre Z 1`,
+`PAN OFFSET 13 %`, `TILT OFFSET −50 %`, `FOCUS OFFSET 0 %`.
+
+### The fields, and the sign convention
+
+They are **signed offsets**, using the same encoding as `150.f4`:
+`percent = (v − 32768) / 32767`.
+
+| Field | Screen | Stored | Decoded |
+|---|---|---|---|
+| `151.f2` | `FOCUS OFFSET` | 32767 | **0 %** |
+| `151.f3` | `PAN OFFSET` | 37027 | **13 %** |
+| `151.f4` | `TILT OFFSET` | 16383 | **−50 %** |
+
+Three for three, to the unit. And the four `Orchestre` entries, frozen across 21
+files, decode to whole percentages under the same rule — pan **39, 26, 1, 3 %**
+and tilt **9, 9, 0, 6 %** — where any wrong convention would scatter them.
+
+`tools/wpj_codec.py` names them `focus_offset`, `pan_offset`, `tilt_offset`, and
+151 leaves the passthrough list. Two of the three opaque record types are now
+down to 130 and 161.
+
+### Retraction — the POS-03 prediction was built on the wrong model
+
+POS-03 published a DMX table on the assumption that 151 holds **absolute
+positions**, predicting a tilt of 36 / 19 / 32 under `f4` = TILT. It does not:
+`f4` is an **offset**, and the value is negative. The prediction is withdrawn
+before it was ever measured.
+
+Corrected: `Ceiling` puts the group at TILT 100 %, so the detached lyre sits at
+`100 − 50 = 50 %` and its pan at `50 + 13 = 63 %`. Because the mapping through
+the travel limits is linear, adding the offset before or after it gives the same
+answer — the two models are indistinguishable here, and that is worth knowing
+before an experiment is designed to tell them apart.
+
+If `Lyre Z 1` is the fixture at DMX 0, recalling `Ceiling` should now read
+**tilt 71** on channel 1 where POS-02 measured 142, and **pan 176** on channel 0
+where it measured 167. The other five lyres must be unchanged. That capture
+would also identify which physical lyre the firmware calls `Lyre Z 1` — an
+ordering the file has not yet been shown to carry.

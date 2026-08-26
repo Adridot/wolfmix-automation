@@ -83,7 +83,7 @@ enum; where 2.0.2 renamed one, both are given.
 | 23 | main menu → DMX VALUES | `DMX_LEVELS` |
 | 25 | main menu → Settings | `SETTINGS` |
 | 26 | main menu → Open | `PROJECTS` |
-| 28 | `GROUPS` key (chevrons) | `WOLF` — the paparazzi flash effect |
+| 28 | `WOLF` key (chevrons) | `WOLF` — the paparazzi flash effect |
 | 29 | `STROBE` | `STROBE` |
 | 30 | `SPEED` | `SPEED` |
 | 32 | `BLINDER` | `BLINDER` |
@@ -137,7 +137,7 @@ transition, HOME on both sides):
 | 17 | main menu → fixture patch | `WM_MODE_FIXTURE_SETUP` | unchanged |
 | 25 | main menu → settings | `WM_MODE_SETTINGS` | unchanged |
 | 26 | main menu → projects | `WM_MODE_PROJECTS` | unchanged |
-| 28 | `GROUPS` key (wolf chevrons) | `WM_MODE_WOLF` | see open question below |
+| 28 | `WOLF` key (chevrons) | `WM_MODE_WOLF` | unchanged |
 
 **[correlated]** — FX keys, mapping rests on the press order being the panel
 order (STROBE, BLINDER, SPEED, BLACKOUT top to bottom). Every value then lands
@@ -167,13 +167,13 @@ in firmware 2.0.18**, 14 of them device-confirmed, 4 more correlated, and one
 removed name (`STATIC_GOBO`) is a pure rename at its original value 8. New
 modes live above 38; 43 is the first one seen.
 
-### Open question
+### Resolved: there was never a `GROUPS` key
 
-The key silkscreened `GROUPS` reports **28**, whose legacy name is
-`WM_MODE_WOLF`, while `WM_MODE_GROUPS = 24` was not reached. Two candidates:
-(a) the firmware calls this screen WOLF and 24 is a different screen (group
-setup, probably under the main menu); (b) WTOOLS renamed things and the panel
-key is a shortcut. Resolve by finding what produces 24.
+Earlier rounds mislabelled the chevrons key as `GROUPS`. It is the **`WOLF`**
+key, and it reports **28** = `WM_MODE_WOLF`, its own legacy name — nothing to
+explain. Groups are not a panel key at all: the A–D / E–H bank switch is
+SHIFT + `BPM TAP`, and it changes no mode. `WM_MODE_GROUPS = 24` stays
+unreached; if it exists on MK1 it is somewhere else entirely.
 
 ## MODE-01 round 2 — touchscreen and menu paths, same session
 
@@ -187,7 +187,7 @@ key is a shortcut. Resolve by finding what produces 24.
 | 19 | main menu → Fixtures → ADD | `WM_MODE_FIXTURE_SELECTION` | unchanged |
 | 23 | main menu → DMX VALUES | `WM_MODE_DMX_LEVELS` | unchanged |
 | 36 | DMX VALUES → beam editor | `WM_MODE_BEAM_EDITOR` | unchanged |
-| 28 | `GROUPS` key (chevrons) | `WM_MODE_WOLF` | **operator-confirmed**: it is the wolf auto-effect, not a groups screen |
+| 28 | `WOLF` key (chevrons) | `WM_MODE_WOLF` | **operator-confirmed**: the wolf auto-effect |
 
 **[observed]**, name still open:
 

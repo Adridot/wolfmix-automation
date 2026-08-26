@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/assets/banner.svg" alt="wolfmix-automation — the Wolfmix .wpj format, byte by byte" width="880">
+
 # wolfmix-automation
 
 **Read, decode, diff and rebuild Wolfmix `.wpj` project files — and drive a Wolfmix W1 over USB — from the command line.**

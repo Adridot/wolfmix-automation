@@ -2659,3 +2659,61 @@ If `Lyre Z 1` is the fixture at DMX 0, recalling `Ceiling` should now read
 where it measured 167. The other five lyres must be unchanged. That capture
 would also identify which physical lyre the firmware calls `Lyre Z 1` — an
 ordering the file has not yet been shown to carry.
+
+## POS-05 — the detached lyre found, and the model closed in 16 bits
+
+`Ceiling` recalled after the detach. **Four channels changed in the whole
+2048-channel universe: 0, 1, 2, and 3.** Everything else was byte-identical to
+the POS-02 capture.
+
+| Lyre @ DMX | pan before → after | tilt before → after |
+|---|---|---|
+| **0** | 167 → **176** | 142 → **71** |
+| 16, 32, 48, 64, 80 | unchanged | unchanged |
+
+Predicted 176 and 71 from `PAN OFFSET +13 %` and `TILT OFFSET −50 %` against a
+group at PAN 50 % / TILT 100 %. **Both exact.**
+
+So **`Lyre Z 1` is the fixture at DMX 0**, the first one — and the entry order
+of record 151 now has one anchor. One lyre detached, one lyre moved, five
+untouched: the offsets apply per fixture and nothing leaks to the group.
+
+### Channels 2 and 3 are the fine pair, and that fixes the model
+
+The `ZQ02244` profile's first four channels carry `110.f4` = **1, 2, 1, 2** —
+pan, tilt, pan, tilt. Channels 2 and 3 are the **fine** halves, and they moved
+together with the coarse ones, which is why exactly four channels changed.
+
+Reading the pair as one 16-bit value shows the earlier ±1 misses for what they
+were — **rounding twice**. The limits are stored as bytes but applied on the
+full 16-bit scale:
+
+```
+borne16(f) = f / 255 × 65535
+DMX16      = borne16(f5) + pct × (borne16(f6) − borne16(f5))
+coarse     = DMX16 >> 8        fine = DMX16 & 0xFF
+```
+
+| | Predicted 16-bit | Measured |
+|---|---|---|
+| pan, group at 50 % (POS-02) | 42919 | **42918** |
+| pan, detached at 63 % | 45191 | **45190** |
+| tilt, group at 100 % | 36494 | **36494** |
+| tilt, detached at 50 % | 18247 | **18246** |
+
+Within one part in 65536, and the coarse byte is exact every time. `142` is not
+`142/256` of full scale but `142/255` — that single choice is what turns 36494
+from an approximation into the measured value.
+
+Re-scored against all three captures the coarse predictions are **tilt 12/12,
+pan 11/12**, the lone miss still `Crowd` on the lyre at DMX 32. The tilt column,
+which carries no `FAN` ramp, has never missed once across 18 predictions.
+
+### What is still not in the file
+
+The capture named `Lyre Z 1` by elimination, not by reading it. **Nothing in the
+project has been shown to map a 151 entry to a fixture** — the slice gives the
+count and the order, but not the identity. `Orchestre`'s four entries are four
+of six lyres, and which four is unknown. Detaching a second, known fixture on a
+slot with an empty slice would settle whether the order is the fixture index,
+the DMX address, or the `115.f6` display order.

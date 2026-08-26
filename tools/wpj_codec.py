@@ -47,6 +47,10 @@ _PRESET = {
                                           # 0-based, 255 = aucun — device-confirmed
     30: ("pattern_couleur", "packed"),    # PATTERN de la couleur statique par groupe
                                           # A–H (nom lu sur l'écran) — device-confirmed
+    # f10 : masque de contenu, six bits, 1 = bascule ÉTEINTE, dans l'ordre de
+    # l'écran PRESET EDIT — bit0 COLOR, 1 MOVE, 2 BEAM, 3 GOBO, 4 LIVE EDIT,
+    # 5 OTHER (bit 5 prédit, pas encore mesuré). Voir le registre, F4-02.
+    10: ("masque_contenu", "v"),
     17: ("dimmers", "packed"),            # dimmer par groupe A–H
     8: ("color_fx_actif", "packed"), 24: ("move_fx_actif", "packed"),
 }

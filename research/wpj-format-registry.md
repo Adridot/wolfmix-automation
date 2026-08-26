@@ -1965,3 +1965,93 @@ single clean `f31` pad shows nothing. No top-level scalar of the preset carries
 the pad index either (3 = Cyan, 7 = Green, 10 = Magenta were searched for, and
 `f10` — which is page-constant like `f4` — is 6 / 5 / 3 on those pages). Where
 that line reads from is **open**.
+
+## F4-02 — the content mask is `f10`, not `f4` — **[device-confirmed]**
+
+One project save, two toggles switched off on two user presets, downloaded
+twice with identical SHA-256. Version 1787670974701 → **1787670974702**, so the
+save reached the file.
+
+### The prediction was wrong in an informative way
+
+The published prediction was that `f4` would read `254` on the preset whose
+`GOBO` toggle was switched off. **`f4` did not move at all** — it is still `255`
+on all three page-5 presets. `f10` moved instead:
+
+| Preset | Toggle switched off | `f10` before | after |
+|---|---|---|---|
+| page 5 slot 1, `valse` | `GOBO` | absent | **8** = bit 3 |
+| page 5 slot 2 | `LIVE EDIT` | absent | **16** = bit 4 |
+| page 5 slot 3 | `OTHER` | absent | absent — nothing changed |
+
+### `f10` is the six toggles, in screen order, and a set bit means OFF
+
+`0` = nothing switched off = all six lit. That alone re-reads the six
+photographs from this morning **without a single contradiction**:
+
+| Preset | `f10` | Bits set | Predicted OFF | Screen showed OFF |
+|---|---|---|---|---|
+| `Searchlight` | absent | — | none | none |
+| `1982` | 6 | 1, 2 | `MOVE`, `BEAM` | `MOVE`, `BEAM` |
+| `Rise up`, `Split The Atom`, `Wander The Forest` | 5 | 0, 2 | `COLOR`, `BEAM` | `COLOR`, `BEAM` |
+| `Pulse Out` | 3 | 0, 1 | `COLOR`, `MOVE` | `COLOR`, `MOVE` |
+
+Six for six. The bit order is the **reading order of the screen**, the top row
+then the bottom row:
+
+| Bit | 0 | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|---|
+| Toggle | `COLOR` | `MOVE` | `BEAM` | `GOBO` | `LIVE EDIT` | `OTHER` |
+| Pinned by | three screens | three screens | four screens | the `valse` write | the slot-2 write | **predicted**, 32 |
+
+`f10` is **≤ 62 on all 2197 presets of the corpus** and never reaches 64, which
+is exactly a six-bit field. Every value the corpus holds reads cleanly:
+`3` = a beam page, `5` = a move page, `6` = a colour page, `32` = only `OTHER`
+off, `51` = `BEAM` + `GOBO`, `61` = `MOVE` alone, `62` = `COLOR` alone.
+
+It also settles the rendering, which no photograph could be asked to settle on
+its own: on `1982`, `f10 = 6` leaves bits 3, 4, 5 clear, so `GOBO`, `LIVE EDIT`
+and `OTHER` are **on** there — the orange tile is the **lit** state of the
+bottom row, and the top row simply takes its category colour when lit and drops
+its tile when not.
+
+### Retracted — F4-01's bit assignments on `f4`
+
+Written earlier today: "`COLOR` = `f4` bit 3, `MOVE` = bit 2, `BEAM` = bit 4",
+at **[device-confirmed]**. Wrong field. `f4` and `f10` are *both* constant per
+factory page, so the six screens could not tell them apart — the four `f4`
+values simply happened to be in one-to-one correspondence with the four `f10`
+values across the four pages. It took a write that moved one without the other.
+
+That is the corpus-uniformity trap in a new dress: not one field uniform
+everywhere, but **two fields co-varying everywhere**, which is just as
+indistinguishable and just as easy to mistake for a proof. The reading that
+survives is the one where a single experiment separated them.
+
+What survives from F4-01: the mask **shape** — `Searchlight` lighting three
+toggles at once still refutes an enumeration — and the retraction of the
+ACC-03 "closed vocabulary" reading. **`f4` itself is unknown again**: 255 on
+pages 1 and 5, 8 / 5 / 17 on pages 2 / 3 / 4, and unmoved by a content-mask
+edit.
+
+### Still open, and one prediction outstanding
+
+`OTHER` is predicted at **bit 5**, so switching it off alone reads `f10 = 32` —
+a value the corpus already holds 181 times. Nothing changed on page 5 slot 3,
+so either the toggle was not pressed or `OTHER` does not toggle.
+
+**Negative**: switching a toggle off does **not** imply the masked content is
+cleared. `valse` did lose its group-A gobo (`f29[A]` 9 → 255) in the same save,
+but across the corpus `f10` bit 3 and an all-255 `gobos` array agree on only
+595/2197 presets, and bit 0 versus an empty `f31` on 1693/2197. The `valse`
+erasure came from something else in that save, which also moved
+`move_fx_actif`, `f16`, `f18` and two `move_fx1` fields.
+
+### Side observation — record 115 lost `f6` and `f7` on every fixture
+
+All 20 fixtures dropped `f6 = 231` and `f7 = 20` in this save, which is the
+whole 100-byte shrink of record 115. Both were a per-project constant
+replicated on every slot, and the registry already flagged that shape as
+suspected volatile state. The `groupe`, `profil` and `adresse_dmx` fields are
+untouched, and `groupe_fixture` still holds — 5 identities on **29** files.
+**[observed]**

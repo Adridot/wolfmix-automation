@@ -999,19 +999,78 @@ record 105 (`f4` = start address, `f7` = channels consumed) disagrees with both:
 it gives spacing 10 for the 16-channel lyres and 8 for the 10-channel pars.
 One of the two attributions is wrong. Flagged here, not resolved.
 
-### Prediction published before measuring
+### Measured on the device — layout and naming **[device-confirmed]**
 
-STATIC GOBO on group A (`Beam`), which is the only populated palette:
+The operator opened STATIC GOBO on group A. The screen header reads **`Beam`**,
+the name record 125 gives group index 0 — a third independent corroboration of
+the A–H ordering.
 
-- **17 pads filled, pads 18, 19 and 20 empty.** With the grid order confirmed on
-  type 140 — bottom row first, 5 columns × 4 rows — the **top row should read
-  `[pad 16] [pad 17] [empty] [empty] [empty]`** and the other three rows should
-  be full.
-- **Pad 10 is the only named one, and its name is `points`.** The other 16 have
-  no stored name, so whatever the screen shows for them comes from the firmware
-  or the library, not from the `.wpj`.
-- Pressing pad *n* on group A should drive the lyres' gobo channel into a
-  distinct DMX band, no two overlapping:
+Three predictions were published before the photograph; all three hold.
+
+**1. The grid order is confirmed a second time.** The screen lays the 20 slots
+out as **5 columns × 4 rows**, and the wire order fills it **bottom row first,
+left to right** — identical to type 140:
+
+```
+top      Gobo 16  Gobo 17  Gobo 18  Gobo 19  Gobo 20
+         Gobo 11  Gobo 12  Gobo 13  Gobo 14  Gobo 15
+         Gobo 6   Gobo 7   Gobo 8   Gobo 9   points
+bottom   Gobo 1   Gobo 2   Gobo 3   Gobo 4   Gobo 5
+```
+
+Two different record families now agree on this layout, so it is the palette
+convention, not a coincidence of one screen.
+
+**2. Names are firmware-generated, and `f3` overrides them.** Nineteen slots
+read `Gobo N` with **N = the 1-based slot index**; slot 10 reads **`points`**,
+which is the one and only string stored in the whole record. Confirmed: the
+`.wpj` carries no name for an unnamed gobo, and the label is synthesised from
+the index.
+
+**3. Slots 18–20 are the empty ones**, in the top row's last three positions as
+predicted. The firmware still prints `Gobo 18/19/20` for them, but their icon is
+a plain neutral disc rather than a gobo pattern — the label is not the tell, the
+icon is. The earlier phrasing "the top row should read `[pad 16] [pad 17]
+[empty] [empty] [empty]`" was right about *which* slots are empty and wrong to
+expect blank labels.
+
+### The icons corroborate the two id runs — **[observed]**
+
+The palette's ids fall in two runs, 425→420 and 342→352, and the icons split at
+exactly the same place:
+
+| Slots | Ids | Icon on screen |
+|---|---|---|
+| 1–6 | 425, 424, 423, 422, 421, 420 | plain discs in a **graded size series**, smallest at slot 1 |
+| 7–17 | 342 … 352 | **patterned** gobo glyphs |
+| 18–20 | none | a single neutral disc, all three identical |
+
+Read as an id space, that is one family of beam-size / dot gobos taken in
+decreasing id order and one family of patterned gobos taken in increasing id
+order — which is just the order the two families sit on the fixture's gobo
+wheel. Icon reading is from a photograph and is **[observed]**, not proof.
+
+`f2` therefore stays **[correlated]**: the screen never shows the id. The DMX
+band test below would settle it, and is still worth doing.
+
+**Caveat recorded at the operator's request**: the icons and labels come from
+the Nicolaudie profile builder, whose gobo library the operator cannot fully
+control. They describe what the *profile declares*, not necessarily what the
+fixture physically projects. The claim here is about `f2` matching the profile's
+declared id, and nothing more.
+
+### UI facts for the mode map — **[device-confirmed]**
+
+- The STATIC GOBO screen carries a **`ROTATE 0 %`** control on the fourth
+  encoder and a **vertical strip of five feature icons** down the left edge,
+  one highlighted — sub-pages of the gobo screen, not yet identified.
+- An **`ALL GOBOS`** view exists, reached before a group is selected; it dims
+  the palette and shows the A / B / C / D group letters unhighlighted.
+
+### The DMX test, still open
+
+Pressing pad *n* on group A should drive the lyres' gobo channel into a distinct
+band, no two overlapping:
 
 | pad | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
 |---|---|---|---|---|---|---|---|---|---|

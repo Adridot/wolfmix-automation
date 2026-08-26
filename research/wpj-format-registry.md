@@ -3235,3 +3235,40 @@ the value names.
 may be *live* state that only reaches the file when a preset captures them. If
 no preset's arrays move, the five values live elsewhere — record 145, or a
 global — and the cardinality match was a coincidence.
+
+### Measured — the prediction is refuted, and it is the branch that was published
+
+Version 1787670974707 → **709**, two saves. **One record moved: 115.** Record
+165 did not change at all, and none of the five arrays moved.
+
+None of `15`, `55`, `58`, `77` or `96` appears anywhere new in the file — their
+byte counts across the whole body are identical before and after, except `15`
+which went *down*. The five settings did not reach the project.
+
+**So the static gobo features are live state**, exactly the refutation branch
+written before the download. A project save does not capture them.
+
+This does **not** refute the five-arrays hypothesis; it refutes the experiment.
+`f3`, `f7`, `f14`, `f23`, `f27` are still five per-group arrays against five
+per-group features, and `70's Paradise` still carries `f14 = [6]×8`. What the
+save showed is that the path from screen to file runs **through a preset**: the
+manual says `GOBO` in the content mask "will include the corresponding parts of
+the project", so a preset must capture the state first.
+
+**Next experiment**: set the five features, then **SHIFT + tap a preset**, which
+the manual says overwrites that preset with the current controller state, then
+save the project. Page 5 slot 3 is the expendable one. The prediction above
+carries over unchanged.
+
+### `115.f6`/`f7` move on every save — **[observed]**
+
+The only change this save produced: all twenty fixtures went from `f6 = 18` with
+no `f7`, to `f6 = 232, f7 = 113`. Identical on every fixture, including the ten
+pars and the fogger, none of which has a gobo channel.
+
+Corpus values are `f6` ∈ {4, 110, 231, 232, 18} and `f7` ∈ {20, 113, 187, 218},
+always one pair per file replicated across every slot. They changed here while
+**nothing in the patch did**, so they track the save rather than the patch —
+consistent with the "global stored per slot" shape noted long ago, and now with
+a stronger claim: a writer must expect them to be rewritten by the device and
+must not read anything per-fixture from them.

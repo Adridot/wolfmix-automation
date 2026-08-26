@@ -3948,3 +3948,34 @@ project-constant mask.
 Twelve slices: **nine named, two provably empty, one open.** Six experiments,
 one latch each, and every naming in the flash half is a direct measurement —
 after five positional and symmetry guesses that all failed.
+
+## FLASH-08 — the reverse direction: a file we wrote, read back by the device
+
+Every naming so far ran **device → file**: latch a key, capture, read the slice.
+This runs it the other way. Three presets are edited to carry one flash slice
+each and nothing else changed, the project is deployed, and the operator recalls
+them.
+
+Only `f16` is touched, on three presets, in one record:
+
+| Preset | Slice set to 511 | Predicted key on recall |
+|---|---|---|
+| page 5 slot 1 (`valse`) | 6 | **`WOLF`** |
+| page 5 slot 2 | 7 | **`STROBE`** |
+| page 5 slot 3 | 8 | **`BLACKOUT`** |
+
+Slices 6–10 are cleared first on all three, so each preset carries exactly one
+flash engine. A verification pass over the built file confirms record 165 is the
+only record that differs and `f16` the only field.
+
+Two presets are not enough for `BLINDER` and `SPEED` in the same pass, and the
+repository's rule is **edit, do not synthesize** — duplicating a preset entry to
+make room would create something the donor file does not contain. So slices 9
+and 10 get a second pass rather than a shortcut.
+
+### Side finding — `165.f1` is neither count
+
+`f1` equals the number of presets on 24 files and the number of *named* presets
+on the other 17, and neither rule survives the whole corpus: `base.wpj` has 82
+presets, 81 named, `f1` = 82; `after-smoke-alone.wpj` has 83 presets, 81 named,
+`f1` = 81. It is left **verbatim** by this edit. **[observed]**

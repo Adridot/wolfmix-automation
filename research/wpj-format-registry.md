@@ -1518,6 +1518,37 @@ Inward deals from the edges inward: 3+3 = six edge pars Amber, 2+2 = four
 central pars Cyan. Both measured, both fit. Ten positions straight gives 5 and
 5, also measured.
 
+### The distribution rule, complete — **F30-03**, **[device-confirmed]**
+
+How the firmware deals N colours over M fixtures when M is not divisible by N
+is what a show generator actually needs, and two more captures on group B — the
+ten pars, with `Amber` (pad 1), `Cyan` (pad 3) and `UV` (pad 4) selected, red
+reading 255 / 0 / 60 so the three never collide — settled it. Both splits were
+predicted in writing first.
+
+| Geometry | Run length | Colours | Predicted | Measured |
+|---|---|---|---|---|
+| element 9, right hard | 10 | 3 | **4-3-3** | Amber 1–4, Cyan 5–7, UV 8–10 |
+| element 5, outward hard | 5 (half) | 3 | **2-2-1** | Amber 4–7, Cyan 2,3,8,9, UV 1,10 |
+| element 5, outward hard | 5 (half) | 2 | 3-2 | measured earlier |
+| element 9, right hard | 10 | 2 | 5-5 | measured earlier |
+
+The rule, in one sentence:
+
+> Along the run a direction defines — the **half-length** for the mirrored
+> directions (`outward`, `inward`), the **full length** for the straight ones
+> (`right`, `left`) — the selected pads are dealt **in ascending pad order**,
+> split as evenly as possible, and the **remainder goes to the earliest
+> colours**.
+
+`outward` deals from the centre towards the edges, `inward` from the edges
+towards the centre, `right` from the first fixture to the last, `left` from the
+last to the first. The blended variants interpolate the same deal instead of
+stepping it, truncating rather than rounding.
+
+That is enough to generate a static colour look for any rig and reproduce what
+the controller does, which was the point.
+
 ### `FLASH` is not a geometry — **[device-confirmed]**
 
 Every other entry lays colours out in space. `FLASH` does not: it makes the

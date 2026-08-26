@@ -2450,7 +2450,7 @@ would have said nothing about `FAN`; it was the pairs splitting apart that
 forced the field into view. Recorded because the temptation is to publish only
 the tilt table.
 
-### The discriminator, published before measuring — **[planned]**
+### The discriminator — measured, POS-02 — **[device-confirmed]**
 
 `Ceiling` stores `FAN = 50 %`. Under the rule above, `2·FAN − 100 = 0`: the ramp
 collapses and **every fixture sits at 50 %** of its own band. The pairs that
@@ -2468,3 +2468,45 @@ split on `Crowd` must come back together.
 Tilt at 100 % has no rounding in it at all and must read exactly `f6`. Pan is
 ±1. The two predictions fail in different ways: if the limits are wrong the tilt
 column breaks, and if the `FAN` rule is wrong the pan pairs stay split.
+
+**Both held.** Measured: pan **167, 162, 178, 178, 165, 165**, tilt **142, 142,
+77, 77, 127, 127**.
+
+- **Tilt exact on all six**, and exact on all six of `Crowd` too — **12/12
+  across the two captures**, from three different limit pairs at two different
+  percentages. `106.f5`/`f6` are the travel limits, with nothing left to argue.
+- **The pan pairs closed**: `(178, 178)` and `(165, 165)`, where `Crowd` gave
+  `(176, 180)` and `(174, 180)`. Expressed against each lyre's own band the six
+  sit at 50.0, 50.9, 50.9, 50.9, 50.0, 50.0 % — the ramp collapsed exactly as
+  the `FAN` rule requires.
+
+### The divisor is 65536, not 65535
+
+The first pass predicted 161 where 162 was measured, and 177 where 178 was
+measured — both of them the two cases whose exact value lands on `.5`. The cause
+is that `32768 / 65535` is *not* one half: it is 0.500008, and the ramp term
+pushed it a hair under. Dividing by **65536** makes `32768` exactly 50 % and
+takes `Ceiling`'s pan from 4/6 to **6/6**, degrading nothing else.
+
+So the stored 16-bit fields are `percent × 65536`, read back as `v / 65536`,
+with the result rounded to nearest. That is the natural encoding for a firmware
+that stores a fraction in a `uint16`, and the two `.5` cases are what exposed it.
+
+### Final tally, and the one that still misses
+
+```
+DMX = round( f5 + frac × (f6 − f5) )
+frac = (1 − FAN) + k × (2·FAN − 1) / (n − 1)      k = fixture rank, 0…n−1
+FAN, PAN, TILT = stored / 65536                    n = fixtures in the group
+```
+
+| | pan | tilt |
+|---|---|---|
+| `Crowd` | 5/6 | **6/6** |
+| `Ceiling` | **6/6** | **6/6** |
+
+**11/12 and 12/12.** The single miss is `Crowd` on the lyre at DMX 32: predicted
+175, measured 176, an exact value of 175.38. It is the third fixture of six on a
+53-step band, so an intermediate rounding inside the ramp would explain it —
+that remains **[hypothesized]**, and one more capture at a different `FAN` would
+pin it. The tilt column, which has no ramp in it, never misses.

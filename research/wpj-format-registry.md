@@ -293,6 +293,21 @@ output is *not* a direct image of the stored value and cannot be used to read
 these fields. It stays useful for locating which channel carries tilt, and it
 makes the limits themselves a target worth decoding.
 
+**Resolved on 2026-08-26 — the limits are `106.f5`/`f6`.** See the record 106
+entry below. The two fixtures in that capture are group C's `Lyre ZQ02344`, and
+their tilt entries hold `f5 = 255`, `f6 = 198` — the exact endpoints measured,
+in the exact order measured, spanning exactly the 57 steps observed. The
+anomaly was never an anomaly; it was an undecoded field, and it now reads:
+
+```
+DMX = f5 + percent × (f6 − f5)        0 % → 255,  100 % → 198
+```
+
+That makes the DMX cross-check usable again for every fixture whose limits are
+known, and it upgrades the reading below from correlated to
+**[device-confirmed]** — by a measurement taken before the field was decoded,
+which is the strongest form this notebook has.
+
 ## Type 155 — the four FX sequences — **[device-confirmed]**
 
 Earlier entries in this registry called this record a DMX patch map and then a
@@ -2241,7 +2256,7 @@ profile's channel order. `roles_106` in `tools/wpj_identities.py` checks the
 table on every entry of every file, and an unknown role fails rather than
 passing unnoticed — 8 identities, 30 files.
 
-### `f5`/`f6` = the fixture's travel limits on pan and tilt — **[correlated]**
+### `f5`/`f6` = the fixture's travel limits on pan and tilt — **[device-confirmed]**
 
 On the colour roles, `f5`/`f6` are `0`/`255`: the whole channel. On pan and tilt
 they vary **per fixture**, and they vary in pairs — which is what a rig hung in
@@ -2264,8 +2279,22 @@ per axis.
 
 The two `ZQ02344` carry `f5 > f6` on tilt. Read as `[low, high]` that is
 malformed; read as `[start, end]` it is an **inverted axis**, which is what a
-moving head hung upside down needs. Status **[observed]** for the inversion —
-one rig, one axis.
+moving head hung upside down needs.
+
+**And that pair is already measured.** The `Floor` → `Ceiling` capture recorded
+earlier in this registry, under type 150, drove exactly two fixtures' tilt from
+**255 to 198** and was written up as "both inverted and compressed into 57 DMX
+steps", with no explanation available at the time. Those two fixtures are the
+two `ZQ02344`, and their tilt limits are `f5 = 255`, `f6 = 198`: same endpoints,
+same order, same 57 steps. The prediction was published years — well, hours —
+after the measurement, and it fits without a free parameter:
+
+```
+DMX = f5 + percent × (f6 − f5)
+```
+
+`Floor` is TILT 0 % → 255. `Ceiling` is TILT 100 % → 198. Both exact. The
+inversion is `f5 > f6`, not a sign bit anywhere.
 
 `f1`/`f3` are *not* the enclosing bounds: they read `0`/`127` on pan while `f6`
 reaches 201. They stay unnamed.

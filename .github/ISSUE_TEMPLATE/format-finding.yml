@@ -1,0 +1,46 @@
+name: Format finding
+description: A new field interpretation, or a correction to one already documented
+labels: ["format"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please read [docs/methodology.md](../blob/master/docs/methodology.md) first.
+        **Never attach a `.wpj`, `.wm` or `.wmx` file** — hashes only. See [LEGAL.md](../blob/master/LEGAL.md).
+  - type: input
+    id: claim
+    attributes:
+      label: The claim
+      description: One sentence. Which record, which field, what it means.
+      placeholder: "Type 150, field 4 is FOCUS OFFSET, signed, 32768 = 0 %"
+    validations: { required: true }
+  - type: textarea
+    id: manipulation
+    attributes:
+      label: The manipulation
+      description: Exactly one variable changed, described so someone else can repeat it.
+    validations: { required: true }
+  - type: textarea
+    id: evidence
+    attributes:
+      label: The evidence
+      description: "`wpj_diff.py` output, a DMX capture, or what the device screen showed. Hashes of the before/after files — not the files."
+      render: text
+    validations: { required: true }
+  - type: dropdown
+    id: status
+    attributes:
+      label: Status reached
+      options: [observed, hypothesized, correlated, validated, device-confirmed]
+    validations: { required: true }
+  - type: input
+    id: why-not-higher
+    attributes:
+      label: Why it does not reach the next status
+    validations: { required: true }
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      placeholder: "W1 Mk1, firmware 2.0.18, WTOOLS 1.6.3, macOS 26.5"
+    validations: { required: true }

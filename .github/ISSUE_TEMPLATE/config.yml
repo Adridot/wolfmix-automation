@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Something that should not be published
+    url: https://github.com/Adridot/wolfmix-automation/security/advisories/new
+    about: A project file, vendor document or personal data found in this repository — report it privately.
+  - name: Wolfmix product support
+    url: https://forum.wolfmix.com
+    about: This project is independent of Wolfmix and Nicolaudie. For the controller itself, ask the manufacturer.

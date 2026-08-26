@@ -390,21 +390,23 @@ are still French.
 | [`docs/troubleshooting.md`](docs/troubleshooting.md) | something printed a message you did not expect |
 | [`SPEC.md`](SPEC.md) | you need the bytes |
 | [`LEGAL.md`](LEGAL.md) · [`PROVENANCE.md`](PROVENANCE.md) | you are reusing, forking or publishing any of this |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) · [`SECURITY.md`](SECURITY.md) | you are sending something back |
 
 ## Contributing
 
 The bar here is **evidence, not code style**. A patch that adds a field
 interpretation comes with the experiment that produced it: the exact
 single-variable manipulation, the before/after hashes, the diff, and the status
-it reaches. [`docs/methodology.md`](docs/methodology.md) walks through it.
+it reaches.
 
-Ground rules for any patch:
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — what a contribution must carry, and the
+  rules any patch respects
+- [`docs/methodology.md`](docs/methodology.md) — the method itself
+- [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) · [`SECURITY.md`](SECURITY.md)
 
-- standard library only — no new dependencies;
-- `make check` passes, and the byte-identical round-trip still holds;
-- unknown bytes stay verbatim;
-- **no project file, vendor document or extracted resource in a commit.**
-  `.gitignore` is there to catch it; do not work around it.
+One rule is worth repeating here: **no project file, vendor document or
+extracted resource in a commit.** `.gitignore` is there to catch it; do not work
+around it.
 
 Recording that something is *not* what it looked like is as valuable here as
 recording what it is.

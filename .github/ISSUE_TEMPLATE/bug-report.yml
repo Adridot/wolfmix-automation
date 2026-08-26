@@ -1,0 +1,36 @@
+name: Bug report
+description: A tool did the wrong thing
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "**Do not attach project files.** Paste the command, the output and the hashes."
+  - type: input
+    id: command
+    attributes:
+      label: The command you ran
+      placeholder: "python3 tools/wpj_show.py compile show.json out.wpj"
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and what happened instead
+    validations: { required: true }
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      render: text
+    validations: { required: true }
+  - type: textarea
+    id: check
+    attributes:
+      label: "`make check` output"
+      description: Run it from the repository root. If it abstains, say so — it means nothing was verified.
+      render: text
+    validations: { required: true }
+  - type: input
+    id: env
+    attributes:
+      label: Python version and OS
+    validations: { required: true }

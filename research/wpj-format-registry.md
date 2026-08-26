@@ -4189,3 +4189,27 @@ for future `f1` semantics work only.
 
 Identity updated accordingly: `ajout_de_preset()` now records the edit
 arithmetic and the retraction, not a truncation.
+
+## PRESET-03 — a named preset at page 5 slot 20, hands-off — 2026-08-26
+
+Request: create "preset test automatique" at the **bottom-right pad of
+page 5** — id (5−1)·20 + (20−1) = **99** — transferred, loaded and activated
+with zero panel interaction. Two new variables ride along: a **gap in the id
+sequence** (85–98 absent, first ever in the corpus), and the first
+**file-written `nom`** (f25). Candidate: donor = entry 82 verbatim, id → 99,
+`nom` inserted in tag order, `f16` flash slices 6–10 cleared (donor carried
+BLACKOUT on slice 8). 86 entries, `f1` left at 81, only record 165 differs
+from the device's current state, 15/15 identities pass.
+
+### Predictions, published before the deploy
+
+1. Store + post-RESTART verify accept the 86 entries (per PRESET-01).
+2. **The pad does not appear before a manual reopen.** FLASH-08 measured
+   that the controller keeps running the project it has open across the
+   deploy's RESTART; nothing suggests structure changes that. If the pad
+   *is* visible with no panel touch, FLASH-08's reading must be revisited —
+   either way the automation boundary gets measured.
+3. On the next (manual) open, the preset sits at **page 5, slot 20,
+   bottom-right, named** — pads are keyed by id, and the 85–98 gap is
+   tolerated. Rival outcomes that would refute: entry dropped (sequential
+   ids required) or pad at slot 6 (position-keyed matrix).

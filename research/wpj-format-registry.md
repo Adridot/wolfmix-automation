@@ -2046,9 +2046,34 @@ Two independent readings of the same bit, one stored and one on the screen.
 pressed or `OTHER` does not toggle". That was reading the diff instead of the
 absolute value. The value was in the file the whole time.
 
-All six bits are now named. The outstanding differential runs the other way:
-`OTHER` has been switched back on and, on the next project save, page 5 slot 3
-should read **`f10` absent** while `f4` stays at 255.
+All six bits are now named.
+
+### The reverse differential was not captured — **and a clean round-trip was**
+
+The published prediction was that with `OTHER` switched back on, the next save
+would read `f10` **absent** on page 5 slot 3. It was never tested: the operator
+switched `OTHER` on, saved, switched it off again and saved again. The version
+counter went 1787670974702 → **704**, two increments, and the intermediate state
+was gone before the download.
+
+**The prediction stands untested.** It is not confirmed by what follows, and is
+recorded here as outstanding.
+
+What the two saves do establish is worth more than a third data point on bit 5,
+which two independent readings already name. The final file is **byte-identical**
+to the one before them — same 43654 bytes, and not one record differs, only the
+version counter in the opaque prefix:
+
+```
+after-two-toggles  version 1787670974702  sha256 90148a9f…0936f43f
+after two more saves version 1787670974704  every record identical
+```
+
+So switching a content-mask toggle off, on and off again returns the project to
+**exactly** the same bytes. The toggle leaves no residue anywhere else in the
+file, and `f10` is the only thing in the project that carries it — which is a
+stronger statement than "`f10` changed when we pressed it", and it comes free.
+**[device-confirmed]**
 
 **Negative**: switching a toggle off does **not** imply the masked content is
 cleared. `valse` did lose its group-A gobo (`f29[A]` 9 → 255) in the same save,

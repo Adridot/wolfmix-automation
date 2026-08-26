@@ -414,12 +414,22 @@ f3  f7  f14  f17  f23  f27  f28  f29  f30  f32  f33  f34  f35
 other nine are **known to be per-group** even where their meaning is not, which
 rules out reading them as scalars. `f32`–`f35` appear at schema 10.
 
-**[hypothesized]** `f3`, `f7`, `f14`, `f23`, `f27` are the **five gobo
-features**. The `STATIC GOBO` screen carries one percentage per group,
-switchable between *Rotation, Prism, Focus, Zoom* and *Iris* — five features,
-and the preset has exactly five unexplained per-group arrays. `70's Paradise`
-carries `f14 = [6]×8` and the manual's `ROTATE` screenshot reads 6 %;
-`Get Moving` carries `f7 = [0,1,0,…]`, group B only.
+**[device-confirmed]** five of them are the **`STATIC GOBO` features**, measured
+by setting all five on group A to distinct values and capturing them into a
+preset:
+
+| Screen | Field | | Screen | Field |
+|---|---|---|---|---|
+| `ROTATE` | `f14` | | `ZOOM` | `f34` |
+| `FOCUS` | `f32` | | `IRIS` | `f35` |
+| `PRISM` | `f33` | | | |
+
+Their schema-10 defaults `50 / 0 / 100 / 100` on `f32`–`f35` read as Focus 50 %,
+Prism 0 %, Zoom 100 %, Iris 100 %. `f3`, `f7`, `f23` and `f27` remain
+unattributed.
+
+These are **live state** until a preset captures them: a project save alone does
+not write them, only `SHIFT` + tapping a preset does.
 
 ### FX submessage — shared by Beam, Color and Move
 

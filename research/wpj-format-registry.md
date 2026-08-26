@@ -3425,7 +3425,10 @@ The screen carries exactly four values — `MIN PAN`, `MAX PAN`, `MIN TILT`,
 or 100%". That is `106.f5`/`f6`, per fixture and per axis, in the vendor's own
 words.
 
-**Predicted**, if the screen shows `f/255`:
+**Measured on the lyre at DMX 0: 52 %, 79 %, 0 %, 56 % — all four exact.**
+`106.f5`/`f6` is now held by three independent routes: the retrospective group C
+capture, the forward group A predictions of POS-01/02, and the manufacturer's
+own screen. Predicted, if the screen shows `f/255`:
 
 | Lyre @ DMX | MIN PAN | MAX PAN | MIN TILT | MAX TILT |
 |---|---|---|---|---|
@@ -3466,3 +3469,22 @@ Magenta  Yellow  Iris  Zoom  Dimmer  Color Wheel  Gobo  Gobo Rotate  Shutter
 Gobo  Gobo Rotate  Prism  Prism Rotate`. `uPan`/`uTilt` are the fine halves, and
 `Gobo`/`Gobo Rotate` appearing **twice** is why a profile can carry two gobo
 wheels — which the role table's duplicate feature ids already hinted at.
+
+### Three small negatives from the same pass
+
+- **`116.f6` is not the block count.** `LED BAR 252 RGB` occupies **three**
+  record-105 entries and carries `f6 = 0`, while `MH-100 BEAM` occupies one and
+  carries `1`. The `LASERBAR` has six entries and carries `3`. Whatever `f6`
+  counts, it is not blocks. It is 1 on exactly two profiles and 3 on one.
+- **`165.f13` carries nothing.** Six sub-messages, **all empty, on all 2778
+  presets**. A writer must re-emit the six empty items and can read nothing
+  from them.
+- **The preset button's colour is not in any decoded field.** No field of the
+  preset tracks the `COLOR` line across the six photographed screens — the three
+  presets showing `Green` differ in `f11` and agree in nothing else. The manual
+  explains it: the default is **AUTO**, where the button "will automatically
+  fade between up to 4 of the colors used in the Preset", and the preset grid
+  shows "the first 4 colors used". So the colour is **computed** unless forced,
+  and no preset in this corpus has ever forced it — which is why no field
+  exists for it. Forcing one colour on one preset and saving would make the
+  field appear.

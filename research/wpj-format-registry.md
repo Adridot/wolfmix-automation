@@ -2048,24 +2048,45 @@ absolute value. The value was in the file the whole time.
 
 All six bits are now named.
 
-### The reverse differential was not captured — **and a clean round-trip was**
+### The reverse differential — missed once, then measured
 
 The published prediction was that with `OTHER` switched back on, the next save
-would read `f10` **absent** on page 5 slot 3. It was never tested: the operator
-switched `OTHER` on, saved, switched it off again and saved again. The version
-counter went 1787670974702 → **704**, two increments, and the intermediate state
-was gone before the download.
+would read `f10` **absent** on page 5 slot 3.
 
-**The prediction stands untested.** It is not confirmed by what follows, and is
-recorded here as outstanding.
+**First attempt, missed.** The operator switched `OTHER` on, saved, switched it
+off again and saved again. The version counter went 1787670974702 → **704**, two
+increments, and the intermediate state was gone before the download. Nothing was
+learned about the prediction.
 
-What the two saves do establish is worth more than a third data point on bit 5,
-which two independent readings already name. The final file is **byte-identical**
-to the one before them — same 43654 bytes, and not one record differs, only the
+**Second attempt, exact.** `OTHER` switched back on and saved once more:
+
+| | Predicted | Measured |
+|---|---|---|
+| `f10` on page 5 slot 3 | absent | **absent** |
+| `f4` on that preset | unchanged, 255 | 255 |
+| records touched by the save | 165 only | **165 only** |
+| bytes | — | 43654 → **43652**, exactly the two bytes of a `f10` varint field |
+
+Version 1787670974705, `sha256 0ec6b169…0280546f`, downloaded twice identically.
+Bit 5 is now confirmed in **both directions**, and the byte accounting is exact:
+one tag byte plus one value byte, removed when the toggle goes back on.
+
+*A second correction on this experiment.* The download that measured it was
+launched as a **baseline**, with the published expectation that the counter
+would still read 704 because a screen edit does not reach the file. It read 705:
+the operator had already saved. The prediction that mattered was right; the one
+about when to look was wrong — twice in a row on the same experiment, in
+opposite directions. The lesson is not "take a baseline", it is that the version
+counter is the only thing that says which state a download holds, and it has to
+be read before anything is concluded, not after.
+
+### A clean round-trip, from the pair of saves that missed
+
+The file at version 704 is **byte-identical** to the one at 702 — same 43654 bytes, and not one record differs, only the
 version counter in the opaque prefix:
 
 ```
-after-two-toggles  version 1787670974702  sha256 90148a9f…0936f43f
+after-two-toggles    version 1787670974702
 after two more saves version 1787670974704  every record identical
 ```
 

@@ -2309,3 +2309,47 @@ DMX address order: **201, 190, 204, 204, 202, 202**. At the minimum: **133, 133,
 Three distinct values across six fixtures, no two adjacent lyres differing by
 less than 9 — the prediction cannot be satisfied by accident, and it is exactly
 the measurement that has been impossible to interpret until now.
+
+## Record 115 `f6` — the fixture display order — **[correlated, 30/30]**
+
+The record's own `field 6` — not the per-fixture one — is one byte per fixture,
+and it is a **complete permutation** of the fixture indices in every file.
+`ordre_fixtures_115` checks it; 9 identities, 30 files.
+
+What it is *not*: neither a sort by group nor a sort by profile explains it
+corpus-wide, and the two explain **complementary** halves — 9/30 for
+`(group, address)`, 21/30 for `(profile, index)`, 30 between them. The operator's
+own rig is the interesting case:
+
+```
+stored     0 1 2 3 15 16 | 4 5 6 7 8 9 10 11 12 13 | 14 | 17 | 18 19
+profiles   ZQ02244 ×6    | 6x18W ×10               | Faze | Spark | ZQ02344 ×2
+groups     A ×6          | B ×10                   | 9th slot   | C ×2
+```
+
+Read by profile it is exact; read by group it would put C before the ninth slot.
+`rig-a` is the mirror image — there the group order and the profile order
+disagree the other way, and the stored list follows the **group**. A rule that
+holds for one and fails for the other is not the rule.
+
+So `f6` is an **ordering the project carries explicitly**, most likely the patch
+list order as the editor shows it, which the operator can rearrange. Only the
+permutation property is claimed. **This is one glance in WTOOLS from being
+settled**: open the patch and read the fixture order off the screen.
+
+### Preset `f18` — a false lead, recorded so it is not walked again
+
+`f18` is 10 varints of which only the first is ever non-zero, on 8 factory
+presets and 2 user ones. One clean single-variable differential looked
+decisive: switching `LIVE EDIT` off on page 5 slot 2 took `f18[0]` from **24 to
+8** — losing exactly bit 4, which is the bit `f10` gained. That suggested
+`f18[0] & f10 == 0`.
+
+**It does not hold**: 84 presets violate it, all of them page-3 presets carrying
+`f18[0] = 3` against `f10 = 5`. And the companion differential disagrees too —
+switching `GOBO` off on `valse` took `f18[0]` from **11 to 0**, not to 3.
+
+`f18[0]` takes the values 1, 3, 8, 9, 11, 16, 19, 24 across the corpus, on
+presets whose names are all movement-flavoured (`Get Moving`, `Runway`, `Aim`,
+`Point to Point`, `D A N C E`). It reacts to the content mask but is not masked
+by it. Still **open**.

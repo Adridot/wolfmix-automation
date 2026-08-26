@@ -201,8 +201,26 @@ def roles_106(w):
                 f"attendu {ROLES_106[role]}"
 
 
+def ordre_fixtures_115(w):
+    """115.f6 = une permutation complète des index de fixtures.
+
+    Un octet par fixture, chaque index exactement une fois. Ce n'est ni le
+    tri par groupe ni le tri par profil — les deux marchent sur une partie du
+    corpus seulement, et sur des parties complémentaires. C'est un ordre
+    d'affichage propre au projet. Voir le registre, « record 115 ».
+    """
+    d = wpj_codec._decode_msg(w.get(115), {5: ("items", {}), 6: ("ordre", "hex")})
+    if "ordre" not in d:
+        return
+    o = d["ordre"]
+    liste = list(bytes.fromhex(o if isinstance(o, str) else o["hex"]))
+    assert sorted(liste) == list(range(len(d["items"]))), \
+        f"115.f6 : {liste} n'est pas une permutation de 0..{len(d['items']) - 1}"
+
+
 IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
-              groupe_fixture, moteurs_f16, plages_111, roles_106)
+              groupe_fixture, moteurs_f16, plages_111, roles_106,
+              ordre_fixtures_115)
 
 
 def demo():

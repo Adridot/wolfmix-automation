@@ -19,6 +19,3 @@ research/vendor/
 
 # Vendor documents and binaries kept locally for reference, never committed.
 *.pdf
-
-# git filter-branch scratch dir: it holds the pre-anonymisation tree.
-.git-rewrite/

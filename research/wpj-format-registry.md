@@ -1133,3 +1133,31 @@ until measured.
 Pad 10 is `points`, so **`points` should land in 70–76**. Gobo channels are not
 subject to the movement limits that made the position palette unreadable from
 DMX, so the oracle can read this one directly.
+
+## Preset `f29` — candidate static-GOBO index per group — **[hypothesized]**
+
+Surveying the packed per-group arrays of record 165 in the experiment project:
+
+| Field | 8 varints | Default | Reading |
+|---|---|---|---|
+| `f28` | position index per group | 1 | **static POSITION**, correlated |
+| `f17` | dimmer per group | 255 | dimmer, hypothesized |
+| **`f29`** | **255 on all eight** | **255** | **candidate static GOBO index** |
+| `f30` | 9 on all eight, 1 on some presets | 9 | unknown |
+| `f3`, `f7`, `f14`, `f23`, `f27`, `f32`…`f35` | all zero in this rig | 0 | unexercised |
+
+`f29` is the only per-group array whose default is **255**, and 255 is exactly
+the "nothing selected" sentinel already **device-confirmed** in the type-155
+sequencer. Seven presets carry `[9, 255, 255, …]` — a single value on group A,
+which is the only group with a gobo palette. If the index is 0-based like the
+sequencer's, **9 = item 10 = `points`**, the one gobo the operator named.
+
+That is three coincidences pointing the same way, but no experiment. It stays
+**[hypothesized]** until one preset is saved with a known gobo on a known group.
+Discriminator, one save: put gobo item 3 on group A and item 7 on group B (once
+group B has a gobo palette), then read `f29`; `[2, 6, 255…]` confirms 0-based,
+`[3, 7, 255…]` confirms 1-based.
+
+If it holds, the preset record's palette references are symmetric — `f28`
+positions, `f29` gobos, `f31` colours — and the three palette records 150, 145
+and 140 are each reachable from a preset.

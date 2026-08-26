@@ -3786,3 +3786,27 @@ eight slots only.
 
 Either way slice 7 is settled. `102.f4`'s **second** byte should also become 1,
 the independent check that the right key was switched.
+
+### Better: both keys are latched, which makes one capture discriminating
+
+The operator reports `STROBE` **and** `SMOKE` are currently latched together.
+That is a stronger experiment than the one just published, because FLASH-04's
+reservation — that a null result cannot separate "no slice" from "not latched" —
+dissolves:
+
+- **Exactly one slice rises** → it is `STROBE`, and `SMOKE` has no slice even
+  though it was demonstrably held at the same moment. FLASH-04 goes from
+  correlated to **device-confirmed**, by the very capture that proves the key
+  was down.
+- **Two slices rise** → `SMOKE` does have one, FLASH-04 was a false negative
+  caused by the key not being latched, and both are named at once.
+
+The prediction stands: slice 7 rises. What is added is that **no second slice
+rises**, and that half is now the one carrying the weight.
+
+*Correction to the slice-7 argument.* It rested on `Fire!` and `Strobe` being
+the only two presets to raise it. The operator points out that **`Fire!` reads
+as smoke, not strobe** — and they are right, the name is equivocal and this
+registry leaned on it. `Strobe` alone is the unambiguous anchor, so the
+correlated status came from one preset and a name, which is thinner than it was
+written. The measurement about to happen replaces it either way.

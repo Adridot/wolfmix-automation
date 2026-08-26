@@ -2002,7 +2002,7 @@ then the bottom row:
 | Bit | 0 | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|---|
 | Toggle | `COLOR` | `MOVE` | `BEAM` | `GOBO` | `LIVE EDIT` | `OTHER` |
-| Pinned by | three screens | three screens | four screens | the `valse` write | the slot-2 write | **predicted**, 32 |
+| Pinned by | three screens | three screens | four screens | the `valse` write | the slot-2 write | slot 3's stored 32, read on the screen |
 
 `f10` is **≤ 62 on all 2197 presets of the corpus** and never reaches 64, which
 is exactly a six-bit field. Every value the corpus holds reads cleanly:
@@ -2034,11 +2034,21 @@ ACC-03 "closed vocabulary" reading. **`f4` itself is unknown again**: 255 on
 pages 1 and 5, 8 / 5 / 17 on pages 2 / 3 / 4, and unmoved by a content-mask
 edit.
 
-### Still open, and one prediction outstanding
+### `OTHER` = bit 5, confirmed by the state that was already there
 
-`OTHER` is predicted at **bit 5**, so switching it off alone reads `f10 = 32` —
-a value the corpus already holds 181 times. Nothing changed on page 5 slot 3,
-so either the toggle was not pressed or `OTHER` does not toggle.
+The prediction was that switching `OTHER` off alone would read `f10 = 32`.
+Page 5 slot 3 did not change in this save — and it did not need to: it carries
+`f10 = 32` **before and after**, and the operator, opening its `PRESET EDIT`
+screen, reports that `OTHER` was **already off** on it and switched it back on.
+Two independent readings of the same bit, one stored and one on the screen.
+
+*Correction*: this entry first read that null diff as "either the toggle was not
+pressed or `OTHER` does not toggle". That was reading the diff instead of the
+absolute value. The value was in the file the whole time.
+
+All six bits are now named. The outstanding differential runs the other way:
+`OTHER` has been switched back on and, on the next project save, page 5 slot 3
+should read **`f10` absent** while `f4` stays at 255.
 
 **Negative**: switching a toggle off does **not** imply the masked content is
 cleared. `valse` did lose its group-A gobo (`f29[A]` 9 → 255) in the same save,

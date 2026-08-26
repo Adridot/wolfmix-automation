@@ -51,7 +51,7 @@ Every record has the same envelope: `field 1 varint = item count`, then
 | 115 | 116 – 409 | 10 – 22 | **fixture instances** (one per row of the fixture grid) | correlated 18/18 |
 | 116 | 162 – 334 | 3 – 7 | **fixture profile catalogue** | correlated 18/18 (exact count + offset identity) |
 | 120 | 532 – 1199 (575 in `rig-c-bug`) | 86 – 258 | **per-fixture-channel value table**, flat | correlated 18/18 (exact count identity) |
-| 125 | 111 – 137 | **9** always | **9 fixture categories**: name + profile bitmask | correlated 18/18 (mask fully derivable) |
+| 125 | 111 – 137 | **9** always | **the 8 groups A–H + a 9th slot** (§2.2, retracted and corrected 2026-08-26): name + profile bitmask | correlated 18/18 (mask fully derivable) |
 | 130 | **102 always** | **9** always | 9 per-category records, **byte-identical in 18/18 files** | observed — carries no project data |
 | 135 | 140 – 145 | **16** always | **the 16 ColorFX palette pads** (RGBWALU) | correlated |
 | 140 ×8 | 182 – 189 | **20** each | 8 pages × 20 **static-colour pads**; `f2` = page 0…7 | correlated 18/18 |
@@ -177,6 +177,9 @@ profile 4 (a second moving head) → 0x10, profiles 2+3 → 0x0c at index 8, and
 category name the operator gave it — four independent name↔content matches,
 the names themselves being that rig's own and not reproduced here.
 
+**Retracted 2026-08-26 — see the registry, *The fixture → group assignment*.**
+The paragraph below is kept as written; only its conclusion is wrong.
+
 So **125 is the 9 fixture *categories*, not the 8 groups A–H**, and its masks
 are redundant data recomputable from 105 + 115 + 116. Status: **correlated**.
 Only `f8` (the user-editable category name) carries information a writer must
@@ -193,7 +196,7 @@ record 151 being populated. Candidates: a capability flags byte, or the same
 3 to 7 different profiles and 10 to 22 fixtures. Items 0–7 read
 `{f2 = i, f4 = 20, f6 = i, f7 = 1, f8 = 1}`, item 8 reads
 `{f4 = 27, f6 = 8, f8 = 1}`. The 9-item shape and the `f6 = 0…8` index match
-record 125's categories one-for-one; `f4 = 20` matches the pads-per-page
+record 125's nine slots one-for-one; `f4 = 20` matches the pads-per-page
 limit. **[hypothesized]** per-category factory defaults (how many pads a
 category's screen shows). Negative result worth recording: **no differential
 experiment will ever be productive on 130 unless the operator edits something
@@ -490,7 +493,9 @@ more saves. `rig-c = 8` is an older writer.
   `4 × 128` is 4 sequences × 8 groups × 16 steps, not a universe.
 - **`125` = the 8 groups A–H.** Refuted: 9 items, and the mask is exactly
   reproducible from `105.f6` (category) + `115.f3` (profile) in 18/18 files.
-  It is the 9 fixture *categories*.
+  It is the 9 fixture *categories*. **This refutation is itself retracted on
+  2026-08-26**: the 9 slots are groups A–H plus a ninth for the fixtures with
+  no group pads, and `105.f6` is the group index. See the registry.
 - **Record 102 `f7` is the SPEED multiplier "stored literally".** Corrected,
   not refuted: 0.5× writes 1 (FX-06).
 - **Prefix byte 40 is a byte-wide save counter.** Corrected: it is the LSB of

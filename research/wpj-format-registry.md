@@ -1711,3 +1711,83 @@ is the only value seen when no group has two pads — but `Purple Rain` is no
 longer its exception: it genuinely holds two pads on A and on B while sitting on
 `SINGLE`, which is a legitimate if unusual choice. `Milky Way` is the reverse
 case, one pad on A and two on B, carrying `0`.
+
+## The fixture → group assignment — it was in the file, filed under "category"
+
+**[correlated on 27/27 files; the slot 0/1/2 → group A/B/C mapping is
+device-confirmed]**
+
+The open question of the previous session — *nothing in the project file has yet
+been shown to carry the fixture → group assignment* — is answered, and it needed
+no hardware at all. The assignment was already decoded; it was named
+**`categorie`**, and that name is what hid it.
+
+### Where it lives — two redundant carriers
+
+| Field | Scope | Reading |
+|---|---|---|
+| `115[r].f4` | one per fixture | the fixture's group index, **absent = 0 = group A** |
+| `105[e].f6` | one per patch entry | the same index, repeated on every entry of that fixture |
+| `125[i].f4` | one per slot, 6 bytes LE | the OR of `1 << 115[r].f3` over the fixtures of slot *i* — a **profile** mask, so it cannot address a single fixture |
+
+The first two agree on **457/457 fixture rows across 27 files**, and the third
+is derivable from them bit for bit. All three are now checked by
+`groupe_fixture` in `tools/wpj_identities.py` — 5 identities, 27 files.
+
+`tools/wpj_codec.py` renames `105.f6` from `categorie` to `groupe` and gives
+record 115 its three proven keys: `adresse_dmx` (`f2`), `profil` (`f3`),
+`groupe` (`f4`).
+
+### Prediction published before measuring
+
+Written before the dump, on the experiment project, from the DMX-measured
+membership alone: the six `Lyre ZQ02244` at DMX 0, 16, 32, 48, 64, 80 carry
+`f6 = 0`; the ten `6x18W` at 99, 109 … 189 carry `f6 = 1`; the two
+`Lyre ZQ02344` carry `f6 = 2`. **All twenty entries exact**, including the two
+lyres that live at fixture indices 15 and 16, far from the other four.
+
+The two remaining fixtures — `Entour Faze` and `Spark` — carry `f6 = 8`.
+
+### Nine slots: A–H, plus a ninth for what is not a group
+
+`125` has exactly 9 items in every file, and the group index reaches 8 in the
+corpus. Slot 8 is not a ninth group: it collects the fixtures that have no
+group pads on the device — `Entour Faze`, `Spark`, `Sonicboom` in the two rigs
+that own such machines. That matches the preset's four per-group arrays being
+**eight** slots wide (`f28` positions, `f29` gobos, `f30` pattern, `f31` colour
+mask), and record 130's ninth item being the odd one out (`f4 = 27` where the
+first eight carry `f4 = 20`).
+
+### Retracted — "125 is the 9 fixture *categories*, not the 8 groups A–H"
+
+Written in `research/corpus-mining-2026-08-25.md` §2.2 and carried into
+`SPEC.md` §7.2. The mask really is derivable from the profiles, and that
+observation was correct; the conclusion drawn from it was not. A derived mask
+says nothing about what the slot *means*.
+
+Three things refute the category reading:
+
+1. **`rig-b` slot 0 holds two different profiles** — `6x18W 6in1 RGBAW UV` and
+   `LED PAR 56 Black RG`, mask `0x09`. A fixture *category* derived from the
+   model cannot merge two models; an operator building a group of "all my pars"
+   does exactly that.
+2. **The slot 0/1/2 members are the measured groups A/B/C.** Group A was read
+   off the DMX as the six `Lyre ZQ02244` and group B as the ten pars (F30-02,
+   and again on `Milky Way`); those are precisely the members of slots 0 and 1.
+   Slot 2 is the two `Lyre ZQ02344`, the operator's group C.
+3. **`f8` is a *group* name.** The experiment project names slot 0 `Beam` and
+   slot 1 `Pars` — the operator's own names for their moving-head group and
+   their par group, not category labels the firmware would ship.
+
+`rig-c-bug`'s seventh profile at slot 3 is a `LASERBAR`: a fourth group, `D`.
+
+### What this unlocks, and what is still missing
+
+A show generator can now target a group: read `115[*].f4`, and the eight slots
+of `f28`/`f29`/`f30`/`f31` in every preset address exactly those fixtures. The
+group *names* are readable too, from `125[i].f8`.
+
+Still open, and cheap to settle with one photograph: whether the device's
+group A screen displays the name `Beam`. That would take the slot → letter
+mapping from *measured membership* to *named on the device*, and would confirm
+slots 3–7 as D–H without patching anything.

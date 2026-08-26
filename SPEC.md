@@ -114,7 +114,7 @@ every run.
 | 115 | 116–409 | 10–22 | **fixture instances** | correlated (§7) |
 | 116 | 162–334 | 3–7 | **fixture profile catalogue** | correlated |
 | 120 | 532–1199 | 86–258 | flat per-fixture-channel value table | correlated |
-| 125 | 111–137 | **9** | **9 fixture categories**: name + profile bitmask | correlated (§7.2) |
+| 125 | 111–137 | **9** | **the 8 groups A–H + a 9th slot**: name + profile bitmask | correlated (§7.2) |
 | 130 | **102** | **9** | byte-identical in 27/27 files | observed — no project data |
 | 135 | 140–145 | **16** | the 16 ColorFX palette pads (RGBWALU) | correlated |
 | 140 ×8 | 182–189 | **20** each | **static COLOUR palette**, one per group A–H, `f2` = group 0…7 | **device-confirmed** (§3.3) |
@@ -552,6 +552,12 @@ Verified bit for bit, 18/18, with four independent name↔content matches. So
 recomputable from 105 + 115 + 116. Only `f8`, the user-editable category name,
 carries information a writer must preserve.
 
+**Retracted 2026-08-26**: they are the **8 fixture groups A–H plus a ninth slot** for the fixtures that have no group pads. See the registry, *The fixture → group assignment*. `rig-b` groups two different profiles into slot 0, which a model-derived category could not do, and slots 0/1/2 are the DMX-measured groups A/B/C.
+
+The fixture → group assignment itself is `115[r].f4`, mirrored on every patch
+entry as `105[e].f6`: 457/457 fixture rows agree across 27 files, checked by
+`groupe_fixture` in `tools/wpj_identities.py`.
+
 **[observed]** The 7th byte of `f4` is `0x30` in the *Porte* projects and `0x38`
 in the rig-c family — a per-project constant replicated on all 9 items,
 correlating with record 151 being populated.
@@ -561,7 +567,7 @@ correlating with record 151 being populated.
 102 bytes, 9 items, byte-identical in 18/18 files across 4 rigs with 3–7
 profiles and 10–22 fixtures. Items 0–7 read `{f2 = i, f4 = 20, f6 = i, f7 = 1,
 f8 = 1}`, item 8 reads `{f4 = 27, f6 = 8, f8 = 1}`. The 9-item shape matches
-record 125's categories one-for-one and `f4 = 20` matches the pads-per-page
+record 125's nine slots one-for-one and `f4 = 20` matches the pads-per-page
 limit. **[hypothesized]** per-category factory defaults. Negative result worth
 recording: **no differential experiment will be productive on 130** unless the
 operator edits something category-related.

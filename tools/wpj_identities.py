@@ -75,7 +75,34 @@ def patch_disjoint(w):
         assert a + n <= b, f"fenêtres DMX qui se recouvrent : {a}+{n} > {b}"
 
 
-IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint)
+def groupe_fixture(w):
+    """115.f4 == 105.f6 == l'index de groupe de la fixture, et 125 en découle.
+
+    Deux records portent l'affectation, redondants : 115[r].f4 par fixture et
+    105[e].f6 par entrée de patch. Le masque 125[i].f4 (6 octets, LE) est le OU
+    des 1 << 115[r].f3 des fixtures du slot i — donc un slot qui mélange deux
+    profils y allume deux bits. Neuf slots : A–H plus un 9e (index 8).
+    """
+    p105, p115 = _items(w, 105), _items(w, 115)
+    p125 = _items(w, 125)
+    assert len(p125) == 9, f"125 : {len(p125)} slots au lieu de 9"
+    for e in p105:
+        r = e.get("f5", 0)
+        assert e.get("f6", 0) == p115[r].get("f4", 0), \
+            f"105 : fixture {r} en groupe {e.get('f6', 0)} mais 115.f4 = " \
+            f"{p115[r].get('f4', 0)}"
+    for i, slot in enumerate(p125):
+        attendu = 0
+        for f in p115:
+            if f.get("f4", 0) == i:
+                attendu |= 1 << f.get("f3", 0)
+        masque = int.from_bytes(bytes.fromhex(slot["f4"]["hex"])[:6], "little")
+        assert masque == attendu, \
+            f"125[{i}] : masque {masque:#x} != profils du groupe {attendu:#x}"
+
+
+IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
+              groupe_fixture)
 
 
 def demo():

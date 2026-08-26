@@ -23,8 +23,10 @@ import wpjlib
 # dict = sous-message (répété pour les listes d'entrées).
 # 105 : f4/f7 délimitent la tranche du record 106 qui appartient à l'entrée,
 # PAS une adresse DMX (l'adresse est 115.f2). Voir le registre, « record 105 ».
+# f6 = index de groupe (0-7 = A-H, 8 = le slot des effets), redondant avec
+# 115.f4 — voir le registre, « l'affectation luminaire → groupe ».
 _PATCH = {1: ("profil", "v"), 4: ("offset_106", "v"), 5: ("fixture", "v"),
-          6: ("categorie", "v"), 7: ("nb_entrees_106", "v")}
+          6: ("groupe", "v"), 7: ("nb_entrees_106", "v")}
 _PROFIL = {2: ("nb_canaux", "v"), 8: ("nom", "str"), 9: ("hash", "hex"),
            11: ("timestamp", "v")}
 # Ordre des 7 canaux d'un pad : device-confirmed (vue RGB+ du W1, brut 0-255)
@@ -53,7 +55,8 @@ SCHEMAS = {
     101: {1: ("nom", "str")},
     102: {},                                  # 16 octets, champs non identifiés
     105: {5: ("patch", _PATCH)},
-    115: {5: ("fixtures", {})},
+    115: {5: ("fixtures", {2: ("adresse_dmx", "v"), 3: ("profil", "v"),
+                          4: ("groupe", "v")})},
     116: {5: ("profils", _PROFIL)},
     120: {5: ("canaux", {})},                 # entrée vide {} = `2a 00` = tout à 0
     125: {5: ("groupes", {8: ("nom", "str")})},

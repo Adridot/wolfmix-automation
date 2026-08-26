@@ -391,6 +391,25 @@ def _entrees_165(payload):
     return f1, entrees
 
 
+def noms_de_preset_bornes(w):
+    """Aucun nom de preset ne dépasse 19 octets UTF-8.
+
+    Limite device-confirmed (PRESET-05, 2026-08-26) : l'UI de renommage du
+    W1 plafonne à 19 caractères et le chargeur fait respecter la même borne
+    sur un nom écrit par fichier — au-delà, le projet entier refuse de
+    s'ouvrir (« Error opening project »), bruyamment. Un générateur doit
+    donc valider les noms AVANT d'écrire.
+    """
+    for pre in _items(w, 165):
+        nom = pre.get("f25")
+        if nom is None:
+            continue
+        octets = (bytes.fromhex(nom["hex"]) if isinstance(nom, dict)
+                  else nom.encode("utf-8"))
+        assert len(octets) <= 19, \
+            f"165 : nom de {len(octets)} octets : {octets!r}"
+
+
 def ajout_de_preset():
     """L'ajout d'un preset : ce que l'appareil écrit, ce qu'il jette.
 
@@ -467,7 +486,7 @@ IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
               groupe_fixture, moteurs_f16, plages_111, roles_106,
               ordre_fixtures_115, bornes_106, tranches_151,
               tableaux_par_groupe_165, f4_autorise_les_moteurs,
-              schema_du_prefixe, canal_principal_110)
+              schema_du_prefixe, canal_principal_110, noms_de_preset_bornes)
 
 
 def demo():

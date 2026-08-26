@@ -119,7 +119,7 @@ Values: **0 = FLASH**, **1 = TOGGLE**. Guide 10 documents five release modes
 carries a **4** at index 5, so the domain is **[hypothesized]** 0–4 with 2/3/4
 the three timers.
 
-**Experiment FX-01, 2026-08-25, W1 serial withheld, fw 2.0.18.**
+**Experiment FX-01, 2026-08-25, W1 (serial withheld), fw 2.0.18.**
 Request: `GET_PROJECT` on `73d06df4-9b5d-5cd1-9645-51ba125f71a5`
 (`WMX EXP format-lab`, the dedicated experiment project) before and after the
 operator moved **STROBE only** from FLASH to TOGGLE with the fourth encoder
@@ -815,7 +815,7 @@ Either display shape is decisive. The two readings cannot both be right.
 
 ### Measured — **[device-confirmed]**, and the editor turned out to have five views
 
-The operator opened SHIFT + pad 1 on group B (`<group-B name>`, the name record 125 gives
+The operator opened SHIFT + pad 1 on group B (its own name, which record 125 gives
 group index 1) and photographed all five views of the picker. The header reads
 `<group-B name> / ITEM B1` — the group's name and the item's group letter plus 1-based
 index, which corroborates the A–H group ordering a third time.
@@ -1008,8 +1008,8 @@ One of the two attributions is wrong. Flagged here, not resolved.
 
 ### Measured on the device — layout and naming **[device-confirmed]**
 
-The operator opened STATIC GOBO on group A. The screen header reads **`Beam`**,
-the name record 125 gives group index 0 — a third independent corroboration of
+The operator opened STATIC GOBO on group A. The screen header reads the name
+record 125 gives group index 0 — a third independent corroboration of
 the A–H ordering.
 
 Three predictions were published before the photograph; all three hold.

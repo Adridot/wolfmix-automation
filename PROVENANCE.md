@@ -79,26 +79,36 @@ Staff statements and user reports are quoted with their thread id (e.g. t=736
 for "no communication protocols embedded beside MIDI"). Vendor guides are cited
 by number. Short factual quotations, attributed; no document is reproduced.
 
-## Corpus
+## Corpus — none of it is published
 
-Only a subset of `corpus/` may be published. The rule is per-file, not
-per-directory.
+The earlier revision of this file weighed which corpus files were safe to
+publish and concluded that nine of them were. **That conclusion is withdrawn.**
 
-| Publishable | Files | Why |
-|---|---|---|
-| **yes** (9 files) | `corpus/projects/00000000-…-cc21-….wpj` (*rig-a*, 10 fixtures), `…cd21-….wpj` (*rig-b*, 15 fixtures) | two small real projects, no third-party content |
-| **yes** | `corpus/experiments/ACC-0{1..6}/*.wpj` (7 files) | written by our own writer, all derived from *rig-a* |
-| **review first** | `corpus/experiments/FX-0{1,3,4,5,6}/*.wpj` (7 files) | named *WMX EXP format-lab*, but they are controller saves of a **copy of `f2737ec3` = the rig-c rig**: 20 fixtures, its patch and its presets. Only the project name differs. Publishing them publishes that rig |
-| **no** | `rig-c.wpj`, `rig-c-bug.wpj`, `f2737ec3-….wpj` | the operator's production show, including its patch |
-| **no** | the 5 variant-B files, the variant-C file, and the `.wm`/`.wmx` sidecars | WTOOLS-side data, not reviewed for third-party content |
+Re-reading the files settled it: ~70 of the ~78 printable strings in a project
+are **byte-identical across unrelated rigs** — factory preset, effect, macro and
+position names authored by the manufacturer. Every project also embeds fixture
+profile data (names, channel layouts, capability ranges, gobo image ids) taken
+from the vendor's profile library, and a device-derived UUID. There is no
+"small, clean" project file; the smallest one still carries all three.
 
-The 9 safe files are enough for every self-check in `tools/` to run (each asserts
-at least 5 variant-A files). Publishing the FX-\* set as well would raise the
-evidence base from 2 independent rigs to 3 — worth doing **if** the operator
-accepts that the rig-c patch becomes public.
+So the rule is now per-repository, not per-file: **no `.wpj`, `.wm` or `.wmx`
+file is distributed here**, and `.gitignore` enforces it. What is published
+instead:
 
-Note: *rig-a* / *rig-b* are small real projects, not factory defaults.
-Review them once before any public push.
+| Published | Not published |
+|---|---|
+| `corpus/SHA256SUMS` — what was measured, by hash | the files themselves |
+| the write-ups in `research/`, with per-experiment hashes | the before/after pairs |
+| the tools that read and write the format | any project to read |
+| `corpus/experiments/*/build.py`, `show.json` — our own edit specs | the donors they were run against |
+
+Full reasoning, including everything else that is deliberately absent, in
+[`LEGAL.md`](LEGAL.md). How to supply your own corpus:
+[`docs/corpus.md`](docs/corpus.md).
+
+Consequence, stated plainly: on a fresh clone the self-checks **abstain** and
+verify nothing. They report that, and `make check` still exits 0. Point
+`WPJ_CORPUS` at projects of your own and they become real again.
 
 ## Trademarks
 

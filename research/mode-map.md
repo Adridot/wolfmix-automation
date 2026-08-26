@@ -4,14 +4,16 @@ Status vocabulary as in `wpj-format-registry.md`.
 
 ## Evidence
 
-- **[observed]** Legacy WTOOLS 1.x SDK (`/tmp/wolfmix-sdk-inspect/main.cjs`)
-  contains the complete TypeScript enum with numeric values, 39 entries,
-  `WM_MODE_HOME = 0` … `WM_MODE_UNREGISTERED = 38`. Reproduced in the table
-  below; extraction command:
-  `grep -o 'WM_MODE_[A-Z_0-9]*=[0-9-]*' main.cjs`.
-- **[observed]** WTOOLS 2.0.2 (build 248, Flutter AOT) contains 45 distinct
-  `WM_MODE_*` strings. Extraction: `grep -o 'WM_MODE_[A-Z_0-9]*'` over
-  `/tmp/wtools-2.0.2-strings.txt`, deduplicated.
+These are **interface constant names**, read as names, from software installed
+on our own machine. Nothing from that software is reproduced here beyond the
+identifiers themselves, and every numeric value in the confirmed map below was
+measured on our own device rather than taken from a binary — see `LEGAL.md`.
+
+- **[observed]** The legacy WTOOLS 1.x SDK bundle ships the enum as plain
+  TypeScript with numeric values: 39 entries, `WM_MODE_HOME = 0` …
+  `WM_MODE_UNREGISTERED = 38`. Listed below as the legacy numbering.
+- **[observed]** WTOOLS 2.0.2 (build 248, Flutter AOT) carries 45 distinct
+  `WM_MODE_*` identifiers in its string pool, names only, no values.
 - **[observed]** The AOT string pool is not in declaration order
   (`WM_MODE_HOME` is the 41st string in binary order), so **no numeric value
   can be read from the 2.0.2 binary by string order**. Values below stay
@@ -54,7 +56,7 @@ with a compatibility shim in WTOOLS, sparse values) are not excluded.
  9 STATIC_POSITION   19 FIXTURE_SELECTION     29 STROBE
 ```
 
-## Confirmed map (W1 MK1, serial withheld, firmware 2.0.18)
+## Confirmed map (W1 MK1 (serial withheld), firmware 2.0.18)
 
 All values below are **[device-confirmed]**: the operator drove the front
 panel while `watch-mode` polled `GET_SETTINGS`. Legacy names are the 1.x SDK
@@ -109,7 +111,7 @@ toggling between it and the main menu with the back button. Also unreached:
 `GROUPS` (24) — the
 A–D / E–H bank switch is SHIFT + `BPM TAP`, which changes no mode.
 
-## MODE-01 results — 2026-08-25, W1 serial withheld, fw 2.0.18
+## MODE-01 results — 2026-08-25, W1 (serial withheld), fw 2.0.18
 
 Method: `tools/wolfmix.py watch-mode --interval 0.15` (GET_SETTINGS polling
 only, zero writes) while the operator walked the front panel, returning to

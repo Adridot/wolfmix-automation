@@ -158,7 +158,7 @@ rig-c: the healthy revision has out-of-range offsets too.
 ### 2.2 Record 125 is fully derived — no experiment needed
 
 `125` has exactly **9** items in every file. Item *i* carries
-`f4` = a 7-byte blob and `f8` = an optional UTF-8 name (`'Beam'`, `'<group-B name>'` in
+`f4` = a 7-byte blob and `f8` = an optional UTF-8 name (the operator's group names, in
 rig-c). The first 6 bytes of `f4`, read as a little-endian integer, are
 **exactly the bitmask of the 116 profiles whose patch entries carry
 `105.f6 == i`**:
@@ -168,10 +168,11 @@ mask[i] = OR over fixture rows r of (1 << 115[r].f3)  where  category(r) == i
 ```
 
 **Verified 18/18 files, bit for bit.** Cross-check on rig-c: profile 0
-`Lyre ZQ02244` → mask 0x01 named *Beam*; profile 1 `6x18W` → 0x02 named
-*<group-B name>*; profile 4 `Lyre ZQ02344` → 0x10; profiles 2+3 (`Entour Faze`, `Spark`)
-→ 0x0c at index 8. `rig-c-bug` adds `LASERBAR` = profile 6 → 0x40 at
-index 3. Four independent name↔content matches.
+(a 16-channel moving head) → mask 0x01, profile 1 (a 10-channel par) → 0x02,
+profile 4 (a second moving head) → 0x10, profiles 2+3 → 0x0c at index 8, and
+`rig-c-bug` adds a seventh profile → 0x40 at index 3. Each mask matches the
+category name the operator gave it — four independent name↔content matches,
+the names themselves being that rig's own and not reproduced here.
 
 So **125 is the 9 fixture *categories*, not the 8 groups A–H**, and its masks
 are redundant data recomputable from 105 + 115 + 116. Status: **correlated**.

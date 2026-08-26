@@ -10,12 +10,34 @@ Principe de sûreté (règle « lecture avant écriture ») :
   vérifié par self-check sur tout le corpus.
 - Écriture toujours vers un NOUVEAU fichier, jamais d'écrasement.
 """
+import glob
 import hashlib
+import os
 import struct
 import sys
 
+CORPUS_ENV = "WPJ_CORPUS"
+CORPUS_DEFAUT = "corpus"
+
 ROOT_TYPE = 100
 BODY_OFF = 0x40  # conteneur racine ; préfixe opaque = octets 20..0x40
+
+
+def corpus_files(motif="**/*.wpj"):
+    """Fichiers de corpus locaux. Racine : $WPJ_CORPUS, sinon ./corpus.
+
+    Aucun fichier .wpj n'est distribué avec ce dépôt (voir docs/corpus.md) :
+    les self-checks tournent sur le corpus que l'utilisateur fournit, et
+    s'abstiennent proprement s'il n'y en a pas.
+    """
+    racine = os.environ.get(CORPUS_ENV) or CORPUS_DEFAUT
+    return sorted(glob.glob(os.path.join(racine, motif), recursive=True))
+
+
+def pas_de_corpus(outil):
+    print(f"{outil} : ignoré, aucun corpus dans "
+          f"{os.environ.get(CORPUS_ENV) or CORPUS_DEFAUT}/ "
+          f"(voir docs/corpus.md)", file=sys.stderr)
 
 
 class Wpj:
@@ -80,8 +102,9 @@ class Wpj:
 
 
 def demo():
-    import glob
-    files = sorted(glob.glob("corpus/**/*.wpj", recursive=True))
+    files = corpus_files()
+    if not files:
+        return pas_de_corpus("wpjlib")
     tested = 0
     for path in files:
         try:
@@ -92,7 +115,8 @@ def demo():
         rebuilt = hashlib.sha1(w.body()).digest() + w.body()
         assert rebuilt == orig, f"round-trip NON identique : {path}"
         tested += 1
-    assert tested >= 5, f"corpus variante A introuvable (cwd ?) : {tested} fichiers"
+    if not tested:
+        return pas_de_corpus("wpjlib")
     print(f"self-check ok : round-trip octet-identique sur {tested} fichiers",
           file=sys.stderr)
 

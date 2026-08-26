@@ -25,7 +25,11 @@ Three rules go with the ladder:
 
 ## Counting the corpus honestly
 
-The variant-A corpus holds 19 files, but only **four independent rigs**:
+None of the corpus is published ([`../LEGAL.md`](../LEGAL.md)); what follows is
+about how it was counted while measuring, and applies just as much to yours.
+
+The variant-A corpus used here holds 25 files, but only **four independent
+rigs**:
 *rig-a* (10 fixtures), *rig-b* (15), *rig-c* (20) and
 *rig-c-bug* (22, a re-patched *rig-c*). The rest are derived — seven
 written by our own writer from *rig-a*, seven controller saves of one copy
@@ -82,7 +86,7 @@ those, are writable without hedging.
 A patch that adds or changes a field interpretation needs:
 
 - the exact single-variable manipulation, reproducible by someone else;
-- the before/after files, with SHA-256 sums;
+- the SHA-256 sums of the before/after files — **the hashes, not the files**;
 - the `wpj_diff.py` output;
 - the status it reaches, and why it does not reach the next one;
 - serial, firmware and WTOOLS version.
@@ -90,6 +94,10 @@ A patch that adds or changes a field interpretation needs:
 Then: `make check` still passes, the byte-identical round-trip still holds over
 the whole corpus, unknown bytes are still preserved verbatim, and no new
 dependency was added.
+
+If the reading implies a count, an offset or a derivation, add it to
+`tools/wpj_identities.py` as well: an arithmetic identity that holds on every
+file is checkable forever, by anyone, without hardware.
 
 Recording that something is *not* what it looked like is as valuable as
 recording what it is. Both go in `research/`.

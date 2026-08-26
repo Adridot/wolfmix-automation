@@ -133,9 +133,11 @@ def inspect(path):
 
 
 def demo():
-    import glob
+    files = wpjlib.corpus_files()
+    if not files:
+        return wpjlib.pas_de_corpus("wpj_api")
     ok = 0
-    for path in sorted(glob.glob("corpus/**/*.wpj", recursive=True)):
+    for path in files:
         r = inspect(path)
         assert r["modelVersion"] == MODEL_VERSION
         assert isinstance(r["validation"]["checksumOk"], bool)
@@ -149,7 +151,8 @@ def demo():
         assert all(u["type"] not in wpj_codec.SCHEMAS for u in r["unknown_tlvs"]), \
             f"{path} : un type schématisé est retombé en unknown_tlv"
         ok += 1
-    assert ok >= 5, f"corpus variante A introuvable (cwd ?) : {ok} fichiers"
+    if not ok:
+        return wpjlib.pas_de_corpus("wpj_api")
     print(f"self-check ok : inspect JSON valide sur {ok} fichiers variante A")
 
 

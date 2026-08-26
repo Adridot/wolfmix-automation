@@ -24,11 +24,11 @@ Never invent a name for an unconfirmed enum value. Ambiguity is recorded as a
 list of candidates, not resolved by guessing. Absent fields are *absent*, never
 reported as `0` or `off`.
 
-Measurement base: W1 Mk1, serial withheld, firmware **2.0.18**, WTOOLS **1.6.3**,
+Measurement base: W1 Mk1 (serial withheld), firmware **2.0.18**, WTOOLS **1.6.3**,
 macOS. Corpus hashes in `corpus/SHA256SUMS`.
 
-**On "18/18 files".** The corpus holds 19 variant-A files, but only **4 are
-independent rigs** (*rig-a* 10 fixtures, *rig-b* 15, *rig-c* 20,
+**On "18/18 files".** The measurement corpus holds 25 variant-A files, but only
+**4 are independent rigs** (*rig-a* 10 fixtures, *rig-b* 15, *rig-c* 20,
 *rig-c-bug* 22 = a re-patched *rig-c*). The rest are derived: 7 written
 by our own writer from *rig-a*, 7 controller saves of one copy of
 *rig-c*. An identity holding 18/18 is strong enough to **kill** a
@@ -115,9 +115,9 @@ every run.
 | 125 | 111–137 | **9** | **9 fixture categories**: name + profile bitmask | correlated (§7.2) |
 | 130 | **102** | **9** | byte-identical in 18/18 files | observed — no project data |
 | 135 | 140–145 | **16** | the 16 ColorFX palette pads (RGBWALU) | correlated |
-| 140 ×8 | 182–189 | **20** each | 8 pages × 20 static-colour pads, `f2` = page 0…7 | correlated |
-| 145 ×8 | 40–159 | **20** each | 8 pages × 20 glyph buttons, `f2` = page 0…7 | hypothesized |
-| 150 ×8 | 483–491 | **20** each | 8 pages × 20 pan/tilt positions, `f2` = page 0…7 | correlated |
+| 140 ×8 | 182–189 | **20** each | **static COLOUR palette**, one per group A–H, `f2` = group 0…7 | **device-confirmed** (§3.3) |
+| 145 ×8 | 40–159 | **20** each | **static GOBO palette**, one per group A–H, `f2` = group 0…7 | **device-confirmed** (§3.4) |
+| 150 ×8 | 483–491 | **20** each | **static POSITION palette**, one per group A–H, `f2` = group 0…7 | **device-confirmed** (§3.2) |
 | 151 | 0 or 64 | 0 or **4** | 4 × three 16-bit values centred on 32767 | observed |
 | 155 | 562–563 | **4** | **4 FX sequences**, 8 × 16 grid + step count | correlated (§8) |
 | 160 | 393–542, **optional** | 8–11 | named macros | correlated |
@@ -129,16 +129,108 @@ every run.
 `gitfeber/wpj-toolkit` documents only types 101, 135 and 165; its published
 inspect model emits the other 17 as `unknown_tlvs`, type and length only.
 
-### 3.1 The `×8` types are pages, not groups — **refuted, 18/18**
+### 3.1 The `×8` families are the eight groups A–H — **[device-confirmed]**
 
-`140 ×8`, `145 ×8` and `150 ×8` are **not** the 8 fixture groups A–H. Each of
-the 8 records carries exactly 20 items whatever the rig, and a top-level
-`field 2` = an explicit page number 0…7 (absent for page 0). A group-indexed
-record would vary in size with how many fixtures each group holds; these do not.
+`140 ×8`, `145 ×8` and `150 ×8` are the **groups A–H**, indexed by top-level
+`field 2` = 0…7, absent for group A. An earlier survey in this document read
+them as pages; that was wrong, and three independent device readings settle it:
 
-Stronger: `140[4..7]`, `145[1..7]` and `150[1..7]` are **byte-identical across
-all 18 files** — 4 independent rigs, two different writers. Untouched factory
-pages. Only page 0 (and pages 1–3 of 140) ever differ.
+- the first copy of 150 holds the operator's own `<group-A name>`, where the seven
+  others hold the factory `Floor` — exactly what group A shows on the device;
+- the colour picker on group B prints the header `<group-B name> / ITEM B1`, that name being
+  the name record 125 gives group index 1;
+- the gobo picker on group A prints that group's own name, index 0.
+
+Each record carries exactly 20 items whatever the rig: **20 palette slots per
+group**, not a per-group fixture list. Most are untouched factory content —
+`140[4..7]`, `145[1..7]` and `150[1..7]` are byte-identical across all corpus
+files, 4 independent rigs and two writers.
+
+### 3.2 Type 150 — static POSITION palettes — **[device-confirmed]**
+
+```
+field 1 = 20                     slot count
+field 2 = 0…7                    group index, absent for A
+field 5 × 20                     one per slot
+  f3  FAN            unsigned, value = percent × 65535
+  f4  FOCUS OFFSET   signed, 32768 = 0 %, 65535 = +100 %
+  f5  name           UTF-8, absent when the slot is empty
+  f6  PAN            unsigned, percent × 65535
+  f7  TILT           unsigned, percent × 65535, absent = 0
+  f8  CROSS          [hypothesized]
+```
+
+Read off the device's own edit screen (SHIFT + a position pad shows PAN, TILT,
+FOCUS OFFSET and FAN | CROSS as percentages), on slots where the four values
+disagree.
+
+**An earlier reading of this document called `f3` pan and `f4` tilt. Both were
+wrong**, and the corpus alone could not catch it: in the rigs available, every
+named slot of the group examined reads PAN 50 %, which is indistinguishable
+from the neutral fields. Only the device screen separated them. `tools/wpj_show.py`
+writes `f6`/`f7`.
+
+### 3.3 Type 140 — static COLOUR palettes — **[device-confirmed]**
+
+The item is the **same sub-message as record 135** (documented externally as the
+global ColorFX palette), with 20 items instead of 16:
+
+```
+field 1 = 20 · field 2 = group 0…7 · field 5 × 20
+  f1 red · f2 green · f3 blue · f4 white · f5 amber · f6 lime · f7 uv
+  0…255, absent = 0
+```
+
+Settled by the picker's `RGB+` view, which prints the **raw 0–255 channel
+values** and names all seven channels in field order. The other four views are
+lossy: the display **truncates**, so 127/255 shows as 49 %, not 50 %.
+
+The 20 pads are named on screen (Amber, Lime, Cyan, UV, Pink, Red, …) but **no
+name is stored in the file** — the labels are firmware constants tied to the
+slot index, unlike record 150 where `f5` holds a per-slot name.
+
+Grid layout, **[correlated]** by transposition from the type-145 measurement:
+4 columns × 5 rows, filled column by column, top to bottom.
+
+### 3.4 Type 145 — static GOBO palettes — **[device-confirmed]**
+
+Same family, but **no `field 1` count** — the 20 slots are implicit.
+
+```
+field 2 = 0…7                    group index, absent for A
+field 5 × 20                     one per gobo pad
+  f1  glyph    one character, icon font; ' ' (0x20) = empty slot
+  f2  gobo id  global image id, absent on an empty slot
+  f3  name     UTF-8, optional, operator-assigned
+```
+
+**The palette is derived from the patch.** `f2` is the image id carried by the
+gobo-wheel ranges of the group's fixtures: the `f4` values of record 111's
+ranges whose function `f3` = 14, in wire order, skipping the "open" range and
+the shake ranges. Two identities hold on every variant-A file of the corpus and
+are checked mechanically by `tools/wpj_identities.py` (part of `make check`):
+
+| Identity | Meaning |
+|---|---|
+| `110[c].f2 == len(111 slice of c)` | `110.f2` is a **range count**, not a feature enum |
+| `[145 items].f2 == [111 ranges with f3 == 14].f4` | the gobo palette **is** the fixture's gobo wheel |
+
+Confirmed on DMX, two points, exact: pressing pad *n* drives the group's gobo
+channel to the **lower bound** of range *n* (`111.f1`) — pad 1 (`f2` = 425) gave
+7, pad 10 (`f2` = 345) gave 70, and nothing else in 2048 channels moved. That
+same capture confirms `115.f2` as the 0-based DMX start address.
+
+Names: 19 slots print `Gobo N` with N = the 1-based slot index and store
+nothing; the one named slot stores its string in `f3`. **The labels are
+synthesised by the firmware**, so a writer must not expect to find them.
+
+Two flavours of empty must both be reproduced: an empty slot inside a populated
+palette stores `f1 = ' '`, while a wholly empty palette stores bare empty items
+(`2a 00`).
+
+**Scope.** Measured on one group, one profile (six instances of one moving
+head). Nothing contradicts the general rule, but transposition to another rig
+is **[hypothesized]** until measured.
 
 ---
 
@@ -363,7 +455,7 @@ the rig-c blackout, since the healthy revision has out-of-range offsets too.
 ### 7.2 Record 125 is fully derived — **[correlated 18/18]**
 
 Nine items in every file. Item *i* carries `f4` = a 7-byte blob and `f8` = an
-optional UTF-8 name (`'Beam'`, `'<group-B name>'`). The first 6 bytes of `f4`, read
+optional UTF-8 name (the operator's own group names). The first 6 bytes of `f4`, read
 little-endian, are exactly:
 
 ```
@@ -488,7 +580,8 @@ the `wpj-toolkit` enumerations; neither source has them alone.
 - **L3 — record 102 `f5`/`f6`/`f11`.** Three fields at 100, three unassigned
   guide parameters, one save (§6). **Highest value per unit of effort.**
 - **L4 — static colour `f31`.** 4 repetitions × 5 varints, bitmasks over type-140
-  pads (`Deep Red` = mask 32 = pad 6). Are the 4 repetitions groups A–D?
+  pads: `Deep Red` = mask 32 = pad 6, and pad 6 is now confirmed to be **Red**
+  (§3.3), so bit *n* selects pad *n* + 1. Are the 4 repetitions groups A–D?
   Experiment: one pad, one group.
 - **L5 — MIDI mapping record.** The W1 accepts MIDI (preset select by note,
   group/master dimmers by CC, MIDI clock at 24 PPQN) and the map is learned per

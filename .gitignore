@@ -1,6 +1,20 @@
 .DS_Store
 __pycache__/
 *.pyc
-.wolfmix-state/
 *.err
+
+# Runtime state of the device experiment runner: controller snapshots, run
+# journals, DMX captures. Local only, never published.
+.wolfmix-state/
+
+# No Wolfmix project or library file is distributed with this repository.
+# They carry manufacturer content (factory presets, fixture profiles) and the
+# operator's own show data. See docs/corpus.md.
+*.wpj
+*.wm
+*.wmx
+corpus/**/dmx/
 research/vendor/
+
+# Vendor documents and binaries kept locally for reference, never committed.
+*.pdf

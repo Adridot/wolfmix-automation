@@ -2,9 +2,21 @@
 
 ## Files
 
-**`self-check ok` never appears / `corpus variante A introuvable (cwd ?)`**
-The self-checks resolve `corpus/` relative to the working directory. Run from
-the repository root.
+**`… : ignoré, aucun corpus dans corpus/ (voir docs/corpus.md)`**
+Working as intended: no project file ships with this repository, and you have
+not supplied one. The self-check abstained rather than passing vacuously. Put
+`.wpj` files under `corpus/`, or set `WPJ_CORPUS` to where you keep them —
+[`corpus.md`](corpus.md).
+
+**A self-check finds no files even though they are there**
+The corpus root is resolved relative to the working directory unless
+`WPJ_CORPUS` is absolute. Run from the repository root, or export an absolute
+path.
+
+**`wpj_show` abstains although the corpus has files**
+Its self-check needs a donor carrying the slots it edits (preset id 80, a
+position at page 1 index 1, palette pad 0). It tries each file in turn and
+abstains if none qualifies. Any full factory-derived project has them.
 
 **`invalid SHA-1 header`**
 `wpjlib` refuses anything whose bytes 0–19 are not the SHA-1 of bytes 20→EOF.

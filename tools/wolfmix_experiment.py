@@ -542,15 +542,19 @@ def status(args):
 
 
 def self_test(_args):
-    repository = Path(__file__).resolve().parent.parent
-    sample = repository / "corpus/projects/f2737ec3-c2a8-5565-a05b-10ec4c0d46d0.wpj"
-    path, data = validate_project(sample)
-    assert path == sample and data
-    with tempfile.TemporaryDirectory() as directory:
-        target = Path(directory) / "state.json"
-        value = {"sha256": sha256(data), "size": len(data)}
-        atomic_json(target, value)
-        assert read_json(target) == value
+    # No project file is distributed with this repository (docs/corpus.md);
+    # the file-backed half of the check runs only on a local corpus.
+    sample = next(iter(wpjlib.corpus_files()), None)
+    if sample is None:
+        wpjlib.pas_de_corpus("wolfmix_experiment")
+    else:
+        path, data = validate_project(Path(sample))
+        assert path == Path(sample).resolve() and data
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "state.json"
+            value = {"sha256": sha256(data), "size": len(data)}
+            atomic_json(target, value)
+            assert read_json(target) == value
     changes = describe_change(102, bytes.fromhex("2802"), bytes.fromhex("2803"))
     assert changes == ["  type 102 field 5: 2 -> 3"], changes
     appeared = describe_change(102, b"", bytes.fromhex("2807"))

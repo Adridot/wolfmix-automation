@@ -64,8 +64,14 @@ one-universe-per-packet layout is still handled.
 **Why the envelope.** A single DMX frame is not comparable between runs because
 effects animate. Per-channel min/max is: a static channel has `min == max`, an
 animated one keeps its range whatever the phase. That makes it the oracle for
-"did this project change alter the output at all" — see `research/` for how it
-settled the type-102 field-11 question.
+"did this project change alter the output at all". It is what refuted type 102
+`field 11` as inert, and what confirmed the gobo palette: pressing pad *n*
+drove the group's gobo channel to the lower bound of range *n*, with nothing
+else moving in 2048 channels.
+
+Read the whole state, not the delta you expect: the same captures pinned
+`115.f2` as the 0-based DMX start address, because the block boundaries were
+visible in the envelope.
 
 `watch-mode` is the ground truth for the `WM_MODE_*` enum: it polls
 `GET_SETTINGS` (read-only) while the operator walks the controller through its
@@ -76,7 +82,8 @@ screens. Mapping status: [`../research/mode-map.md`](../research/mode-map.md).
 A transactional runner for project experiments, without WTOOLS in the loop.
 
 **The safety envelope.** It only ever writes a project UUID derived
-deterministically (UUID v5) from the experiment label, named `WMX EXP <label>`.
+deterministically (UUID v5) from the experiment label, named `WMX EXP <label>`
+(the device truncates the name to 19 characters).
 It cannot collide with one of your projects. Before initialising it snapshots
 every project on the controller. Every upload is verified by downloading it
 back and comparing bytes. On failure it restores the previous experiment

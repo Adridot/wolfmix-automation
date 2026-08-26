@@ -214,10 +214,9 @@ def projet_vers_dict(path):
 # --- preuve de fidélité ------------------------------------------------------
 
 def demo():
-    import glob, os
-    files = sorted(glob.glob("corpus/**/*.wpj", recursive=True))
-    extra = os.path.expanduser("~/Library/Application Support/WTOOLS/wlinkData/projects")
-    files += sorted(glob.glob(os.path.join(extra, "*.wpj")))  # lecture seule
+    files = wpjlib.corpus_files()
+    if not files:
+        return wpjlib.pas_de_corpus("wpj_codec")
     stats, nb_fichiers = {}, 0
     for path in files:
         try:
@@ -230,7 +229,8 @@ def demo():
             assert encode(t, d) == p, f"fidélité rompue : type {t} dans {path}"
             occ, raw = stats.get(t, (0, 0))
             stats[t] = (occ + 1, raw + ("raw" in d))
-    assert nb_fichiers >= 5, f"corpus variante A introuvable (cwd ?) : {nb_fichiers}"
+    if not nb_fichiers:
+        return wpjlib.pas_de_corpus("wpj_codec")
     print(f"fidélité octet vérifiée sur {nb_fichiers} fichiers variante A")
     print("type  occ  décodé")
     for t in sorted(stats):

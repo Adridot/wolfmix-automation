@@ -28,7 +28,11 @@ _FX_CLES = {"effet": (0, 8), "vitesse": (0, 200), "link_order": (10, 13),
             "speed_source": (0, 2), "bpm_division": (0, 1 << 31)}
 _SHOW_CLES = ("base", "nom", "presets", "positions", "palette")
 _PRESET_CLES = ("id", "nom", "positions", "dimmers") + _FX_NOMS
-_POS_CLES = ("page", "index", "nom", "pan", "tilt")
+# Attribution device-confirmed (registre, type 150) : f6 = PAN, f7 = TILT,
+# f3 = FAN, f4 = FOCUS OFFSET. Une lecture antérieure plaçait pan/tilt en
+# f3/f4 ; elle est réfutée par l'écran d'édition du W1.
+_POS_CLES = ("page", "index", "nom", "pan", "tilt", "fan")
+_POS_CHAMPS = {"pan": "f6", "tilt": "f7", "fan": "f3"}
 _PAL_CLES = ("index", "rouge", "vert", "bleu")
 
 
@@ -130,12 +134,11 @@ def compiler(spec, sortie):
             if not isinstance(pos["nom"], str):
                 raise ValueError(f"{ctx} : nom doit être une chaîne")
             e["nom"] = pos["nom"]
-        if "pan" in pos:
-            e["f3"] = _borne(ctx, "pan", pos["pan"], 0, 65535)
-        if "tilt" in pos:
-            e["f4"] = _borne(ctx, "tilt", pos["tilt"], 0, 65535)
-        attendu = {("nom" if k == "nom" else {"pan": "f3", "tilt": "f4"}[k]): v
-                   for k, v in pos.items() if k in ("nom", "pan", "tilt")}
+        for cle, champ in _POS_CHAMPS.items():
+            if cle in pos:
+                e[champ] = _borne(ctx, cle, pos[cle], 0, 65535)
+        attendu = {("nom" if k == "nom" else _POS_CHAMPS[k]): v
+                   for k, v in pos.items() if k in ("nom",) + tuple(_POS_CHAMPS)}
         verifs.append((150, page - 1, ctx, lambda d, i=idx, att=attendu:
                        all(d["positions"][i].get(k, 0) == v
                            for k, v in att.items())))
@@ -224,17 +227,29 @@ def _imprime(diffs):
 
 
 def demo():
-    import glob
+    """Cherche un donneur utilisable dans le corpus local ; s'abstient sinon.
+
+    Aucun .wpj n'est distribué avec ce dépôt (docs/corpus.md) : le self-check
+    prend le premier fichier variante A du corpus qui porte les emplacements
+    édités (preset 80, position page 1 index 1, pad 0).
+    """
+    for base in wpjlib.corpus_files():
+        try:
+            return _demo_sur(base)
+        except (ValueError, KeyError, StopIteration, OSError):
+            continue                      # donneur sans les emplacements voulus
+    return wpjlib.pas_de_corpus("wpj_show")
+
+
+def _demo_sur(base):
     import tempfile
-    base = sorted(glob.glob("corpus/projects/*.wpj"))
-    base = next(p for p in base if "f2737ec3" in p)
     spec = {"base": base, "nom": "WMX SHOW DEMO",
             "presets": [{"id": 80, "nom": "demo",
                          "beam_fx1": {"effet": 1, "vitesse": 120},
                          "positions": [4, 1, 1, 1, 1, 1, 1, 1],
                          "dimmers": [200] * 8}],
             "positions": [{"page": 1, "index": 1, "nom": "DemoPos",
-                           "pan": 12345, "tilt": 54321}],
+                           "pan": 12345, "tilt": 54321, "fan": 32768}],
             "palette": [{"index": 0, "rouge": 10, "vert": 20, "bleu": 30}]}
     with tempfile.TemporaryDirectory() as tmp:
         out = os.path.join(tmp, "demo.wpj")
@@ -249,7 +264,8 @@ def demo():
         assert p["nom"] == "demo" and p["dimmers"] == [200] * 8
         assert p["beam_fx1"][0]["effet"] == 1 and p["beam_fx1"][0]["vitesse"] == 120
         e = wpj_codec.decode(150, w.get(150, 0))["positions"][1]
-        assert e["nom"] == "DemoPos" and e["f3"] == 12345 and e["f4"] == 54321
+        assert e["nom"] == "DemoPos" and e["f6"] == 12345 and e["f7"] == 54321
+        assert e["f3"] == 32768
         assert wpj_codec.decode(135, w.get(135))["pads"][0] == \
             {"rouge": 10, "vert": 20, "bleu": 30}
         # spec vide = round-trip octet-identique du donneur

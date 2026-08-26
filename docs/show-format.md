@@ -8,6 +8,9 @@ in it. Everything not named is preserved byte for byte.
 python3 tools/wpj_show.py compile show.json out.wpj
 ```
 
+No project file ships with this repository, so the donor is one of yours —
+see [`corpus.md`](corpus.md).
+
 ## Why template-based
 
 Creating a record from scratch has never been validated on a device, so the
@@ -68,15 +71,29 @@ The same shape for all six slots. Only these keys are accepted:
 
 ## `positions[]`
 
-Record 150 exists eight times, one per group A–H; `page` selects which.
+Record 150 exists eight times, **one per group A–H**; `page` selects which
+(1 = A … 8 = H — the key is named `page` for historical reasons).
 
 | Key | Type | Bounds | Meaning |
 |---|---|---|---|
 | `page` | int | 1–8 | **required** — group A–H |
-| `index` | int | ≥ 0 | **required** — entry index within the page, must exist |
+| `index` | int | ≥ 0 | **required** — slot index within the group, must exist |
 | `nom` | string | — | position name |
-| `pan` | int | 0–65535 | pan value (codec field `f3`) |
-| `tilt` | int | 0–65535 | tilt value (codec field `f4`) |
+| `pan` | int | 0–65535 | PAN, value = percent × 65535 (codec field `f6`) |
+| `tilt` | int | 0–65535 | TILT, same scale (codec field `f7`) |
+| `fan` | int | 0–65535 | FAN, same scale (codec field `f3`) |
+
+Percentages are stored as `round(percent × 65535 / 100)`: 50 % = 32768, 23 % =
+15073. The device's own screens **truncate** when they display a percentage, so
+reading a value back off the panel can show one less than you wrote.
+
+FOCUS OFFSET (`f4`) is signed — 32768 is 0 % — and CROSS (`f8`) is still
+hypothesised; neither is writable here.
+
+> An earlier version of this document mapped `pan`/`tilt` to `f3`/`f4`. That
+> attribution was refuted by the device's own edit screen: `f3` is FAN and `f4`
+> is FOCUS OFFSET. The compiler now writes `f6`/`f7`. If you built a show
+> against the old mapping, recompile it.
 
 ## `palette[]`
 
@@ -94,7 +111,7 @@ but are not writable yet — no experiment has confirmed them.
 
 ```json
 {
-  "base": "corpus/projects/rig-a.wpj",
+  "base": "corpus/projects/your-project.wpj",
   "nom": "MY SHOW",
   "presets": [
     {
@@ -105,7 +122,7 @@ but are not writable yet — no experiment has confirmed them.
     }
   ],
   "positions": [
-    {"page": 1, "index": 0, "nom": "Public", "pan": 32000, "tilt": 18000}
+    {"page": 1, "index": 0, "nom": "Public", "pan": 32768, "tilt": 15073}
   ],
   "palette": [
     {"index": 0, "rouge": 255, "vert": 40, "bleu": 0}

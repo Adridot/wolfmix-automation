@@ -3415,3 +3415,54 @@ operator's controller is a **MK1**, so no MIDI map can exist in this corpus, and
 L5's premise — that the map must live in the file — cannot be tested here. The
 **DMX** mapping side does exist on MK1. Categories are `Group Dimmer`, `Preset`,
 `Preset Page`, `Flash` and `General`.
+
+## Fixture Setup, from the manual — a read-only check for `106.f5`/`f6`
+
+### `FIXTURE LIMITS` shows the travel limits as percentages
+
+The screen carries exactly four values — `MIN PAN`, `MAX PAN`, `MIN TILT`,
+`MAX TILT` — as percentages, with "push the encoders to reset these values to 0
+or 100%". That is `106.f5`/`f6`, per fixture and per axis, in the vendor's own
+words.
+
+**Predicted**, if the screen shows `f/255`:
+
+| Lyre @ DMX | MIN PAN | MAX PAN | MIN TILT | MAX TILT |
+|---|---|---|---|---|
+| 0 | **52 %** | **79 %** | 0 % | **56 %** |
+| 16 | 52 % | **75 %** | 0 % | 56 % |
+| 32, 48 | **59 %** | **80 %** | 0 % | **30 %** |
+| 64, 80 | **50 %** | **79 %** | 0 % | **50 %** |
+
+Four distinct pan pairs and three distinct tilt maxima across six fixtures.
+Opening the screen on any one lyre checks the whole reading, with nothing
+written.
+
+### `min` above `max` is a documented shape, not an anomaly
+
+The channel editor's own screenshot reads `Wheel Rot min 191 / Wheel Rot Max
+128` — a minimum above its maximum, shipped in the manufacturer's
+documentation. POS-04 read the two `ZQ02344`'s `f5 = 255, f6 = 198` on tilt as
+an inverted axis; the format uses that inversion generally, and the
+`FIXTURE LIMITS` toolbar has explicit **Invert Pan** and **Invert Tilt**
+actions.
+
+### Profiles carry beams, and `116.f6` is the candidate
+
+A profile may have up to **512 channels** and **64 beams** — "the number of
+independently controllable beams a fixture has" — and the channel editor's
+fourth encoder assigns a channel to a beam.
+
+`116.f6` takes 0, 1 and 3, and is 1 on the `6x18W` and the `MH-100 BEAM`, 3 on
+the `LASERBAR`, 0 on everything else. **[hypothesized]** a beam count or index.
+It does not simply equal the block count the registry recorded for the
+multi-block fixtures — `LASERBAR` is 6 × 8 channels and carries 3 — so the
+reading is not yet right.
+
+### Channel types, named
+
+The fixture builder lists channel types verbatim: `Pan  Tilt  uPan  uTilt  Cyan
+Magenta  Yellow  Iris  Zoom  Dimmer  Color Wheel  Gobo  Gobo Rotate  Shutter
+Gobo  Gobo Rotate  Prism  Prism Rotate`. `uPan`/`uTilt` are the fine halves, and
+`Gobo`/`Gobo Rotate` appearing **twice** is why a profile can carry two gobo
+wheels — which the role table's duplicate feature ids already hinted at.

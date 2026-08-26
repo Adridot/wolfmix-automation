@@ -3852,3 +3852,55 @@ order the firmware assigned, and three refuted positional guesses got us here.
 `f16` now reads: 0 Color FX, 1 Move FX, 2 Beam FX, 5 static, 6 WOLF, 7 STROBE,
 8 BLACKOUT, 9 BLINDER, 11 a per-project constant. Slices 3, 4 and 10 are zero in
 every file and every experiment.
+
+## FLASH-06 — `SPEED` is slice 10, and the symmetry argument is refuted
+
+`SPEED` switched to `TOGGLE` and latched, `STROBE` and `SMOKE` released, preset
+82 overwritten, one save, version 716 → 717. `102.f4`'s **fourth** byte became 1.
+
+`f16` moved two slices:
+
+| Slice | | |
+|---|---|---|
+| 7 | 511 → **0** | `STROBE`, released |
+| **10** | 0 → **511** | **`SPEED`** |
+
+**Retracted**: "`SPEED` has no slice, by symmetry — the other key with no group
+exclusion". It has one. The symmetry argument was published as
+**[hypothesized]** one experiment ago and is now dead.
+
+**And the rule it rested on is dead with it.** FLASH-05 recorded that the
+correspondence between "has an exclusion mask in record 102" and "has a slice in
+`f16`" was *exact on all six keys*. It was exact on the five measured at the
+time. `SPEED` has a slice and no exclusion mask, so the two facts are
+independent — which is what a group mask on a **global speed multiplier** should
+have suggested in the first place.
+
+### The flash side of `f16`, measured on all six — **[device-confirmed]**
+
+| Slice | Key |
+|---|---|
+| 6 | `WOLF` |
+| 7 | `STROBE` |
+| 8 | `BLACKOUT` |
+| 9 | `BLINDER` |
+| 10 | `SPEED` |
+| — | `SMOKE` — the only key with no slice |
+
+Five of six, each measured by its own latch, each writing **511** — all nine
+slots. Only `SMOKE` writes nothing, and that is device-confirmed by the capture
+where it was held alongside `STROBE`.
+
+Slices **3 and 4 remain zero** in every file and every experiment, and there are
+no flash keys left to assign to them.
+
+Whatever slice **11** is, it is not `SMOKE`: it is non-zero and constant per
+project, and it did not move in the capture where `SMOKE` was latched.
+
+### What five refuted guesses bought
+
+The flash engines were guessed positionally three times — `102.f4`'s order, then
+its mask-field order, then the panel layout — and by symmetry twice. All five
+failed. The layout `WOLF STROBE BLACKOUT BLINDER SPEED` matches nothing else in
+the format, and the only way it was ever going to be read is one latch at a
+time. Five experiments, five measurements, no inference left in the result.

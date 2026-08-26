@@ -379,13 +379,15 @@ nine slots — every slice is a group mask and the ninth bit is never set.
 | **7** | **`STROBE`** | device-confirmed, 511 |
 | **8** | **`BLACKOUT`** | device-confirmed, 511 |
 | **9** | **`BLINDER`** | device-confirmed, 511 |
+| **10** | **`SPEED`** | device-confirmed, 511 |
 | 11 | per-project constant | never varies between presets |
 
-A preset captures the **live flash-key state** when it is overwritten, and the
-four keys with a group-exclusion mask in record 102 are exactly the four with a
-slice here. `SMOKE` was latched during a capture and wrote nothing; `SPEED`, the
-other key with no exclusion, is assumed the same. The flash slices write all
-**nine** bits including the effects slot, where the FX engines stop at 255.
+A preset captures the **live flash-key state** when it is overwritten. Five of
+the six keys have a slice, each measured by its own latch; only `SMOKE` writes
+nothing, confirmed by a capture where it was held alongside `STROBE`. Having an
+exclusion mask in record 102 and having a slice here are **independent** —
+`SPEED` has a slice and no exclusion. The flash slices write all **nine** bits
+including the effects slot, where the FX engines stop at 255.
 
 The alignment tests itself: at a stride of 8, slice 1 would read 254 where
 `move_fx_actif` says 255. Across 29352 slice extractions not one falls outside

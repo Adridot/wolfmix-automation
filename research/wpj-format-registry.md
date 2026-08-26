@@ -1300,6 +1300,28 @@ The preset record's palette references are therefore symmetric and all three
 are now anchored: **`f28` positions (150), `f29` gobos (145), `f31` colours
 (140)**, each an index or mask into that group's own palette.
 
+### 255 clears the channel, it does not mean "leave alone" — **[device-confirmed]**
+
+A third recall closed the loop. `Startup` (page 1, slot 1) is a full-content
+preset — `f4` = 255, the same content mask as the other two — carrying
+`f29 = [255]×8`. Recalling it from the `Sizzle` state drove all six gobo
+channels back to **0**.
+
+So the sentinel is applied, not skipped: a preset with 255 actively clears the
+group's static gobo. A writer that means "keep whatever is there" has no way to
+say so in this field.
+
+### UI fact, and the rig was left as found — **[device-confirmed]**
+
+**Preset pads do not toggle off.** Pressing a lit preset a second time does
+nothing — unlike the type-145 gobo pads, which deselect on a second press. The
+only way back is to recall another preset.
+
+The closing envelope after `Startup` agrees with the opening baseline on
+**2048 of 2048 channels**, in both min and max, with the same 122 non-zero and
+0 animated channels. Nothing was written to the controller and nothing was
+saved: the whole experiment was live UI state plus three read-only captures.
+
 ### Scope
 
 Measured on **group A only**, whose six `Lyre ZQ02244` are the only gobo-wheel

@@ -2962,3 +2962,20 @@ need and colour presets do not — and the pars, which carry no pan, tilt, gobo 
 wheel channel, are exactly the fixtures a colour preset addresses. Nothing in
 the corpus separates the candidates, and bits 1, 5, 6 and 7 are still never seen
 outside 255.
+
+### `f16` slices 5 and 7 — **[correlated]**
+
+**Slice 7 is the strobe engine.** It is active on exactly **two** presets in the
+whole corpus, in all 32 files: `Fire!` (id 17) and `Strobe` (id 76). Two presets
+whose names both describe a flicker, and nothing else in 2446 presets. The W1
+has a dedicated `STROBE` key and record 102 carries a strobe speed, so a
+twelfth-of-a-record mask that only those two presets raise is that engine.
+
+**Slice 5 is active on every preset, always 255.** Under the permission reading
+that is an engine every preset is allowed to drive on every group — which is
+what the **static layer** is: every preset carries a static colour (`f31`), a
+position (`f28`) and a gobo (`f29`), and those are never optional. **[hypothesized]**,
+since a field that never varies cannot be pinned by the corpus alone.
+
+`f16` now reads: 0 Color FX, 1 Move FX, 2 Beam FX, 5 static (hypothesised),
+7 strobe, 11 a per-project constant, and 3, 4, 6, 8, 9, 10 never non-zero.

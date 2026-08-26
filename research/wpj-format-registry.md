@@ -2549,3 +2549,62 @@ here that nothing explains yet. **[observed]**
 Note that this window is *not* the travel limit: the limits are `f5`/`f6`, they
 are per fixture, and on pan they run to 201 or 204 — well past the 127 in `f3`.
 The two pairs of fields do different jobs, which is why both exist.
+
+## POS-03 — record 151 is the detached-fixture positions
+
+The operator toggled the firmware feature that **detaches moving heads for
+independent control**, on group A's `Ceiling`, and saved. Version
+1787670974705 → 706, 43652 → 43669 bytes, and exactly **two** records moved.
+
+### `150.f1`/`f2` are a slice of 151 — **[device-confirmed]**
+
+```
+before   Orchestre  f1 = 4              151 has 4 items
+after    Orchestre  f1 = 4              151 has 5 items
+         Ceiling    f1 = 1, f2 = 4
+```
+
+`f2` is the offset, `f1` the length: `[0,4)` for `Orchestre` and `[4,5)` for
+`Ceiling` tile `[0, 5)` exactly. It is the **same (offset, length) couple** the
+format uses in `105.f4`/`f7` into 106 and `116.f3`/`f2` into 110 — the third
+instance of one construction, which is why it was recognisable at a glance.
+
+`tranches_151` checks the tiling; 11 identities, 31 files. This also closes an
+entry left open under type 150: *"`field 1` = 4 appears on exactly one slot in
+the corpus, group A's first, and is still unexplained"*. It is `Orchestre`'s
+slice length, and `Orchestre` was already carrying four detached fixtures before
+this session started.
+
+### What 151 holds
+
+Four items were frozen across 21 files; the fifth is new:
+
+| | `f2` | `f3` | `f4` |
+|---|---|---|---|
+| items 0–3 (`Orchestre`) | 32767 | 45546 / 41287 / 33095 / 33750 | 35716 / 35716 / 32767 / 34733 |
+| item 4 (`Ceiling`, new) | 32767 | **37027** | **16383** |
+
+Read as `v / 65536`: `f2` is **50 % on all five**, `f3` runs 50.5 – 69.5 % and
+the new one is 56.5 %, `f4` runs 50 – 54.5 % and the new one is **25 %** — well
+outside the band the four old ones occupy.
+
+Three 16-bit fractions per detached fixture, and the record's population tracks
+a feature that positions fixtures individually. `f3` and `f4` are the two that
+move. **Which is PAN and which is TILT is not decided by the corpus**, and
+neither is which fixture each item belongs to.
+
+### The discriminator, published before measuring — **[planned]**
+
+`Ceiling` recalled on group A. Five of the six lyres must hold the group
+position — tilt **142, 142, 77, 77, 127, 127** — and exactly **one** must differ from
+it. That one is the detached fixture, and its tilt names the field:
+
+| If TILT is… | lyre @ 0 or 16 | @ 32 or 48 | @ 64 or 80 |
+|---|---|---|---|
+| `f4` = 25 % | **36** | **19** | **32** |
+| `f3` = 56.5 % | **80** | **44** | **72** |
+
+The two hypotheses are 40 to 60 DMX steps apart on every band, so one capture
+separates them and identifies the detached lyre at the same time. Under
+`f4` = TILT, its pan (`f3` = 56.5 %) would read 171, 165, 181, 181, 170, 170
+depending on which lyre it is.

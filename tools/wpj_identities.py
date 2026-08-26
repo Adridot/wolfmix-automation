@@ -28,8 +28,8 @@ def _varints(hexa):
     return out
 
 
-def _items(w, typ):
-    return wpj_codec._decode_msg(w.get(typ), _ITEMS)["items"]
+def _items(w, typ, occurrence=0):
+    return wpj_codec._decode_msg(w.get(typ, occurrence), _ITEMS)["items"]
 
 
 def ranges_par_canal(w):
@@ -258,9 +258,33 @@ def bornes_106(w):
                 break
 
 
+def tranches_151(w):
+    """150[slot].f2/f1 = tranche du record 151, et les tranches le pavent.
+
+    Même construction que `105.f4/f7` dans 106 et `116.f3/f2` dans 110 : un
+    couple (offset, longueur) qui découpe une liste plate. Les slots de
+    position qui n'en utilisent pas ne portent ni `f1` ni `f2`. Voir le
+    registre, « record 151 ».
+    """
+    n151 = len(_items(w, 151)) if w.get(151) else 0
+    vus = []
+    for g in range(8):
+        for i, slot in enumerate(_items(w, 150, g)):
+            if "f1" not in slot and "f2" not in slot:
+                continue
+            vus.append((slot.get("f2", 0), slot.get("f1", 0), g, i))
+    pos = 0
+    for debut, n, g, i in sorted(vus):
+        assert debut == pos, \
+            f"150[{'ABCDEFGH'[g]}][{i + 1}] : tranche à {debut} mais " \
+            f"{pos} entrées de 151 consommées"
+        pos += n
+    assert pos == n151, f"151 : {pos} entrées référencées, {n151} présentes"
+
+
 IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
               groupe_fixture, moteurs_f16, plages_111, roles_106,
-              ordre_fixtures_115, bornes_106)
+              ordre_fixtures_115, bornes_106, tranches_151)
 
 
 def demo():

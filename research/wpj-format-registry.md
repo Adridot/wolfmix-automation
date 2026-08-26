@@ -3325,3 +3325,46 @@ and are obvious as soon as the fields have names.
   live edits running, and the mask captured exactly them.
 - `gobos` went `[1]×8` → `[9, 255×7]`: gobo 9 on group A, cleared elsewhere,
   the 0-based index with 255 as "none" that F29-01 measured.
+
+## The FX screens, from the manual — **[correlated]**
+
+The `COLOR FX` screen has four encoders: **Speed**, **Phase | Order**, **Size**,
+**Fade**. The `MOVE FX` screen has the same four, but two of them carry a second
+mode: **Size | Fan** and **Fade | Flick**. That is the asymmetry the corpus
+showed as an extra field: move FX submessages carry `f3` and colour ones do not.
+
+### `move_fx.f5` = the effect's position — **[correlated]**
+
+The manual: tapping one of 16 light-green matrix buttons "adjusts the position
+of the entire effect to the top left, top, top right, right, bottom right,
+bottom, bottom left, left and center" — **nine** positions.
+
+`move_fx1.f5` is a single byte and takes only `0, 1, 5, 6` across **2778
+occurrences**, never 9 or above. Nine slots, four ever used, none out of range.
+
+### `color_fx.f5` = the effect's colour mask — **[correlated]**
+
+The manual: tapping one of the 16 coloured matrix buttons "adds and removes the
+corresponding color from the effect". `color_fx1.f5` is 2 to 4 bytes and
+ACC-05 already wrote `[3, 0]` into it expecting pads 1 + 2. Both readings agree:
+it is a pad mask over the 16-pad ColorFX palette of record 135.
+
+### What is now constrained, and what is not
+
+Speed is already three named fields — `vitesse`, `bpm_division`,
+`speed_source` — matching the encoder's Clock / BPM / Audio sync modes. That
+leaves `f6`, `f8`, `f9` for **Phase, Order, Size, Fade** on colour, plus `f3`
+and the Fan/Flick modes on move.
+
+Two anchors from the defaults:
+
+- `f8` defaults to **100** in all three families, and `SIZE` is the property a
+  desk ships at 100 %.
+- `f3` exists **only on move** and defaults to **50** — and 50 % is the neutral
+  value of `FAN` everywhere else in this format, as POS-02 measured on the
+  position picker's own `FAN`.
+
+Both are **[hypothesized]**. `f6` and `f9` remain unattributed between Phase,
+Order, Fade and Flick, and `PHASE 0 %` being the neutral means the phase field
+would simply be **absent** on most presets — which is the shape of `f6` on move,
+present on only a fraction of them.

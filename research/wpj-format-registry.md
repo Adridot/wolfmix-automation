@@ -2308,7 +2308,14 @@ it would change the very field under test.
 Group A's pan is its fixture's own DMX address, tilt is address + 1 — roles 1
 and 2 sit on channel offsets 0 and 1 of the `ZQ02244`.
 
-**Recall `Ceiling` (group A, position slot 5), which stores TILT = 100 %.** At
+**Identify the pad by what its editor shows, never by its position.** The first
+attempt at this told the operator "pad 5" on the assumption that the wire order
+is the pad order. It is not — the pad they opened showed `50 70 0 70`, which is
+`Crowd` (PAN 50, TILT 70, FOCUS 0, FAN 70) and not `Ceiling` (50 / 100 / 0 / 50).
+The same trap as the colour grid, paid a third time. The slot → pad mapping for
+type 150 is **still unknown**, and this is a reminder that it is.
+
+**Recall the position whose editor reads TILT = 100 %** — that is `Ceiling`. At
 100 % the formula has no rounding left in it: the tilt channel must read exactly
 `f6`.
 
@@ -2325,12 +2332,21 @@ Three distinct values across six fixtures, no rounding, and a wide margin — wi
 no limits at all the six would read 255. Its pan is 50 %, predicting **167, 161,
 177, 177, 165, 165**, with ±1 allowed for rounding.
 
-**Then recall `Orchestre` (slot 1)**, PAN 13 % / TILT 23 %, which exercises the
-low end of every band: tilt **33, 33, 18, 18, 29, 29** and pan **142, 140, 158,
-158, 138, 138**, ±1.
+**`Crowd` works just as well**, TILT 70 %, predicting tilt **99, 99, 54, 54, 89,
+89** and the same pan as `Ceiling`. **`Orchestre`**, PAN 13 % / TILT 23 %,
+exercises the low end: tilt **33, 33, 18, 18, 29, 29**, pan **142, 140, 158,
+158, 138, 138**. All non-extreme values ±1 for rounding.
 
-Both recalls together cover each of the three limit pairs at two points, and a
-reading that ignored the limits would land on 255 and 33 instead.
+Any two of the three recalls cover each limit pair at two points, and a reading
+that ignored the limits would land on the same value for all six fixtures.
+
+### A feature to come back to
+
+The operator reports that a firmware update added the ability to **detach the
+moving heads and set them independently**. Nothing in this registry has been
+attributed to it yet. The per-group preset arrays that are zero throughout the
+corpus — `f3`, `f23`, `f27` — and the schema-10 additions `f32`–`f35` are the
+places to look first.
 
 ## Record 115 `f6` — the fixture display order — **[correlated, 30/30]**
 

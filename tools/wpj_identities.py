@@ -41,7 +41,41 @@ def palette_gobo(w):
     assert palette == ids, f"palette {palette} != ids gobo {ids}"
 
 
-IDENTITES = (ranges_par_canal, palette_gobo)
+def tranches_106(w):
+    """105.f4/f7 = tranche du record 106, pas une adresse DMX.
+
+    Les intervalles [f4, f4+f7) pavent exactement [0, count(106)), et chaque
+    entrée de 106 tombe dans la fenêtre DMX de sa fixture. Une lecture de f4
+    comme adresse DMX de départ casse les deux (registre, « record 105 »).
+    """
+    p105, p106 = _items(w, 105), _items(w, 106)
+    p115, p116 = _items(w, 115), _items(w, 116)
+    pos = 0
+    for e in sorted(p105, key=lambda e: (e.get("f4", 0), e.get("f7", 0))):
+        assert e.get("f4", 0) == pos, \
+            f"105 : tranche à {e.get('f4', 0)} mais {pos} entrées de 106 consommées"
+        pos += e.get("f7", 0)
+    assert pos == len(p106), f"105 : Σf7 = {pos} != count(106) = {len(p106)}"
+    for e in p105:
+        f = p115[e.get("f5", 0)]
+        base = f.get("f2", 0)
+        span = p116[f.get("f3", 0)].get("f2", 0)
+        for k in range(e.get("f4", 0), e.get("f4", 0) + e.get("f7", 0)):
+            canal = p106[k].get("f2", 0)
+            assert base <= canal < base + span, \
+                f"106[{k}].f2 = {canal} hors de la fenêtre DMX " \
+                f"[{base}, {base + span}) de la fixture {e.get('f5', 0)}"
+
+
+def patch_disjoint(w):
+    """115.f2 = adresse DMX de départ : les fenêtres ne se recouvrent pas."""
+    p115, p116 = _items(w, 115), _items(w, 116)
+    fen = sorted((f.get("f2", 0), p116[f.get("f3", 0)].get("f2", 0)) for f in p115)
+    for (a, n), (b, _) in zip(fen, fen[1:]):
+        assert a + n <= b, f"fenêtres DMX qui se recouvrent : {a}+{n} > {b}"
+
+
+IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint)
 
 
 def demo():

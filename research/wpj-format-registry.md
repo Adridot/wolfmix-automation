@@ -997,14 +997,66 @@ across the corpus:
 a gobo image id under `f3 = 14`, a colour id under `f3 = 9` (small integers
 1…19 there, not 342…425).
 
-### An open contradiction on record 105 — **[observed]**
+### The record 105 contradiction — resolved on the corpus, `f4` was misread
 
-`115[r].f2` reads as the **0-based DMX start address** and agrees with the
-profile channel counts: the six `Lyre ZQ02244` (16 ch) sit at 0, 16, 32, 48,
-64, 80 and the ten `6x18W` (10 ch) at 99, 109 … 189. The current reading of
-record 105 (`f4` = start address, `f7` = channels consumed) disagrees with both:
-it gives spacing 10 for the 16-channel lyres and 8 for the 10-channel pars.
-One of the two attributions is wrong. Flagged here, not resolved.
+Two readings could not both be right: `115[r].f2` as the **0-based DMX start
+address** — six `Lyre ZQ02244` (16 ch) at 0, 16, 32, 48, 64, 80, ten `6x18W`
+(10 ch) at 99, 109 … 189, and confirmed by the gobo DMX test above — against
+record 105's `f4` = start address, `f7` = channels consumed, which gave spacing
+10 for the 16-channel lyres and 8 for the 10-channel pars.
+
+**`105.f4` is not a DMX address. It is the running offset into record 106**,
+the same shape as `116.f3` into 110. Sorting the 105 entries of `rig-c` by `f4`
+makes it obvious:
+
+```
+f4    0  10  20  30  40  48 … 112  120  121  131  141  141  147
+f7   10  10  10  10   8   8 …   8    1   10    10    0    6    6   Σ = 153 = count(106)
+```
+
+Each `f4` is the sum of the preceding `f7`, and the intervals `[f4, f4+f7)`
+tile `[0, count(106))` **exactly**. The tell is the pair at 141: two entries
+share an offset because the first has span 0. A DMX address could not do that,
+and the fixture at `115.f2 = 64` carries `105.f4 = 121`.
+
+`106` is one entry per **mapped** channel of a fixture, and `106.f2` is its
+absolute 0-based DMX channel. Subtracting the fixture's `115.f2` gives the
+per-profile offset pattern — for the lyre, `0, 1, 6, 6, 7, 8, 10, 12, 13, 14`,
+ten mapped channels out of sixteen, repeated identically at +16, +32 … That is
+why `f7` = 10 for a 16-channel profile: **`f7` counts 106 entries, not DMX
+channels.**
+
+Three identities, checked mechanically on **25/25** variant-A files by
+`tools/wpj_identities.py`:
+
+| Identity | Meaning |
+|---|---|
+| the `[f4, f4+f7)` intervals tile `[0, count(106))` | `105.f4` = offset into 106, `f7` = its span |
+| every `106[k].f2` of a slice ∈ `[115[r].f2, 115[r].f2 + profile channels)` | ties each slice to its fixture's DMX window |
+| the fixtures' DMX windows are pairwise disjoint | `115.f2` is a real patch address |
+
+None is vacuous: the window test fails immediately if the slices are assigned
+to the wrong fixtures, and a rig whose `115.f2` were an internal arena index
+would have no reason to keep its windows disjoint. The offset pattern is
+constant per profile in every file except for the two **multi-block** fixtures
+(`rig-b`'s `LED BAR 252 RGB`, 3 × 4 ch, and `rig-c-bug`'s `LASERBAR`, 6 × 8 ch),
+where it is constant per block — the case where several 105 entries already
+share one `f5`.
+
+**Retracted**: `105.f4` = "0-based start address" and `105.f7` = "channels
+consumed", as written in `research/corpus-mining-2026-08-25.md` and
+`research/rig-c-bug.md`. `tools/wpj_codec.py` now names them `offset_106` and
+`nb_entrees_106`. **`115.f2` is the DMX start address** — device-confirmed by
+the gobo test, and now corroborated by the corpus.
+
+Consequence for `research/rig-c-bug.md`: its address survey read the wrong
+field, so the address ranges quoted there are wrong. Its conclusion is not —
+the real patch is disjoint in both revisions, so there is still no DMX
+collision.
+
+**Still open**: which 110 channels get a 106 entry, and what `106`'s own fields
+`f1`, `f3`…`f6` hold. `f7` being a per-profile constant means the whole 105/106
+pair is probably derivable from the profile, like the gobo palette is.
 
 ### Measured on the device — layout and naming **[device-confirmed]**
 

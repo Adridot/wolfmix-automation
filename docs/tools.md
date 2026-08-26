@@ -63,7 +63,7 @@ and it verifies that itself before returning. If a type has no schema, or the
 protobuf is unexpected, it returns `{"raw": "<hex>"}` — never a partial or
 approximate decode.
 
-Naming: a field whose meaning is proven gets a semantic key (`nom`, `adresse`,
+Naming: a field whose meaning is proven gets a semantic key (`nom`, `profil`,
 `effet`, …); an unidentified field keeps a neutral `fN` key. An absent field is
 absent from the dict — never a synthesised `0`.
 

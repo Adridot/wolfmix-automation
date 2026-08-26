@@ -41,8 +41,16 @@ Anomalies secondaires (peu plausibles comme cause) : 102.f9 80→75
 idx 21 (motif légitime, vu ailleurs) ; 2 entrées de patch vides
 (placeholder présent aussi dans les révisions saines).
 
-**Aucune collision d'adresses DMX réelle** : le patch est propre
-(lyres 0–39 et 121–140, pars 40–119, lasers 141–200, adresses 0-based).
+**Aucune collision d'adresses DMX réelle** : le patch est propre, dans les
+deux révisions.
+
+> **Correction 2026-08-26.** Les adresses citées ici à l'origine (« lyres 0–39
+> et 121–140, pars 40–119, lasers 141–200 ») venaient de `105.f4`, qui n'est
+> **pas** une adresse DMX mais un offset dans le record 106 — voir le registre,
+> « The record 105 contradiction ». Les vraies adresses sont dans `115.f2` :
+> lyres 0–95, pars 99–198, le reste plus haut. La conclusion tient : l'identité
+> `patch_disjoint` de `tools/wpj_identities.py` vérifie sur 25/25 fichiers que
+> les fenêtres DMX ne se recouvrent pas, `rig-c-bug` compris.
 
 ## Cartographie TLV établie au passage (variante A)
 
@@ -50,7 +58,7 @@ idx 21 (motif légitime, vu ailleurs) ; 2 entrées de patch vides
 |---|---|---|
 | 101 | nom projet | correlated |
 | 102 | réglages globaux 16 o (f9 = % global 72–80) | hypothesized |
-| **105** | **patch DMX** : par entrée {f1 id profil, f4 adresse 0-based, f5 index fixture, f6 catégorie (0 beam, 1 par, 2/3 laser, 8 fumée), f7 nb canaux} | **correlated** (espacement adresses = f7 sur 5/5 fichiers) |
+| **105** | par entrée {f1 id profil, f4 offset dans 106, f5 index fixture, f6 catégorie (0 beam, 1 par, 2/3 laser, 8 fumée), f7 nb d'entrées de 106}. **f4 n'est pas une adresse DMX** (rétracté, voir le registre) ; l'adresse est `115.f2` | **correlated** (pavage exact de 106 sur 25/25) |
 | 106 | 1 entrée par canal patché | correlated (comptage exact ×2) |
 | 110 | 1 entrée par canal de profil | correlated (comptage exact ×2) |
 | 111 | plages de valeurs par canal (min/max/id fonction) | hypothesized |

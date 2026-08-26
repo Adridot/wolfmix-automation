@@ -117,8 +117,11 @@ Read out:
   `0–31 / 32–63 / … / 224–255`, i.e. gobo or colour-wheel slots.
 - **105 = the DMX patch.** `f1` = library fixture id (stable across projects:
   `1017` is the same `6x18W 6in1 RGBAW UV` in both *rig-b* and
-  *rig-c*), `f4` = 0-based start address, `f5` = index of the fixture row
-  in 115, `f6` = category 0…8, `f7` = channels consumed. A fixture built from
+  *rig-c*), `f4` = **running offset into record 106** — *retracted 2026-08-26,
+  this was read as a 0-based DMX start address; the address is `115.f2`, see
+  the registry* —, `f5` = index of the fixture row
+  in 115, `f6` = category 0…8, `f7` = **number of 106 entries**, not channels.
+  A fixture built from
   several DMX blocks emits several entries with the same `f5` (the
   `LED BAR 252 RGB` of *rig-b* = 3 × 4 ch; the `LASERBAR` of
   `rig-c-bug` = 6 × 8 ch).

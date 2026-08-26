@@ -21,8 +21,10 @@ import wpjlib
 # Schémas : champ → (nom, genre). genre : "v" varint, "str" UTF-8,
 # "hex" octets bruts, "packed" = varints packés (liste d'ints),
 # dict = sous-message (répété pour les listes d'entrées).
-_PATCH = {1: ("profil", "v"), 4: ("adresse", "v"), 5: ("fixture", "v"),
-          6: ("categorie", "v"), 7: ("nb_canaux", "v")}
+# 105 : f4/f7 délimitent la tranche du record 106 qui appartient à l'entrée,
+# PAS une adresse DMX (l'adresse est 115.f2). Voir le registre, « record 105 ».
+_PATCH = {1: ("profil", "v"), 4: ("offset_106", "v"), 5: ("fixture", "v"),
+          6: ("categorie", "v"), 7: ("nb_entrees_106", "v")}
 _PROFIL = {2: ("nb_canaux", "v"), 8: ("nom", "str"), 9: ("hash", "hex"),
            11: ("timestamp", "v")}
 # Ordre des 7 canaux d'un pad : device-confirmed (vue RGB+ du W1, brut 0-255)

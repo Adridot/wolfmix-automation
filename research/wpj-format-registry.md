@@ -1575,14 +1575,67 @@ after the flash the group's six fixtures sat at their no-colour value.
 | 10 | left + circles | 7 | blended, dealt last → first |
 | 11 | left | 8 | hard, dealt last → first |
 
-**What is measured and what is not.** The *behaviour* of all eleven entries is
-now device-confirmed. The *stored value* is device-confirmed at five points —
-9, 0, 1, 2 and 5, each read out of a preset whose DMX was then measured. The
-other six rows get their stored value from the alignment
-`value = (screen position − 3) mod 11`, which is the unique order-preserving
-cyclic map fitting those five points. That is very strong but it is arithmetic,
-not a byte read: **saving one preset with, say, element 6 and reading `f30` = 3
-would close the last gap.**
+### The stored values, read out of a save — **F30-04**
+
+The remaining gap was that six of the eleven stored values were arithmetic
+rather than read. One save closed it, and it was designed to test three things
+at once. The operator set three groups to three different patterns with three
+different colour selections, then saved:
+
+| Group | Pattern set on screen | Pads selected | Predicted `f30` | Predicted `f31` |
+|---|---|---|---|---|
+| A | element 7, inward hard | Amber, Cyan | **4** | **5** |
+| B | element 6, inward blended | Amber, Cyan, UV | **3** | **13** |
+| C | element 11, left hard | Amber, UV | **8** | **9** |
+
+Read back off the controller:
+
+```
+f30      = [4, 3, 8, 0, 0, 0, 0, 0]
+f31[A]   = 5    Amber, Cyan
+f31[B]   = 13   Amber, Cyan, UV
+f31[C]   = 9    Amber, UV
+f31[D…H] = 24   UV, Pink        — the live residue of the Milky Way recall
+```
+
+**Every value exact**, including the D–H residue. Three consequences:
+
+- `f30` is a **genuine per-group array**, proven in the bytes and not only on
+  the screen. This is the first non-uniform `f30` ever observed — 2033 corpus
+  presets carry the same value on all eight groups.
+- Stored values **4, 3 and 8** are now read rather than derived, and they land
+  exactly where the icon order says. With 9, 0, 1, 2 and 5 already read from
+  factory presets, **eight of the eleven** entries have their stored byte
+  confirmed. The map is an order-preserving cyclic bijection, which one point
+  and a direction already determine; eight leave 6, 7 and 10 with no freedom.
+- `f31` = eight 20-bit masks is confirmed at the **bit level**, with three
+  different masks in one record.
+
+### Saving a preset does not save the project — **[device-confirmed]**
+
+Worth its own line, because it cost a false negative. Creating a preset with
+SHIFT + a pad, naming it and confirming leaves it in the controller's live
+state: the screen showed `Preset 83` on page 5, yet two full downloads returned
+**82 presets and an unchanged version**, 1787670974700. Only after the operator
+performed the separate **project** save did the file change — version
+1787670974701, 43400 → 43751 bytes, 83 presets.
+
+Any experiment that writes through the UI must therefore save the project
+explicitly and check the version counter before concluding anything.
+
+### The PRESET EDIT screen — **[observed]**
+
+Photographed while creating the preset. It shows the preset's content as six
+toggles — `COLOR`, `MOVE`, `BEAM`, `GOBO`, `LIVE EDIT`, `OTHER` — plus
+`FADE 00:00.00` and `HOLD 00:01.00`. Those six are the obvious candidates for
+the bits of `f4`, the content mask (255 on a full preset, 8 on the colour page,
+17 on beam, 5 on move), and `FADE` is a candidate for `f11` (500 / 2000 / 4000,
+already guessed to be milliseconds). The new preset came out with `f4` = 255
+and no `f11`. Nothing here is confirmed; it is the map for the next session.
+
+Also confirmed in passing: the firmware names an unnamed preset `Preset N` with
+**N = id + 1**, so page 5 slot 2 reads `Preset 82` for id 81. That corroborates
+`id = (page − 1) × 20 + (slot − 1)`.
 
 ### Group membership, read off the DMX — **[device-confirmed]**
 

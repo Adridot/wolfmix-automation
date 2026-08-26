@@ -3764,3 +3764,25 @@ two releases in this same save show the capture was reading live key state at
 that moment. That is strong, not conclusive. Status **[correlated]**, and the
 one thing that would close it is the operator confirming the smoke icon was on
 screen at the moment of the overwrite.
+
+## FLASH-05 — `STROBE`, prediction published before the measurement
+
+`STROBE` switched to `TOGGLE` and latched, preset 82 overwritten, one save.
+
+**Predicted**: `f16` slice **7** rises, and no other slice does. That converts
+slice 7 from *elimination* — the last per-group flash key with a free slot — to
+a direct measurement, and it re-validates the procedure that produced FLASH-04's
+null result on `SMOKE`.
+
+**The value is the interesting part.** `WOLF`, `BLACKOUT` and `BLINDER` each
+came back **511**, all nine slots including the effects slot. But the two
+presets that raise slice 7 on their own — `Fire!` and `Strobe` — carry **255**,
+eight slots only.
+
+| Slice 7 reads | Reading |
+|---|---|
+| **511** | the flash key writes the same nine-slot mask as the other three, and the preset engine's 255 is simply a different author |
+| **255** | the strobe genuinely stops at the eight groups, and the ninth slot is reserved for effects that can black out or flash a fogger |
+
+Either way slice 7 is settled. `102.f4`'s **second** byte should also become 1,
+the independent check that the right key was switched.

@@ -3631,3 +3631,52 @@ Two independent points on the same sequence:
 Slices 8, 9 and 10 are zero on every file, which is what five never-latched
 flash keys look like. Latching `BLINDER` in `TOGGLE` mode and capturing a preset
 would test the whole sequence at once.
+
+## FLASH-02 — `BLINDER` is slice 9, and the positional inference is refuted
+
+`BLINDER` switched to `TOGGLE` and latched, preset 82 overwritten, one save.
+Version 712 → 713.
+
+`102.f4` moved `010000000000` → `0100**01**000000`: the **third** byte became 1,
+which is `BLINDER` under the order that record already uses — an independent
+check that the right key was latched.
+
+`f16` moved two slices:
+
+| Slice | Before | After | |
+|---|---|---|---|
+| 6 | 511 | **0** | `WOLF` released, as it should be |
+| **9** | 0 | **511** | **`BLINDER`** |
+
+**Slice 6 falling back to 0 is worth as much as slice 9 rising.** It shows the
+slice tracks the key's live state at capture time, in both directions, rather
+than accumulating.
+
+### Retracted — the flash engines do not follow `102.f4`'s order
+
+FLASH-01 inferred slices 8, 9 and 10 as `BLINDER`, `SPEED`, `BLACKOUT` from
+`WOLF` at 6 and the strobe at 7 matching the first two entries of
+`WOLF STROBE BLINDER SPEED BLACKOUT SMOKE`. **`BLINDER` is 9, not 8**, so two
+points did not establish the sequence — they were consistent with it and with
+other arrangements, and the third point separated them.
+
+What survives is only what was measured:
+
+| Slice | Engine | Status |
+|---|---|---|
+| 0 | `Color FX` | correlated, equals `color_fx_actif` |
+| 1 | `Move FX` | correlated, equals `move_fx_actif` |
+| 2 | `Beam FX` | correlated |
+| 5 | static layer | hypothesized |
+| **6** | **`WOLF`** | **device-confirmed** |
+| 7 | strobe | correlated — `Fire!` and `Strobe` only |
+| **9** | **`BLINDER`** | **device-confirmed** |
+| 11 | per-project constant | observed |
+| 3, 4, 8, 10 | zero in every file | — |
+
+`SPEED`, `BLACKOUT` and `SMOKE` are somewhere in 3, 4, 8, 10 — or not in `f16`
+at all, since `SPEED` and `SMOKE` have no group exclusion either. There is no
+longer a positional argument to lean on; each needs its own latch.
+
+**State note**: `BLINDER`'s release mode is now `TOGGLE` where it was `FLASH`,
+one more divergence from `corpus/experiments/FX-01/before.wpj`.

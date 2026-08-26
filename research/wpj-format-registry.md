@@ -870,8 +870,10 @@ is the only factory pad carrying `f5`. The names are **not stored in the file** 
 no string field ever appears in a 140 item — so they are firmware labels tied to
 the slot index, unlike the position palette where `f5` holds a per-slot name.
 
-**Grid layout**: the physical matrix is 5 columns × 4 rows, and the wire order
-fills it **bottom row first, left to right**:
+**Grid layout**: the physical matrix is 5 columns × 4 rows and the wire order
+fills it row by row, left to right. ⚠️ The vertical direction below is
+**withdrawn** — see "The grid orientation is retracted" under type 145; a
+hardware press contradicts it:
 
 ```
 row 1 (top)      16 Coral   17 Yellow      18 Lemon   19 Sky Blue  20 White
@@ -900,7 +902,7 @@ This corrects the earlier guess that the list read as 4 columns × 5 rows.
 - Whether any group can hold a **different number of pads** than 20 (`field 1`
   is 20 in every record of every file).
 
-## Type 145 ×8 — the static GOBO palettes — **[correlated]**
+## Type 145 ×8 — the static GOBO palettes — **[device-confirmed]**
 
 Same family as 140 and 150: one record per group, top-level `field 2` = group
 index 0…7 (absent for A), 20 repeated `field 5` items. **Unlike 140 and 150 it
@@ -1007,9 +1009,10 @@ the A–H ordering.
 
 Three predictions were published before the photograph; all three hold.
 
-**1. The grid order is confirmed a second time.** The screen lays the 20 slots
-out as **5 columns × 4 rows**, and the wire order fills it **bottom row first,
-left to right** — identical to type 140:
+**1. The grid order, with one reservation.** The screen lays the 20 slots out as
+**5 columns × 4 rows** filled row by row in wire order, identical to type 140.
+⚠️ The vertical direction shown below is **withdrawn** — see "The grid
+orientation is retracted" further down:
 
 ```
 top      Gobo 16  Gobo 17  Gobo 18  Gobo 19  Gobo 20
@@ -1067,10 +1070,41 @@ declared id, and nothing more.
 - An **`ALL GOBOS`** view exists, reached before a group is selected; it dims
   the palette and shows the A / B / C / D group letters unhighlighted.
 
-### The DMX test, still open
+### The DMX test — **[device-confirmed]**, two points, exact
 
-Pressing pad *n* on group A should drive the lyres' gobo channel into a distinct
-band, no two overlapping:
+Prediction published before measuring: pressing pad *n* drives the lyres' gobo
+channel into the band of range *n*. Measured on the six `Lyre ZQ02244`, whose
+gobo channel is offset 10 of each 16-channel block (DMX 11, 27, 43, 59, 75, 91
+— the block starts 0, 16, 32, 48, 64, 80 confirm `115.f2` = **DMX start
+address**):
+
+| Pad pressed | `f2` | Predicted band | Measured, all six channels |
+|---|---|---|---|
+| none (baseline) | — | 0–6 "open" | **0** |
+| 10 = `points` | 345 | 70–76 | **70** |
+| 1 | 425 | 7–13 | **7** |
+
+Nothing else in 2048 channels moved, in either capture, beyond a ±1 dither on
+DMX 163/165/173 already present in the baseline.
+
+So **`145[n].f2` is the gobo image id of range *n* of the group's gobo-wheel
+channel**, and the controller emits that range's **lower bound** (`111.f1`),
+not its midpoint. All six fixtures of the group take the value together.
+
+### The grid orientation is retracted — **[observed]**
+
+The operator pressed the pad they describe as **top left** and the output went
+to 7, i.e. **item 1**. The registry claimed the wire order fills the pad matrix
+bottom row first, on both type 140 and type 145. That reading came from
+rotating a photograph of the screen, and it is contradicted by the hardware.
+
+**Both entries are withdrawn pending one more press.** What survives untouched
+is that the screen shows the 20 slots as 5 × 4 in wire order — only the vertical
+direction is in doubt. Discriminator: press the palette's **bottom-left** pad.
+Item 16 (DMX **112**) means the order fills top row first; item 1 (DMX 7) would
+mean the operator's "top left" and mine disagree about which edge is up.
+
+### The earlier band table, kept for reference
 
 | pad | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
 |---|---|---|---|---|---|---|---|---|---|

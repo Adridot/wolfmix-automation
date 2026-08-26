@@ -1425,6 +1425,10 @@ centre against running straight across.
 | 5 | gradient, straight across |
 | 9 | none — one colour or no static colour |
 
+Recalling `Startup` at the end brought the output back to the opening baseline
+on **2048 of 2048 channels**. Five recalls, five read-only captures, nothing
+written and nothing saved.
+
 ### Two things it settles beyond `f30`
 
 - **A static colour reaches a fixture with no RGB through its colour wheel.**

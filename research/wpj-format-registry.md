@@ -4308,3 +4308,27 @@ maximum of 19. Rival: the project opens with 6 pads and slot 6 named — then
 the name is innocent and PRESET-04's failure was the addition count. A
 second build with a ≤19-byte name stands ready to split length from
 presence if the primary holds.
+
+### PRESET-05 measured — the 19-character name limit is the loader's — **[device-confirmed]**
+
+A single, otherwise well-formed entry at id 85 carrying a **23-byte** name
+made the project refuse to open ("Error opening project"). The operator
+confirms the panel's rename UI caps names at **19 characters** — and
+PRESET-05 shows the loader enforces the same bound on file-written names
+rather than truncating or dropping the entry: **any name > 19 bytes makes
+the whole project unloadable, loudly.** Combined with the corpus (no
+factory name exceeds 19), the preset name field is a fixed 19-char buffer.
+
+## PRESET-06 — the deliverable: dense ids, 16-byte name at slot 20
+
+Candidate = PRESET-04 with the single fatal variable changed: entries 85–98
+unnamed, entry 99 named **"preset test auto"** (16 bytes ≤ 19). If it opens,
+the A/B against PRESET-04 pins that failure on name length and clears the
+15-at-once addition count.
+
+### Prediction, published before the deploy
+
+The project opens; page 5 shows 20 occupied pads; slot 20 (bottom right)
+reads "preset test auto"; recalling it lights no flash key. The id gap
+remains untested in isolation (PRESET-03 confounded it with the long name);
+a dedicated gap-only experiment stays open.

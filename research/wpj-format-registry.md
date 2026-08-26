@@ -3721,3 +3721,46 @@ latch; there is nothing left to infer from.
 
 **State note**: `BLACKOUT`'s release mode is now `TOGGLE`, alongside `WOLF` and
 `BLINDER`. Three of the six differ from `corpus/experiments/FX-01/before.wpj`.
+
+## FLASH-04 — `SMOKE` has no `f16` slice
+
+`SMOKE` switched to `TOGGLE` and latched, `BLACKOUT` released first, preset 82
+overwritten, one save, version 714 → 715. `102.f4` gained a 1 in its **sixth**
+byte, so the right key was switched.
+
+`f16` moved two slices and **both fell**:
+
+| Slice | | |
+|---|---|---|
+| 8 | 511 → **0** | `BLACKOUT`, released |
+| 9 | 511 → **0** | `BLINDER`, released |
+
+**No slice rose.** The published prediction was "at most one slice among 3, 4,
+10 will rise, and slice 8 will fall" — both halves hold, and the "at most" was
+doing real work.
+
+### Why that fits
+
+`SMOKE` and `SPEED` are the **only two flash keys with no group-exclusion mask
+in record 102** — the operator confirmed the device offers no exclusion control
+for either, and `Settings` lists only four exclusions. Neither effect is
+per-group: smoke drives a fogger's channels and speed multiplies every effect
+globally. A per-group mask would have nothing to say about them.
+
+So `f16` carries a flash engine for exactly the four keys that *are* per-group:
+`WOLF` (6), `BLACKOUT` (8), `BLINDER` (9), and — by elimination now rather than
+by position — `STROBE`, which slice 7 already showed through `Fire!` and
+`Strobe`. Slices 3, 4 and 10 stay zero in every file.
+
+### The reservation this result carries
+
+A null result cannot distinguish "`SMOKE` has no slice" from "`SMOKE` was not
+actually latched when the preset was captured". Switching the release mode is
+visible in `102.f4`; **pressing** the key is not visible anywhere in the file
+unless it writes a slice — which is precisely what is in question.
+
+The three earlier latches each produced a rise, so the procedure works; and the
+two releases in this same save show the capture was reading live key state at
+that moment. That is strong, not conclusive. Status **[correlated]**, and the
+one thing that would close it is the operator confirming the smoke icon was on
+screen at the moment of the overwrite.

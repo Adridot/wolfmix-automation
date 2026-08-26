@@ -121,7 +121,7 @@ def moteurs_f16(w):
     a neuf slots : les groupes A–H plus celui des effets. L'alignement se
     teste tout seul : à 9 bits le moteur 1 vaut exactement `move_fx_actif`
     sur tout le corpus, à 8 bits il vaudrait 254 là où `move_fx_actif` vaut
-    255. Voir le registre, « f16 ».
+    255. Voir le registre, « f16 » et « FLASH-01 ».
     """
     for pre in _items(w, 165):
         h = pre.get("f16")
@@ -131,7 +131,10 @@ def moteurs_f16(w):
         assert all(o < 256 for o in oct_), \
             f"165.f16 : varint hors d'un octet dans {h['hex']}"
         gros = int.from_bytes(bytes(oct_), "little")
-        for m in range(12):
+        # Le 9e bit — le slot des effets — n'est allumé que par les moteurs
+        # flash, à partir de la tranche 6 : WOLF frappe tout, fumigène compris.
+        # Voir le registre, « FLASH-01 ».
+        for m in range(6):
             assert not (gros >> (9 * m)) & 0x100, \
                 f"165.f16 : moteur {m} allume le 9e slot dans {h['hex']}"
         actif = _varints(pre.get("f24", {}).get("hex", ""))

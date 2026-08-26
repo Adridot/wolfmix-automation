@@ -3575,3 +3575,59 @@ content mask is absent, so every toggle including `OTHER` is on.
 **Refutation branch**: if no new field number appears, the flash state is not in
 the preset despite the setting, and `Include Flash buttons in Preset` governs
 only recall. Then `f12` and `f20` are something else and the search moves on.
+
+### Measured — refuted, and `f16` answers instead
+
+Version 711 → 712, one save, **one record**: 165, one byte longer. Preset 82
+gained **no new field number**. `f12` and `f20` are still absent.
+
+The only thing that changed on the preset is **`f16`**:
+
+```
+before  ff01 fe01 01 00 00 e001 1f   00 00 00 00 00 10
+after   ff01 fe01 01 00 00 e001 df01 7f 00 00 00 00 10
+```
+
+Cut at the 9-bit stride, exactly one slice moves:
+
+| Slice | Before | After |
+|---|---|---|
+| **6** | 0 | **511** |
+
+**`f16` slice 6 is `WOLF`.** And 511 is all **nine** bits — the eight groups
+*and* the ninth slot, the one holding the fogger and the spark. Every other
+non-zero slice in the entire corpus stops at 255. The manual says WOLF "plays a
+Paparazzi style white flash across all light fixtures"; the mask says *all*
+means all nine slots.
+
+**The prediction is refuted.** `f12` and `f20` are holes in the numbering, but
+they are not the flash state — the flash state is another engine in `f16`, which
+already held Color, Move, Beam, the static layer and the strobe.
+
+**And it refutes one of our own identities.** `moteurs_f16` asserted that no
+slice ever sets the ninth bit — true on 2778 presets, false the moment a flash
+key is latched. It now checks that only for slices 0–5, and the comment says
+why. An identity that holds on a corpus is a statement about the corpus until
+something new exercises it; this one lasted four hours.
+
+### The six flash engines, in order — **[correlated]**
+
+`102.f4` stores the six release modes in the order
+`WOLF STROBE BLINDER SPEED BLACKOUT SMOKE`. Slice 6 is WOLF, measured. Slice 7
+was already read as the strobe, from `Fire!` and `Strobe` being the only two
+presets in 2778 that raise it — and STROBE is second in that same order.
+
+Two independent points on the same sequence:
+
+| Slice | Engine | Status |
+|---|---|---|
+| 6 | `WOLF` | **device-confirmed** |
+| 7 | `STROBE` | correlated |
+| 8 | `BLINDER` | **[hypothesized]** by position |
+| 9 | `SPEED` | **[hypothesized]** by position |
+| 10 | `BLACKOUT` | **[hypothesized]** by position |
+| 11 | ? | **not** SMOKE — it is non-zero and constant per project (5, 2 or 7), which no unheld flash key would be |
+
+Slices 8, 9 and 10 are zero on every file, which is what five never-latched
+flash keys look like. Latching `BLINDER` in `TOGGLE` mode and capturing a preset
+would test the whole sequence at once.

@@ -41,6 +41,8 @@ _PRESET = {
     5: ("color_fx1", _FX), 6: ("color_fx2", _FX),
     21: ("move_fx1", _FX), 22: ("move_fx2", _FX),
     28: ("positions", "packed"),          # index de position par groupe A–H
+    29: ("gobos", "packed"),              # index de gobo (type 145) par groupe,
+                                          # 0-based, 255 = aucun — device-confirmed
     17: ("dimmers", "packed"),            # dimmer par groupe A–H
     8: ("color_fx_actif", "packed"), 24: ("move_fx_actif", "packed"),
 }

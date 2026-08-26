@@ -1186,7 +1186,7 @@ Pad 10 is `points`, so **`points` should land in 70–76**. Gobo channels are no
 subject to the movement limits that made the position palette unreadable from
 DMX, so the oracle can read this one directly.
 
-## Preset `f29` — candidate static-GOBO index per group — **[hypothesized]**
+## Preset `f29` — the static GOBO index per group — **[device-confirmed]**
 
 Surveying the packed per-group arrays of record 165 in the experiment project:
 
@@ -1260,6 +1260,52 @@ Four distinct values, no collision. Anything else — the gobo channels staying 
 0, or a value outside {70, 63, 21, 14} — refutes `f29` as a static gobo index.
 A range instead of a single value would mean the preset's beam FX is animating
 the gobo channel, which is itself worth knowing.
+
+### Measured — **[device-confirmed]**, two points, both exact
+
+**Experiment F29-01, 2026-08-26, W1 fw 2.0.18, `WMX EXP format-lab` version
+1787670974700.** The project was downloaded first and its `f29` values checked
+against the prediction. Nothing was written and nothing was saved: three
+read-only 10-second envelopes, 2048 channels, with the operator recalling a
+preset between them.
+
+| Capture | gobo channels 10, 26, 42, 58, 74, 90 | Predicted 0-based | Predicted 1-based |
+|---|---|---|---|
+| baseline, nothing recalled | **0** on all six | — | — |
+| `Get Moving`, `f29[A]` = 9 | **70** on all six | **70** | 63 |
+| `Sizzle`, `f29[A]` = 2 | **21** on all six | **21** | 14 |
+
+Both hit exactly, both static (min == max) while 44–60 other channels were
+animated by the presets' FX. So:
+
+```
+f29 = static gobo index per group A–H, 8 packed varints
+      0-based index into that group's type-145 palette
+      255 = no gobo, the same sentinel as the type-155 sequencer
+```
+
+The controller emits the **lower bound** of the selected range, exactly as the
+type-145 pad test found.
+
+### The factory values are not inert
+
+`Sizzle` carries `[2]×8` — one of the factory constants that appear even in
+projects with no gobo palette at all, and the reason this entry was hedged
+above. It applied. So those `[1]×8` / `[2]×8` presets do carry a real gobo
+index; it simply has no effect on a group whose palette is empty. The argument
+against the hypothesis dissolves, and the argument from `f30 = [9]×8` was
+irrelevant: `f30` is a different field that happens to share a default.
+
+The preset record's palette references are therefore symmetric and all three
+are now anchored: **`f28` positions (150), `f29` gobos (145), `f31` colours
+(140)**, each an index or mask into that group's own palette.
+
+### Scope
+
+Measured on **group A only**, whose six `Lyre ZQ02244` are the only gobo-wheel
+fixtures on this rig. Groups B–H have empty palettes, so nothing there could be
+exercised. Transposition to another group, profile or rig stays
+**[hypothesized]**, as for type 145 itself.
 
 
 ## Preset `f32`–`f35` — a schema-10 addition, zeroed by the upgrade — **[correlated]**

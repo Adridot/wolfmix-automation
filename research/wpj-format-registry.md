@@ -4118,3 +4118,40 @@ Candidates on disk, ready to deploy (never committed, like all `.wpj`):
 `corpus/experiments/FLASH-09/candidate-f1-83.wpj` for PRESET-02 — built from
 it with `f1` 81 → 83 as the **only** differing byte (offset 1 of record 165),
 verified at build time.
+
+## PRESET-01 — the truncation claim collapses before the experiment runs — 2026-08-26
+
+Preparing PRESET-01 (WTOOLS closed, operator present), the pre-flight
+download refutes yesterday's headline measurement:
+
+- Storage today serves sha256 `c2458b0a…` — **exactly the FLASH-09 journal's
+  `downloadedSha256`** — with records byte-identical to the candidate:
+  **85 presets, ids … 83 84**, `f1` = 81. **[observed]**
+- Its version counter is `1787761940828` = 16:32:20 UTC = the deploy run's
+  own timestamp: the store stamped it, and **nothing has rewritten storage
+  since**. No device save ever wrote an 83-preset version back.
+- Yesterday's "returned 83 presets, record 165 = 30184, same version
+  counter" matches `before.wpj` on every attribute — count, ids, record
+  size, and counter `1787761074508` (which the byte-preserving edit had
+  copied into the candidate, hence "same counter" against the sent file).
+  The overwhelmingly likely reading: that download was a **pre-deploy
+  state**, mis-attributed as post-deploy. FLASH-09's conclusion "the device
+  deletes preset entries it did not create" is **retracted** as unsupported:
+  no artifact of a truncated post-deploy download exists (`check1/check2`
+  in the session scratchpad also hash to the *before* state).
+
+### Prediction, published before the panel measurement
+
+Storage has held the two file-added presets byte-for-byte for ~24 h, across
+the deploy's RESTART and verify. Predicted, for a cold open (open another
+project, then open format-lab from Main Menu → Projects):
+
+1. Preset matrix page 5 shows **5 occupied pads** (valse + 2 unnamed + the
+   two additions).
+2. Recalling pad 4 lights **BLINDER**, pad 5 lights **SPEED** — the two
+   entries carry `f16` slices 9 and 10 at 511, which would also close the
+   flash-engine map's last two slices in the write direction.
+3. A download taken afterwards still returns 85 presets.
+
+If instead the panel shows 3 pads, the loader-gate model returns and
+PRESET-02 (`f1` = 83) becomes the discriminating deploy.

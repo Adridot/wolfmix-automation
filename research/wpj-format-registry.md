@@ -4385,3 +4385,47 @@ so the reboot must re-read storage — the new bytes.
    deletion, and the allowlist holds no reload lever.
 4. Panel, look only: page 5 shows 5 pads plus "preset test auto" bottom
    right; page 6 slot 15 shows "Test"; no filler pads anywhere.
+
+### SETP-02 measured — no protocol event replaces the live copy — **[device-confirmed]**
+
+The run took a detour that rewrote the recall story first:
+
+- **The PRESETS screen (mode 5) swallows USB recalls silently** — status
+  still "Hooray!", frame untouched. Every "silent recall" observed today
+  (including the early false "reload" verdicts) traces to the operator's
+  panel sitting on the matrix screen. Recalls work from HOME and other
+  screens. **[device-confirmed]**
+- **`SET_PRESET.f2 = varint(id)` recalls any preset, factory or user**
+  (id 92 → 75 channels, fade-free). `f1` recalled factory ids in early
+  probes but is inert on ids ≥ 80 — semantics **open**; use `f2`.
+- `SET_MODE` with `f1 = 0` returned success but landed on mode **8**, not
+  0 — payload semantics **open**. It does kick the panel off mode 5, which
+  un-gates recalls.
+- Fade discipline: recalls must be judged on fade-free targets (donor
+  clones have no `f11`) or after the fade completes; mid-fade captures
+  produced most of today's ambiguity.
+
+The reload chain itself, operator-approved: DELETE_PROJECT (open project,
+count 5 → 4) → SET_PROJECT (sparse file) → RESTART → storage verified
+byte-for-byte. Then the fade-free discriminator: **filler id 92 still
+paints** — the old 101-preset copy is STILL live. A DISABLE_ENGINE →
+ENABLE_ENGINE cycle changes nothing either. Four negative results —
+RESTART (FLASH-08, and PRESET-07 in-band), delete-store-restart, engine
+cycle — close the question: **firmware 2.0.18 keeps its NVRAM live copy
+through every event in the known protocol surface; only a manual
+Main Menu → Projects open replaces it.** Hands-off activation therefore
+decomposes as: transfer (remote), reload (ONE panel gesture, irreducible
+today), recall (remote, `SET_PRESET.f2`).
+
+Open lead for a future session: WTOOLS 2.0.2 users see pushed edits live,
+so either WTOOLS relies on the same manual gesture, or one of the
+unidentified event ids (13–15, 17, 22–38, 40, 42) performs the reload.
+Observing a WTOOLS push would decide.
+
+Note: the earlier PRESET-07 prediction 2 ("recall 92 still repaints after
+the deploy restart") was measured as *no repaint* at the time and briefly
+read as a reload — that reading is **retracted**: the probe ran while the
+panel sat on mode 5, which silences recalls. The corrected in-band probes
+above supersede it. The sparse file's loadability (its two id gaps,
+84→99→114) remains **untested** — no reload ever happened — and the next
+manual open measures exactly that.

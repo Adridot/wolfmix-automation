@@ -4253,3 +4253,33 @@ flash slices cleared, unnamed) and id **99** named "preset test automatique"
    **id gap** — ids must be dense — and clears the file-written name.
 3. If instead the open fails again, the `nom` (or its interaction with
    additions) becomes the prime suspect and the next build drops it.
+
+## FLASH-10 — the five flash slices, confirmed in both directions
+
+The project now carries **85 presets**, and page 5 slots 1–5 hold one flash
+slice each:
+
+| Slot | Slice | Key |
+|---|---|---|
+| 1 (`valse`) | 6 | `WOLF` |
+| 2 | 7 | `STROBE` |
+| 3 | 8 | `BLACKOUT` |
+| 4 | 9 | `BLINDER` |
+| 5 | 10 | `SPEED` |
+
+The operator reports `BLINDER` and `SPEED` validated alongside the three already
+measured, so **all five slices are device-confirmed in both directions**:
+captured from a latched key into the file, and written into a file the
+controller then acts on.
+
+That is the repository's highest standard, and it now covers the whole flash
+half of `f16`. Together with `SMOKE` writing nothing — proven by the capture
+where it was the only key held — the six flash keys are completely accounted
+for.
+
+**Presets 83 and 84 exist.** FLASH-09 measured that the firmware deletes preset
+entries added by writing the file; these two were created by some other route,
+which this registry did not observe. The FLASH-09 constraint stands as measured
+— *writing a new entry into the file does not survive the load* — and how a
+preset is created legitimately is still an open question, being pursued
+separately.

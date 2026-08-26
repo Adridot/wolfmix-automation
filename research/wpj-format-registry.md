@@ -3529,3 +3529,49 @@ corrected here rather than edited, because the drift is the point.
 `f11 = 100`; it is one more divergence from `corpus/experiments/FX-01/before.wpj`.
 And `f11` can no longer be observed at 100 on this controller without writing it
 back first.
+
+## FLASH-01 — where the flash state lives, prediction published first
+
+`Include Flash buttons in Preset` is **already on** for this project, so every
+preset in the corpus was captured with whatever flash state was live at the
+time — and none of them shows one.
+
+### The field numbers the preset never uses
+
+Across **2778 presets**, record 165's sub-message emits fields
+`1–11, 13–19, 21–35`. Two numbers are **holes in the middle of the range**:
+
+```
+f12   between f11 (FADE) and f13
+f20   between f19 (id) and f21 (move_fx1)
+```
+
+Protobuf numbering is assigned when a message is designed, so a gap that sits
+*between* used numbers is a field that exists in the schema and is simply **0
+everywhere** — absent, under this format's convention throughout. `f36` onward
+are absent too, but those are past the end and say nothing.
+
+**So the flash state is `f12` or `f20`**, and it reads 0 on every corpus preset
+because none was captured with a flash key held.
+
+### The experiment, and the current state read first
+
+`102.f4` presently reads `[1, 0, 0, 0, 0, 0]`: **WOLF is in `TOGGLE` mode** and
+the other five are `FLASH`. Toggle is the one that stays on without a finger on
+it, which makes WOLF the only flash key that can be active while a preset is
+overwritten.
+
+Preset 82 (page 5 slot 3) currently carries **neither `f12` nor `f20`**, and its
+content mask is absent, so every toggle including `OTHER` is on.
+
+1. Press `WOLF` once — it latches.
+2. `SHIFT` + tap page 5 slot 3, overwriting it with the live state.
+3. Save the project. Press `WOLF` again to release it.
+
+**Predicted**: preset 82 gains exactly one field it did not have — `f12` or
+`f20` — carrying **1**, WOLF being bit 0 in the order `102.f4` already uses
+(`WOLF STROBE BLINDER SPEED BLACKOUT SMOKE`).
+
+**Refutation branch**: if no new field number appears, the flash state is not in
+the preset despite the setting, and `Include Flash buttons in Preset` governs
+only recall. Then `f12` and `f20` are something else and the search moves on.

@@ -67,7 +67,7 @@ itself worth recording rather than silently resolving.
 - **Language:** `research/` and most tool output strings are French; `SPEC.md`,
   `LEGAL.md`, `PROVENANCE.md`, `docs/` and `README.md` are English. Keep it that
   way rather than mass-translating.
-- **Codec keys:** a proven field gets a semantic key (`nom`, `adresse`,
+- **Codec keys:** a proven field gets a semantic key (`nom`, `profil`,
   `effet`); an unidentified one keeps a neutral `fN` key. Renaming `fN` → a
   guess is exactly the failure mode this repository exists to avoid.
 - **Self-check idiom:** every tool run with no arguments executes its own
@@ -89,6 +89,22 @@ itself worth recording rather than silently resolving.
 
 A refutation is a result. `research/` contains several, and they are written up
 with the same care as the confirmations.
+
+### Two traps that have already cost time
+
+- **A field that is uniform across the whole corpus may still be per-group, or
+  per-anything.** Uniformity over thousands of samples is evidence about the
+  *corpus*, not about the field: nothing had ever varied it. `f30` was read as
+  a scalar on those grounds and refuted by one photograph of the device.
+- **Creating a preset does not save the project.** Nor does any other UI edit
+  until the operator performs the separate project save. Read the `uint64` at
+  offsets 40–47 before and after: if it has not incremented, nothing was
+  written, whatever the screen shows.
+
+Much of the format can also be measured **without writing anything**: set a
+control on the device, capture `wolfmix.py dmx-envelope`, compare. Eleven modes
+of `f30` were settled that way in an hour, with the rig returned to its opening
+baseline on all 2048 channels.
 
 ## What this project will not do
 

@@ -425,10 +425,9 @@ recording what it is.
 ---
 
 <div align="center">
-<sub>
 
-Wolfmix, Wolfmix W1, WTOOLS, WLINK and Nicolaudie are trademarks of their respective owners.<br>
-This project is independent and is not affiliated with, endorsed by, or sponsored by any of them.
+<sub>Wolfmix, Wolfmix W1, WTOOLS, WLINK and Nicolaudie are trademarks of their respective owners.</sub>
 
-</sub>
+<sub>This project is independent and is not affiliated with, endorsed by, or sponsored by any of them.</sub>
+
 </div>

@@ -335,10 +335,29 @@ def f4_autorise_les_moteurs(w):
                     f"165 : moteur {m} actif mais f4 = {f4} n'a pas le bit {bit}"
 
 
+def schema_du_prefixe(w):
+    """L'octet 50 est la version de schéma, et 165.f32–f35 arrivent à 10.
+
+    Le préfixe est constant sauf l'UUID (20–35), le compteur de version
+    (40–47) et cet octet. La corrélation est totale sur le corpus : schéma 8
+    sans `f32`, schémas 10 et 11 avec. Voir le registre, « le préfixe ».
+    """
+    schema = w.prefix[30]
+    assert w.prefix[16:20].hex() == "152b10c0", "préfixe : constante 36-39 changée"
+    assert w.prefix[28:30].hex() == "01f9", "préfixe : constante 48-49 changée"
+    assert w.prefix[31] == 0, "préfixe : octet 51 non nul"
+    assert w.prefix[32:].hex() == "02bee81ca26ccb546dc7b6ec", \
+        "préfixe : constante 52-63 changée"
+    a32 = any("f32" in pre for pre in _items(w, 165))
+    assert a32 == (schema >= 10), \
+        f"préfixe : schéma {schema} mais f32 {'présent' if a32 else 'absent'}"
+
+
 IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
               groupe_fixture, moteurs_f16, plages_111, roles_106,
               ordre_fixtures_115, bornes_106, tranches_151,
-              tableaux_par_groupe_165, f4_autorise_les_moteurs)
+              tableaux_par_groupe_165, f4_autorise_les_moteurs,
+              schema_du_prefixe)
 
 
 def demo():

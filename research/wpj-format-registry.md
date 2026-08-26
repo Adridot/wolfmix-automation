@@ -2979,3 +2979,42 @@ since a field that never varies cannot be pinned by the corpus alone.
 
 `f16` now reads: 0 Color FX, 1 Move FX, 2 Beam FX, 5 static (hypothesised),
 7 strobe, 11 a per-project constant, and 3, 4, 6, 8, 9, 10 never non-zero.
+
+## The opaque prefix, mapped — **[correlated, 32/32]**
+
+The 44 bytes at offsets 20–63 were carried through verbatim and never read past
+offsets 40 and 50. Across seven consecutive saves of one project **only byte 40
+ever moved**, and across three different projects only three regions differ at
+all:
+
+| Offset | Content | Status |
+|---|---|---|
+| 20–35 | the project **UUID**, 16 bytes | device-confirmed |
+| 36–39 | `15 2b 10 c0` — identical in every file | constant |
+| 40–47 | little-endian `uint64`, the **project version** | device-confirmed |
+| 48–49 | `01 f9` — identical in every file | constant |
+| **50** | the **schema version** | correlated |
+| 51 | `00` in every file | constant |
+| 52–63 | `02 be e8 1c a2 6c cb 54 6d c7 b6 ec` — identical in every file | constant |
+
+### Byte 50 is the schema version
+
+| Schema | Files | `165.f32`–`f35` | Record 151 |
+|---|---|---|---|
+| **8** | 1 (`rig-c`) | absent | present |
+| **10** | 11 | present, 11/11 | 2/11 |
+| **11** | 20 | present, 20/20 | 20/20 |
+
+The correlation is total, and it settles a reading that had only been inferred:
+`f32`–`f35` are **schema-10 additions**, which is why the one project authored
+at schema 8 carries nothing there. `schema_du_prefixe` checks both the four
+constant regions and the schema ↔ `f32` equivalence — 14 identities, 32 files.
+
+Schema **11** is this firmware's, and it is the one that carries the detach
+feature: every schema-11 file has record 151, and only schema-11 files have gone
+past four detached entries. A writer must therefore not raise the schema byte
+without also emitting what that schema requires.
+
+The four constant regions are worth stating as constants rather than leaving
+them unread: 24 of the 44 prefix bytes carry no project information at all, and
+any change there is a format change, not a project change.

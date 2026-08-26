@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-label="Pipeline: show.json and a donor .wpj go into wpj_show.py, which validates and refuses unproven fields; then wpj_codec.py converts JSON to bytes with self-checked fidelity; then wpjlib.py rebuilds the TLV container and recomputes the SHA-1; the result is a new, auto-verified .wpj, which you and only you hand to WTOOLS or the W1.">
+<title>The show pipeline</title>
+<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0a0f1e"/><stop offset="0.55" stop-color="#111a2c"/><stop offset="1" stop-color="#0b1120"/></linearGradient><marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#7c8bab"/></marker></defs>
+<rect width="1200" height="300" rx="18" fill="url(#bg)"/>
+<rect x="1" y="1" width="1198" height="298" rx="17" fill="none" stroke="#27324c" stroke-width="1.5"/>
+<text x="42" y="42" font-family="ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace" font-size="12.5" fill="#61708f">the show pipeline</text>
+<rect x="42" y="66" width="186" height="62" rx="12" fill="#4fc3d4" fill-opacity="0.10" stroke="#4fc3d4" stroke-opacity="0.55" stroke-width="1.5"/>
+<text x="135.0" y="100" font-family="ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace" font-size="16" font-weight="600" fill="#e8eefb" text-anchor="middle">show.json</text>
+<text x="135.0" y="124" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.5" fill="#93a1bd" text-anchor="middle">your edits</text>
+<rect x="42" y="158" width="186" height="62" rx="12" fill="#4fc3d4" fill-opacity="0.10" stroke="#4fc3d4" stroke-opacity="0.55" stroke-width="1.5"/>
+<text x="135.0" y="192" font-family="ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace" font-size="16" font-weight="600" fill="#e8eefb" text-anchor="middle">donor .wpj</text>
+<text x="135.0" y="216" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.5" fill="#93a1bd" text-anchor="middle">one of yours</text>
+<rect x="288" y="96" width="200" height="100" rx="12" fill="#8a97f5" fill-opacity="0.10" stroke="#8a97f5" stroke-opacity="0.55" stroke-width="1.5"/>
+<text x="388.0" y="130" font-family="ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace" font-size="16" font-weight="600" fill="#e8eefb" text-anchor="middle">wpj_show.py</text>
+<text x="388.0" y="154" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.5" fill="#93a1bd" text-anchor="middle">validates,</text>
+<text x="388.0" y="173" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.5" fill="#93a1bd" text-anchor="middle">refuses the unproven</text>
+<rect x="524" y="96" width="200" height="100" rx="12" fill="#8a97f5" fill-opacity="0.10" stroke="#8a97f5" stroke-opacity="0.55" stroke-width="1.5"/>
+<text x="624.0" y="130" font-family="ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace" font-size="16" font-weight="600" fill="#e8eefb" text-anchor="middle">wpj_codec.py</text>
+<text x="624.0" y="154" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.5" fill="#93a1bd" text-anchor="middle">JSON to bytes,</text>
+<text x="624.0" y="173" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.5" fill="#93a1bd" text-anchor="middle">fidelity self-checked</text>
+<rect x="760" y="96" width="200" height="100" rx="12" fill="#8a97f5" fill-opacity="0.10" stroke="#8a97f5" stroke-opacity="0.55" stroke-width="1.5"/>
+<text x="860.0" y="130" font-family="ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace" font-size="16" font-weight="600" fill="#e8eefb" text-anchor="middle">wpjlib.py</text>
+<text x="860.0" y="154" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.5" fill="#93a1bd" text-anchor="middle">TLV container,</text>
+<text x="860.0" y="173" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.5" fill="#93a1bd" text-anchor="middle">SHA-1 recomputed</text>
+<rect x="996" y="110" width="162" height="72" rx="12" fill="#ef7aa8" fill-opacity="0.10" stroke="#ef7aa8" stroke-opacity="0.55" stroke-width="1.5"/>
+<text x="1077.0" y="144" font-family="ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace" font-size="16" font-weight="600" fill="#e8eefb" text-anchor="middle">new .wpj</text>
+<text x="1077.0" y="168" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.5" fill="#93a1bd" text-anchor="middle">auto-verified</text>
+<path d="M232 97 L282 128" stroke="#7c8bab" stroke-width="2" fill="none" marker-end="url(#arw)"/>
+<path d="M232 189 L282 158" stroke="#7c8bab" stroke-width="2" fill="none" marker-end="url(#arw)"/>
+<path d="M492 146 L518 146" stroke="#7c8bab" stroke-width="2" fill="none" marker-end="url(#arw)"/>
+<path d="M728 146 L754 146" stroke="#7c8bab" stroke-width="2" fill="none" marker-end="url(#arw)"/>
+<path d="M964 146 L990 146" stroke="#7c8bab" stroke-width="2" fill="none" marker-end="url(#arw)"/>
+<path d="M1077 186 L1077 232" stroke="#7c8bab" stroke-width="2" stroke-dasharray="7 6" stroke-opacity="0.6" fill="none" marker-end="url(#arw)"/>
+<text x="1077" y="258" font-family="ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace" font-size="13" fill="#93a1bd" text-anchor="middle">WTOOLS / W1</text>
+<text x="1077" y="277" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="12.5" fill="#61708f" text-anchor="middle">your call, always</text>
+<text x="42" y="258" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.5" fill="#93a1bd">Unknown bytes pass through verbatim · writes never overwrite</text>
+<text x="42" y="278" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="13.5" fill="#61708f">Nothing is written to the controller by this path.</text>
+</svg>

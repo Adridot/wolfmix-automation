@@ -182,15 +182,7 @@ back and that **nothing else moved**. Key reference: [`docs/show-format.md`](doc
 
 ## How it works
 
-```mermaid
-flowchart LR
-    A["show.json<br/>your edits"] --> B["wpj_show.py<br/>validates,<br/>refuses the unproven"]
-    D["donor .wpj<br/>one of yours"] --> B
-    B --> C["wpj_codec.py<br/>JSON to bytes,<br/>fidelity self-checked"]
-    C --> E["wpjlib.py<br/>TLV container,<br/>SHA-1 recomputed"]
-    E --> F["new .wpj<br/>auto-verified"]
-    F -.-> G(["WTOOLS / W1<br/>your call, always"])
-```
+<img src="docs/assets/pipeline.svg" alt="show.json and a donor .wpj feed wpj_show.py, which validates and refuses unproven fields; wpj_codec.py turns JSON into bytes with self-checked fidelity; wpjlib.py rebuilds the TLV container and recomputes the SHA-1; out comes a new, auto-verified .wpj, which you and only you hand to WTOOLS or the W1." width="100%">
 
 Three properties hold at every stage:
 

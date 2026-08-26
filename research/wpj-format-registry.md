@@ -4283,3 +4283,28 @@ which this registry did not observe. The FLASH-09 constraint stands as measured
 — *writing a new entry into the file does not survive the load* — and how a
 preset is created legitimately is still an open question, being pursued
 separately.
+
+### PRESET-04 measured — dense ids still refuse to load — **[observed]**
+
+"Error opening project" again, with ids 85–99 dense. The gap was not the
+fatal variable (or not alone). Rollback to the 85-preset state restored a
+normally-opening project (operator-confirmed, second time). Remaining
+suspects, by prior: the file-written `nom` — **no name in the 2778-preset
+corpus exceeds 19 bytes**, and "preset test automatique" is 23 — and the
+addition count (15 at once vs the 2 of PRESET-01).
+
+## PRESET-05 — one entry, id 85, the 23-byte name: name vs quantity
+
+Candidate: the 85-preset state plus a single entry id 85 (donor 82, flash
+slices cleared) carrying `nom` = "preset test automatique". Against
+PRESET-01 (two unnamed additions, loaded fine) the single new variable is
+the name.
+
+### Prediction, published before the deploy
+
+Primary: **"Error opening project" again** — the name is fatal, most likely
+its 23-byte length overflowing a firmware buffer sized around the corpus
+maximum of 19. Rival: the project opens with 6 pads and slot 6 named — then
+the name is innocent and PRESET-04's failure was the addition count. A
+second build with a ≤19-byte name stands ready to split length from
+presence if the primary holds.

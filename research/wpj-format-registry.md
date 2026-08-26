@@ -1570,19 +1570,41 @@ four repetitions of `f31`:
 to show groups E–H. Nothing in the project file has yet been shown to carry the
 fixture → group assignment; where it lives is still open.
 
-### `f31` — the wire layout, corrected — **[correlated]**
+### `f31` — one 20-pad mask per group A–H — **[correlated]**
 
-Read while chasing `f30`, and it corrects `research/preset-format-165.md`.
-`f31` is 20 packed varints = **4 repetitions of 5 bytes**, and each repetition
-is **40 bits carrying two 20-bit masks** of the type-140 pads, low mask first:
+`f31` is 20 packed varints = **160 bits = eight 20-bit masks**, one per group
+A–H, little-endian, bit *n* of group *g* selecting pad *n+1* of that group's
+type-140 palette:
 
 ```
-rep = 5 bytes, little-endian
-  bits  0…19   mask A — pad n selected  (bit n → pad n+1)
-  bits 20…39   mask B — same shape
+mask(g) = (int.from_bytes(20 bytes, "little") >> (20 * g)) & 0xFFFFF
 ```
 
-The two masks are identical on every preset in the corpus except `Purple Rain`.
-The anchor still holds: `Deep Red` is a single bit 5 in mask A = pad 6 = Red.
-What mask B is for, and whether the 4 repetitions are groups A–D, remain
-**[hypothesized]** — the spread measurements above used only mask A.
+That makes the preset's four per-group arrays line up exactly: `f28` positions,
+`f29` gobos, `f30` pattern, `f31` colour mask — eight slots each.
+
+It reads out sensibly where the earlier attempt did not. `Startup` is `Amber` on
+all eight groups, `Deep Red` a single bit 5 = pad 6 = Red, `Neon Rave` is
+`Lime + Pink` on all eight — and the presets that differ between groups are
+plainly designed that way:
+
+| Preset | A | B | C…H |
+|---|---|---|---|
+| `Purple Rain` | UV + Purple | UV + Pink | UV |
+| `Aim` | UV + Red | Red + White | Red |
+| `Milky Way` | White | UV + Pink | UV + Pink |
+
+**Retracted**: an earlier entry read `f31` as *four repetitions of five bytes,
+each holding two 20-bit masks*. It was cutting eight 20-bit groups into four
+40-bit packets, which is why one mask kept looking like a mysterious duplicate
+of the other and why `Purple Rain` looked like a lone anomaly. It is not an
+anomaly; it is a preset with three different colour selections across its
+groups.
+
+**Consequence for the pad-count table above.** The "pads in `f31`" column was
+computed from the first 20 bits, which under the correct reading is **group A's
+mask alone**. The rule it supported still holds in the corrected reading — `9`
+is the only value seen when no group has two pads — but `Purple Rain` is no
+longer its exception: it genuinely holds two pads on A and on B while sitting on
+`SINGLE`, which is a legitimate if unusual choice. `Milky Way` is the reverse
+case, one pad on A and two on B, carrying `0`.

@@ -1206,10 +1206,93 @@ sequencer's, **9 = item 10 = `points`**, the one gobo the operator named.
 
 That is three coincidences pointing the same way, but no experiment. It stays
 **[hypothesized]** until one preset is saved with a known gobo on a known group.
-Discriminator, one save: put gobo item 3 on group A and item 7 on group B (once
-group B has a gobo palette), then read `f29`; `[2, 6, 255…]` confirms 0-based,
-`[3, 7, 255…]` confirms 1-based.
-
 If it holds, the preset record's palette references are symmetric — `f28`
 positions, `f29` gobos, `f31` colours — and the three palette records 150, 145
 and 140 are each reachable from a preset.
+
+### What the corpus adds, and what it takes away — **[observed]**
+
+Surveying `f29` over all 25 variant-A files (four rigs, 2038 presets), exactly
+**three** non-sentinel patterns exist:
+
+| Pattern | Presets | Where |
+|---|---|---|
+| `[1]×8` | 3 | `70's Paradise`, `Milky Way`, `Fire!` — **every file** |
+| `[2]×8` | 1 | `Sizzle` — **every file** |
+| `[9, 255×7]` | 7 | **only** the rig lineage that has a gobo palette |
+
+**In favour.** The `[9, 255×7]` presets are `Get Moving`, `Candy Floss Swing`,
+`valse`, and the four factory MOVE presets id 56–59 (`D A N C E`, `J U M P`,
+`Point to Point`, `Lights to the Siren`). Those last four are **the same factory
+presets in every rig**, and in `rig-a` and `rig-b` — whose eight gobo palettes
+are all empty, no gobo-wheel fixture patched — they carry all-255 instead. So
+the value is not shipped with the preset: something writes group A's slot
+**only when group A actually has a gobo palette**, exactly like the palette
+itself being derived from the patch.
+
+**Against, and it must be said.** `f29`'s neighbour `f30` sits at `[9]×8` on
+~65 presets of *every* file, so **9 is a common default value in this record**,
+not a rare one — the "9 = `points`" coincidence is worth less than it looked.
+And the four `[1]×8` / `[2]×8` presets carry a gobo index on all eight groups in
+projects with **no gobo palette anywhere**, which kills any rule of the form
+"255 wherever the group has no palette". They are factory constants nothing has
+touched.
+
+Net: the hypothesis survives and gained one real argument, the corpus is out of
+road, and the base is still 0-based-vs-1-based undecided.
+
+### Discriminator without a save — press a pad and measure — **[planned]**
+
+The original discriminator needed group B to own a gobo palette, which it
+cannot: the palette is derived from the patch and only group A has a gobo-wheel
+fixture. But `f29` can be read **live**, through the DMX oracle that already
+settled the type-145 gobo ids, with no write and no save.
+
+Recall a preset and measure the lyres' gobo channel (0-based DMX 10, 26, 42, 58,
+74, 90). Predictions published before measuring, from the band table above:
+
+| Preset | page/slot | `f29[A]` | 0-based → pad | expect | 1-based → pad | expect |
+|---|---|---|---|---|---|---|
+| `Get Moving` | 1 / 2 | 9 | 10 = `points` | **70** | 9 | **63** |
+| `Sizzle` | 1 / 13 | 2 | 3 | **21** | 2 | **14** |
+
+Four distinct values, no collision. Anything else — the gobo channels staying at
+0, or a value outside {70, 63, 21, 14} — refutes `f29` as a static gobo index.
+A range instead of a single value would mean the preset's beam FX is animating
+the gobo channel, which is itself worth knowing.
+
+
+## Preset `f32`–`f35` — a schema-10 addition, zeroed by the upgrade — **[correlated]**
+
+Four more packed 8-varint per-group arrays, and their presence splits cleanly on
+the writer/schema version at offset 50:
+
+| Files | Schema | `f32` … `f35` |
+|---|---|---|
+| `rig-c.wpj` | **8** | **absent from every preset** |
+| `rig-a`, `rig-b`, the ACC series | 10 | `50` / `0` / `100` / `100`, on all 8 groups of all 80 presets |
+| `f2737ec3`, `rig-c-bug`, the whole experiment lineage | 10 and 11 | `0` / `0` / `0` / `0`, everywhere |
+
+Read out: the four fields **did not exist at schema 8**. Projects authored at
+schema 10 carry a plausible default set — 50 %, 0, 100 %, 100 % — while the one
+project that was **upgraded from schema 8** carries zeros in all four, on every
+preset, and keeps them through every later save. The upgrade path added the
+fields without filling them.
+
+`50 / 0 / 100 / 100` on a per-group array is the shape of a Move FX
+offset/width pair — pan offset 50 %, tilt offset 0, pan width 100 %, tilt
+width 100 % — but nothing has been measured, so that is **[hypothesized]** and
+the assignment order is a guess.
+
+### It is not the rig-c blackout — **[correlated]**
+
+Tempting, given the lineage: `research/rig-c-bug.md` blames a firmware upgrade
+on this very project. But `f2737ec3` is the **healthy** revision of the pair and
+it carries the zeros too, identically to `rig-c-bug`. The zeros predate the
+fault and cannot cause it. One candidate removed, not added.
+
+### Consequence for a writer
+
+A generator targeting schema 10 or 11 should emit `50 / 0 / 100 / 100` rather
+than copying the zeros of the experiment project, which are an upgrade artefact
+rather than a chosen value.

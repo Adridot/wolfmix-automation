@@ -2917,3 +2917,48 @@ it is unknown: no screen seen so far exposes anything that varies per group with
 one preset in the whole corpus carrying it. `f14` is in the same position, on
 `70's Paradise`. Both stay **[observed]**: eight values indexed A–H, contents
 unattributed.
+
+## F4-03 — `f4` gates the engines, and `f16`'s slice 2 is the Beam FX
+
+Crossing the preset's `f4` with the `f16` engine masks makes both fields say
+something the other could not.
+
+| `f4` | binary | engines seen active | count |
+|---|---|---|---|
+| 8 | `00001000` | **0** only, or none | 640 |
+| 5 | `00000101` | **1** only, or none | 640 |
+| 17 | `00010001` | **2** only, or none | 638 |
+| 255 | `11111111` | any combination | 693 |
+
+The implication holds on every preset of every file, and it is one-directional:
+
+```
+engine 0 active  ⇒  f4 bit 3        Color FX
+engine 1 active  ⇒  f4 bit 2        Move FX
+engine 2 active  ⇒  f4 bit 4        Beam FX
+```
+
+`f4_autorise_les_moteurs` checks it — 13 identities, 32 files. A page may permit
+an engine no preset on it uses, which is why the converse fails and why `f4`
+reads as a **permission mask** rather than a record of what is running.
+
+### Slice 2 of `f16` is the Beam FX — **[correlated]**
+
+Slice 0 was pinned to `color_fx_actif` and slice 1 to `move_fx_actif` by direct
+equality. Slice 2 had no partner field. It is now named by exclusion that is not
+hand-waving: it is active on **574 of the 638 presets whose `f4` is 17** — the
+beam page — and on **none** of the 1280 presets of the colour and move pages. A
+mask confined to the beam page, on a device whose third FX engine is Beam FX.
+
+That leaves `f16` with three named engines out of twelve, slices 5 and 7
+unexplained, and slice 11 a per-project constant.
+
+### What `f4` bit 0 still is not
+
+Bit 0 is set on the move page (`5` = bits 0 + 2) and the beam page
+(`17` = bits 0 + 4), and clear on the colour page (`8` = bit 3 alone). Under the
+permission reading it is a fourth capability that movement and beam presets both
+need and colour presets do not — and the pars, which carry no pan, tilt, gobo or
+wheel channel, are exactly the fixtures a colour preset addresses. Nothing in
+the corpus separates the candidates, and bits 1, 5, 6 and 7 are still never seen
+outside 255.

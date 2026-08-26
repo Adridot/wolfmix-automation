@@ -310,10 +310,35 @@ def tableaux_par_groupe_165(w):
                 f"165.f{n} : {len(vals)} varints au lieu de 8"
 
 
+# Moteur de f16 -> bit de 165.f4 qui doit être mis pour qu'il puisse agir.
+# 0 = Color FX, 1 = Move FX, 2 = Beam FX ; voir le registre, « F4-03 ».
+MOTEUR_VERS_F4 = {0: 3, 1: 2, 2: 4}
+
+
+def f4_autorise_les_moteurs(w):
+    """Un moteur actif dans f16 implique son bit dans le masque 165.f4.
+
+    L'implication est unilatérale : une page peut autoriser un moteur sans
+    qu'aucun preset ne l'emploie. C'est ce qui identifie la tranche 2 de f16
+    comme le Beam FX — elle n'est jamais active hors des presets dont le `f4`
+    porte le bit 4.
+    """
+    for pre in _items(w, 165):
+        h = pre.get("f16")
+        if not h:
+            continue
+        gros = int.from_bytes(bytes(_varints(h["hex"])), "little")
+        f4 = pre.get("f4", 0)
+        for m, bit in MOTEUR_VERS_F4.items():
+            if (gros >> (9 * m)) & 0x1FF:
+                assert f4 >> bit & 1, \
+                    f"165 : moteur {m} actif mais f4 = {f4} n'a pas le bit {bit}"
+
+
 IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
               groupe_fixture, moteurs_f16, plages_111, roles_106,
               ordre_fixtures_115, bornes_106, tranches_151,
-              tableaux_par_groupe_165)
+              tableaux_par_groupe_165, f4_autorise_les_moteurs)
 
 
 def demo():

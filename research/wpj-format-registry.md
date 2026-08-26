@@ -4022,3 +4022,99 @@ this is the reason.
 reported success, yet a later download returns the truncated record. Its check
 therefore does not catch this class of change — a caller that adds structure
 must re-download and compare item counts itself.
+
+## FLASH-09 revisited — the drop happens at reopen, not at store — 2026-08-26
+
+Re-reading the run journal and the deployer's code corrects yesterday's
+reading in one important way, and the corpus closes several doors.
+
+### The device stored and returned all 85 entries — **[observed]**
+
+`verify_project` compares the **record payloads byte for byte** (it raises on
+any difference), and in run `20260826T163220.559340Z-FLASH-09` it passed
+**twice — once after the store, once after the RESTART**. So at deploy time
+the controller stored the 85-entry record 165 and served it back intact; the
+`downloadedSha256` differs from `candidateSha256` only in the prefix (version
+counter). The truncation to 83 appeared **only in the download made after the
+operator reopened the project by hand** for the recall test.
+
+Yesterday's sentence "the firmware normalises the record on load" was right by
+accident: it is the **project-open path on the panel**, not the USB store
+path, that drops the entries. The deployer's verification is not blind — at
+the moment it ran, nothing had been dropped yet.
+
+### The truncation kept the original 83 verbatim — **[observed]**
+
+The returned record measured 30184 bytes — **exactly the size of the record
+before the edit**, and
+
+```
+30882 − 30184 = 698 = 2 × (3 + 346)
+```
+
+i.e. precisely the two added entries with their `f5` headers. The device did
+not renumber, rebuild or normalise anything: it kept its 83 entries and
+discarded exactly the two it had not created. Encoded as an identity:
+`ajout_de_preset()` in `tools/wpj_identities.py`, over
+`corpus/experiments/FLASH-09/{before,candidate}.wpj`.
+
+### No external preset count exists in the file — **[observed]**
+
+Exhaustive record diff of the F30-04 pair (the device itself adds a preset,
+82 → 83): outside record 165, only **{115, 125, 155, 161}** change, plus the
+version counter.
+
+| Record | Change | Reading |
+|---|---|---|
+| 115 | two bytes per fixture | live per-fixture values, changes at every save |
+| 125 | last byte of every `f4` (all 9 slots): `30` → `38` | **not** a preset count: `38` also on rig-c (2 user presets), `30` on the 0-user factory files |
+| 155 | `f5[0].f3`: 1 → 16 | sequencer state, single field |
+| 161 | 3 bytes | volatile UI/machine state (known) |
+
+Nothing anywhere holds "3 user presets". The FLASH-09 candidate also passes
+all 15 corpus identities — the rejected file violates no known invariant.
+
+### `165.f1`: both remaining candidate rules die on one pair — **[observed]**
+
+Across the F30-04 pair, `f1` goes **82 → 81** while the count goes 82 → 83
+and the named count stays 81 on both sides. So "f1 = presets" is refuted by
+the after-file and "f1 = named presets" by the before-file — on a single
+device-written pair, no corpus survey needed. `f1` is stable across every
+later save of the same state (all 83-preset files carry 81), so it is not
+per-save UI noise either. Semantics: **open**.
+
+### Reading, and the two experiments that decide it — **[hypothesized]**
+
+The behaviour matches a **warm-reopen merge**: reopening the project that is
+already live updates existing presets by id and never creates one. This is
+consistent with FLASH-08 ("the controller kept running the project it already
+had") and with every successful edit experiment — all of them updates. The
+one live alternative is a gate on `f1` (kept = `f1 + 2` fits the single
+binding observation).
+
+- **PRESET-01 — cold open.** Deploy the FLASH-09 candidate unchanged; the
+  operator opens a *different* project on the panel, then opens
+  format-lab. Warm-merge predicts **85** presets survive; an `f1` gate
+  predicts 83.
+- **PRESET-02 — f1 bumped.** Deploy the candidate with `f1` set to 83 as the
+  only change; warm reopen as in FLASH-09. An `f1` gate predicts **85**;
+  warm-merge predicts 83.
+
+Either outcome answers the question "how do you add a preset by file". Both
+are one deploy plus one panel gesture.
+
+### The path that works today — **[device-confirmed]**
+
+Until PRESET-01/02 run, adding capacity is a panel gesture and everything
+else is a file edit: create the slots once on the controller (select a
+preset, SHIFT + tap an empty pad — the documented copy gesture), then rewrite
+those entries' contents entirely by file. Updates to existing entries are
+device-confirmed to persist across store, restart and reopen (FLASH-05…08,
+GOBO-01, POS-03/06). For the show generator this means: pre-create one page
+of placeholder presets, then generate freely into them.
+
+Candidates on disk, ready to deploy (never committed, like all `.wpj`):
+`corpus/experiments/FLASH-09/candidate.wpj` for PRESET-01 (unchanged), and
+`corpus/experiments/FLASH-09/candidate-f1-83.wpj` for PRESET-02 — built from
+it with `f1` 81 → 83 as the **only** differing byte (offset 1 of record 165),
+verified at build time.

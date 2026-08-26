@@ -376,6 +376,99 @@ def canal_principal_110(w):
                 f"{p110[off + m].get('f4')}, pas {c.get('f4')}"
 
 
+# Taille du record 165 rendu par l'appareil après la réouverture de
+# FLASH-09, mesurée le 2026-08-26 (voir le registre, « FLASH-09 »).
+RENDU_FLASH09 = 30184
+
+
+def _entrees_165(payload):
+    """(f1, [entrées brutes]) du record 165, sans interpréter les entrées."""
+    i, f1, entrees = 0, None, []
+    while i < len(payload):
+        tag, i = wpj_codec._rvarint(payload, i)
+        if tag == 0x08:                      # f1 varint
+            f1, i = wpj_codec._rvarint(payload, i)
+        elif tag == 0x2A:                    # f5 : une entrée preset
+            ln, i = wpj_codec._rvarint(payload, i)
+            entrees.append(payload[i:i + ln]); i += ln
+        else:
+            raise AssertionError(f"165 : tag inattendu {tag:#x}")
+    return f1, entrees
+
+
+def ajout_de_preset():
+    """L'ajout d'un preset : ce que l'appareil écrit, ce qu'il jette.
+
+    Deux paires d'expériences (registre, « F30-04 » et « FLASH-09 ») :
+
+    - F30-04, l'appareil ajoute lui-même un preset : hors 165 ne changent
+      que les records d'état vif {115, 125, 155, 161}. Le fichier ne porte
+      donc AUCUN compte externe de presets. Et 165.f1 passe de 82 à 81
+      pendant que le compte passe de 82 à 83, avec 81 nommés des deux
+      côtés : « nombre de presets » est réfuté par l'après, « nombre de
+      presets nommés » par l'avant.
+
+    - FLASH-09, deux entrées ajoutées par fichier (copies de l'entrée 82,
+      id et tranche f16 changés) : l'appareil a stocké puis rendu les 85
+      entrées octet pour octet (verify du deploy, après son RESTART) ; la
+      réouverture au panneau a ramené le record à 30184 octets — la taille
+      exacte du record d'avant l'ajout. Les 83 d'origine conservées
+      verbatim, les deux ajouts jetés :
+      30882 - 30184 == 2 × (3 + len(entrée 82)).
+
+    Paire absente du corpus = vérification sautée, pas réussie.
+    """
+    import os
+    rac = os.path.join(os.environ.get(wpjlib.CORPUS_ENV)
+                       or wpjlib.CORPUS_DEFAUT, "experiments")
+
+    def charge(*p):
+        chemin = os.path.join(rac, *p)
+        return wpjlib.Wpj.load(chemin) if os.path.exists(chemin) else None
+
+    av, ap = charge("F30-04", "before.wpj"), \
+        charge("F30-04", "after-three-patterns.wpj")
+    if av and ap:
+        assert [t for t, _ in av.records] == [t for t, _ in ap.records]
+        bouges = {t for (t, p1), (_, p2) in zip(av.records, ap.records)
+                  if p1 != p2}
+        assert bouges == {115, 125, 155, 161, 165}, \
+            f"F30-04 : records changés {sorted(bouges)}"
+        f1a, ea = _entrees_165(av.get(165))
+        f1b, eb = _entrees_165(ap.get(165))
+        noms_a = sum(1 for p in wpj_codec.decode(165, av.get(165))["presets"]
+                     if p.get("nom"))
+        noms_b = sum(1 for p in wpj_codec.decode(165, ap.get(165))["presets"]
+                     if p.get("nom"))
+        assert (len(ea), noms_a, f1a) == (82, 81, 82), \
+            f"F30-04 avant : {(len(ea), noms_a, f1a)}"
+        assert (len(eb), noms_b, f1b) == (83, 81, 81), \
+            f"F30-04 après : {(len(eb), noms_b, f1b)}"
+
+    av, ca = charge("FLASH-09", "before.wpj"), \
+        charge("FLASH-09", "candidate.wpj")
+    if av and ca:
+        assert av.prefix == ca.prefix, "FLASH-09 : préfixe touché par l'édit"
+        bouges = {t for (t, p1), (_, p2) in zip(av.records, ca.records)
+                  if p1 != p2}
+        assert bouges == {165}, f"FLASH-09 : records changés {sorted(bouges)}"
+        f1a, ea = _entrees_165(av.get(165))
+        f1c, ec = _entrees_165(ca.get(165))
+        assert f1a == f1c == 81, f"FLASH-09 : f1 {f1a} / {f1c}"
+        assert len(ec) == 85 and ec[:83] == ea, \
+            "FLASH-09 : le candidat n'est pas avant + 2 entrées en queue"
+        for e in ec[83:]:
+            assert len(e) == len(ea[82]), "FLASH-09 : entrée d'autre taille"
+            diffs = sum(x != y for x, y in zip(ea[82], e))
+            assert 0 < diffs <= 6, \
+                f"FLASH-09 : {diffs} octets d'écart avec l'entrée 82"
+        entete = 1 + len(wpj_codec._wvarint(len(ea[82])))
+        assert len(av.get(165)) == RENDU_FLASH09, \
+            "FLASH-09 : le record rendu n'a pas la taille d'avant l'ajout"
+        assert len(ca.get(165)) - RENDU_FLASH09 == 2 * (entete + len(ea[82])), \
+            "FLASH-09 : la troncature n'est pas « les deux ajouts, exactement »"
+
+
 IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
               groupe_fixture, moteurs_f16, plages_111, roles_106,
               ordre_fixtures_115, bornes_106, tranches_151,
@@ -401,8 +494,9 @@ def demo():
                 raise AssertionError(f"{path} : {verif.__name__} : {e}") from None
     if not n:
         return wpjlib.pas_de_corpus("wpj_identities")
-    print(f"{len(IDENTITES)} identités vérifiées sur {n} fichiers variante A",
-          file=sys.stderr)
+    ajout_de_preset()
+    print(f"{len(IDENTITES)} identités vérifiées sur {n} fichiers variante A"
+          " (+ paires F30-04 / FLASH-09)", file=sys.stderr)
 
 
 if __name__ == "__main__":

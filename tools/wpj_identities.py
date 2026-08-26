@@ -376,11 +376,6 @@ def canal_principal_110(w):
                 f"{p110[off + m].get('f4')}, pas {c.get('f4')}"
 
 
-# Taille du record 165 rendu par l'appareil après la réouverture de
-# FLASH-09, mesurée le 2026-08-26 (voir le registre, « FLASH-09 »).
-RENDU_FLASH09 = 30184
-
-
 def _entrees_165(payload):
     """(f1, [entrées brutes]) du record 165, sans interpréter les entrées."""
     i, f1, entrees = 0, None, []
@@ -408,13 +403,14 @@ def ajout_de_preset():
       côtés : « nombre de presets » est réfuté par l'après, « nombre de
       presets nommés » par l'avant.
 
-    - FLASH-09, deux entrées ajoutées par fichier (copies de l'entrée 82,
-      id et tranche f16 changés) : l'appareil a stocké puis rendu les 85
-      entrées octet pour octet (verify du deploy, après son RESTART) ; la
-      réouverture au panneau a ramené le record à 30184 octets — la taille
-      exacte du record d'avant l'ajout. Les 83 d'origine conservées
-      verbatim, les deux ajouts jetés :
-      30882 - 30184 == 2 × (3 + len(entrée 82)).
+    - FLASH-09 / PRESET-01, deux entrées ajoutées par fichier (copies de
+      l'entrée 82, id et tranche f16 changés) : l'ajout est
+      **device-confirmed** — stocké, rendu octet pour octet, affiché et
+      rappelable après réouverture à froid (registre, « PRESET-01 »). La
+      « suppression » initialement rapportée par FLASH-09 est rétractée :
+      les nombres du téléchargement « rendu » étaient ceux de l'état
+      pré-deploy. L'arithmétique de l'édit reste vérifiable :
+      len(candidat.165) - len(avant.165) == 2 × (3 + len(entrée 82)).
 
     Paire absente du corpus = vérification sautée, pas réussie.
     """
@@ -463,10 +459,8 @@ def ajout_de_preset():
             assert 0 < diffs <= 6, \
                 f"FLASH-09 : {diffs} octets d'écart avec l'entrée 82"
         entete = 1 + len(wpj_codec._wvarint(len(ea[82])))
-        assert len(av.get(165)) == RENDU_FLASH09, \
-            "FLASH-09 : le record rendu n'a pas la taille d'avant l'ajout"
-        assert len(ca.get(165)) - RENDU_FLASH09 == 2 * (entete + len(ea[82])), \
-            "FLASH-09 : la troncature n'est pas « les deux ajouts, exactement »"
+        assert len(ca.get(165)) - len(av.get(165)) == 2 * (entete + len(ea[82])), \
+            "FLASH-09 : l'écart de taille n'est pas « les deux ajouts, exactement »"
 
 
 IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,

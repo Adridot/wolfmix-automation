@@ -4155,3 +4155,37 @@ project, then open format-lab from Main Menu → Projects):
 
 If instead the panel shows 3 pads, the loader-gate model returns and
 PRESET-02 (`f1` = 83) becomes the discriminating deploy.
+
+### Measured — all three predictions held — **[device-confirmed]**
+
+Cold open performed (another project opened, then format-lab from
+Main Menu → Projects), operator at the panel, WTOOLS closed:
+
+1. Preset matrix page 5 shows **5 occupied pads**. ✓
+2. Pad 4 recall lights **BLINDER**, pad 5 recall lights **SPEED**. ✓ —
+   `f16` slices **9 and 10 are now device-confirmed in the write
+   direction**, closing the flash-engine map both ways for all five
+   engines plus WOLF (slices 6–10, FLASH-03…08 + PRESET-01).
+3. The post-reopen download returns **85 presets, records byte-identical
+   to the deployed candidate, version counter unchanged** — the device did
+   not even need to rewrite storage.
+
+So, the answer to the question that opened FLASH-09:
+
+**A preset is added to record 165 by appending a well-formed `f5` entry with
+the next sequential id. Nothing else is required.** No count exists to
+maintain, `165.f1` may be left verbatim (85 presets accepted with `f1` = 81),
+and the firmware accepts, displays, recalls and conserves the additions
+across store, RESTART, cold reopen and 24 h of storage. FLASH-09's
+"the device deletes preset entries it did not create" is **refuted by device
+measurement**; the *edit, do not synthesize* rule loses its measured
+justification for preset entries and reverts to plain caution about
+unknown fields.
+
+**PRESET-02 is unposed.** It existed to discriminate a loader gate
+(warm-merge vs `f1`) that PRESET-01 shows does not exist: `f1` = 81 gated
+nothing at 85 presets. The `candidate-f1-83.wpj` build is kept as a donor
+for future `f1` semantics work only.
+
+Identity updated accordingly: `ajout_de_preset()` now records the edit
+arithmetic and the retraction, not a truncation.

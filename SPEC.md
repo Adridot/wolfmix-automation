@@ -347,6 +347,11 @@ toggle is **off**:
 |---|---|---|---|---|---|---|
 | | `COLOR` | `MOVE` | `BEAM` | `GOBO` | `LIVE EDIT` | `OTHER` |
 
+The manual states what each includes: `COLOR` = Color FX **and static colours**,
+`MOVE` = Move FX **and static positions**, `BEAM` = Beam FX, `GOBO` and
+`LIVE EDIT` the corresponding parts, `OTHER` = **the group dimmer values**
+(record 165 `f17`).
+
 Screen order, left to right then down. Every bit is held by at least two
 independent readings — six photographs of factory presets plus targeted writes —
 and three of them by a single-variable differential. Corpus values re-read
@@ -386,7 +391,17 @@ engine 0 active implies `f4` bit 3, engine 1 bit 2, engine 2 bit 4, on every
 preset of every file. The implication is one-directional — a page may permit an
 engine none of its presets uses.
 
-### 5.5 Thirteen per-group arrays — **[correlated 32/32]**
+### 5.5 `f18` = the Live Edit mask — **[correlated]**
+
+The `LIVE EDIT` screen is 4 pages of 20 buttons; `f18` is 10 packed varints =
+**80 bits**, one per button, the same byte-field construction as `f16` and
+`f31`. Across the corpus only buttons **1, 2, 4, 5 and 20** are ever set — the
+top of page 1 — out of eighty possible.
+
+`f10`'s `LIVE EDIT` bit says *whether* a preset carries Live Edits; `f18` says
+*which*.
+
+### 5.6 Thirteen per-group arrays — **[correlated 32/32]**
 
 Sweeping the whole format for fields that always decode to exactly 8 packed
 varints returns thirteen, all in record 165:
@@ -398,6 +413,13 @@ f3  f7  f14  f17  f23  f27  f28  f29  f30  f32  f33  f34  f35
 `f17` dimmers, `f28` positions, `f29` gobos, `f30` colour pattern are named. The
 other nine are **known to be per-group** even where their meaning is not, which
 rules out reading them as scalars. `f32`–`f35` appear at schema 10.
+
+**[hypothesized]** `f3`, `f7`, `f14`, `f23`, `f27` are the **five gobo
+features**. The `STATIC GOBO` screen carries one percentage per group,
+switchable between *Rotation, Prism, Focus, Zoom* and *Iris* — five features,
+and the preset has exactly five unexplained per-group arrays. `70's Paradise`
+carries `f14 = [6]×8` and the manual's `ROTATE` screenshot reads 6 %;
+`Get Moving` carries `f7 = [0,1,0,…]`, group B only.
 
 ### FX submessage — shared by Beam, Color and Move
 

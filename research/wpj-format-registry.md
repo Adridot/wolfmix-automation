@@ -65,7 +65,7 @@ Relevé sur f4a5d15f (C) ; à corréler sur les fichiers B (offset 20).
 |---|---|---|---|---|
 | 1 | varint | 1 | version du format (6 ou 7) | hypothesized |
 | 2 | len | 1 | **nom du projet** UTF-8 (« Mariage Hermine », « 2 Lyres ») | correlated |
-| 3 | len ×100 | 100 | **presets** (sous-msg : champ1=nom, champ2=varint 1000, champ4=blob 135 o) | correlated (100 = 5 pages × 20 slots ? à valider) |
+| 3 | len ×100 | 100 | **presets** (sous-msg : champ1=nom, champ2=varint 1000, champ4=blob 135 o) | correlated (le manuel donne **10 pages × 20**, soit 200 slots) |
 | 15 | len ×2048 | 2048 | inconnu (gros volume — steps ? séquences ?) | observed |
 | 5 | len ×80 | 80 | inconnu | observed |
 | 17 | len ×87, 6 ×48, 7/9/30/31 ×40, 40 ×32… | — | inconnus | observed |

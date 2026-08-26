@@ -3904,3 +3904,47 @@ its mask-field order, then the panel layout — and by symmetry twice. All five
 failed. The layout `WOLF STROBE BLACKOUT BLINDER SPEED` matches nothing else in
 the format, and the only way it was ever going to be read is one latch at a
 time. Five experiments, five measurements, no inference left in the result.
+
+## FLASH-07 — `SMOKE` alone, and the flash side closes
+
+Everything released, `SMOKE` alone latched, preset 82 overwritten, one save,
+version 717 → 718. Record **165 only** — `102.f4` did not move, `SMOKE` already
+being in `TOGGLE`.
+
+`f16` moved **one** slice, and it fell:
+
+| Slice 10 | 511 → **0** | `SPEED`, released |
+|---|---|---|
+
+**Nothing rose.** The preset's `f16` now reads slices 0, 1, 5 and 11 — Color FX,
+Move FX, the static layer, and the per-project constant. No flash engine at all,
+with a flash key held.
+
+This is the cleanest form the experiment can take: **one key active, the only
+candidate left, and not a bit written.** The three earlier null-adjacent results
+each carried a "was it really latched" reservation; this one cannot, because
+`SMOKE` is the only thing that was on.
+
+And slice **11 did not move either** — it sits at 2 before and after — which
+retires the last version of the idea that 11 might be `SMOKE` with a
+project-constant mask.
+
+### `f16` — final
+
+| Slice | Engine | |
+|---|---|---|
+| 0 | `Color FX` | duplicates `color_fx_actif` |
+| 1 | `Move FX` | duplicates `move_fx_actif` |
+| 2 | `Beam FX` | |
+| 3, 4 | zero everywhere | nothing left to assign |
+| 5 | static layer | 255 on every preset, [hypothesized] |
+| 6 | `WOLF` | flash, 511 |
+| 7 | `STROBE` | flash, 511 |
+| 8 | `BLACKOUT` | flash, 511 |
+| 9 | `BLINDER` | flash, 511 |
+| 10 | `SPEED` | flash, 511 |
+| 11 | per-project constant, 2 / 5 / 7 | not a flash key |
+
+Twelve slices: **nine named, two provably empty, one open.** Six experiments,
+one latch each, and every naming in the flash half is a direct measurement —
+after five positional and symmetry guesses that all failed.

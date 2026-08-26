@@ -4213,3 +4213,43 @@ from the device's current state, 15/15 identities pass.
    bottom-right, named** — pads are keyed by id, and the 85–98 gap is
    tolerated. Rival outcomes that would refute: entry dropped (sequential
    ids required) or pad at slot 6 (position-keyed matrix).
+
+### Measured — the gap is fatal, loudly — **[observed]**
+
+1. ✓ Store and both verifies accepted the 86 entries.
+2. ✓ No panel touch, after the deploy's RESTART: nothing new on page 5.
+   FLASH-08's boundary now holds for structure as well — the running
+   project does not reload on RESTART, and firmware 2.0.18 exposes no USB
+   open-project command. **Full hands-off activation is not achievable on
+   this firmware**; the boundary is the reload, measured twice.
+3. ✗ **Refuted, in an unforeseen direction**: on manual open the panel
+   showed **"Error opening project"** — not a dropped entry, not a
+   repositioned pad: the whole project refused to load. First *loud*
+   rejection ever measured (FLASH-09's silent deletion was a
+   mis-attribution; this is a real error dialog). Confounded variables:
+   the id gap 85–98 and the first file-written `nom`. Storage still held
+   the 86 entries byte-for-byte after the error — the loader rejects
+   without rewriting.
+
+Rollback: redeploying the 85-preset state (`after-cold-open` bytes)
+restored a normally-opening project, operator-confirmed. The transactional
+runner plus a kept known-good download make a failed loader experiment a
+two-minute round trip.
+
+## PRESET-04 — fill the gap, keep the name: the A/B that isolates the variable
+
+Candidate: the 85-preset state plus entries id **85–98** (donor = entry 82,
+flash slices cleared, unnamed) and id **99** named "preset test automatique"
+— identical to PRESET-03 in every respect except the gap. 100 presets,
+`f1` = 81 verbatim, page 5 becomes full.
+
+### Predictions, published before the deploy
+
+1. Store + verifies accept the 100 entries.
+2. After manual reopen: the project **opens**; page 5 shows **20 occupied
+   pads**, slots 6–19 unnamed, slot 20 named "preset test automatique";
+   recalling slot 20 lights no flash key (slices 6–10 cleared). If this
+   holds, the PRESET-03/PRESET-04 A/B pins the loader failure on the
+   **id gap** — ids must be dense — and clears the file-written name.
+3. If instead the open fails again, the `nom` (or its interaction with
+   additions) becomes the prime suspect and the next build drops it.

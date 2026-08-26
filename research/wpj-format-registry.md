@@ -3368,3 +3368,50 @@ Both are **[hypothesized]**. `f6` and `f9` remain unattributed between Phase,
 Order, Fade and Flick, and `PHASE 0 %` being the neutral means the phase field
 would simply be **absent** on most presets — which is the shape of `f6` on move,
 present on only a fraction of them.
+
+## The Flash screens and Settings — type 102 corroborated, `f11` narrowed
+
+Every flash screen's parameters, from the manual, against the decoded record:
+
+| Screen | Parameters | Record 102 |
+|---|---|---|
+| `WOLF` | release mode **only** | `f4`, `f10` mask |
+| `STROBE` | speed, 1 – 100 % | `f9`, `f8` mask |
+| `BLINDER` | fade-out 0 / 0.2 / 0.5 / 1 / 2 s | `f2`, `f3` mask |
+| `SPEED` | Freeze / 0.5× / 2× / 4× / 8× | `f7` |
+| `BLACKOUT` | release mode **only** | `f1` mask |
+| `SMOKE` | intensity + fan speed | `f5`, `f6` |
+
+Six screens, every parameter accounted for, and the two screens with no
+parameter are exactly the two with no value field. The `Settings` list confirms
+the asymmetry from the other side: it offers `Exclude Wolf`, `Exclude Strobe`,
+`Exclude Blinder` and `Exclude Blackout` — **four** exclusions, which is why
+record 102 has exactly four mask fields and none for SPEED or SMOKE.
+
+**`f11` is not on any flash screen.** Combined with the measurements already
+recorded — not SMOKE, not BLINDER, not WOLF, not STROBE speed, not master
+brightness — the flash side is now exhausted.
+
+**New candidate**: `Settings → General → Button brightness`, which the manual's
+own screenshot shows at **100 %**. It has never been tested, unlike the master
+dimmer. One save after changing it settles it. `Display brightness` (45 % in the
+screenshot) and `Audio input level` (50 %) are the two neighbours to check if it
+fails.
+
+### Two settings that gate what a preset stores
+
+- **`Store group dimmers in Preset`** — when off, the group dimmer values are
+  not recalled by the preset. That is the setting behind the content mask's
+  `OTHER` bit, which the manual defines as "the group dimmer values".
+- **`Include Flash buttons in Preset`** — when set, the state of the flash
+  buttons is stored in the preset. So a preset carries flash state, and nothing
+  in record 165 has been attributed to it yet. Six flash buttons, and `f4` has
+  **four** unexplained bits (1, 5, 6, 7) plus bit 0.
+
+### MIDI mapping is MK2 and higher — lead L5 does not apply to this hardware
+
+The `Mappings` screen maps "a DMX or MIDI (MK2 and higher) command". The
+operator's controller is a **MK1**, so no MIDI map can exist in this corpus, and
+L5's premise — that the map must live in the file — cannot be tested here. The
+**DMX** mapping side does exist on MK1. Categories are `Group Dimmer`, `Preset`,
+`Preset Page`, `Flash` and `General`.

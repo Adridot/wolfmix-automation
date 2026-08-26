@@ -3501,3 +3501,31 @@ the version counter and the per-save globals `115.f6`/`f7`.
 be project data — master brightness was set to 80 % and wrote nothing. If `f11`
 stays at 100, `Button brightness` joins that list and the field is elsewhere;
 `Display brightness` and `Audio input level` are the neighbours to try next.
+
+### Measured — refuted, and the experiment was mis-posed
+
+Version 1787670974710 → 711, one save, **43688 bytes both times and not one
+record changed**. `Button brightness` writes nothing into the project; it joins
+the STATIC POSITION fade and master brightness on the controller-global list.
+That much is a clean result and worth having.
+
+**But the experiment could not have tested `f11`, and the fault is mine.** The
+prediction rested on "`f11` = 100 in every corpus file". That stopped being true
+**twenty-eight snapshots ago**: F11-01 wrote `f11 = 0` into this very project
+ourselves, the controller accepted it, and every save since re-emits the field
+**absent**. The record has read `{f2, f4, f5, f6, f9}` with no `f11` since
+version 1787670974700.
+
+So the comparison was 0 against 0. A one-line check of the current record before
+proposing the test would have caught it — the same lesson the version counter
+taught twice today, in a new disguise: **read the current state of the field you
+are about to test, not the state the registry describes.**
+
+*Correction to the F11-01 entry above*, which says "`field 11` = 100 in every
+corpus file": true when written, false since. The line is left standing and
+corrected here rather than edited, because the drift is the point.
+
+**Consequence for the restore.** The experiment project has lost the factory
+`f11 = 100`; it is one more divergence from `corpus/experiments/FX-01/before.wpj`.
+And `f11` can no longer be observed at 100 on this controller without writing it
+back first.

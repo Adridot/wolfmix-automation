@@ -1103,6 +1103,15 @@ So **`145[n].f2` is the gobo image id of range *n* of the group's gobo-wheel
 channel**, and the controller emits that range's **lower bound** (`111.f1`),
 not its midpoint. All six fixtures of the group take the value together.
 
+### The rig was left as found
+
+Pressing the lit pad a second time deselects it. A closing envelope agrees with
+the opening baseline on **2045 of 2048 channels**; the three that differ (DMX
+163, 171, 173) are the ±1 dither already present before the test, caught at a
+different phase. The gobo channels are back to 0. **Nothing was written to the
+controller and nothing was saved** — the whole experiment was live UI state
+plus read-only captures.
+
 ### Scope of everything above — recorded at the operator's request
 
 All of it was measured on **group A's gobo palette only**, sourced from **one

@@ -3810,3 +3810,45 @@ as smoke, not strobe** — and they are right, the name is equivocal and this
 registry leaned on it. `Strobe` alone is the unambiguous anchor, so the
 correlated status came from one preset and a name, which is thinner than it was
 written. The measurement about to happen replaces it either way.
+
+### Measured — both halves hold, and FLASH-04 is closed
+
+Version 715 → 716, one save. `102.f4`'s **second** byte became 1: `STROBE`
+switched. `f16` moved **one** slice:
+
+| Slice 7 | 0 → **511** |
+|---|---|
+
+- **`STROBE` is slice 7**, measured directly. It no longer rests on the name
+  `Fire!` or on elimination.
+- **The value is 511**, not 255. The flash key writes all nine slots, like
+  `WOLF`, `BLACKOUT` and `BLINDER`. The `255` that `Fire!` and `Strobe` carry is
+  a preset's own strobe engine writing eight — a different author, as the first
+  branch predicted.
+- **No second slice rose, while `SMOKE` was latched at the same moment.** That
+  is the capture FLASH-04 needed: the key was demonstrably down and wrote
+  nothing. **FLASH-04 becomes [device-confirmed]** — `SMOKE` has no `f16` slice.
+
+### `f16`, complete for the flash keys — **[device-confirmed]**
+
+| Slice | Key | Value when latched |
+|---|---|---|
+| 6 | `WOLF` | 511 |
+| 7 | `STROBE` | 511 |
+| 8 | `BLACKOUT` | 511 |
+| 9 | `BLINDER` | 511 |
+| — | `SMOKE` | **no slice** |
+| — | `SPEED` | **no slice**, [hypothesized] by symmetry — the other key with no group exclusion |
+
+Four keys, four slices, all writing the full nine-slot mask, and the two keys
+with no group-exclusion control in record 102 have no slice either. The
+correspondence between "has an exclusion mask in 102" and "has a slice in
+`f16`" is exact on all six keys.
+
+The slice order — `WOLF STROBE BLACKOUT BLINDER` — matches neither `102.f4`'s
+release-mode order nor the order of 102's own mask fields. It is simply the
+order the firmware assigned, and three refuted positional guesses got us here.
+
+`f16` now reads: 0 Color FX, 1 Move FX, 2 Beam FX, 5 static, 6 WOLF, 7 STROBE,
+8 BLACKOUT, 9 BLINDER, 11 a per-project constant. Slices 3, 4 and 10 are zero in
+every file and every experiment.

@@ -2333,7 +2333,7 @@ no limits at all the six would read 255. Its pan is 50 %, predicting **167, 161,
 177, 177, 165, 165**, with ±1 allowed for rounding.
 
 **`Crowd` works just as well**, TILT 70 %, predicting tilt **99, 99, 54, 54, 89,
-89** and the same pan as `Ceiling`. **`Orchestre`**, PAN 13 % / TILT 23 %,
+89** and the same pan as `Ceiling`. **`<group-A name>`**, PAN 13 % / TILT 23 %,
 exercises the low end: tilt **33, 33, 18, 18, 29, 29**, pan **142, 140, 158,
 158, 138, 138**. All non-extreme values ±1 for rounding.
 
@@ -2559,20 +2559,20 @@ independent control**, on group A's `Ceiling`, and saved. Version
 ### `150.f1`/`f2` are a slice of 151 — **[device-confirmed]**
 
 ```
-before   Orchestre  f1 = 4              151 has 4 items
-after    Orchestre  f1 = 4              151 has 5 items
+before   <group-A> f1 = 4              151 has 4 items
+after    <group-A> f1 = 4              151 has 5 items
          Ceiling    f1 = 1, f2 = 4
 ```
 
-`f2` is the offset, `f1` the length: `[0,4)` for `Orchestre` and `[4,5)` for
+`f2` is the offset, `f1` the length: `[0,4)` for `<group-A name>` and `[4,5)` for
 `Ceiling` tile `[0, 5)` exactly. It is the **same (offset, length) couple** the
 format uses in `105.f4`/`f7` into 106 and `116.f3`/`f2` into 110 — the third
 instance of one construction, which is why it was recognisable at a glance.
 
 `tranches_151` checks the tiling; 11 identities, 31 files. This also closes an
 entry left open under type 150: *"`field 1` = 4 appears on exactly one slot in
-the corpus, group A's first, and is still unexplained"*. It is `Orchestre`'s
-slice length, and `Orchestre` was already carrying four detached fixtures before
+the corpus, group A's first, and is still unexplained"*. It is `<group-A name>`'s
+slice length, and `<group-A name>` was already carrying four detached fixtures before
 this session started.
 
 ### What 151 holds
@@ -2581,7 +2581,7 @@ Four items were frozen across 21 files; the fifth is new:
 
 | | `f2` | `f3` | `f4` |
 |---|---|---|---|
-| items 0–3 (`Orchestre`) | 32767 | 45546 / 41287 / 33095 / 33750 | 35716 / 35716 / 32767 / 34733 |
+| items 0–3 (`<group-A name>`) | 32767 | 45546 / 41287 / 33095 / 33750 | 35716 / 35716 / 32767 / 34733 |
 | item 4 (`Ceiling`, new) | 32767 | **37027** | **16383** |
 
 Read as `v / 65536`: `f2` is **50 % on all five**, `f3` runs 50.5 – 69.5 % and
@@ -2633,7 +2633,7 @@ They are **signed offsets**, using the same encoding as `150.f4`:
 | `151.f3` | `PAN OFFSET` | 37027 | **13 %** |
 | `151.f4` | `TILT OFFSET` | 16383 | **−50 %** |
 
-Three for three, to the unit. And the four `Orchestre` entries, frozen across 21
+Three for three, to the unit. And the four `<group-A name>` entries, frozen across 21
 files, decode to whole percentages under the same rule — pan **39, 26, 1, 3 %**
 and tilt **9, 9, 0, 6 %** — where any wrong convention would scatter them.
 
@@ -2713,7 +2713,7 @@ which carries no `FAN` ramp, has never missed once across 18 predictions.
 
 The capture named `Lyre Z 1` by elimination, not by reading it. **Nothing in the
 project has been shown to map a 151 entry to a fixture** — the slice gives the
-count and the order, but not the identity. `Orchestre`'s four entries are four
+count and the order, but not the identity. `<group-A name>`'s four entries are four
 of six lyres, and which four is unknown. Detaching a second, known fixture on a
 slot with an empty slice would settle whether the order is the fixture index,
 the DMX address, or the `115.f6` display order.
@@ -2728,7 +2728,7 @@ fixtures at once.
 ### The mapping was in the file from the first dump
 
 ```
-Orchestre  offset 0, 4 entries   f1 = 2, 3, 0, 1
+<group-A> offset 0, 4 entries   f1 = 2, 3, 0, 1
 Ceiling    offset 4, 1 entry     f1 absent = 0
 Crowd      offset 5, 1 entry     f1 = 2
 ```
@@ -2738,7 +2738,7 @@ carries no `f1`, so fixture 0 — the lyre at DMX 0, which is exactly the fixtur
 POS-05 identified by watching four channels move. The measurement and the field
 agree, and the field did not need the measurement.
 
-`Orchestre`'s four entries are fixtures **2, 3, 0, 1** — the lyres at DMX 32,
+`<group-A name>`'s four entries are fixtures **2, 3, 0, 1** — the lyres at DMX 32,
 48, 0 and 16, stored in neither index nor address order. That is why the slice
 needs an explicit index rather than an implied position.
 
@@ -4452,3 +4452,233 @@ with the id formula (id = (page−1)·20 + (slot−1), gaps allowed), names
 ≤ 19 bytes, `f1` = count; deploy; ONE manual open; then
 `SET_MODE` (un-gate) + `SET_PRESET.f2 = position` recalls anything,
 hands-off.
+
+## RELOAD-01 — l'event de rechargement : lecture statique de WTOOLS 2.0.2, puis capture USB — 2026-08-26
+
+Question posée : quel event du protocole USB remplace la copie vive du
+projet sans geste au panneau ? SETP-02 a fermé l'allowlist actuelle par
+quatre négatifs ; le lead restant était « WTOOLS 2.0.2 pousse des éditions
+qui apparaissent en direct, donc l'event existe ».
+
+WTOOLS ouvre le tty en `TIOCEXCL` : impossible d'écouter le port pendant
+qu'il tourne. La capture doit se faire au niveau du **bus USB**, ce qui
+demande des privilèges et probablement une installation. Avant de payer ce
+prix, lecture **statique** de ce qui est déjà sur la machine.
+
+### Lecture statique — WTOOLS 2.0.2 (build 248, Flutter AOT) — **[observed]**
+
+Même règle qu'au `mode-map.md` : seuls des **identifiants** sont lus, rien
+du binaire n'est reproduit ici au-delà des noms.
+
+1. **Surface API contrôleur.** Les noms de méthodes du client (suffixe
+   `…Async` dans le pool de chaînes) couvrent : `downloadProjectToController`,
+   `deleteProject`, `syncProjects`, `getDataFromController`,
+   `sendProfileToController`, `deleteProfileFromController`,
+   `refreshControllerSettings`, `updateFirmware`, `uploadFlash`,
+   `factoryReset`, `disconnectController`. **Aucun verbe de chargement de
+   projet côté contrôleur** : `loadProject`, `openProject`, `reloadProject`,
+   `setActiveProject`, `activateProject`, `selectProject`, `switchProject`,
+   `currentProject` sont **tous absents** du pool. Les seuls `load…` présents
+   (`loadProjectFromFile`, `loadProjectFromDroppedFile`) chargent un fichier
+   **dans l'app**, pas dans l'appareil.
+2. **Vocabulaire des types de message.** Le pool contient, en camelCase
+   exact, 13 des 18 noms de notre table d'events : `getProfileList`,
+   `getProfile`, `getProjectList`, `getProject`, `deleteProject`,
+   `setProject`, `returnStatus`, `returnProgress`, `getSettings`, `setMode`,
+   `setPreset`, `skipPreset`, `restart`. Le même moule fournit des noms
+   **non encore attribués à un id** : `setProfile`, `deleteProfile`,
+   `setFlashData`, `getFlashData`, `setFirmware`, `factoryReset`, `rename`,
+   `setLock`, `setUnlock`, `keepAlive`, `handshake`, `getPatch`, `setBeat`,
+   `setKey`, `activate`. Aucun de ces candidats ne recharge un projet.
+   ⚠ Le pool AOT est dédupliqué et **hors ordre de déclaration** (constat
+   `mode-map.md`) : ces noms sont un **vocabulaire**, pas une numérotation.
+   Aucune valeur numérique ne peut en être tirée.
+   ⚠ Deux réserves qui limitent la portée de ce point : (i) 5 des 18 noms
+   connus manquent (`disableEngine`, `enableEngine`, `disableUsbDmx`,
+   `enableUsbDmx`, `dmxPacket`) — 2.0.2 les a donc renommés, et le
+   vocabulaire lu n'est pas la table complète ; (ii) plusieurs candidats
+   (`restart`, `activate`, `rename`, `refresh`, `handshake`, `keepAlive`)
+   sont des mots courants du framework et peuvent n'avoir aucun rapport
+   avec le protocole.
+3. **`ProjectLoadingType` — faux ami écarté.** L'enum existe mais ses
+   valeurs voisines dans le pool sont `cloud` / `controller` /`fromCloud` /
+   `fromController` : c'est l'**origine** d'un projet dans l'app, pas le
+   mode de chargement `ALL/FIXTURES/PRESETS` du panneau.
+4. **Le guide intégré du vendeur** (`assets/guides/en.json`, chapitre
+   « WTOOLS ») énumère les fonctions de l'app : sync BPM (Ableton Link,
+   OS2L), Easy View 3D, achat d'add-ons, **sync de projets** (« click on a
+   project to sync it to your Wolfmix, export or delete »), sync de profils,
+   lock/unlock, factory reset, renommage. **Pas d'éditeur de projet ni de
+   preset.** WTOOLS 2.0.2 ne peut donc pas « pousser une édition » : il
+   transfère un fichier entier (notre `SET_PROJECT`) ou déclenche un preset
+   depuis son écran LIVE (`Set Wolfmix Preset` / `Failed to set preset` =
+   notre `SET_PRESET`, event 41, déjà acquis).
+5. **Le geste manuel porte des paramètres.** Toujours d'après le guide, le
+   « Open » du panneau expose trois encodeurs : projet, **partie**
+   (ALL / FIXTURES / PRESETS), **fusion des presets**
+   (replace / append / compact). Un event de rechargement devrait
+   transporter ces deux enums en plus de l'identité du projet. Rien dans le
+   vocabulaire du point 2 n'a cette forme.
+
+**Lecture** : la prémisse du lead SETP-02 (« WTOOLS pousse des éditions en
+direct ») ne survit pas à la documentation du vendeur lui-même. Le
+phénomène décrit se réduit très probablement à l'écran LIVE de WTOOLS, qui
+**rappelle** des presets — comportement déjà reproduit hands-off par
+`SET_PRESET.f2`. Statut : **[observed]**, pas plus. Une lecture de noms
+n'est pas une mesure du fil : elle ne peut pas exclure un event que WTOOLS
+enverrait sans lui donner de nom lisible.
+
+### Prédictions chiffrées, publiées avant la capture USB
+
+Ordre honnête : la lecture statique ci-dessus a précédé ces prédictions ;
+elles portent donc sur ce que la capture différentielle montrera.
+
+1. **Aucun event de rechargement n'existe dans le protocole** (donc aucun
+   id inconnu ne remplace la copie vive) — **p ≈ 0,8**. Réfutable : un id
+   hors table apparaît en (b) et, rejoué seul, fait basculer le
+   discriminateur.
+2. Capture (a) — WTOOLS ouvert, navigation sans transfert : le flux
+   sortant se réduit à `GET_SETTINGS` (21), `GET_PROJECT_LIST` (4),
+   `GET_PROFILE_LIST` (2), plus **au plus un** id inconnu émis
+   **périodiquement** (période < 2 s, charge utile vide ou constante). Cet
+   id-là, s'il existe, est le `keepAlive`/`handshake` du point 2 —
+   **pas** un rechargement — et sa périodicité le prouve. **p ≈ 0,7**.
+3. Capture (b) — « sync » d'un projet vers le W1 depuis l'écran Projects :
+   la séquence sortante est `SET_PROJECT` (18) — éventuellement fragmentée,
+   avec `RETURN_PROGRESS` (20) en retour — et **rien d'autre hors table**.
+   **p ≈ 0,75**.
+4. Après (b), sans toucher le panneau : le discriminateur SETP-02 dit
+   **copie vive inchangée** — une position présente seulement dans
+   l'ancienne copie peint encore (> 25 canaux changés vs Startup).
+   **p ≈ 0,85**.
+5. **Si** malgré tout un id inconnu apparaît en (b) seul, classement a
+   priori du suspect, par les trous et la sémantique de voisinage :
+   **17** (seul trou du bloc projet 16 `DELETE_PROJECT` / 18 `SET_PROJECT`)
+   ≈ 0,35 · **40 ou 42** (bloc « action panneau » 39 `SET_MODE`,
+   41 `SET_PRESET`, 43 `SKIP_PRESET` — l'ouverture est un écran) ≈ 0,20 ·
+   **13/14/15** (bloc pré-projet, plus probablement les jumeaux profils
+   `setProfile`/`deleteProfile`) ≈ 0,20 · **22–38** (bloc de 16, plutôt
+   firmware/flash/licence) ≈ 0,15 · **0/1/10/11** (0 = sentinelle,
+   10/11 = paire enable/disable par symétrie avec 6/7 et 8/9) ≈ 0,10.
+   Charge utile attendue si c'est 17 : l'UUID du projet, encodé comme dans
+   `DELETE_PROJECT`, **plus** deux varints (partie, fusion) — l'absence de
+   ces deux varints serait un indice fort que l'event n'est pas un
+   rechargement.
+
+### Capture — protocole et état
+
+Pré-requis mesuré sur cette machine : `ifconfig -a` n'expose **aucune**
+interface `XHC*`, ni Wireshark ni `tshark` installés, Xcode absent (seuls
+les Command Line Tools), SIP actif, macOS 26.6.2. Le premier pas est donc
+un test à privilèges, sans installation :
+
+```
+sudo ifconfig XHC20 up && ifconfig XHC20
+```
+
+**Mesuré le 2026-08-26 — la capture USB n'est pas disponible sur cette
+machine** — **[observed]** : `sudo ifconfig XHC20 up` répond *interface
+XHC20 does not exist*. Cause : les interfaces `XHC*` étaient fournies par
+l'ancien kext `IOUSBFamily` (Intel) ; cette machine est en **arm64** et ne
+charge que `IOUSBHostFamily` (dext), qui n'expose aucune interface de
+capture. Aucune installation ne crée `XHC20` ici — ni Wireshark, ni
+« Additional Tools for Xcode ». Le sniff du bus est donc **hors de portée
+sans sonde matérielle** (analyseur USB externe).
+
+**Ce qui n'est PAS une alternative** : sonder à l'aveugle les ids
+inconnus depuis notre outil. Le vocabulaire lu au point 2 place
+`setFirmware`, `setFlashData` et `factoryReset` dans ce même espace d'ids.
+Envoyer un id inconnu, c'est l'exécuter s'il existe. L'invariant « aucune
+opération firmware, jamais » couvre exactement ce geste.
+
+**Statut de RELOAD-01 : mécanisme non mesurable ici.** Reste RELOAD-02,
+qui mesure l'*effet* au lieu du mécanisme et ne demande aucun privilège.
+
+### À ne pas oublier au moment de décoder
+
+Réutiliser `wolfmix.read_frame` (resynchronisation sur `VERSION`), pas un
+second décodeur : extraire la charge utile bulk du pcap et la lui donner
+en flux. Séparer les deux sens par l'endpoint du bloc d'en-tête USB, pas
+en devinant depuis l'event.
+
+## RECALL-01 — la valeur du varint de `SET_PRESET` est ignorée : rétractation de l'adressage — 2026-08-27
+
+Mesuré en préparant la baseline de RELOAD-02, W1 MK1 fw 2.0.18, projet vif
+= le fichier clairsemé de PRESET-07 (87 entrées), DMX débranché.
+
+### Ce qui a été mesuré — **[device-confirmed]**
+
+1. **Deux sorties, pas plus.** Flux DMX continu (un seul
+   `ENABLE_USB_DMX`, rappels injectés dedans) :
+
+   | t | envoyé | effet |
+   |---|---|---|
+   | 2 s | `f1=23` | rien — l'oscillation 90↔124 canaux non nuls continue |
+   | 8 s | `f1=22` | rien |
+   | 14 s | `f2=23` | **transition** (pic à 75 canaux changés), se pose à 117 non nuls / 49 animés |
+   | 20 s | `f1=76` | **transition** retour à l'oscillation 90↔124 |
+
+   Confirmé par enveloppes : `f1∈{1,22,23,30}` donnent des enveloppes
+   **strictement identiques** (0 canal disjoint, maxDiff 0) ;
+   `f2∈{0,1,22,23,30,80}` de même ; A (un `f1` quelconque) vs B (un `f2`
+   quelconque) = 14 canaux disjoints, 58 canaux de maxDiff.
+   **Seule la présence du champ agit ; la valeur du varint n'agit pas.**
+2. **Le moteur répond bien aux presets** : un appui sur le pad page 1
+   colonne 2 ligne 3 (« Sequenced Sweep ») fait passer la sortie de
+   49 animés / 117 non nuls à 75 / 127, 17 canaux à enveloppes disjointes.
+   Ce n'est donc pas le sous-système preset qui est muet, c'est notre
+   adressage USB.
+3. **Le nom du pad situe la grille** : « Sequenced Sweep » est l'entrée 9 du
+   fichier vif. Colonne 2, ligne 3 → slot 10 ⇒ **la grille est 4 colonnes ×
+   5 lignes**, `slot = (ligne−1)·4 + colonne`. Confirme aussi que le projet
+   vif est bien `WMX EXP format-lab` clairsemé.
+4. **Aucun clone dans le fichier** : les 87 entrées ont 87 empreintes
+   distinctes (payload hors `f19` id et `f25` nom). L'explication
+   « apparences identiques parce que clones du même donneur » est donc
+   **fausse** ; les enveloppes identiques du point 1 ne peuvent pas être
+   mises sur le compte du contenu.
+
+### Rétractations
+
+- **PRESET-07, « `SET_PRESET.f2` = position d'entrée 0-based écrêtée » :
+  RÉFUTÉ.** Tout ce qui le portait — 85/86/92/99 rendant des trames
+  identiques, 92 « peint encore » — est exactement ce que prédit « valeur
+  ignorée ». L'écrêtage n'a jamais été observé : il a été *inféré* d'une
+  égalité qui a une cause plus simple.
+- **SETP-01, « `f1` = varint(id) rappelle (23 Deep Red, 22 Deep Green) » :
+  CONTESTÉ.** Aujourd'hui `f1=22` et `f1=23` sont indiscernables au canal
+  près. Reste ouvert : cette mesure avait été faite sur l'autre projet vif
+  (101 presets) ; l'adressage marche peut-être là et pas ici.
+- **Conséquence en cascade sur SETP-02.** Les quatre négatifs de
+  rechargement (RESTART, delete-store-restart, cycle moteur) ont été jugés
+  au discriminateur « la position bouche-trou peint encore ». Si la valeur
+  est ignorée, ce discriminateur ne distingue pas les copies : **les
+  négatifs de SETP-02 ne sont plus établis**. Ils ne sont pas réfutés non
+  plus — le seul élément indépendant qui subsiste est l'observation
+  visuelle au panneau après l'ouverture manuelle (page 5 et page 6
+  conformes au fichier clairsemé), qui prouve que l'ouverture manuelle
+  recharge, pas que les events ne rechargent pas.
+- **Recette générateur** : la dernière étape (« rappel hands-off par
+  `SET_PRESET.f2` ») repasse de device-confirmed à **ouverte**. Le
+  transfert et l'ouverture manuelle unique restent acquis.
+
+### Ce qui reste à trancher, par ordre de coût
+
+1. **Une ouverture manuelle d'un autre projet** (« rig-c », 101
+   presets) puis `f1=22` vs `f1=23` : reproduit SETP-01 à l'identique. Si
+   l'adressage marche là, le suspect devient le fichier clairsemé
+   lui-même — ce qui intéresse directement le générateur. Sinon, la
+   rétractation est totale.
+2. Sémantique réelle de la charge utile : deux sorties stables pour « un
+   `f1` quelconque » et « un `f2` quelconque » ressemblent à deux
+   *défauts* de décodage, pas à un adressage. Candidat à tester :
+   la cible n'est pas un varint nu mais un sous-message (wire type 2).
+3. RELOAD-02 (poussée WTOOLS + discriminateur) est **suspendu** : un
+   discriminateur qui ne distingue pas deux presets ne distinguera pas
+   deux copies.
+
+Note de méthode : la première lecture de la séance — « les rappels sont
+inertes » — était fausse et est retirée. Les rappels agissent ; ils
+agissent seulement toujours pareil. La sonde à enveloppes séparées ne
+pouvait pas distinguer « rien ne bouge » de « on repeint la même chose » ;
+c'est le flux continu, avec les transitions horodatées, qui a tranché.

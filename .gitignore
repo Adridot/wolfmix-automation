@@ -17,5 +17,8 @@ __pycache__/
 corpus/**/dmx/
 research/vendor/
 
+# Liste locale des noms réels interdits (tools/wpj_privacy.py).
+.wpj-private-names
+
 # Vendor documents and binaries kept locally for reference, never committed.
 *.pdf

@@ -4332,3 +4332,19 @@ The project opens; page 5 shows 20 occupied pads; slot 20 (bottom right)
 reads "preset test auto"; recalling it lights no flash key. The id gap
 remains untested in isolation (PRESET-03 confounded it with the long name);
 a dedicated gap-only experiment stays open.
+
+## SETP-01 — SET_PRESET payload discovery — 2026-08-26
+
+Goal: recall a preset over USB (event 41, allowlisted, never yet sent), the
+missing half of hands-off activation. Every decoded message in this protocol
+is protobuf-shaped, so the candidate encodings, tried one at a time against
+the live project (101 presets), each judged by RETURN_STATUS plus a DMX
+frame comparison:
+
+1. `f1 = varint(preset id)` — predicted encoding. Target: id 23 "Deep Red"
+   (pure-red static look, unambiguous in a DMX frame).
+2. Fallback: `f1 = varint(page 1-based), f2 = varint(slot 1-based)` (23 →
+   page 2, slot 4).
+
+Predicted: form 1 returns success and the next DMX frame shows the Deep Red
+signature (red channels driven, others near zero).

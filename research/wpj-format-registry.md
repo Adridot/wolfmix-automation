@@ -3979,3 +3979,46 @@ and 10 get a second pass rather than a shortcut.
 on the other 17, and neither rule survives the whole corpus: `base.wpj` has 82
 presets, 81 named, `f1` = 82; `after-smoke-alone.wpj` has 83 presets, 81 named,
 `f1` = 81. It is left **verbatim** by this edit. **[observed]**
+
+### Measured — the reverse direction works, once the project is reloaded
+
+The three presets were recalled and **all three triggered their predicted key**:
+slot 1 `WOLF`, slot 2 `STROBE`, slot 3 `BLACKOUT`. `f16` slices 6, 7 and 8 are
+now **device-confirmed in both directions** — captured from a latched key, and
+written into a file the controller then interpreted.
+
+**But only after the operator reopened the project by hand.** The deployment
+performs a `RESTART` of its own and re-verifies afterwards, and that was not
+enough: the controller kept running the project it already had open. So a
+deployed project is not live until it is reopened from `Main Menu → Projects`,
+and `restart` does not substitute for that. Worth stating plainly, because the
+runner's docstring says deployments are "automatic after that point" — they are
+automatic to *store*, not to *load*.
+
+### FLASH-09 — the device deletes preset entries it did not create
+
+To cover `BLINDER` and `SPEED` in one pass, two preset entries were duplicated
+from preset 82 with only their `id` changed — the operation the device itself
+offers as "SHIFT + tapping another Matrix button will copy the selected Preset".
+
+The deployment reported success. **The controller returned 83 presets, not 85**:
+
+```
+sent      85 presets, record 165 = 30882 bytes, ids … 80 81 82 83 84
+returned  83 presets, record 165 = 30184 bytes, ids … 80 81 82
+```
+
+Same version counter, different content: the firmware **normalises the record on
+load and drops entries beyond what it recognises**. The two additions vanished
+without an error anywhere.
+
+So the repository's rule — *edit, do not synthesize; every preset written must
+already exist in the donor file* — is not conservatism, it is a measured
+constraint. **A preset cannot be added by writing the file. It has to be created
+on the controller.** The rule was being followed for the wrong reason until now;
+this is the reason.
+
+**Note on the runner's verification.** `deploy` verifies after its restart and
+reported success, yet a later download returns the truncated record. Its check
+therefore does not catch this class of change — a caller that adds structure
+must re-download and compare item counts itself.

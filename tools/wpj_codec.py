@@ -52,6 +52,11 @@ _PRESET = {
     # 5 OTHER (bit 5 prédit, pas encore mesuré). Voir le registre, F4-02.
     10: ("masque_contenu", "v"),
     17: ("dimmers", "packed"),            # dimmer par groupe A–H
+    # Les cinq features de l'écran STATIC GOBO, en pourcentage par groupe
+    # A–H — device-confirmed par une capture de preset, voir « GOBO-02 ».
+    14: ("gobo_rotate", "packed"), 32: ("gobo_focus", "packed"),
+    33: ("gobo_prism", "packed"), 34: ("gobo_zoom", "packed"),
+    35: ("gobo_iris", "packed"),
     8: ("color_fx_actif", "packed"), 24: ("move_fx_actif", "packed"),
 }
 

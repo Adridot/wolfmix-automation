@@ -3272,3 +3272,56 @@ always one pair per file replicated across every slot. They changed here while
 consistent with the "global stored per slot" shape noted long ago, and now with
 a stronger claim: a writer must expect them to be rewritten by the device and
 must not read anything per-fixture from them.
+
+## GOBO-02 — the five gobo features, named — **[device-confirmed]**
+
+The corrected experiment: the five features set on group A, then **SHIFT + tap**
+on page 5 slot 3 to overwrite that preset with the controller's live state, then
+one project save. Version 709 → 710, one save, records 115 and 165.
+
+**Five for five, each value in exactly one field:**
+
+| Screen feature | Set to | Field | Read back |
+|---|---|---|---|
+| `ROTATE` | 15 | **`f14`** | `[15, 0, 0, 0, 0, 0, 0, 0]` |
+| `FOCUS` | 58 | **`f32`** | `[58, 0, …]` |
+| `PRISM` | 77 | **`f33`** | `[77, 0, …]` |
+| `ZOOM` | 96 | **`f34`** | `[96, 0, …]` |
+| `IRIS` | 55 | **`f35`** | `[55, 0, …]` |
+
+Group A only, zero on the seven others — which is what setting one group does,
+and which no other reading of these fields would produce. The codec names them
+`gobo_rotate`, `gobo_focus`, `gobo_prism`, `gobo_zoom`, `gobo_iris`.
+
+### The named prediction held, the field list did not
+
+**`f14` = Rotate = 15 was published before the download** and is exact. It was
+derived from `70's Paradise` carrying `f14 = [6]×8` against the manual's
+`ROTATE 6 %` screenshot — a one-preset corpus observation and a vendor
+screenshot, and they were enough.
+
+**Retracted**: the prediction that the five features are `f3`, `f7`, `f14`,
+`f23`, `f27`. Only `f14` is. The other four are **`f32`–`f35`**, which this
+registry had filed as "a schema-10 addition, zeroed by the upgrade" and never
+looked at again. The cardinality argument picked the wrong five: it counted the
+arrays with *no* attribution and missed that `f32`–`f35` had a *provisional*
+one, which is a worse failure than having no idea — it was a label standing in
+for a reading.
+
+The tell was there and unread. `f32`–`f35` carry `50 / 0 / 100 / 100` on
+projects authored at schema 10, and under the names just measured that reads
+**Focus 50 %, Prism 0 %, Zoom 100 %, Iris 100 %** — exactly the defaults a
+lighting desk would ship. Four numbers that mean nothing as an opaque quadruple
+and are obvious as soon as the fields have names.
+
+`f3`, `f7`, `f23` and `f27` stay unattributed. `f7` did move in this save, to
+`[0, 1, 0, 0, 0, 0, 0, 0]` — group B at 1, the same value `Get Moving` carries.
+
+### Side confirmations from the same capture
+
+- `color_fx_actif` went `[0]` → `[255]` and `f16` slice 0 went `0` → `255` **in
+  the same save**, which is the duplication ACC-03b violated.
+- `f18` came back `[3, 0, …]` = Live Edits **1 and 2** — the operator had two
+  live edits running, and the mask captured exactly them.
+- `gobos` went `[1]×8` → `[9, 255×7]`: gobo 9 on group A, cleared elsewhere,
+  the 0-based index with 255 as "none" that F29-01 measured.

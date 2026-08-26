@@ -870,19 +870,24 @@ is the only factory pad carrying `f5`. The names are **not stored in the file** 
 no string field ever appears in a 140 item — so they are firmware labels tied to
 the slot index, unlike the position palette where `f5` holds a per-slot name.
 
-**Grid layout**: the physical matrix is 5 columns × 4 rows and the wire order
-fills it row by row, left to right. ⚠️ The vertical direction below is
-**withdrawn** — see "The grid orientation is retracted" under type 145; a
-hardware press contradicts it:
+**Grid layout — [correlated], corrected twice.** The matrix is **4 columns × 5
+rows**, and the wire order fills it **column by column, top to bottom**:
 
 ```
-row 1 (top)      16 Coral   17 Yellow      18 Lemon   19 Sky Blue  20 White
-row 2            11 Orange  12 Pale Green  13 Mint    14 Purple    15 Pink Panther
-row 3             6 Red      7 Green        8 Turq.    9 Blue      10 Magenta
-row 4 (bottom)    1 Amber     2 Lime         3 Cyan     4 UV         5 Pink
+        col 1        col 2       col 3          col 4
+row 1    1 Amber      6 Red      11 Orange      16 Coral
+row 2    2 Lime       7 Green    12 Pale Green  17 Yellow
+row 3    3 Cyan       8 Turq.    13 Mint        18 Lemon
+row 4    4 UV         9 Blue     14 Purple      19 Sky Blue
+row 5    5 Pink      10 Magenta  15 Pink Panth. 20 White
 ```
 
-This corrects the earlier guess that the list read as 4 columns × 5 rows.
+Column 2 is the saturated column — Red, Green, Turquoise, Blue, Magenta — which
+is what a designer would build. Two earlier readings of this layout were wrong:
+first "5 rows × 4 columns" read the screen groups as rows, then "5 columns × 4
+rows, bottom row first" inverted it. **Only the type-145 version below was
+tested on hardware**; this one is transposed from it, since both palettes are
+drawn by the same 20-slot screen. No colour pad has been pressed.
 
 ### Consequences for the other records
 
@@ -1009,20 +1014,27 @@ the A–H ordering.
 
 Three predictions were published before the photograph; all three hold.
 
-**1. The grid order, with one reservation.** The screen lays the 20 slots out as
-**5 columns × 4 rows** filled row by row in wire order, identical to type 140.
-⚠️ The vertical direction shown below is **withdrawn** — see "The grid
-orientation is retracted" further down:
+**1. The grid order — settled by pressing pads, after two wrong readings.**
+The matrix is **4 columns × 5 rows**, filled **column by column, top to
+bottom**:
 
 ```
-top      Gobo 16  Gobo 17  Gobo 18  Gobo 19  Gobo 20
-         Gobo 11  Gobo 12  Gobo 13  Gobo 14  Gobo 15
-         Gobo 6   Gobo 7   Gobo 8   Gobo 9   points
-bottom   Gobo 1   Gobo 2   Gobo 3   Gobo 4   Gobo 5
+        col 1     col 2    col 3     col 4
+row 1   Gobo 1    Gobo 6   Gobo 11   Gobo 16
+row 2   Gobo 2    Gobo 7   Gobo 12   Gobo 17
+row 3   Gobo 3    Gobo 8   Gobo 13   Gobo 18
+row 4   Gobo 4    Gobo 9   Gobo 14   Gobo 19
+row 5   Gobo 5    points   Gobo 15   Gobo 20
 ```
 
-Two different record families now agree on this layout, so it is the palette
-convention, not a coincidence of one screen.
+Established by DMX, not by reading a photograph: the **top-left** pad emitted 7
+(item 1) and the **bottom-left** pad emitted 35 (item 5), so the left edge is a
+column of five. The four groups visible on the screen are its **columns**.
+
+Both earlier readings in this registry were wrong — "5 rows × 4 columns" read
+those groups as rows, then "5 columns × 4 rows, bottom row first" inverted the
+vertical axis on top of that. Deriving a physical layout by rotating a
+photograph does not work; three pad presses settled it in minutes.
 
 **2. Names are firmware-generated, and `f3` overrides them.** Nineteen slots
 read `Gobo N` with **N = the 1-based slot index**; slot 10 reads **`points`**,
@@ -1091,20 +1103,15 @@ So **`145[n].f2` is the gobo image id of range *n* of the group's gobo-wheel
 channel**, and the controller emits that range's **lower bound** (`111.f1`),
 not its midpoint. All six fixtures of the group take the value together.
 
-### The grid orientation is retracted — **[observed]**
+### Scope of everything above — recorded at the operator's request
 
-The operator pressed the pad they describe as **top left** and the output went
-to 7, i.e. **item 1**. The registry claimed the wire order fills the pad matrix
-bottom row first, on both type 140 and type 145. That reading came from
-rotating a photograph of the screen, and it is contradicted by the hardware.
+All of it was measured on **group A's gobo palette only**, sourced from **one
+fixture profile** (`Lyre ZQ02244`, six instances). It is plausibly the general
+rule and nothing contradicts that, but no other group, profile or fixture type
+has been exercised. Treat transposition to another rig as **[hypothesized]**
+until measured.
 
-**Both entries are withdrawn pending one more press.** What survives untouched
-is that the screen shows the 20 slots as 5 × 4 in wire order — only the vertical
-direction is in doubt. Discriminator: press the palette's **bottom-left** pad.
-Item 16 (DMX **112**) means the order fills top row first; item 1 (DMX 7) would
-mean the operator's "top left" and mine disagree about which edge is up.
-
-### The earlier band table, kept for reference
+### The full band table, for reference
 
 | pad | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
 |---|---|---|---|---|---|---|---|---|---|

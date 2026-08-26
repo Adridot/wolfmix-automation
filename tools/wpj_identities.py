@@ -170,8 +170,39 @@ def plages_111(w):
             f"110[{i}] : plages ni pavantes ni du motif f4 = 18 : {tr}"
 
 
+# 106.f4 = rôle du canal dans le moteur du W1, en bijection avec la
+# « feature » 110.f4 du profil. Table observée sur tout le corpus ; un rôle
+# inconnu doit faire échouer l'identité plutôt que passer inaperçu.
+ROLES_106 = {0: 7, 1: 1, 2: 2, 3: 25, 4: 26, 5: 27, 6: 31, 7: 32, 8: 33,
+             9: 15, 10: 15, 11: 5, 12: 8, 14: 22, 15: 16, 21: 20, 22: 19}
+
+
+def roles_106(w):
+    """106.f4 = rôle moteur du canal ; il détermine la feature 110.f4.
+
+    Chaque entrée de 106 vise un canal du profil de sa fixture, via
+    `106.f2 - 115.f2` ajouté à l'offset `116.f3`. Le rôle et la feature de ce
+    canal se correspondent alors terme à terme sur tout le corpus — c'est ce
+    qui rend lisible « quel canal DMX porte le rouge de cette fixture ».
+    """
+    p105, p106 = _items(w, 105), _items(w, 106)
+    p110, p115, p116 = _items(w, 110), _items(w, 115), _items(w, 116)
+    for e in p105:
+        fx = p115[e.get("f5", 0)]
+        base = fx.get("f2", 0)
+        off = p116[fx.get("f3", 0)].get("f3", 0)
+        for k in range(e.get("f4", 0), e.get("f4", 0) + e.get("f7", 0)):
+            ent = p106[k]
+            role = ent.get("f4", 0)
+            feat = p110[off + ent.get("f2", 0) - base].get("f4")
+            assert role in ROLES_106, f"106 : rôle inconnu {role}"
+            assert ROLES_106[role] == feat, \
+                f"106 : rôle {role} sur la feature {feat}, " \
+                f"attendu {ROLES_106[role]}"
+
+
 IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
-              groupe_fixture, moteurs_f16, plages_111)
+              groupe_fixture, moteurs_f16, plages_111, roles_106)
 
 
 def demo():

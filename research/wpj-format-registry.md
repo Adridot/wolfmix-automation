@@ -2207,3 +2207,76 @@ The 53 channels with no `f4` still carry a `111` item — an **empty** one. The
 format does not omit the slot; it fills it with a message whose every field is
 absent. That is the same convention as `120`'s empty entries (`2a 00`), and it
 is why `count(111)` stays derivable from `110.f2` on every file.
+
+## Record 106 — the channel's engine role, and the pan/tilt travel limits
+
+**[correlated, 30/30 files, 3775 entries]**
+
+`106` had one decoded field, `f2` = absolute DMX channel. Two more now read.
+
+### `f4` = the role of the channel in the W1's engine — the missing link
+
+Each `106` entry targets a channel of its fixture's profile: add
+`106.f2 − 115.f2` to the profile's offset `116.f3`. Do that, and `106.f4` and
+the profile's feature `110.f4` correspond **term for term**, everywhere:
+
+| `106.f4` | Role | `110.f4` | | `106.f4` | Role | `110.f4` |
+|---|---|---|---|---|---|---|
+| 0 | dimmer | 7 | | 9 | shutter | 15 |
+| 1 | pan | 1 | | 10 | strobe | 15 |
+| 2 | tilt | 2 | | 11 | colour wheel | 5 |
+| 3 | red | 25 | | 12 | gobo wheel | 8 |
+| 4 | green | 26 | | 14 | *unnamed* | 22 |
+| 5 | blue | 27 | | 15 | *unnamed* | 16 |
+| 6 | extra 1 | 31 | | 21 | *unnamed* | 20 |
+| 7 | extra 2 | 32 | | 22 | *unnamed* | 19 |
+| 8 | extra 3 | 33 | | | | |
+
+`9` and `10` are the only pair sharing a feature — shutter and strobe both live
+on `110.f4 = 15`, which is what that feature was already read as.
+
+**This is the field a show generator needs.** It answers "which DMX channel
+carries this fixture's red" directly, without inferring anything from the
+profile's channel order. `roles_106` in `tools/wpj_identities.py` checks the
+table on every entry of every file, and an unknown role fails rather than
+passing unnoticed — 8 identities, 30 files.
+
+### `f5`/`f6` = the fixture's travel limits on pan and tilt — **[correlated]**
+
+On the colour roles, `f5`/`f6` are `0`/`255`: the whole channel. On pan and tilt
+they vary **per fixture**, and they vary in pairs — which is what a rig hung in
+symmetric pairs looks like:
+
+| Fixture, DMX | pan `f5`–`f6` | tilt `f5`–`f6` |
+|---|---|---|
+| lyre @ 0 | 133–201 | 0–142 |
+| lyre @ 16 | 133–190 | 0–142 |
+| lyre @ 32 | 151–204 | 0–77 |
+| lyre @ 48 | 151–204 | 0–77 |
+| lyre @ 64 | 128–202 | 0–127 |
+| lyre @ 80 | 128–202 | 0–127 |
+| `ZQ02344` @ 199, 219 | 48–88 | **255–198** |
+
+This is the answer to a standing note in the operator's own brief — *"the DMX
+output is not the image of the stored values for pan/tilt: I have travel limits
+on my moving heads"*. The limits are **here**, in `106.f5`/`f6`, per fixture and
+per axis.
+
+The two `ZQ02344` carry `f5 > f6` on tilt. Read as `[low, high]` that is
+malformed; read as `[start, end]` it is an **inverted axis**, which is what a
+moving head hung upside down needs. Status **[observed]** for the inversion —
+one rig, one axis.
+
+`f1`/`f3` are *not* the enclosing bounds: they read `0`/`127` on pan while `f6`
+reaches 201. They stay unnamed.
+
+### The read-only test that would settle it — **[planned]**
+
+No write. Drive group A's pan to its maximum on the device, capture
+`dmx-envelope`, and read the pan channel of the six lyres. Predicted maxima, in
+DMX address order: **201, 190, 204, 204, 202, 202**. At the minimum: **133, 133,
+151, 151, 128, 128**. Tilt maxima: **142, 142, 77, 77, 127, 127**.
+
+Three distinct values across six fixtures, no two adjacent lyres differing by
+less than 9 — the prediction cannot be satisfied by accident, and it is exactly
+the measurement that has been impossible to interpret until now.

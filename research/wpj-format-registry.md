@@ -2893,3 +2893,27 @@ Seven consecutive saves of the experiment project moved record 161 exactly
 not packed varints (`0xF0` would leave a dangling continuation), and the six
 other saves left them untouched. Consistent with the existing reading: volatile
 state, no show content, and nothing a writer must reproduce.
+
+## F7-01 — a negative: recalling `Get Moving` cannot isolate `f7`
+
+`Get Moving` recalled and captured. **110 channels differ** from the previous
+capture, because a preset drives everything at once — beam FX, colour, gobo,
+dimmer — and `f7` is one field among thirty. Nothing in the envelope can be
+attributed to it.
+
+Recorded so the experiment is not repeated. What the capture *does* show:
+
+- The **ten pars of group B are byte-identical to one another** — dimmer 255,
+  blue 255, red animated 0–167, `extra 3` animated 0–255. Whatever `f7 = 1` does
+  on group B, it does not differentiate the fixtures within it.
+- The pars have **no pan, tilt, gobo or wheel channels** — their eight mapped
+  roles are dimmer, R, G, B, three extras and shutter. So `f7` on group B cannot
+  be a position, a gobo or a wheel index, which removes the obvious candidates.
+- The first lyre's channel 10 reads **70**, which is `f29 = 9` through the gobo
+  palette — F29-01 measured exactly that, and it still holds.
+
+Isolating `f7` needs a single-variable differential, and the control that writes
+it is unknown: no screen seen so far exposes anything that varies per group with
+one preset in the whole corpus carrying it. `f14` is in the same position, on
+`70's Paradise`. Both stay **[observed]**: eight values indexed A–H, contents
+unattributed.

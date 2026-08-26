@@ -2786,3 +2786,50 @@ which put fixture 2 at 46 % of its band — DMX **176**. With a zero pan offset:
 | detaching removes it from the fan | **178** |
 
 One capture answers both.
+
+## POS-07 — the position model, closed — **[device-confirmed]**
+
+`Crowd` recalled after the second detach. **Two channels changed in 2048: 33 and
+35** — the tilt pair of the lyre at DMX 32, which is fixture 2, which is exactly
+what `151[5].f1` says. Everything else identical to POS-01.
+
+### Both questions answered
+
+| | Predicted | Measured |
+|---|---|---|
+| tilt, offset asking for 161 % | **77** if clamped at 100 % | **77** |
+| pan, zero offset | **176** if the fan still applies | **176** |
+
+**The offset is clamped**, and in 16 bits the agreement is exact rather than
+approximate: `borne16(77)` = `77/255 × 65535` = **19789**, and the measured pair
+`(77, 77)` is **19789**. Not one part off.
+
+**Detaching does not remove a fixture from the fan.** Fixture 2 sat at 46 % of
+its band under `FAN = 70 %` before the detach and sits there still — 45072
+measured against 45073 predicted. The offset stacks on top of the group value,
+fan included; it does not replace it.
+
+The pan channels did not move at all, which is the strongest form of the second
+answer: a zero offset really is zero, and the two axes are independent.
+
+### The whole model
+
+```
+pct_group(k) = (1 − FAN) + k × (2·FAN − 1) / (n − 1)     pan, k = fixture rank
+pct_group    = TILT                                       tilt
+pct          = clamp(pct_group + offset, 0, 1)            offset from 151, signed
+borne16(f)   = f / 255 × 65535                            f = 106.f5 or f6
+DMX16        = borne16(f5) + pct × (borne16(f6) − borne16(f5))
+coarse       = DMX16 >> 8         fine = DMX16 & 0xFF
+```
+
+Every term measured, none fitted. Across four captures and 24 predicted
+channels: **tilt exact everywhere**, pan exact everywhere but one — `Crowd` on
+the lyre at DMX 32 in POS-01, where the fan ramp lands on 175.4 and the device
+emits 176.
+
+From a project file alone, the DMX output of a recalled position is now
+computable for any fixture: its group's `FAN`/`PAN`/`TILT` from record 150, its
+rank in the group from `115.f4` and the address order, its per-fixture offsets
+from record 151 through the `150.f1`/`f2` slice, and its travel limits from
+`106.f5`/`f6` found through the role table. Six records, one formula.

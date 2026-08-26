@@ -44,6 +44,29 @@ alternative predicted 63 and 14. Closing envelope 2048/2048 against baseline.
 - The `PRESET EDIT` screen exposes the content mask as six toggles — `COLOR`,
   `MOVE`, `BEAM`, `GOBO`, `LIVE EDIT`, `OTHER` — plus `FADE` and `HOLD`.
 
+## Second half of the session — the patch and the position model
+
+| | Result |
+|---|---|
+| **fixture → group** | `115[r].f4`, mirrored on `105[e].f6`, 457/457 rows. Retracts "125 is nine categories". The blocking question for a show generator, answered from the corpus alone. |
+| **preset `f10`** | the content mask, six bits named, `1` = toggle off. `f4` was never it. |
+| **`f11` / `f15`** | FADE in ms and HOLD, read off four screens. |
+| **`f16`** | twelve 9-bit group masks. Slices 0/1/2 are Color/Move/Beam FX, 7 is strobe. Explains why ACC-03b's Color FX was ignored. |
+| **`f4`** | a permission mask over those engines, not a content mask. |
+| **record 111** | `f1`/`f2` are a range's DMX bounds; all 1026 channels partition into three named cases. |
+| **record 106** | `f4` is the channel's engine role (17 of them), `f1`/`f3` the DMX window it drives, `f5`/`f6` the travel limits. |
+| **record 110** | `f5` is the coarse/fine link, 1100/1100. |
+| **record 151** | the detached-fixture offsets, sliced by `150.f1`/`f2`; `f1` is the fixture index. Leaves the passthrough list. |
+| **the prefix** | fully mapped; byte 50 is the schema version, and 24 of 44 bytes are constants. |
+| **POS-01…07** | the position model measured end to end — fan ramp, clamped offset, byte limits on the 16-bit scale. Tilt exact on 12/12 predicted channels. |
+
+Negatives recorded so they are not walked again: `f18` is not a strided bit
+field and is not masked by `f10`; `120` is neither live state, nor
+save-tracking, nor profile-derived; recalling `Get Moving` cannot isolate `f7`;
+`106.f1/f3 = (0,127)` is not explained by the fine channel.
+
+`make check`: **15 identities on 32 files**, up from 4.
+
 ## State left behind
 
 The rig was returned to the opening baseline, **2048/2048 channels**, three

@@ -3082,3 +3082,45 @@ That narrows the size/fade/phase attribution without settling it: the corpus
 gives the defaults and the shape, and only a measurement can say which name goes
 where. Recorded so the next attempt starts from the defaults rather than from
 the value lists.
+
+## Record 120 — what it is not — **[observed]**
+
+Three readings tested and all three refuted:
+
+| Reading | Test | Result |
+|---|---|---|
+| live channel state | compare `120.f1` to the measured DMX envelope | in range on **66–71 of 215** channels, across three different captures |
+| a snapshot that follows saves | compare across seven consecutive saves | **byte-identical** from version 701 to 707 |
+| derived from the profile | compare the block of each fixture to another of the same profile | differs on **397** fixtures |
+
+So it is frozen, per fixture, and not recomputable — a writer must preserve it,
+and no experiment on the show side will move it.
+
+The channels where `120.f1` *does* match the measured DMX are the ones no preset
+was driving: on the first lyre, channel 6 reads 241 in both and channel 7 reads
+220 in both, while pan and tilt disagree because the preset was moving them.
+**[hypothesized]** `120.f1` is each channel's **resting value** — what the
+controller emits when nothing drives it. One capture with every preset released
+would settle it, and it is the only remaining reading that fits all three
+negatives.
+
+## Where the corpus stops
+
+Everything below now needs the device; the corpus has been swept field by field
+and has nothing further to say about them.
+
+| Open | Why the corpus cannot close it |
+|---|---|
+| `165.f4` bit 0, and bits 1, 5, 6, 7 | bit 0 is set on the move and beam pages and clear on the colour page; no factory preset separates the candidates, and the other four are never seen outside 255 |
+| `165.f18` | eight values on movement presets; not a strided bit field, not masked by `f10` |
+| `165.f3`, `f7`, `f14`, `f23`, `f27` | per-group arrays, zero everywhere except `f7` and `f14` on one preset each |
+| `f16` slices 3, 4, 6, 8, 9, 10 | never non-zero |
+| FX `f6`/`f8`/`f9` — size / fade / phase | defaults known, attribution not |
+| `102.f11` = 100 | one value in every file |
+| `106.f1`/`f3` = `(0, 127)` on pan and tilt | flat on all 206 fixtures; the fine-channel hypothesis is refuted — six pan/tilt roles with **no** fine channel carry 127 too |
+| `110.f4 = 18` / `111.f3 = 41` | a feature absent from the table, on moving heads only |
+| `116.f6` | 1 on `6x18W` and `MH-100 BEAM`, 3 on `LASERBAR`, 0 elsewhere |
+| record 120 | see above |
+| record 130 | byte-identical in all 32 files |
+| record 161 | one bit moved in seven saves |
+| MIDI mapping | never located |

@@ -338,6 +338,67 @@ rather than round.
 Full experiment record, including the eight predictions published before each
 capture, in `research/wpj-format-registry.md`.
 
+### 5.3 The content mask is `f10`, not `f4` — **[device-confirmed]**
+
+The `PRESET EDIT` screen's six toggles are `165.f10`, and a set bit means the
+toggle is **off**:
+
+| bit | 0 | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|---|
+| | `COLOR` | `MOVE` | `BEAM` | `GOBO` | `LIVE EDIT` | `OTHER` |
+
+Screen order, left to right then down. Every bit is held by at least two
+independent readings — six photographs of factory presets plus targeted writes —
+and three of them by a single-variable differential. Corpus values re-read
+sensibly: `51` = BEAM + GOBO, `61` = MOVE alone, `62` = COLOR alone, and nothing
+above 62 in 2612 presets.
+
+`f11` is **FADE in milliseconds**, absent = 0: 4000 → `00:04.00`, 2000 →
+`00:02.00`, 500 → `00:00.50`, absent → `00:00.00`, all measured on screen.
+`f15` is **HOLD**, 1000 ↔ `00:01.00`, consistent on six screens but never varied
+— **[correlated]**.
+
+### 5.4 `f16` — twelve 9-bit group masks — **[correlated 32/32]**
+
+`f16`'s packed varints are the **bytes of a little-endian bit field**, the same
+construction as `f31`. Cut at a stride of **9** — nine because record 125 has
+nine slots — every slice is a group mask and the ninth bit is never set.
+
+| Slice | Engine | Pinned by |
+|---|---|---|
+| 0 | **Color FX** | equals `color_fx_actif`, 2445/2446 |
+| 1 | **Move FX** | equals `move_fx_actif`, 2446/2446 |
+| 2 | **Beam FX** | active only on beam-page presets |
+| 5 | static layer | 255 on every preset — **[hypothesized]** |
+| 7 | strobe | active on `Fire!` and `Strobe`, and nothing else |
+| 11 | per-project constant | never varies between presets |
+
+The alignment tests itself: at a stride of 8, slice 1 would read 254 where
+`move_fx_actif` says 255. Across 29352 slice extractions not one falls outside
+`{0, 1, 2, 5, 7, 255}`.
+
+**A writer must set both carriers.** `color_fx_actif` and `move_fx_actif`
+duplicate slices 0 and 1; ACC-03b wrote one and not the other, and the firmware
+followed `f16` — which is why its Color FX was ignored.
+
+`165.f4` is a **permission mask over these engines**, not a content mask:
+engine 0 active implies `f4` bit 3, engine 1 bit 2, engine 2 bit 4, on every
+preset of every file. The implication is one-directional — a page may permit an
+engine none of its presets uses.
+
+### 5.5 Thirteen per-group arrays — **[correlated 32/32]**
+
+Sweeping the whole format for fields that always decode to exactly 8 packed
+varints returns thirteen, all in record 165:
+
+```
+f3  f7  f14  f17  f23  f27  f28  f29  f30  f32  f33  f34  f35
+```
+
+`f17` dimmers, `f28` positions, `f29` gobos, `f30` colour pattern are named. The
+other nine are **known to be per-group** even where their meaning is not, which
+rules out reading them as scalars. `f32`–`f35` appear at schema 10.
+
 ### FX submessage — shared by Beam, Color and Move
 
 The wire fields are ours; the enum *labels* are cross-referenced with
@@ -574,6 +635,53 @@ operator edits something category-related.
 
 ---
 
+## 7.4 The fixture → group assignment — **[correlated 32/32]**
+
+`115[r].f4` is the fixture's **group index**, absent meaning 0 = group A, and
+`105[e].f6` repeats it on every patch entry of that fixture. The two agree on
+**457/457 fixture rows across 32 files**.
+
+Record **125**'s nine items are the eight groups **A–H plus a ninth slot** that
+collects fixtures with no group pads — foggers, sparks — and `125[i].f8` is the
+operator's own name for the group. Its `f4` is the OR of `1 << 115[r].f3` over
+the group's fixtures, a **profile** mask, which is why the record reads as
+derived and why §7.2's "nine categories" was wrong: `rig-b` puts two different
+profiles in slot 0, which a model-derived category cannot do.
+
+## 7.5 Record 106 — the channel roles — **[correlated 32/32]**
+
+Each `106` entry targets a channel of its fixture's profile through
+`106.f2 − 115.f2 + 116.f3`. Its fields then read:
+
+| Field | Meaning |
+|---|---|
+| `f2` | absolute 0-based DMX channel |
+| `f4` | the channel's **role in the W1 engine** |
+| `f1`, `f3` | the **DMX window** the role drives — one of the channel's `111` ranges on 2643 of 3775 entries |
+| `f5`, `f6` | the fixture's **travel limits**, per fixture and per axis |
+
+Seventeen roles, in bijection with the profile feature `110.f4`:
+
+```
+0 dimmer(7)  1 pan(1)   2 tilt(2)   3 red(25)  4 green(26)  5 blue(27)
+6 extra1(31) 7 extra2(32) 8 extra3(33) 9 shutter(15) 10 strobe(15)
+11 colour wheel(5)  12 gobo wheel(8)  14(22)  15(16)  21(20)  22(19)
+```
+
+**This is the field a show generator needs**: it answers "which DMX channel
+carries this fixture's red" without inferring anything from channel order.
+
+## 7.6 Records 110 and 111 — channels and ranges — **[correlated]**
+
+- `110.f5` is the **index of the channel this one belongs to**: a principal
+  channel points at itself, a **fine** channel at its coarse half, and the
+  pointed channel always carries the same feature. 1100/1100, no exception. A
+  16-bit pan is emitted without guessing byte order or adjacency.
+- `111.f1`/`f2` are a range's **first and last DMX value**. Every channel falls
+  into one of three cases with nothing left over: **944** whose ranges tile
+  `[0, 255]`, **53** unassigned (no `f4`, one *empty* `111` item), and **29**
+  carrying an isolated `{f1: 255, f3: 41}` on `110.f4 = 18`.
+
 ## 8. Type 155 — 4 FX sequences — **[correlated]**
 
 `field 1` = 4, then four `field 5` items, each with `f1 = 8`, `f2 ∈ {1,2}`,
@@ -586,6 +694,44 @@ editor's STEP control.
 
 ---
 
+## 8.1 Type 151 — detached-fixture offsets — **[device-confirmed]**
+
+A firmware feature detaches a fixture from its group and positions it
+independently. Each detached fixture gets one `151` entry, and each position
+slot of record 150 points at its own slice:
+
+```
+150[slot].f2 = offset into 151      150[slot].f1 = length
+```
+
+The slices **tile** `[0, count(151))` — the same (offset, length) couple as
+`105.f4`/`f7` into 106 and `116.f3`/`f2` into 110.
+
+| Field | Screen | Encoding |
+|---|---|---|
+| `151.f1` | — | **fixture index**, absent = 0 |
+| `151.f2` | `FOCUS OFFSET` | signed, `(v − 32768) / 32767` |
+| `151.f3` | `PAN OFFSET` | signed, same |
+| `151.f4` | `TILT OFFSET` | signed, same |
+
+### The position model, end to end — **[device-confirmed]**
+
+Everything a recalled position emits is computable from the file:
+
+```
+pct_group(k) = (1 − FAN) + k × (2·FAN − 1) / (n − 1)     pan; k = rank in group
+pct_group    = TILT                                       tilt
+pct          = clamp(pct_group + offset, 0, 1)            offset from 151
+borne16(f)   = f / 255 × 65535                            f = 106.f5 or f6
+DMX16        = borne16(f5) + pct × (borne16(f6) − borne16(f5))
+coarse       = DMX16 >> 8        fine = DMX16 & 0xFF
+```
+
+`FAN`, `PAN` and `TILT` come from record 150 as `stored / 65536`. Measured over
+four DMX captures and 24 predicted channels: **tilt exact everywhere**, pan
+exact everywhere but once. Detaching a fixture does **not** remove it from the
+fan; the offset stacks on top of the group value and is clamped.
+
 ## 9. Prefix bytes 20–63
 
 | Offset | Content | Status |
@@ -594,7 +740,7 @@ editor's STEP control.
 | 36–39 | constant `15 2b 10 c0` in 18/18 | observed — container magic |
 | **40–47** | **little-endian uint64 version**, incremented by one per save | **correlated** |
 | 48–49 | constant `01 f9` in 18/18 | observed |
-| 50 | writer/schema version: 8 (older WTOOLS), 10 (WTOOLS-written), 11 (after any controller save) | correlated |
+| 50 | **schema version**: 8, 10 or 11 | correlated 32/32 |
 | 51 | constant 0 | observed |
 | 52–63 | constant `02 be e8 1c a2 6c cb 54 6d c7 b6 ec` in 18/18 | observed |
 
@@ -607,6 +753,14 @@ increments and offset 40 drops to `0x00`. **A writer must treat 40–47 as one
 
 **[device-confirmed]** Bytes 20–35 are *not* an import identity key: creating a
 new project without touching them works (ACC-01).
+
+**Byte 50 gates the schema.** `165.f32`–`f35` are absent from the one schema-8
+file and present in all 31 schema-10 and schema-11 files. Schema **11** is this
+firmware's and is the one that carries the detach feature: every schema-11 file
+has record 151. A writer must not raise the byte without emitting what the
+schema requires. Across seven consecutive saves of one project **only byte 40
+moved**; 24 of the 44 prefix bytes are constant in every file and carry no
+project information at all.
 
 ---
 
@@ -664,32 +818,34 @@ the `wpj-toolkit` enumerations; neither source has them alone.
   wire location. We have `f5` carrying a pad mask for Color FX and a bare varint
   0–6 for Move FX, and unmapped for Beam. **[hypothesized]** Beam `f5` is
   `feature`. One single-variable save (Dimmer → Zoom) settles it.
-- **L2 — group-mask asymmetry.** The toolkit reports `colorGroupMask` over A–H
-  but `beamGroupMask` over **A–D only**. Our `f16` hypothesis is "FX-bank masks
-  per group in complementary pairs"; the A–D restriction constrains which halves
-  of `f16` are which.
+- ~~**L2 — group-mask asymmetry.**~~ **Closed** (§5.4): `f16` is twelve **9-bit**
+  group masks, not complementary pairs. The stride is nine because record 125
+  has nine slots. Slice 0 equals `color_fx_actif` and slice 1 `move_fx_actif`
+  exactly; slice 2 is the Beam FX, slice 7 the strobe.
 - **L3 — record 102 `f5`/`f6`/`f11`.** Three fields at 100, three unassigned
   guide parameters, one save (§6). **Highest value per unit of effort.**
 - ~~**L4 — static colour `f31`.**~~ **Closed** (§5.1): eight 20-bit masks, one
   per group A–H, confirmed at the bit level by a save carrying three different
   masks. The "4 repetitions" reading was cutting 160 bits into the wrong slices.
-- **L4′ — the preset content mask `f4`.** The `PRESET EDIT` screen shows it as
-  six toggles — `COLOR`, `MOVE`, `BEAM`, `GOBO`, `LIVE EDIT`, `OTHER` — plus
-  `FADE` and `HOLD` times, the latter a candidate for `f11`. Corpus values are
-  255 (full), 8 (colour page), 17 (beam), 5 (move). One save per toggle names
-  every bit. **Highest value per unit of effort in record 165.**
-- **L4″ — where the fixture → group assignment lives.** Groups A–H drive every
-  per-group array, but nothing in the file has been shown to say which fixture
-  belongs to which group. The `GROUPS` key only pages the display to E–H; it
-  does not show membership. A show generator cannot target a group without
-  this.
+- ~~**L4′ — the preset content mask.**~~ **Closed** (§5.3), and it was never
+  `f4`: the `PRESET EDIT` toggles live in **`f10`**, six bits, `1` = toggle
+  **off**, in screen order `COLOR MOVE BEAM GOBO LIVE EDIT OTHER`. `f11` is
+  `FADE` in milliseconds and `f15` is `HOLD`. `f4` turned out to be a
+  **permission mask over the FX engines** (§5.4).
+- ~~**L4″ — where the fixture → group assignment lives.**~~ **Closed** (§7.4):
+  `115[r].f4` is the group index, absent = 0 = group A, mirrored on every patch
+  entry as `105[e].f6`. It had been decoded all along under the name
+  *category*. Record 125 is the eight groups plus a ninth slot, not nine
+  categories.
 - **L5 — MIDI mapping record.** The W1 accepts MIDI (preset select by note,
   group/master dimmers by CC, MIDI clock at 24 PPQN) and the map is learned per
   project on `WM_MODE_MAPPING = 43`, so it must live in the file. Not yet
   located. This is the gateway to live control.
-- **L6 — record 151.** 0 or 64 bytes, 4 × three 16-bit values centred on 32767.
-  Correlates with the `0x38` byte in 125 `f4`. Lowest confidence; recorded so
-  nobody re-derives it.
+- ~~**L6 — record 151.**~~ **Closed** (§8.1): the **detached-fixture offsets**.
+  One entry per fixture positioned independently of its group, carrying
+  `f1` = fixture index, `f2` = `FOCUS OFFSET`, `f3` = `PAN OFFSET`,
+  `f4` = `TILT OFFSET`, all signed as `(v − 32768) / 32767`. `150.f2`/`f1` are
+  the offset and length of each position slot's slice.
 - ~~**L7 — the 115 arena.**~~ **Closed** (§7.1): `115.f2` is the DMX start
   address, and identities 10 and 11 pin it. There is no arena.
 - **L8 — variants B and C.** Only the top level is mapped. A different

@@ -3018,3 +3018,67 @@ without also emitting what that schema requires.
 The four constant regions are worth stating as constants rather than leaving
 them unread: 24 of the 44 prefix bytes carry no project information at all, and
 any change there is a format change, not a project change.
+
+## Record 110 `f5` — the coarse/fine link — **[correlated, 1100/1100]**
+
+`110.f5` had 31 distinct values and no reading. It is the **index, within the
+profile, of the channel this one belongs to**: a principal channel points at
+itself, and a **fine** channel points at its coarse half.
+
+The rule holds on every channel of every profile of every file, with **no
+exception**:
+
+```
+f5 ≤ j                                   never points forward
+110[offset + f5].f4 == 110[offset + j].f4    same feature as the channel it points at
+```
+
+959 channels point at themselves; the 141 that do not are exactly the fine
+halves, and they name themselves by doing so:
+
+| Profile | Position | `f5` | Feature |
+|---|---|---|---|
+| `ZQ02244`, 16 ch | 2 | **0** | pan — the fine half of channel 0 |
+| `ZQ02244`, 16 ch | 3 | **1** | tilt — the fine half of channel 1 |
+| `ZQ02344`, 8 ch | 1 | **0** | pan fine |
+| `ZQ02344`, 8 ch | 3 | **2** | tilt fine |
+
+POS-05 found the fine channels by watching four DMX channels move together. The
+file said so all along, and says it for **every** profile including the ones the
+operator does not own. `canal_principal_110` checks it — 15 identities, 32 files.
+
+A show generator can now emit a 16-bit pan without guessing byte order or
+adjacency: the coarse channel is the one whose `f5` equals its own index, and
+its fine half is whichever channel points back at it.
+
+## Two more negatives
+
+### `f18` is not a strided bit field
+
+`f16` turned out to be twelve 9-bit slices, so `f18` was cut the same way. It
+produces nothing: slice 0 simply restates the first byte, slices 1 and 3–7 are
+always zero, and slice 2 is non-zero on a single preset in a single file. The
+construction that unlocked `f16` does not apply here. `f18[0]` keeps its eight
+values — 1, 3, 8, 9, 11, 16, 19, 24 — on movement-flavoured presets, and stays
+**unattributed**.
+
+### The FX submessages — shape, not meaning
+
+The six FX slots divide cleanly, and the "2" slots are near-uniformly defaults:
+
+| | `f3` | `f5` | `f6` | `f8` | `f9` | default when idle |
+|---|---|---|---|---|---|---|
+| beam | — | — | ✓ | ✓ | ✓ | `f6` 25, `f8` 100, `f9` 50 |
+| colour | — | ✓ blob | ✓ | ✓ | ✓ | `f5` `2000`, `f6` 20, `f9` 50 |
+| move | ✓ | ✓ byte | ✓ | ✓ | ✓ | `f3` 50, `f5` `00`, `f8` 100, `f9` 50 |
+
+`beam_fx2` and `move_fx2` are **one single value each across all 2612 presets**
+— secondary slots nobody uses — while `color_fx2` varies on 23. `f3` exists only
+on movement, which is what a field like amplitude would do. `f8` defaults to 100
+and `f9` to 50 in every family, so they are a full-scale quantity and a centred
+one respectively.
+
+That narrows the size/fade/phase attribution without settling it: the corpus
+gives the defaults and the shape, and only a measurement can say which name goes
+where. Recorded so the next attempt starts from the defaults rather than from
+the value lists.

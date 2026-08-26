@@ -353,11 +353,31 @@ def schema_du_prefixe(w):
         f"préfixe : schéma {schema} mais f32 {'présent' if a32 else 'absent'}"
 
 
+def canal_principal_110(w):
+    """110.f5 = l'index, dans le profil, du canal principal de ce canal.
+
+    Un canal principal se désigne lui-même ; un canal **fin** désigne son
+    canal grossier. Le canal pointé porte toujours la même `f4`, ce qui rend
+    le couple 16 bits lisible sans deviner l'ordre des octets. Vérifié sans
+    exception sur les 1100 canaux du corpus.
+    """
+    p110, p116 = _items(w, 110), _items(w, 116)
+    for pr in p116:
+        off, n = pr.get("f3", 0), pr.get("f2", 0)
+        for j in range(n):
+            c = p110[off + j]
+            m = c.get("f5", 0)
+            assert m <= j, f"110[{off + j}] : f5 = {m} pointe en avant"
+            assert p110[off + m].get("f4") == c.get("f4"), \
+                f"110[{off + j}] : f5 pointe un canal de feature " \
+                f"{p110[off + m].get('f4')}, pas {c.get('f4')}"
+
+
 IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
               groupe_fixture, moteurs_f16, plages_111, roles_106,
               ordre_fixtures_115, bornes_106, tranches_151,
               tableaux_par_groupe_165, f4_autorise_les_moteurs,
-              schema_du_prefixe)
+              schema_du_prefixe, canal_principal_110)
 
 
 def demo():

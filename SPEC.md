@@ -27,12 +27,14 @@ reported as `0` or `off`.
 Measurement base: W1 Mk1 (serial withheld), firmware **2.0.18**, WTOOLS **1.6.3**,
 macOS. Corpus hashes in `corpus/SHA256SUMS`.
 
-**On "18/18 files".** The measurement corpus holds 25 variant-A files, but only
+**On file counts.** The measurement corpus holds **27 variant-A files**, but only
 **4 are independent rigs** (*rig-a* 10 fixtures, *rig-b* 15, *rig-c* 20,
-*rig-c-bug* 22 = a re-patched *rig-c*). The rest are derived: 7 written
-by our own writer from *rig-a*, 7 controller saves of one copy of
-*rig-c*. An identity holding 18/18 is strong enough to **kill** a
+*rig-c-bug* 22 = a re-patched *rig-c*). The rest are derived: files written
+by our own writer from *rig-a*, and controller saves of one copy of
+*rig-c*. An identity holding on all of them is strong enough to **kill** a
 hypothesis; it is not by itself enough to call anything device-confirmed.
+Counts written "27/27" below are re-checked by `make check` on whatever corpus
+is present.
 
 ---
 
@@ -105,15 +107,15 @@ every run.
 |---|---|---|---|---|
 | 101 | 12–20 | — | project name (`f1` UTF-8) | **device-confirmed** (§4) |
 | 102 | 16–22 | — | flash-FX settings, 6 keys | **device-confirmed** (§6) |
-| 105 | 114–351 | 10–27 | **DMX patch**, one entry per patched block | correlated (§7) |
-| 106 | 600–2614 | 50–201 | one entry per patched DMX channel | correlated (exact count identity) |
+| 105 | 114–351 | 10–27 | **patch index**: one entry per DMX block, slicing record 106 | correlated (§7) |
+| 106 | 600–2614 | 50–201 | one entry per **mapped** channel, `f2` = absolute DMX channel | correlated (§7) |
 | 110 | 210–775 | 22–80 | flattened channel table of all profiles | correlated |
 | 111 | 347–1526 | 45–201 | flattened range/capability table, indexed by 110 | correlated |
 | 115 | 116–409 | 10–22 | **fixture instances** | correlated (§7) |
 | 116 | 162–334 | 3–7 | **fixture profile catalogue** | correlated |
 | 120 | 532–1199 | 86–258 | flat per-fixture-channel value table | correlated |
 | 125 | 111–137 | **9** | **9 fixture categories**: name + profile bitmask | correlated (§7.2) |
-| 130 | **102** | **9** | byte-identical in 18/18 files | observed — no project data |
+| 130 | **102** | **9** | byte-identical in 27/27 files | observed — no project data |
 | 135 | 140–145 | **16** | the 16 ColorFX palette pads (RGBWALU) | correlated |
 | 140 ×8 | 182–189 | **20** each | **static COLOUR palette**, one per group A–H, `f2` = group 0…7 | **device-confirmed** (§3.3) |
 | 145 ×8 | 40–159 | **20** each | **static GOBO palette**, one per group A–H, `f2` = group 0…7 | **device-confirmed** (§3.4) |
@@ -268,21 +270,73 @@ does not re-serialise it the way it does record 115.
 | `f1` / `f2` | Beam FX 1 / 2 | correlated |
 | `f5` / `f6` | Color FX 1 / 2 | correlated |
 | `f21` / `f22` | Move FX 1 / 2 (extra `f3`, default 50) | correlated |
-| `f28` | position index per group A–H, 8 packed varints | correlated |
+| `f28` | position index per group A–H, 8 packed varints, indexes type 150 | correlated |
+| `f29` | **gobo index per group A–H**, 8 packed varints, **0-based** into type 145, **255 = none and it clears the channel** | **device-confirmed** (§5.1) |
+| `f30` | **static-colour `PATTERN` per group A–H**, 8 packed varints, 11 modes | **device-confirmed** (§5.1) |
+| `f31` | **static colour: 20 bytes = 160 bits = eight 20-bit pad masks**, one per group A–H | **device-confirmed** (§5.1) |
 | `f17` | dimmer per group A–H, packed, default `[255]×8` | hypothesized |
 | `f8` / `f24` | Color FX / Move FX active flag (packed, `[0]` or `[255]`) | correlated |
-| `f31` | static colour: 4 × 5 varints, bitmasks over type-140 pads | hypothesized |
 | `f4` | content mask (255 full, 8 colour, 17 beam, 5 move) | hypothesized |
 | `f16` | ~13 varints, FX-bank masks per group in complementary pairs | hypothesized |
 | `f11` | 500 / 2000 / 4000 — fade time in ms? | hypothesized |
 | `f10` | factory library version? | observed |
-| `f9`=1, `f15`=1000, `f13`×6, `f18`, `f3`, `f7`, `f14`, `f23`, `f26`, `f27`, `f29`, `f30` | unknown | observed |
+| `f32`…`f35` | per-group arrays added at schema 10, defaults `50 / 0 / 100 / 100`; all zero in a project upgraded from schema 8 | correlated |
+| `f9`=1, `f15`=1000, `f13`×6, `f18`, `f3`, `f7`, `f14`, `f23`, `f26`, `f27` | unknown, all zero on the measured rig | observed |
 
 `f28` read from named factory presets: `Floor` = `[0]×8`, `Center` = `[1]×8`,
 `Crowd` = `[3]×8`, `Ceiling` = `[4]×8` — the values index into type 150.
 
 **[observed]** `f28`, `f17`, `f8`, `f24` are **packed** varints (wire type 2),
 not repeated varints. The two "flags" are packed lists of one element.
+
+### 5.1 The four per-group arrays — **[device-confirmed]**
+
+A preset carries four arrays of eight slots, one slot per group A–H, and each
+points into that group's own palette record:
+
+| Field | Points at | Encoding |
+|---|---|---|
+| `f28` | type 150, positions | index |
+| `f29` | type 145, gobos | **0-based** index, `255` = none |
+| `f30` | — | `PATTERN`, the static-colour spread mode |
+| `f31` | type 140, colours | one **20-bit mask** per group, packed 8 × 20 = 160 bits |
+
+`f31` is not eight separate fields: it is 20 bytes read as one little-endian
+integer, group *g* occupying bits `[20g, 20g + 20)`, bit *n* selecting pad
+*n* + 1.
+
+```python
+mask = lambda blob, g: (int.from_bytes(blob, "little") >> (20 * g)) & 0xFFFFF
+```
+
+**`f29`.** Recalling a preset with `f29[A]` = 9 drove the group's six gobo-wheel
+fixtures to DMX 70 — pad 10, the lower bound of its range — and `f29[A]` = 2
+drove them to 21, pad 3. A preset with `[255]×8` put them back to 0, so the
+sentinel is **applied**, not skipped: there is no way to say "leave as is".
+
+**`f30`.** Eleven modes: eight are four directions × two renderings, plus
+`SINGLE`, `FLASH` and an alternating pattern.
+
+| Value | Mode |
+|---|---|
+| 0 | stepped, alternating one fixture in two |
+| 1 / 2 | blended / hard, dealt **centre → edges** |
+| 3 / 4 | blended / hard, dealt **edges → centre** |
+| 5 / 6 | blended / hard, dealt **first → last** |
+| 7 / 8 | blended / hard, dealt **last → first** |
+| 9 | `SINGLE` — one colour, every fixture the same |
+| 10 | `FLASH` — the group's colour pads become **momentary**, not a layout |
+
+Distribution, measured at two and three colours in both geometries: along the
+run a direction defines — the **half-length** for the centre/edge directions,
+the **full length** for the others — the selected pads are dealt in **ascending
+pad order**, split as evenly as possible, with the **remainder to the earliest
+colours**. Ten fixtures over three colours gives 4-3-3; a half-length of five
+over three gives 2-2-1. Blended modes interpolate the same deal and **truncate**
+rather than round.
+
+Full experiment record, including the eight predictions published before each
+capture, in `research/wpj-format-registry.md`.
 
 ### FX submessage — shared by Beam, Color and Move
 
@@ -402,6 +456,19 @@ The strongest structural result available. Eight identities hold **exactly,
 8.  Σ 116[ 115[r].f3 ].f2         == count(120)
 ```
 
+Three more, added once `105.f4` was corrected, and mechanically re-checked on
+**27/27** files by `tools/wpj_identities.py`:
+
+```
+9.  the [f4, f4+f7) intervals of 105, sorted by f4, tile [0, count(106))
+10. every 106 entry of a slice lies in [115[r].f2, 115[r].f2 + profile channels)
+11. the fixtures' DMX windows are pairwise disjoint
+```
+
+Identity 10 fails immediately if slices are attached to the wrong fixtures, and
+identity 11 has no reason to hold for an internal arena index — together they
+are what pins `115.f2` to a real DMX patch.
+
 - **116 = fixture profile catalogue.** `f2` = channel count of the profile;
   `f3` = index of its first channel in record 110; `f8` = UTF-8 name **truncated
   to 19 characters** (`'LED PAR 56 Black RG'`); `f9` = 16-byte profile hash;
@@ -413,12 +480,23 @@ The strongest structural result available. Eight identities hold **exactly,
   `{f1 = from, f2 = to, f3 = function id}`; *rig-a* holds clean 8-way
   splits `1–50 / 51–100 / … / 241–255` and 31-wide splits `0–31 / … / 224–255`,
   i.e. gobo or colour-wheel slots.
-- **105 = the DMX patch.** `f1` = library fixture id, **stable across projects**
-  (`1017` is the same `6x18W 6in1 RGBAW UV` in two unrelated rigs); `f4` =
-  0-based start address; `f5` = index of the fixture row in 115; `f6` = category
-  0…8; `f7` = channels consumed. A fixture built from several DMX blocks emits
-  several entries **sharing one `f5`** (a `LED BAR 252 RGB` = 3 × 4 ch; a
+- **105 = the patch index into 106.** `f1` = library fixture id, **stable across
+  projects** (`1017` is the same `6x18W 6in1 RGBAW UV` in two unrelated rigs);
+  `f5` = index of the fixture row in 115; `f6` = category 0…8. **`f4` is the
+  running offset into record 106 and `f7` is that slice's length** — *not* a DMX
+  address and *not* a channel count. A fixture built from several DMX blocks
+  emits several entries **sharing one `f5`** (a `LED BAR 252 RGB` = 3 × 4 ch; a
   `LASERBAR` = 6 × 8 ch).
+- **106 = one entry per *mapped* channel**, `f2` holding the **absolute 0-based
+  DMX channel**. Subtracting the fixture's `115.f2` gives an offset pattern that
+  is constant per profile — a 16-channel moving head exposes ten mapped
+  channels at offsets `0 1 6 6 7 8 10 12 13 14`, which is why its `f7` reads 10.
+
+  **Retracted**: earlier notes called `105.f4` a 0-based start address and
+  `105.f7` a channel count. Sorted by `f4`, the intervals `[f4, f4+f7)` tile
+  `[0, count(106))` exactly, and two entries share offset 141 in *rig-c* because
+  one has span 0 — which no DMX address could do. **The DMX start address is
+  `115.f2`**, device-confirmed by the gobo capture in §3.4.
 - **115 = fixture instances**, one per row of the fixture grid. `f3` = index into
   116; `f2` = start offset in an internal channel arena; `f6` (on the record,
   not the items) = display order, a permutation of 0…n−1.
@@ -431,12 +509,19 @@ four rigs, always `max(105.f5) + 1`); the "20" in earlier notes was a
 coincidence of one rig having 20 fixtures. Record 155 is *not* the DMX patch map
 (§8).
 
-### 7.1 The 115 arena has holes — **[hypothesized]**
+### 7.1 The "115 arena" was a real DMX patch all along — **resolved**
 
-Identity 8 holds 18/18, but the stronger claim that `115.f2` offsets tile
+Identity 8 holds everywhere, but the stronger claim that `115.f2` offsets tile
 `[0, count(120))` exactly holds only for *rig-a* and its derivatives.
 Elsewhere the offsets are stride-correct per profile but leave gaps and run past
 the end of 120 — always staying below 512.
+
+**That was the wrong frame.** `115.f2` is the **DMX start address**: the gaps are
+unused address space in a 512-channel universe, which is why nothing ever
+exceeds 512, and identity 11 shows the resulting windows never overlap — a
+constraint a real patch must satisfy and an internal arena has no reason to.
+The table below is a picture of how the operators patched their rigs, nothing
+more.
 
 | File | `count(120)` | `max 115.f2` |
 |---|---|---|
@@ -579,10 +664,19 @@ the `wpj-toolkit` enumerations; neither source has them alone.
   of `f16` are which.
 - **L3 — record 102 `f5`/`f6`/`f11`.** Three fields at 100, three unassigned
   guide parameters, one save (§6). **Highest value per unit of effort.**
-- **L4 — static colour `f31`.** 4 repetitions × 5 varints, bitmasks over type-140
-  pads: `Deep Red` = mask 32 = pad 6, and pad 6 is now confirmed to be **Red**
-  (§3.3), so bit *n* selects pad *n* + 1. Are the 4 repetitions groups A–D?
-  Experiment: one pad, one group.
+- ~~**L4 — static colour `f31`.**~~ **Closed** (§5.1): eight 20-bit masks, one
+  per group A–H, confirmed at the bit level by a save carrying three different
+  masks. The "4 repetitions" reading was cutting 160 bits into the wrong slices.
+- **L4′ — the preset content mask `f4`.** The `PRESET EDIT` screen shows it as
+  six toggles — `COLOR`, `MOVE`, `BEAM`, `GOBO`, `LIVE EDIT`, `OTHER` — plus
+  `FADE` and `HOLD` times, the latter a candidate for `f11`. Corpus values are
+  255 (full), 8 (colour page), 17 (beam), 5 (move). One save per toggle names
+  every bit. **Highest value per unit of effort in record 165.**
+- **L4″ — where the fixture → group assignment lives.** Groups A–H drive every
+  per-group array, but nothing in the file has been shown to say which fixture
+  belongs to which group. The `GROUPS` key only pages the display to E–H; it
+  does not show membership. A show generator cannot target a group without
+  this.
 - **L5 — MIDI mapping record.** The W1 accepts MIDI (preset select by note,
   group/master dimmers by CC, MIDI clock at 24 PPQN) and the map is learned per
   project on `WM_MODE_MAPPING = 43`, so it must live in the file. Not yet
@@ -590,8 +684,8 @@ the `wpj-toolkit` enumerations; neither source has them alone.
 - **L6 — record 151.** 0 or 64 bytes, 4 × three 16-bit values centred on 32767.
   Correlates with the `0x38` byte in 125 `f4`. Lowest confidence; recorded so
   nobody re-derives it.
-- **L7 — the 115 arena.** Is `115.f2` a live address into a 512-slot arena, or a
-  stale field? Bears on the rig-c blackout (§7.1).
+- ~~**L7 — the 115 arena.**~~ **Closed** (§7.1): `115.f2` is the DMX start
+  address, and identities 10 and 11 pin it. There is no arena.
 - **L8 — variants B and C.** Only the top level is mapped. A different
   serialisation of the same show; needs its own campaign.
 

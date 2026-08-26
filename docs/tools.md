@@ -42,7 +42,7 @@ self-check: it globs `**/*.wpj` under `$WPJ_CORPUS` (default `corpus/`).
 
 **Invariant:** an unmodified record is re-emitted byte for byte, so load+save
 without an edit produces a byte-identical file. Self-check: every variant-A file
-in the corpus (25 on the development machine).
+in the corpus (27 on the development machine).
 
 ```bash
 python3 tools/wpjlib.py     # self-check
@@ -68,6 +68,9 @@ Naming: a field whose meaning is proven gets a semantic key (`nom`, `profil`,
 absent from the dict — never a synthesised `0`.
 
 Decoded today: 101, 102, 105, 115, 116, 120, 125, 135, 140, 145, 150, 160, 165.
+
+Note on 105: the keys are `offset_106` and `nb_entrees_106`, not an address and a
+channel count — see `SPEC.md` §7. The old names were a misreading.
 Passthrough (round-tripped, undecoded): 106, 110, 111, 130, 151, 155, 161 —
 several of these have a documented structure in `SPEC.md` without a codec
 schema yet.

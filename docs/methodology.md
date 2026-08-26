@@ -28,14 +28,14 @@ Three rules go with the ladder:
 None of the corpus is published ([`../LEGAL.md`](../LEGAL.md)); what follows is
 about how it was counted while measuring, and applies just as much to yours.
 
-The variant-A corpus used here holds 25 files, but only **four independent
+The variant-A corpus used here holds 27 files, but only **four independent
 rigs**:
 *rig-a* (10 fixtures), *rig-b* (15), *rig-c* (20) and
 *rig-c-bug* (22, a re-patched *rig-c*). The rest are derived — seven
 written by our own writer from *rig-a*, seven controller saves of one copy
 of *rig-c*.
 
-So an identity that holds "18/18 files" is strong enough to **kill** a
+So an identity that holds on every file is strong enough to **kill** a
 hypothesis. It is not by itself enough to promote one. Derived files inherit
 their parent's structure; they are not independent evidence.
 

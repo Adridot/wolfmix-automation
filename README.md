@@ -101,9 +101,9 @@ make check
 ```
 
 ```text
-self-check ok : round-trip octet-identique sur 25 fichiers
-fidélité octet vérifiée sur 25 fichiers variante A
-2 identités vérifiées sur 25 fichiers variante A
+self-check ok : round-trip octet-identique sur 27 fichiers
+fidélité octet vérifiée sur 27 fichiers variante A
+4 identités vérifiées sur 27 fichiers variante A
 ```
 
 Six self-checks: byte-identical round-trip, codec fidelity per record type,
@@ -132,7 +132,7 @@ python3 tools/wpj_api.py corpus/projects/your-project.wpj | head -40
       "known": { "colorFx1": { "type": 2, "speedPercent": 120, "linkOrder": 10 } } }
   ],
   "fixtures": { "status": "partial",
-                "items": [ { "profil": 57, "adresse": 44, "fixture": 7, "nb_canaux": 4 } ] },
+                "items": [ { "profil": 57, "offset_106": 44, "fixture": 7, "nb_entrees_106": 4 } ] },
   "validation": {
     "checksumOk": true,
     "issues": [
@@ -224,10 +224,11 @@ Run any of them with **no arguments** to execute its self-check.
 |---|---|
 | Variant-A container, SHA-1 header, project name | 🟢 **device-confirmed** — our files are accepted and stored byte-identically |
 | Record inventory — 20 types | 🟢 13 decoded, 7 round-tripped verbatim |
-| Patch model (105/106/110/111/115/116/120/125) | 🟢 locked by arithmetic identities, addresses confirmed on live DMX |
+| Patch model (105/106/110/111/115/116/120/125) | 🟢 locked by 11 arithmetic identities; the DMX address is `115.f2`, confirmed on live DMX |
 | Static palettes — colour, gobo, position (140/145/150) | 🟢 **device-confirmed**, one record per group A–H |
 | FX sequences (155) | 🟢 decoded — 16 steps × 8 groups |
-| Presets and FX (165) | 🟡 effect type device-confirmed; `size`/`fade`/`phase` still hypotheses |
+| Presets — the four per-group arrays (165) | 🟢 **device-confirmed** — positions, gobos, colour masks and the 11-mode colour `PATTERN` |
+| Presets — FX submessage (165) | 🟡 effect type device-confirmed; `size`/`fade`/`phase` still hypotheses; the content mask `f4` is next |
 | Flash FX settings (102) | 🟡 closed end to end except three fields — one of them **refuted as inert** |
 | UI mode enum (`WM_MODE_*`) | 🟡 26+ values measured on the device, not read out of a binary |
 | Variants B and C | 🔴 top level only — read-only by rule |

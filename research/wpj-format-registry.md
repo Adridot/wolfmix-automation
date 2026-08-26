@@ -2833,3 +2833,63 @@ computable for any fixture: its group's `FAN`/`PAN`/`TILT` from record 150, its
 rank in the group from `115.f4` and the address order, its per-fixture offsets
 from record 151 through the `150.f1`/`f2` slice, and its travel limits from
 `106.f5`/`f6` found through the role table. Six records, one formula.
+
+## The preset's per-group arrays — thirteen of them — **[correlated, 32/32]**
+
+Sweeping every length-delimited field of every record for one that decodes to
+exactly **8 packed varints, always**, returns thirteen fields, and all thirteen
+are in record 165:
+
+```
+f3   f7   f14  f17  f23  f27  f28  f29  f30  f32  f33  f34  f35
+```
+
+Four were already named — `f17` dimmers, `f28` positions, `f29` gobos, `f30`
+colour pattern. The other nine are now **known to be per-group** even where
+their meaning is not, which is a real constraint rather than a label: it says
+`f3`, `f7`, `f14`, `f23` and `f27` are eight values indexed A–H, not scalars and
+not blobs. `tableaux_par_groupe_165` checks the count on every preset of every
+file — 12 identities, 32 files. It is not vacuous: a wrong varint split, or a
+field read as a scalar, changes the count immediately.
+
+Nothing outside 165 is a fixed 8-array. Record 160's `f1` and `f8` reach 8 on
+115 of their occurrences but drop to 1 or 2 on others, so they are *sometimes*
+per-group; `116.f9` is a 16-byte UUID that occasionally decodes to 8 varints by
+coincidence, which is exactly the kind of false positive this sweep should
+surface rather than hide.
+
+### What that fixes about the never-exercised fields
+
+`f3`, `f23` and `f27` are zero on all 2612 presets, and `f7` and `f14` are
+non-zero on exactly one preset each — `Get Moving` carries `f7 = [0,1,0,0,0,0,0,0]`
+and `70's Paradise` carries `f14 = [6]×8`. Under the array reading those two are
+now legible: `f7` sets **group B only**, and `f14` sets **the same value on all
+eight groups**. Both are one read-only DMX recall away from being named, and
+both presets exist on the operator's controller.
+
+### Record 160 — the macros are per-group too
+
+```
+Prism           f1 = [4]×6 + [1]×2      f8 = [50]×8
+Prism rot OFF   f1 = [16]×6 + [4]×2     f8 = [128]×8
+Frost           f1 = [4]×6 + [1]×2      f8 = [255]×8
+blanc chaud     f1 = [1]×6 + [64]×2     f8 = [43]×8
+ambre           f1 = [1]×6 + [64]×2     f8 = [93]×8
+```
+
+`f8` is one byte-wide value per group and `f1` one small power of two per group
+— 1, 4, 16, 64, and 20 = 4 + 16 elsewhere, so a mask rather than an index. The
+operator's own names line up with the values: `blanc chaud` and `ambre` differ
+only in `f8` (43 against 93) while sharing an identical `f1`, which is what two
+presets of the same control at two settings look like. `f7` resolves into
+**eight pairs** `(v, 128)`, one per group, followed by four trailing bytes.
+**[observed]** — the shape is clear, the semantics are not.
+
+### Record 161 stays volatile
+
+Seven consecutive saves of the experiment project moved record 161 exactly
+**once**, and by one bit: the last byte of each of the three blobs went
+`0xF0` → `0xB0`, at offsets 187, 188 and 189 — the end of each. The blobs are
+not packed varints (`0xF0` would leave a dangling continuation), and the six
+other saves left them untouched. Consistent with the existing reading: volatile
+state, no show content, and nothing a writer must reproduce.

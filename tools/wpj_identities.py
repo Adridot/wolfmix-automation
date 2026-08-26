@@ -286,9 +286,34 @@ def tranches_151(w):
             f"151[{k}].f1 = {e.get('f1', 0)} hors des {nfx} fixtures"
 
 
+# Les treize champs du preset qui portent une valeur par groupe A–H. Tous
+# font exactement 8 varints packés, sans exception dans le corpus — voir le
+# registre, « les tableaux par groupe ».
+TABLEAUX_PAR_GROUPE = (3, 7, 14, 17, 23, 27, 28, 29, 30, 32, 33, 34, 35)
+
+
+def tableaux_par_groupe_165(w):
+    """Les champs par groupe du preset font exactement 8 varints.
+
+    Contrainte non triviale : un découpage varint erroné, ou un champ pris
+    pour un scalaire, change immédiatement le compte. C'est ce qui range
+    `f3`, `f7`, `f14`, `f23` et `f27` — nuls dans tout le corpus — parmi les
+    valeurs par groupe plutôt que parmi les inconnues sans forme.
+    """
+    for pre in _items(w, 165):
+        for n in TABLEAUX_PAR_GROUPE:
+            champ = pre.get(f"f{n}")
+            if champ is None:
+                continue
+            vals = _varints(champ["hex"] if isinstance(champ, dict) else champ)
+            assert len(vals) == 8, \
+                f"165.f{n} : {len(vals)} varints au lieu de 8"
+
+
 IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
               groupe_fixture, moteurs_f16, plages_111, roles_106,
-              ordre_fixtures_115, bornes_106, tranches_151)
+              ordre_fixtures_115, bornes_106, tranches_151,
+              tableaux_par_groupe_165)
 
 
 def demo():

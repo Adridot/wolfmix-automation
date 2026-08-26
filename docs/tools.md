@@ -71,7 +71,7 @@ Decoded today: 101, 102, 105, 115, 116, 120, 125, 135, 140, 145, 150, 160, 165.
 
 Note on 105: the keys are `offset_106` and `nb_entrees_106`, not an address and a
 channel count — see `SPEC.md` §7. The old names were a misreading.
-Passthrough (round-tripped, undecoded): 106, 110, 111, 130, 151, 155, 161 —
+Passthrough (round-tripped, undecoded): 106, 110, 111, 130, 155, 161 —
 several of these have a documented structure in `SPEC.md` without a codec
 schema yet.
 

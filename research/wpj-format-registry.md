@@ -2391,3 +2391,80 @@ switching `GOBO` off on `valse` took `f18[0]` from **11 to 0**, not to 3.
 presets whose names are all movement-flavoured (`Get Moving`, `Runway`, `Aim`,
 `Point to Point`, `D A N C E`). It reacts to the content mask but is not masked
 by it. Still **open**.
+
+## POS-01 — the travel limits measured, and `FAN` decoded by the miss
+
+One read-only capture. `Crowd` recalled on group A, 301 frames, 2048 channels,
+nothing written. The predictions were published beforehand.
+
+### Tilt — six for six, exact
+
+| Lyre @ DMX | tilt channel | `f5`–`f6` | Predicted | **Measured** |
+|---|---|---|---|---|
+| 0 | 1 | 0–142 | 99 | **99** |
+| 16 | 17 | 0–142 | 99 | **99** |
+| 32 | 33 | 0–77 | 54 | **54** |
+| 48 | 49 | 0–77 | 54 | **54** |
+| 64 | 65 | 0–127 | 89 | **89** |
+| 80 | 81 | 0–127 | 89 | **89** |
+
+`min == max` on all six, so these are static values, not the ends of an
+animation. Three distinct results from three distinct limit pairs, each computed
+as `f5 + 0.70 × (f6 − f5)` from a stored `TILT = 70 %`, and every one landed on
+the unit.
+
+**`106.f5`/`f6` are the travel limits.** This is now device-confirmed twice over
+and by two different routes: the retrospective `Floor` → `Ceiling` capture on
+group C, and this forward prediction on group A.
+
+### Pan — the prediction was wrong, and the reason is `FAN`
+
+Predicted 167, 161, 177, 177, 165, 165. Measured **153, 155, 176, 180, 174,
+180**. Not a near miss — and the tell is that the two lyres of each pair, which
+share a limit pair exactly, came out **different**: 176 against 180, 174 against
+180. Whatever set the pan was not applying one value to the group.
+
+`Crowd` stores `FAN = 70 %`, and the prediction ignored it. Expressed as a
+percentage of each lyre's own band, the six measured pans are:
+
+```
+29.4   38.6   47.2   54.7   62.2   70.3        measured
+30     38     46     54     62     70          30 + 8k, k = 0…5
+```
+
+A monotone ramp from **30 % to 70 %**, in DMX address order, across the six
+fixtures of the group. So `FAN` spreads pan symmetrically about 50 %, from
+`100 − FAN` to `FAN`, distributed evenly over the group's fixtures:
+
+```
+pan_k = (100 − FAN) + k × (2·FAN − 100) / (n − 1)      k = 0 … n−1
+DMX_k = f5 + pan_k/100 × (f6 − f5)
+```
+
+Every one of the six lands within 1 DMX step of that, which is what 8-bit
+rounding over bands of 53 to 74 steps costs. Status **[correlated]** — one FAN
+value, one group, one geometry.
+
+**And the miss is what produced it.** A pan prediction that had been *right*
+would have said nothing about `FAN`; it was the pairs splitting apart that
+forced the field into view. Recorded because the temptation is to publish only
+the tilt table.
+
+### The discriminator, published before measuring — **[planned]**
+
+`Ceiling` stores `FAN = 50 %`. Under the rule above, `2·FAN − 100 = 0`: the ramp
+collapses and **every fixture sits at 50 %** of its own band. The pairs that
+split on `Crowd` must come back together.
+
+| Lyre @ DMX | pan | tilt (`TILT = 100 %`) |
+|---|---|---|
+| 0 | **167** | **142** |
+| 16 | **161** | **142** |
+| 32 | **177** | **77** |
+| 48 | **177** | **77** |
+| 64 | **165** | **127** |
+| 80 | **165** | **127** |
+
+Tilt at 100 % has no rounding in it at all and must read exactly `f6`. Pan is
+±1. The two predictions fail in different ways: if the limits are wrong the tilt
+column breaks, and if the `FAN` rule is wrong the pan pairs stay split.

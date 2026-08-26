@@ -37,12 +37,16 @@ This repository is the result of taking that format apart — by reading files w
 own, changing one parameter at a time in the vendor's own editor, and watching
 what our own controller does on its USB link and on its DMX output.
 
-It gives you two things:
+It gives you two things.
 
-|  | |
-|---|---|
-| 📄 **A specification** | [`SPEC.md`](SPEC.md) — the `.wpj` format byte by byte. 3 container variants, 20 record types, the patch model, presets, FX, the static palettes. **Every claim carries its evidence status and the experiment that produced it.** |
-| 🛠 **Tools that use it** | A container writer with a proven byte-identical round-trip, a codec that verifies its own fidelity, a show compiler, and a client for the controller's USB protocol. |
+**📄 A specification** — [`SPEC.md`](SPEC.md) describes the `.wpj` format byte by
+byte: 3 container variants, 20 record types, the patch model, presets, FX, the
+static palettes. Every claim carries its evidence status and the experiment
+that produced it.
+
+**🛠 Tools that use it** — a container writer with a proven byte-identical
+round-trip, a codec that verifies its own fidelity, a show compiler, and a
+client for the controller's USB protocol.
 
 > [!NOTE]
 > **What this is not.** Not an official tool, not affiliated with Wolfmix or
@@ -52,7 +56,7 @@ It gives you two things:
 
 ## Requirements
 
-| | |
+| What | Detail |
 |---|---|
 | **Python** | 3.x, standard library only — no `pip install`, no virtualenv. Developed on 3.14. |
 | **OS** | macOS or Linux. Only the device client is OS-sensitive (POSIX serial). |
@@ -363,7 +367,7 @@ are still French.
 
 ## Roadmap
 
-| | Item |
+| State | Item |
 |---|---|
 | ✅ | Variant-A writer with a byte-identical round-trip, device-confirmed |
 | ✅ | Record inventory, patch model, preset/FX sub-message |

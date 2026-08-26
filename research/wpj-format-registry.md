@@ -2111,3 +2111,58 @@ replicated on every slot, and the registry already flagged that shape as
 suspected volatile state. The `groupe`, `profil` and `adresse_dmx` fields are
 untouched, and `groupe_fixture` still holds — 5 identities on **29** files.
 **[observed]**
+
+## Preset `f16` — twelve 9-bit group masks, and the answer to ACC-02/ACC-03
+
+**[correlated, 30/30 files, 2446 presets]**
+
+`f16` is a packed-varint field whose values are all `< 256`: they are the
+**bytes of one little-endian bit field**, the same construction as `f31`. Cut
+that bit field into slices of **9 bits** and every slice is a group mask.
+
+Nine, not eight — because record 125 has nine slots, the groups A–H plus the
+one that holds the fixtures with no group pads. The ninth bit is **never set**
+in any slice of any preset.
+
+### The alignment tests itself
+
+At a 9-bit stride, slice 1 equals `move_fx_actif` **exactly, 2446/2446**:
+`0 ↔ 0`, `255 ↔ 255`, `1 ↔ 1`. At an 8-bit stride the same field reads `254`
+where `move_fx_actif` says `255` — a mask meaning "every group except A" sitting
+on a preset that drives every group. One stride is coherent and the other is
+not.
+
+Stronger still: across 2446 presets × 12 slices = **29352 extractions**, not one
+slice falls outside `{0, 1, 2, 5, 7, 255}`. A wrong alignment would smear
+arbitrary values everywhere.
+
+```
+slice 0   0 or 255      == color_fx_actif       (2445/2446, see below)
+slice 1   0, 1 or 255   == move_fx_actif        (2446/2446)
+slice 2   0 or 255      a third engine, independent of both
+slice 5   255 always
+slice 7   255 on 60 presets, 0 elsewhere
+slice 11  5 (A+C), 2 (B) or 7 (A+B+C) — constant per project, never per preset
+slices 3, 4, 6, 8, 9, 10   always 0 in this corpus
+```
+
+`moteurs_f16` in `tools/wpj_identities.py` checks the ninth bit and the
+`move_fx_actif` equality on every preset of every file — 6 identities, 30 files.
+
+### The one exception is `acc03b`, and it closes an open question
+
+Exactly one preset in the corpus has slice 0 = `0` while `color_fx_actif` = 255:
+preset 78 of **`acc03b.wpj`**. That is our own write, from the experiment whose
+result was recorded on 2026-08-25 as *"accepté, pas de bug UI, mais Color FX et
+dimmers toujours ignorés"*.
+
+**That is why it was ignored.** ACC-03b set `color_fx_actif` and left `f16`
+alone, so the two carriers of the colour engine's group mask disagreed and the
+firmware followed `f16`. The suspicion recorded at the time — *"nouveau suspect :
+1er varint de f16 = masque de groupes du moteur couleur"* — was right, and the
+9-bit reading now says why it is a mask and what its slots are.
+
+**Consequence for a writer**: `color_fx_actif` and `move_fx_actif` are
+**duplicates** of slices 0 and 1. Writing one without the other produces a
+preset the device renders differently from what the file appears to say. This is
+the second redundant pair found in this format, after `115.f4` / `105.f6`.

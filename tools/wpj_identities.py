@@ -16,6 +16,18 @@ GOBO_FN = 14          # 111.f3 = fonction « gobo » (registre, type 145)
 _ITEMS = {5: ("items", {})}
 
 
+def _varints(hexa):
+    """Octets d'un champ « packed varint » : la liste des valeurs décodées."""
+    out, v, sh = [], 0, 0
+    for c in bytes.fromhex(hexa):
+        v |= (c & 0x7f) << sh
+        if c & 0x80:
+            sh += 7
+        else:
+            out.append(v); v, sh = 0, 0
+    return out
+
+
 def _items(w, typ):
     return wpj_codec._decode_msg(w.get(typ), _ITEMS)["items"]
 
@@ -101,8 +113,35 @@ def groupe_fixture(w):
             f"125[{i}] : masque {masque:#x} != profils du groupe {attendu:#x}"
 
 
+def moteurs_f16(w):
+    """165.f16 = douze masques de groupes de 9 bits, un par « moteur ».
+
+    Les varints packés sont les octets d'un champ de bits little-endian
+    découpé en tranches de **9** bits — 9 et non 8, parce que le record 125
+    a neuf slots : les groupes A–H plus celui des effets. L'alignement se
+    teste tout seul : à 9 bits le moteur 1 vaut exactement `move_fx_actif`
+    sur tout le corpus, à 8 bits il vaudrait 254 là où `move_fx_actif` vaut
+    255. Voir le registre, « f16 ».
+    """
+    for pre in _items(w, 165):
+        h = pre.get("f16")
+        if not h:
+            continue
+        oct_ = _varints(h["hex"])
+        assert all(o < 256 for o in oct_), \
+            f"165.f16 : varint hors d'un octet dans {h['hex']}"
+        gros = int.from_bytes(bytes(oct_), "little")
+        for m in range(12):
+            assert not (gros >> (9 * m)) & 0x100, \
+                f"165.f16 : moteur {m} allume le 9e slot dans {h['hex']}"
+        actif = _varints(pre.get("f24", {}).get("hex", ""))
+        assert (gros >> 9) & 0x1FF == (actif[0] if actif else 0), \
+            f"165.f16 : moteur 1 = {(gros >> 9) & 0x1FF} != move_fx_actif " \
+            f"{actif} dans {h['hex']}"
+
+
 IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
-              groupe_fixture)
+              groupe_fixture, moteurs_f16)
 
 
 def demo():

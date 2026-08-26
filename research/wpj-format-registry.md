@@ -4429,3 +4429,26 @@ panel sat on mode 5, which silences recalls. The corrected in-band probes
 above supersede it. The sparse file's loadability (its two id gaps,
 84→99→114) remains **untested** — no reload ever happened — and the next
 manual open measures exactly that.
+
+### PRESET-07 measured, and `f2` re-read: it is the entry POSITION — **[device-confirmed]**
+
+The manual open of the sparse file succeeded: page 5 shows its 5 pads plus
+"preset test auto" bottom right, page 6 shows "Test" mid-page, no fillers.
+**Id gaps load fine** — PRESET-03's failure is now fully attributed to the
+23-byte name, and the loader tolerates the device's own 84→99→114 layout.
+
+With the sparse project live, the position/id ambiguity — invisible in
+every dense state, where the two coincide — finally split: recalls of 85
+and 92, which exist as no id in the live project, still paint, and 85/86/
+92/99 all render pairwise-identical frames (the operator's "Test" was
+captured from the donor-family look, hence the equality). Id addressing is
+**refuted**; **`SET_PRESET.f2` = varint(entry position, 0-based, clamped
+to the last entry when out of range)**. The mode-5 recall gate was
+demonstrated a third time in the same run (all-silent grid until SET_MODE
+kicked the panel off the matrix screen).
+
+The generator's recipe, all device-confirmed today: write entries sparse
+with the id formula (id = (page−1)·20 + (slot−1), gaps allowed), names
+≤ 19 bytes, `f1` = count; deploy; ONE manual open; then
+`SET_MODE` (un-gate) + `SET_PRESET.f2 = position` recalls anything,
+hands-off.

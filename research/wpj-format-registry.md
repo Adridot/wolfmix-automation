@@ -3208,3 +3208,30 @@ per save.
   Unlocated in the file.
 
 Source: <https://storage.googleapis.com/nicolaudie-us-litterature/Release/wolfmix_w1_reference_manual_en.pdf>
+
+## GOBO-01 — prediction, published before the download
+
+The operator set all five `STATIC GOBO` features on **group A** — the only group
+whose fixtures have gobos — to five distinct values:
+
+```
+Rotate 15    Prism 77    Focus 58    Zoom 96    Iris 55
+```
+
+Five different fields, five distinct values, one save. No two expected values
+collide, and none of them appears in any of the five arrays today.
+
+**Predicted**: exactly five per-group arrays change, and they are `f3`, `f7`,
+`f14`, `f23`, `f27`. Each becomes `[v, 0, 0, 0, 0, 0, 0, 0]` with `v` one of
+`{15, 55, 58, 77, 96}`, each used once. The assignment then names all five
+features in a single differential.
+
+**Named prediction**: `f14` = **Rotate** = 15, from `70's Paradise` carrying
+`f14 = [6]×8` against the manual's `ROTATE 6 %` screenshot. If `f14` comes back
+55, 58, 77 or 96 that inference is refuted and the array is whichever feature
+the value names.
+
+**The branch that would refute the whole hypothesis**: the static gobo features
+may be *live* state that only reaches the file when a preset captures them. If
+no preset's arrays move, the five values live elsewhere — record 145, or a
+global — and the cardinality match was a coincidence.

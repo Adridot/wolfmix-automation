@@ -1791,3 +1791,87 @@ Still open, and cheap to settle with one photograph: whether the device's
 group A screen displays the name `Beam`. That would take the slot → letter
 mapping from *measured membership* to *named on the device*, and would confirm
 slots 3–7 as D–H without patching anything.
+
+## Preset `f4`, the content mask — what the corpus can and cannot say
+
+### `f4` is constant per preset page — **[correlated, 27/27 files]**
+
+2158 factory presets, 27 files, four values and not one exception:
+
+| Page | `f4` | Binary | The operator's name for the page |
+|---|---|---|---|
+| 1 | 255 | `11111111` | full |
+| 2 | 8 | `00001000` | colour |
+| 3 | 5 | `00000101` | move |
+| 4 | 17 | `00010001` | beam |
+| 5 | 255 | `11111111` | the three user presets, all full |
+
+That is the whole vocabulary the corpus contains. Every factory page carries one
+value on all twenty of its slots, so **the corpus cannot separate the six
+toggles** — no factory preset ever differs from its page.
+
+### The one out-of-vocabulary value is ours, not the firmware's
+
+`acc03a.wpj` carries `f4 = 25` on preset 78. It is **not** evidence: ACC-03
+wrote it with our own tools, deliberately, as `17 | 8`, and the W1 rejected it —
+the preset's tile vanished when clicked, and no Color FX played
+(`research/experiments.md`, ACC-03). The follow-up `acc03b.wpj` with `f4 = 255`
+produced no UI bug.
+
+**That is a real signal about the shape of the field.** A plain bitmask should
+have accepted `25` as "beam plus colour" and shown something. The display bug
+argues for `f4` being read against a **closed vocabulary** — an enumeration of
+preset kinds, or a mask whose legal combinations are constrained — rather than
+eight free bits. Status: **[observed]**, one data point, and it is our own
+write. It does not settle the question either way; it says the question is not
+the trivial one.
+
+### The bits, if it is a mask
+
+`8` shares no bit with `5` or `17`; `5` and `17` share **bit 0**. So a mask
+reading needs a toggle that both the move page and the beam page carry and the
+colour page does not — and the colour page would then be a single toggle, which
+would have to be `COLOR`. `GOBO`, `LIVE EDIT` and `OTHER` are the candidates for
+bit 0. Bits 1, 5, 6 and 7 are never seen except inside 255.
+
+### The read-only measurement that settles it — **[planned]**
+
+No write, no save. Open `PRESET EDIT` (SHIFT + the pad) on one preset of each
+page and read which of the six toggles are lit.
+
+| Preset to open | `f4` | Predicted |
+|---|---|---|
+| any page 2 slot | 8 | exactly **one** toggle lit, and it is `COLOR` |
+| any page 3 slot | 5 | exactly **two**, one of them `MOVE` |
+| any page 4 slot | 17 | exactly **two**, one of them `BEAM`, and its second toggle is the **same** one as the page-3 preset's |
+| any page 1 slot | 255 | all six lit |
+
+If instead each page shows a single lit toggle — `COLOR`, `MOVE`, `BEAM` — then
+`f4` is an enumeration and the mask reading is refuted, which is exactly what
+the ACC-03 display bug hints at.
+
+## Preset `f11` = FADE and `f15` = HOLD — the numbers to check on the screen
+
+### `f11`, the fade — **[correlated]**, and predicted to the centisecond
+
+`f11` is absent on all of pages 1 and 4, and carries `500` on most of pages 2
+and 3. Exactly two presets in the whole corpus carry anything else, the same two
+in all 27 files:
+
+| Preset | Page, slot | `f11` | Predicted `FADE` on screen |
+|---|---|---|---|
+| `Split The Atom` | 3, 6 (id 45) | 4000 | `00:04.00` |
+| `Wander The Forest` | 3, 7 (id 46) | 2000 | `00:02.00` |
+| `Rise up` (id 44), its neighbour | 3, 5 | 500 | `00:00.50` |
+| any page 4 preset | — | absent | `00:00.00` |
+
+The names fit a long fade, and the newly created preset 82 came out with no
+`f11` while its screen read `FADE 00:00.00` — absent = 0 = no fade, which is the
+`ACC-01` reading of absence throughout this format.
+
+### `f15` = HOLD — **[hypothesized]**, one anchor and no variation
+
+Preset 82's screen read `HOLD 00:01.00` and its `f15` is `1000`. But `f15` is
+`1000` on **2197/2197 presets in 27 files** — nobody has ever changed a hold
+time, so the corpus contributes nothing beyond that single anchor. Falsifiable
+in one glance: every `PRESET EDIT` screen should read `HOLD 00:01.00`.

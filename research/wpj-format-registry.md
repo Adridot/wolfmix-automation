@@ -2301,14 +2301,36 @@ reaches 201. They stay unnamed.
 
 ### The read-only test that would settle it — **[planned]**
 
-No write. Drive group A's pan to its maximum on the device, capture
-`dmx-envelope`, and read the pan channel of the six lyres. Predicted maxima, in
-DMX address order: **201, 190, 204, 204, 202, 202**. At the minimum: **133, 133,
-151, 151, 128, 128**. Tilt maxima: **142, 142, 77, 77, 127, 127**.
+Nothing is written and nothing is edited. Recalling a **position from the
+palette** is enough; the Fixture Limit screen must be left alone, since touching
+it would change the very field under test.
 
-Three distinct values across six fixtures, no two adjacent lyres differing by
-less than 9 — the prediction cannot be satisfied by accident, and it is exactly
-the measurement that has been impossible to interpret until now.
+Group A's pan is its fixture's own DMX address, tilt is address + 1 — roles 1
+and 2 sit on channel offsets 0 and 1 of the `ZQ02244`.
+
+**Recall `Ceiling` (group A, position slot 5), which stores TILT = 100 %.** At
+100 % the formula has no rounding left in it: the tilt channel must read exactly
+`f6`.
+
+| Lyre @ DMX | tilt channel | Predicted |
+|---|---|---|
+| 0 | 1 | **142** |
+| 16 | 17 | **142** |
+| 32 | 33 | **77** |
+| 48 | 49 | **77** |
+| 64 | 65 | **127** |
+| 80 | 81 | **127** |
+
+Three distinct values across six fixtures, no rounding, and a wide margin — with
+no limits at all the six would read 255. Its pan is 50 %, predicting **167, 161,
+177, 177, 165, 165**, with ±1 allowed for rounding.
+
+**Then recall `Orchestre` (slot 1)**, PAN 13 % / TILT 23 %, which exercises the
+low end of every band: tilt **33, 33, 18, 18, 29, 29** and pan **142, 140, 158,
+158, 138, 138**, ±1.
+
+Both recalls together cover each of the three limit pairs at two points, and a
+reading that ignored the limits would land on 255 and 33 instead.
 
 ## Record 115 `f6` — the fixture display order — **[correlated, 30/30]**
 

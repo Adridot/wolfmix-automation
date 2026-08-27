@@ -1261,6 +1261,11 @@ road, and the base is still 0-based-vs-1-based undecided.
 
 ### Discriminator without a save — press a pad and measure — **[planned]**
 
+> **Fired 2026-08-26** — the result is the very next section, `Measured` (line
+> 1282, F29-01): both points exact, `f29` is the **0-based** static gobo index,
+> `device-confirmed`. The `[planned]` marker above is kept for the record; the
+> protocol below is what was actually run.
+
 The original discriminator needed group B to own a gobo palette, which it
 cannot: the palette is derived from the patch and only group A has a gobo-wheel
 fixture. But `f29` can be read **live**, through the DMX oracle that already
@@ -1854,6 +1859,13 @@ bit 0. Bits 1, 5, 6 and 7 are never seen except inside 255.
 
 ### The read-only measurement that settles it — **[planned]**
 
+> **Fired 2026-08-26** — and it did not settle what it set out to settle. F4-01
+> (line 1897) refuted the enumeration and read `f4` as a bitmask; F4-02 (line
+> 1987) then showed the **content mask is `f10`, not `f4`**, and F4-01's bit
+> assignments were retracted with it (line 2036). `f4` came back at F4-03 (line
+> 2924) as a **permission mask over the engines**. The screens this protocol
+> asked for were read; the field they were read against was the wrong one.
+
 No write, no save. Open `PRESET EDIT` (SHIFT + the pad) on one preset of each
 page and read which of the six toggles are lit.
 
@@ -2304,6 +2316,13 @@ reaches 201. They stay unnamed.
 
 ### The read-only test that would settle it — **[planned]**
 
+> **Fired 2026-08-26, and confirmed twice since** — POS-01 (line 2398) measured
+> `106.f5`/`f6` as the per-fixture travel limits on tilt, six for six. The same
+> two fields were measured again on a different **role** on 2026-08-27: GEN-02
+> found the group dimmer running through the identical formula,
+> `DMX = f5 + (f17/255)·(f6 − f5)`, exact on seven points. A pair of bounds
+> that holds on two unrelated roles is no longer a reading about tilt.
+
 Nothing is written and nothing is edited. Recalling a **position from the
 palette** is enough; the Fixture Limit screen must be left alone, since touching
 it would change the very field under test.
@@ -2598,6 +2617,12 @@ neither is which fixture each item belongs to.
 
 ### The discriminator, published before measuring — **[planned]**
 
+> **Withdrawn before it was ever measured, 2026-08-26** — its own retraction is
+> at line 2646. The table below assumes record 151 holds **absolute positions**;
+> POS-04 (line 2615) decoded 151 as **offsets**, and the value in question is
+> negative, so the predicted DMX is wrong on both branches. Kept as written,
+> because a prediction built on the wrong model is the cheapest kind of lesson.
+
 `Ceiling` recalled on group A. Five of the six lyres must hold the group
 position — tilt **142, 142, 77, 77, 127, 127** — and exactly **one** must differ from
 it. That one is the detached fixture, and its tilt names the field:
@@ -2766,7 +2791,7 @@ same file. It is the "global stored per slot" shape already noted on `115.f6`/
 `f7`, and this save re-stamped it. **[observed]**, and it carries no per-fixture
 information.
 
-### The next prediction, published before measuring — **[planned]**
+> **Closed 2026-08-27** — settled by POS-07, line 2793 (`Crowd` recalled after the second detach: the only two channels that changed in 2048 were the tilt pair 33 and 35, tilt **77**, so the offset is clamped at 100 %; the pan channels did not move at all and channel 32 still read **176**, so detaching does not remove a fixture from the fan — both predictions exact). This protocol was fired as written.
 
 `Crowd`'s new entry is fixture **2**, the lyre at DMX 32, with `PAN OFFSET 0 %`
 and `TILT OFFSET +91 %`. Recall `Crowd` and only channels 32, 33, 34, 35 should
@@ -6073,10 +6098,13 @@ rappeler chacune et comparer les enveloppes DMX agrégées. Ce qui s'éteint **e
 plus** des dimmers, c'est le contenu qu'`OTHER` a gagné en 2.0.15. Si rien
 d'autre ne bouge, `OTHER` = `DIMMER` et le renommage est cosmétique.
 
-> **Repris le 2026-08-27 par FW-03**, avec une correction : la paire devient
+> **Tiré le 2026-08-27 par FW-03**, avec une correction : la paire est devenue
 > `f10 = 30` / `f10 = 62` et non `0` / `32`. `f10 = 0` laisse `LIVE EDIT`
 > allumé, et GEN-03 a montré ce que ça coûte — la copie vive peut diverger du
-> fichier en silence. Les deux cues portent maintenant le verrou de mesure.
+> fichier en silence. Résultat : **exactement 18 canaux**, tous des dimmers ou
+> leur report sur la couleur. Rien d'autre de ce qu'une cue statique porte
+> n'est gaté par le bit 5, et le renommage de 2.0.15 est cosmétique **sur ce
+> périmètre**.
 
 ## FW-02 — `f32`–`f35` sont datés : firmware 2.0.5, et ça date le schéma 10 — 2026-08-27 — **[observed]**
 
@@ -6498,3 +6526,117 @@ Portée honnête : un pad, un groupe, une composante (`rouge`), sur un profil qu
 a des canaux de couleur. Les composantes `ambre`, `lime`, `blanc` et `uv` du
 même sous-message n'ont pas été variées, et rien n'est mesuré sur un profil qui
 n'a pas de canal de couleur.
+
+## FX2-01 — « Double Trouble » : les deux pages d'un effet, et le masque qui manque — 2026-08-27
+
+Question posée par l'opérateur : le firmware 2.0 double les moteurs d'effet —
+deux Color FX, deux Move FX, deux Beam FX — et le manuel dit qu'ils peuvent
+tourner **en même temps sur des groupes différents**. Est-ce que le registre en
+tient compte ?
+
+**Réponse courte : la structure oui, l'affectation aux groupes non.** Et le
+« non » est précisément le piège de l'uniformité, pour la quatrième fois.
+
+### Ce qui est établi
+
+Le record 165 porte **deux sous-messages par type d'effet**, décodés et
+round-trippés depuis le premier jour :
+
+| Type | slot 1 | slot 2 |
+|---|---|---|
+| Beam | `f1` → `beam_fx1` | `f2` → `beam_fx2` |
+| Color | `f5` → `color_fx1` | `f6` → `color_fx2` |
+| Move | `f21` → `move_fx1` | `f22` → `move_fx2` |
+
+Et le second slot n'est pas un doublon décoratif : sur 3697 presets du corpus,
+il porte des valeurs **différentes** du premier sur 742 presets en couleur,
+1439 en mouvement et 1240 en faisceau.
+
+Corrélation mesurée, sans matériel : **quand la tranche `f16` d'un type est non
+nulle, le slot 2 diffère toujours du slot 1** — 738/738 en couleur, 1439/1439
+en mouvement, 1186/1186 en faisceau, zéro exception. L'inverse est faux : 54
+presets en faisceau et 4 en couleur portent deux slots différents avec la
+tranche à zéro. **[correlated 45/45]** — un moteur allumé stocke bien deux
+configurations, et un moteur éteint peut en garder deux vestigiales.
+
+### Ce qui n'est PAS établi, et pourquoi le corpus ne peut pas le dire
+
+`f16` porte douze tranches de 9 bits. Les tranches 0, 1 et 2 sont épinglées :
+Color, Move, Beam — **le moteur numéro un de chaque type**. Rien n'épingle le
+masque de groupes du **deuxième** moteur.
+
+Distribution complète sur les 3697 presets, mesurée :
+
+```
+tranche  0 : 0×2959  255×738          Color FX      (= color_fx_actif)
+tranche  1 : 0×2258  255×1420  1×19   Move FX       (= move_fx_actif)
+tranche  2 : 0×2511  255×1186         Beam FX
+tranche  3 : 0×3697                   ← ZÉRO PARTOUT
+tranche  4 : 0×3697                   ← ZÉRO PARTOUT
+tranche  5 : 255×3697                 groupes adressés (GEN-03)
+tranches 6–10 : les cinq touches flash
+tranche 11 : 5×1950  2×1665  7×82     non attribuée
+```
+
+**Les tranches 3 et 4 sont nulles sur les 3697 presets du corpus.** C'est
+exactement la forme du piège : une uniformité qui dit quelque chose du corpus
+et rien du champ. Personne, dans aucun des quatre rigs, n'a jamais allumé un
+deuxième moteur sur un groupe. Les tranches 3 et 4 sont les candidates
+évidentes pour Color FX 2 et Move FX 2, et **le corpus est structurellement
+incapable de le confirmer ou de l'infirmer**.
+
+Conséquence à écrire noir sur blanc : `SPEC.md` §5.4 listait les tranches 0, 1,
+2, 5, 6–11 et **sautait 3 et 4 en silence**. Un lecteur ne pouvait pas savoir
+qu'elles existaient, encore moins qu'elles étaient vides.
+
+### La tension que ça crée sur la tranche 5
+
+Si la disposition est `[Color1, Move1, Beam1, Color2, Move2, Beam2]`, alors la
+tranche 5 est **Beam FX 2** — et non « les groupes que le preset adresse ». Les
+deux lectures prédisent la même chose sur tout le corpus, où `f17` vaut
+`[255]×8` partout et où la tranche 5 vaut 255 partout. **Elles ne sont pas
+séparées par les données.**
+
+Le seul discriminant existant est l'écriture du graveur de l'appareil en
+GEN-03, sur **un** fichier : il a corrigé 255 → 2 (= B) et 255 → 7 (= A+B+C) sur
+des cues dont le moteur faisceau était à l'arrêt. Un masque de Beam FX 2 n'a
+aucune raison de valoir « les groupes que la cue allume » quand ce moteur est
+éteint, donc la lecture « groupes adressés » reste la meilleure — mais elle
+tient sur **une** sauvegarde, et il faut le dire. L'identité
+`tranche5_f16` de `wpj_identities.py` est trivialement vraie sur le corpus et
+n'est discriminante que sur ce fichier-là.
+
+### Deux hypothèses tuées sur la tranche 11, sans matériel
+
+Ses valeurs — 5, 2, 7 — ont la forme d'un masque de groupes. Deux lectures
+testées et **réfutées** en une commande chacune :
+
+- « les groupes qui portent un luminaire » : **1 fichier sur 45** seulement.
+  rig-c porte A, B et C — masque 7 — et ses presets portent 5 ou 2 ;
+- « le numéro de schéma » : le schéma 11 porte **et** 2 (20 fichiers) **et** 5
+  (13 fichiers).
+
+Elle varie entre presets dans **un** fichier sur 42, ce qui affaiblit aussi le
+« constante par projet » de §5.4 sans le réfuter. Reste non attribuée.
+
+### Discriminateur, pas cher — **[planned]**
+
+Un seul preset, une seule sauvegarde, aucun déploiement, aucun risque : au
+panneau, sur le projet d'expérimentation, composer une cue où **Color FX
+page 1 tourne sur le groupe A et Color FX page 2 sur le groupe B**, sauvegarder,
+télécharger, differ contre l'avant.
+
+| Lecture | tranche 0 | tranche 3 | p |
+|---|---|---|---|
+| `[C1, M1, B1, C2, M2, B2]` — les tranches 3/4/5 sont les seconds moteurs | **1** (= A) | **2** (= B) | 0,55 |
+| le masque de la page 2 vit ailleurs (un champ non décodé, ou `f16` a plus de douze tranches) | 1 ou 3 | **0** | 0,2 |
+| les deux pages ne sont pas per-groupe : SHIFT bascule la page pour **tout** le preset, et le slot 2 n'est qu'une configuration en réserve | **3** (= A+B) | 0 | 0,2 |
+| autre chose | — | — | 0,05 |
+
+La troisième rivale compte autant que les deux autres : « tourner en même temps
+sur des groupes différents » vient du **manuel et de la presse**, pas d'une
+mesure. C'est une source externe, du rang de `observed`, et elle n'a jamais été
+vérifiée sur cet appareil.
+
+Si la tranche 3 s'allume, la tranche 5 redevient douteuse et il faut rejouer
+GEN-03 : deux lectures se disputeraient à nouveau le même masque.

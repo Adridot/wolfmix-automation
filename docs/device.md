@@ -34,6 +34,32 @@ Events used: `GET_PROFILE_LIST` 2, `GET_PROFILE` 3, `GET_PROJECT_LIST` 4,
 `RETURN_STATUS` 19, `RETURN_PROGRESS` 20, `GET_SETTINGS` 21, `SET_MODE` 39,
 `SET_PRESET` 41, `SKIP_PRESET` 43, `RESTART` 44.
 
+**`SET_PRESET` and `SET_MODE` do not carry protobuf.** Firmware 2.0.18 reads
+`payload[0]` as the index: one raw byte, nothing else. A protobuf-shaped
+`[tag, value]` pair makes the controller read the *tag* — `f1=<anything>`
+recalls id 8, `f2=<anything>` id 16. For `preset`, the byte is the preset
+**id** (`id = (page-1)*20 + (slot-1)`); a missing id resolves to the greatest
+existing id below it, and anything past the last entry recalls that last
+entry. For `mode`, the index is usually the mode reached, but not always —
+index 40 lands on 42 — and a raw index can open a screen the panel menu does
+not expose, some of which act on entry (mode 42 tries to read a USB medium).
+See `research/wpj-format-registry.md`, sections RAW-01 and RECALL-03.
+
+A recall changes what the controller is playing, live. It writes nothing:
+`projectChanged` stays false.
+
+**`mode` can trap the panel.** The reported `wolfmixMode` is not the screen on
+display: the controller answers the index you sent, and lights the matching
+LED, while the front panel stays where it was. Modal screens — 26 (Projects)
+and 42 (USB stick) — are entered remotely but not left: neither `mode 0` nor
+`mode 5` dismisses them, and **the panel's own HOME key does not either**.
+What breaks out, measured: `1` (COLOR FX), `3` (MOVE FX), `8` (GOBO), `33`
+(BLACKOUT) — the screens that act on the light. What does not: `0` (HOME),
+`5` (PRESETS), `16` (the main menu). Do not send a modal index to a controller
+in service; if one is stuck, send `mode 1`.
+
+The first request after the port has been idle can time out; issue it again.
+
 `GET_SETTINGS` returns 20 known fields, decoded by name: engine and USB-DMX
 state, lock flags, profile and project counts, free memory, serial number,
 universe count and mapping, firmware version (numeric and string),
@@ -55,6 +81,8 @@ python3 tools/wolfmix.py [--port PATH] [--timeout SECONDS] <command>
 | `dmx [--seconds N]` | stream DMX output; first frame per universe is the full set of non-zero channels, then only changes |
 | `dmx-envelope out.json [--seconds N]` | per-channel min/max over a window |
 | `watch-mode [--interval S] [--seconds N]` | print every change of `wolfmixMode` |
+| `preset ID` | recall a preset by its id, hands-off |
+| `mode INDEX` | switch the controller UI to a mode index |
 | `self-test` | protocol checks, no hardware needed |
 
 `dmx` enables USB DMX only if it was off, and disables it again on exit.

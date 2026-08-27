@@ -694,6 +694,19 @@ def fetch_project(connection, project_uuid, attempts=3):
     )
 
 
+def index_payload(value):
+    """Payload for the short events: firmware 2.0.18 reads ``payload[0]``.
+
+    These events are NOT protobuf. Sending a protobuf-shaped ``[tag, value]``
+    pair makes the controller read the *tag* byte as the index — the trap that
+    produced a day of "the value is ignored" readings. See RAW-01 and RECALL-03
+    in ``research/wpj-format-registry.md``.
+    """
+    if not 0 <= value <= 255:
+        raise WolfmixError("Index must be between 0 and 255")
+    return bytes([value])
+
+
 def require_success(payload, operation):
     status = decode_status(payload)
     if not status["success"]:
@@ -809,6 +822,17 @@ def self_test():
         raise AssertionError("The outgoing event allowlist was bypassed")
     except ProtocolError:
         pass
+    # RAW-01: one raw byte, no protobuf tag. 23 must go on the wire as 0x17.
+    assert index_payload(23) == b"\x17" and index_payload(114) == b"\x72"
+    assert build_frame(1, SET_PRESET, index_payload(23)) == (
+        struct.pack(">BIHH", VERSION, HEADER_SIZE + 1, 1, SET_PRESET) + b"\x17"
+    )
+    for out_of_range in (-1, 256):
+        try:
+            index_payload(out_of_range)
+            raise AssertionError("index_payload accepted an out-of-range index")
+        except WolfmixError:
+            pass
 
     class FakeConnection:
         """Replays a scripted list of project payloads, one per request."""
@@ -870,6 +894,19 @@ def build_parser():
     dmx = commands.add_parser("dmx", help="stream changed DMX channel values")
     dmx.add_argument("--seconds", type=float, default=0,
                      help="stop after this duration; 0 runs until Ctrl-C")
+    preset = commands.add_parser(
+        "preset", help="recall a preset by its id (id = (page-1)*20 + slot-1)"
+    )
+    preset.add_argument("id", type=int,
+                        help="preset id; a missing id resolves to the greatest "
+                             "existing id below it, out of range to the last entry")
+    mode = commands.add_parser(
+        "mode", help="switch the controller UI to a mode index"
+    )
+    mode.add_argument("index", type=int,
+                      help="mode index (research/mode-map.md); raw indexes reach "
+                           "screens the panel menu does not expose, and some act "
+                           "on entry — see MODE-40/42")
     commands.add_parser("self-test", help="run protocol checks without hardware")
     return parser
 
@@ -925,6 +962,21 @@ def main(argv=None):
                     f"Output already exists and was not overwritten: {args.output}"
                 ) from error
             print_json({k: v for k, v in result.items() if k not in ("min", "max")})
+        elif args.command == "preset":
+            require_success(
+                connection.request(SET_PRESET, index_payload(args.id)),
+                f"Recalling preset {args.id}",
+            )
+            print_json({"preset": args.id})
+        elif args.command == "mode":
+            require_success(
+                connection.request(SET_MODE, index_payload(args.index)),
+                f"Switching to mode {args.index}",
+            )
+            settings = decode_settings(connection.request(GET_SETTINGS))
+            # The index is not always the mode reached: 40 lands on 42.
+            print_json({"requested": args.index,
+                        "wolfmixMode": settings["wolfmixMode"]})
         elif args.command == "watch-mode":
             watch_mode(connection, args.interval, args.seconds)
     return 0

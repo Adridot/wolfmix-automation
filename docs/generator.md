@@ -75,25 +75,46 @@ to the most active one it does carry.
 
 ## Where the colour comes from
 
-Nothing writes a palette. Each group has its own 20-pad palette (record 140),
-and the generator picks the pad **nearest** to the requested RGB, then sets that
-group's bit in `165.f31` and its `165.f30` pattern to `SINGLE`. So the colour
-you get is the closest one the rig was already set up with — check the pad
-column the compose report prints.
+The generator writes no palette. Each group has its own 20-pad palette
+(record 140), and the generator picks the pad **nearest** to the requested RGB,
+then sets that group's bit in `165.f31` and its `165.f30` pattern to `SINGLE`.
+So the colour you get is the closest one the rig was already set up with —
+check the pad column the compose report prints.
+
+That is a **choice, not a limit**: writing a palette pad is device-confirmed
+since PAL-01 (2026-08-27) — the value written is the value rendered, to the
+channel. Measured on one component (`red`) of one pad of one group, on a
+profile that has colour channels; the other components (`green`, `blue`,
+`white`, `amber`, `lime`, `uv`) and colourless profiles are untested.
+
+It stays unwired because every distinct colour costs one of the group's twenty
+pads, and those are the pads the operator plays by hand. Burning one is an
+operational decision, not a compiler default. If you want an exact colour, edit
+record 140 deliberately and say which pad you are spending.
 
 ## The trap this exists to avoid
 
-Two masks decide whether a clean compile does anything at all, and only one of
-them is writable:
+Three gates decide whether a clean compile does anything at all, and one of
+them is not in the file:
 
-| Mask | What it does | Handled how |
+| Gate | What it does | Handled how |
 |---|---|---|
-| `165.f10`, content mask — a **set** bit means the toggle is **off** | silences dimmers unless bit 5 `OTHER` is clear | written: `COLOR` and `OTHER` on, `MOVE`/`BEAM` per family, `GOBO` off |
+| `store group dimmers in preset`, a **controller setting** | with it off, every `dimmers` value in the project is silent, whatever the file says (GEN-02, device-confirmed) | **not in the file** — check the Settings menu before blaming the show |
+| `165.f10`, content mask — a **set** bit means the toggle is **off** | bit 1 (`MOVE`) written by us **is** honoured (RECALL-05, validated). Bit 5 (`OTHER`) gates the group dimmers and nothing else a static cue carries — proven by writing the bit and nothing else, 18 channels moved and only those (FW-03, validated) | written: `COLOR` and `OTHER` on, `MOVE`/`BEAM` per family, `GOBO` off, `LIVE EDIT` per the `live_edit` key |
 | `165.f16`, the engine group masks | an FX edit is invisible for an engine that is off | **not written** — the generator clones a donor preset that already has the right engines |
 
 `f16` is duplicated by `color_fx_actif`/`move_fx_actif`, and writing one without
 the other produces a preset the device renders differently from what the file
-says (ACC-03). Cloning sidesteps the whole question; that is why the generator
+says (ACC-03). Cloning sidesteps the engine slices; it does **not** sidestep
+slice 5, the mask of the groups the preset addresses. A clone inherits its
+template's slice 5, and that mask describes the template's cue, not the clone's:
+of our six appended presets the device's own save corrected **five** from the
+inherited 255 to **2** (= B) and **7** (= A+B+C), the sixth being the control
+whose cue really did light all eight groups (GEN-03, validated -- but on that
+**one** save, and the second-Beam-engine reading still contests it: `SPEC.md`
+5.4 and 5.4b). Nothing broke, the clones recalled correctly before the device
+rewrote them, but do not read `f16` as fully handled by cloning. That is why the
+generator
 picks a template instead of assembling a preset from nothing.
 
 ## What it will not compose
@@ -120,8 +141,20 @@ python3 tools/wolfmix.py mode 1
 python3 tools/wolfmix.py preset 80
 ```
 
-`mode 1` first: it is the escape from any modal screen, and the panel's screen
-has been *suspected* of gating recalls — unsettled, since the runs that showed
-it were addressing the wrong id and judged by a withdrawn discriminator. An id
-above the highest one present does nothing; interior gaps are unprobed, and no
-preset above id 127 has ever been measured.
+`mode 1` first: it is the escape from any modal screen (`1`, `3`, `8` and `33`
+release a trapped panel; `0`, `5` and `16` do not — SCREEN-02), and on a modal
+screen the recalls are inert: with the Projects list up, `SET_PRESET` and
+`SKIP_PRESET` did nothing while the protocol kept answering normally
+(RELOAD-04 — watched at the panel, not instrumented).
+
+**A wrong id fails silently.** An absent id does nothing at all — no floor, no
+clamp to the last entry, no wrap, no modulo — and that now covers both cases:
+above the highest id present (RECALL-04) and inside an interior hole
+(RECALL-05: id 90, between 81 and 100, left the frame identical on all 2048
+channels). Interior holes are exactly what a generated bank leaves behind it,
+and nothing reports the miss — the rig simply keeps playing the previous cue.
+An id **above 127** is fine: `SET_PRESET` reads its byte as-is, bit 7 included,
+across the panel's whole range 0–199 (RECALL-06 — bytes 140 and 141 rendered
+their own cues exactly). Pages 1 to 10 are all reachable over USB. Bytes
+200–255 are unprobed: byte 228 came back a strict no-op, but that shot cannot
+separate "no preset at that id" from a bound at 199 (RECALL-06).

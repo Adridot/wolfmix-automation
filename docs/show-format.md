@@ -154,7 +154,7 @@ on what it verified — and one of them is not in the file at all.
 | Gate | What it silences | Where |
 |---|---|---|
 | **`store group dimmers in preset`**, a **controller setting** — not in the file at all | every `dimmers` value in the project, whatever `f10` says. A show can compile, verify and deploy perfectly and still move no level. | GEN-02, device-confirmed |
-| `165.f10`, the content mask — a **set** bit means the toggle is **off** | bit 1 (`MOVE`) written by us **is** honoured (GEN-01). Bit 5 (`OTHER`) was supposed to gate `dimmers`, and with it clear the dimmers still did nothing — so ACC-02's silence is *not* explained by this mask after all. **Writable since this version** via `masque_contenu`. | SPEC.md §5.3 |
+| `165.f10`, the content mask — a **set** bit means the toggle is **off** | bit 1 (`MOVE`) written by us **is** honoured — a preset whose `MOVE` toggle is off leaves pan and tilt where the previous cue put them (RECALL-05, validated). Bit 5 (`OTHER`) gates `dimmers`, and nothing else a static cue carries: GEN-02 first showed the silence blamed on it was a controller setting, then FW-03 wrote the bit alone and measured exactly the eighteen dimmer channels the model predicts — **`validated`**. **Writable since this version** via `masque_contenu`. | RECALL-05, GEN-02, FW-03 |
 | `165.f16`, the engine group masks — slices 0/1/2 = Color/Move/Beam | an FX edit is invisible for a group the engine is not enabled on. ACC-03 set `color_fx_actif` without `f16` and the device followed `f16`. | SPEC.md §5.4, correlated |
 
 `color_fx_actif` and `move_fx_actif` duplicate slices 0 and 1 of `f16`. They are

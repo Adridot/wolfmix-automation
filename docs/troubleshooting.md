@@ -45,8 +45,11 @@ The key is real in the format but not writable yet — its evidence status is
 below `correlated`. The accepted set is in [`show-format.md`](show-format.md).
 
 **`l'entrée doit exister dans le donneur`**
-Creating a preset, position or palette entry from scratch has never been
-validated on a device. Pick a donor project that already has the slot.
+Creating a position or palette entry from scratch has never been validated on a
+device — this message only fires for those two. A **preset** may be created:
+appending an entry with an id above every id in the donor is device-confirmed
+(PRESET-01/06/07), so pass `modele` instead. Otherwise pick a donor project that
+already has the slot.
 
 **`auto-verify : records modifiés hors édition`**
 The compiler detected that an edit changed something it did not intend to. The
@@ -94,10 +97,46 @@ The controller stored something different from what was sent. The runner
 restores the previous experiment project. Keep `runs/<utc>-<case>/` — the
 before/candidate pair is the evidence.
 
+**A recall plays something other than what I deployed**
+The controller plays a live copy, and `deploy` does not replace it — only a
+manual open on the panel does (RELOAD-04). If the project was already open and
+`LIVE EDIT` is on for that cue (`165.f10` bit 4 clear), a gesture at the panel
+also rewrites the live copy while the file stays exactly as uploaded (GEN-03).
+Save on the panel, download the project, and diff it against the bytes you
+sent — that is the only way to see the divergence. Generate measurement cues
+with `live_edit: false`.
+
+**`wolfmix.py preset N` does nothing at all**
+An id that is not present is a silent no-op — above the highest id present
+(RECALL-04) or inside an interior hole (RECALL-05). The rig keeps playing the
+previous cue and nothing reports an error. Check the id against the project
+(`id = (page - 1) * 20 + (slot - 1)`) — ids above 127 are fine, the whole panel
+range 0–199 is reachable (RECALL-06) — and remember that recalls fired a few
+seconds apart can also be swallowed.
+
+**The panel is stuck on a screen after `wolfmix.py mode N`**
+Indexes 26 (Projects) and 42 (USB stick) are modal. Send `mode 1` — `1`, `3`,
+`8` and `33` release the panel; `0`, `5` and `16` do not (SCREEN-02). The
+physical keys get through where `SET_MODE` does not (SCREEN-03).
+
+**`The loaded project has unsaved changes; save it on the W1 first`**
+`arm` and `deploy` refuse to run against a controller holding unsaved edits.
+Save on the panel. Worth doing deliberately rather than grudgingly: that save
+is the only way to read what the live copy has drifted to, and it is how the
+GEN-03 anomaly was explained.
+
 **Nothing happens after `init`**
 Firmware 2.0.18 has no USB command to select a project. Open the
 `WMX EXP …` project once on the controller itself, then run `arm`. Note that
 the project name is truncated to 19 characters on the device.
+
+**My generated show's dimmers do nothing**
+The condition is not in the file: the Settings menu carries
+`store group dimmers in preset`, and with it **off** every `dimmers` value is
+silent while the show still compiles, verifies and deploys perfectly (GEN-02,
+device-confirmed). Some operators keep it off on purpose. Turn it on, then
+re-check — [`generator.md`](generator.md) has the percentage formula and the
+colour-folding case.
 
 **DMX output looks identical between two candidates**
 Compare envelopes (`dmx-envelope`), not frames — effects animate, so two

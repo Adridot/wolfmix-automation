@@ -200,12 +200,44 @@ Settled by the picker's `RGB+` view, which prints the **raw 0–255 channel
 values** and names all seven channels in field order. The other four views are
 lossy: the display **truncates**, so 127/255 shows as 49 %, not 50 %.
 
+**A pad component drives its engine role, not only red/green/blue.** Recalling a
+cue on pad 16 = `(255, 105, 8, white 64)` put red 255, green 105 and blue 8 on
+the group's colour channels **and 64 on its `extra1` channel** — role 6 of §7.5,
+here at fixture address + 4 (GEN-01; the published prediction bet `extra2` and
+was wrong on which extra, right on the structure). So `f4`…`f7` reach real
+channels wherever the profile has them, on one measured point.
+
 The 20 pads are named on screen (Amber, Lime, Cyan, UV, Pink, Red, …) but **no
 name is stored in the file** — the labels are firmware constants tied to the
 slot index, unlike record 150 where `f5` holds a per-slot name.
 
 Grid layout, **[correlated]** by transposition from the type-145 measurement:
 4 columns × 5 rows, filled column by column, top to bottom.
+
+**Writable — [device-confirmed] (PAL-01, 2026-08-27).** The three locks of
+*read before write* are all off for `f5`. The round-trip is byte-identical on
+**360 occurrences across the 45 variant-A files**. A single-variable
+differential changed one
+component of one pad of one group — `140[B].pads[6].red`, 255 → 100, with every
+other record byte-identical — and the device rendered it exactly: a cue on that
+pad with `f17` = 120 drove the ten group-B reds to `trunc(100 × 120/255)` =
+**47** where the same cue had driven them to 120 before, and to **100** under a
+cue that does not read the dimmers. Exactly ten channels moved. The control is
+the neighbour: a cue on **pad 10** of the same record reproduced its earlier
+frame on all 2048 channels, so the write did not spill. The panel also redrew
+the pad itself, before any recall.
+
+**Scope.** The round-trip lock is off for the whole sub-message, but the
+differential and the device acceptance are not: one pad, one group, one
+component (`red`), on a profile that has colour channels. `white`, `amber`,
+`lime` and `uv` were never varied, and nothing is measured on a profile with no
+colour channel — the write is proven for the component measured, not for the
+whole sub-message.
+
+The consequence is a **trade, not a free win**: each distinct colour written
+consumes one of the group's twenty pads, and those pads are the ones the
+operator has under their fingers. The show generator therefore still picks the
+nearest existing pad rather than writing one (`docs/generator.md`).
 
 ### 3.4 Type 145 — static GOBO palettes — **[device-confirmed]**
 
@@ -272,6 +304,13 @@ pair: in F30-04 the controller itself added a preset, and `f1` went 82 → **81*
 while the count went 82 → 83, with 81 *named* presets on both sides. A writer
 preserves it verbatim and maintains nothing.
 
+**What the device's writer puts there, measured once — [observed] (GEN-03).** A
+controller save of a file of **ours** rewrote `f1` from **82** to **88**, and
+there were 88 entries on both sides: here the firmware wrote the **entry count**.
+One device-written pair says count, the other (F30-04) says not-count, so the
+field's meaning stays open — but the firmware does not always leave it alone, and
+a record-by-record differential must expect `f1` to move after a save.
+
 **[correlated]** Preset identity, agreeing with `wpj-toolkit`: the UI is 1-based,
 20 slots per page, `id = (page - 1) * 20 + (slot - 1)`. Id 0 is omitted from the
 wire, as protobuf default.
@@ -284,7 +323,7 @@ does not re-serialise it the way it does record 115.
 
 | Field | Meaning | Status |
 |---|---|---|
-| `f19` | preset id, `id = (page − 1) × 20 + (slot − 1)`; **gaps are tolerated by the loader** | **device-confirmed** (PRESET-07) |
+| `f19` | preset id, `id = (page − 1) × 20 + (slot − 1)`; **gaps are tolerated by the loader**, and `SET_PRESET` on an id that falls in a gap is a **no-op** — it leaves the live frame untouched | **device-confirmed** (PRESET-07, RECALL-05) |
 | `f25` | name, UTF-8, **capped at 19 bytes by the loader** — a longer one makes the whole project refuse to open | **device-confirmed** (§5.8) |
 | `f1` / `f2` | Beam FX 1 / 2 | correlated |
 | `f5` / `f6` | Color FX 1 / 2 | correlated |
@@ -330,6 +369,17 @@ integer, group *g* occupying bits `[20g, 20g + 20)`, bit *n* selecting pad
 mask = lambda blob, g: (int.from_bytes(blob, "little") >> (20 * g)) & 0xFFFFF
 ```
 
+**`f31` holds in the writing direction too — [device-confirmed] (GEN-01).** Two
+generated presets differing in `f31` and in nothing else — verified field by
+field on the candidate, and stored byte for byte by the device — recalled as
+exactly **twenty changed channels out of 2048**: ten reds 255 → 0 and ten blues
+0 → 255, matching pad 6 = `(255, 0, 0)` and pad 9 = `(0, 0, 255)` of that group's
+record 140. The output is the palette, channel for channel. The mask reading was
+device-confirmed **on reading**; it is now confirmed **on writing**, by a
+single-variable experiment. The same series confirms `f30` = 9 (`SINGLE`)
+written by us: one colour, identical on all ten fixtures of the group, no
+alternation.
+
 **`f29`.** Recalling a preset with `f29[A]` = 9 drove the group's six gobo-wheel
 fixtures to DMX 70 — pad 10, the lower bound of its range — and `f29[A]` = 2
 drove them to 21, pad 3. A preset with `[255]×8` put them back to 0, so the
@@ -373,16 +423,52 @@ The manual states what each includes: `COLOR` = Color FX **and static colours**,
 `LIVE EDIT` the corresponding parts, `OTHER` = **the group dimmer values**
 (record 165 `f17`).
 
-> **A fourth gate, outside the file (GEN-02, 2026-08-27).** The Settings menu
+**Bit 5 was called `DIMMER` until firmware 2.0.15 — [observed] (FW-01).** The
+vendor changelog names it twice. 2.0.5: "Add the possibility to exclude Gobo,
+Live Edit, and Dimmer values from a Preset" — the three toggles born together
+are exactly bits **3, 4 and 5**, so the bit numbering is **chronological** and
+bits 0–2 (`COLOR`, `MOVE`, `BEAM`) predate them. 2.0.15: "Change DIMMER preset
+part to OTHER". `OTHER` is therefore a **widening**, not a synonym, and what it
+absorbed is not known — FW-03 measured the bit on a cue carrying neither
+`f32`–`f35` nor an active gobo, so it is blind to precisely those contents. A
+writer that sets bit 5 to keep the dimmers out also turns off whatever else
+`OTHER` now covers. The changelog is an external, static source, the same rank
+as the manual: it corroborates and it dates, it confirms nothing on the device.
+
+**And the gate below moved too.** The same 2.0.15 entry reads "Revert 'Store
+group dimmers in Preset' operation to how it was in firmware 1.x". The
+controller setting has changed behaviour twice, so **any dimmer measurement
+made on a firmware older than 2.0.15 is off-topic for this rig.** No experiment
+in this repo is on record as having run on one — the device has read 2.0.18
+throughout — so this is a bound on what may be imported from outside, not a
+retraction of an entry above.
+
+> **A third gate, and the first one outside the file (GEN-02, 2026-08-27).**
+> After `f10` (§5.3) and `f16` (§5.4), both in the project. The Settings menu
 > carries **`store group dimmers in preset`**. With it off, a preset's `f17`
 > does nothing at all, whatever `f10` says — which is how GEN-01 measured five
-> captures with no dimmer moving. With it on, `f17` acts (§5.x, GEN-02).
+> captures with no dimmer moving. With it on, `f17` acts — through the travel
+> limits of `106.f5`/`f6`, see the `f17` row of §5's preset submessage table
+> (GEN-02).
 >
 > That confounds the `OTHER` attribution: ACC-02 ran with the setting off, so
 > it could never separate "bit 5 silenced the dimmers" from "the setting did".
-> **Bit 5 = `OTHER` comes back down to `hypothesized`** — it rests on the
+> **Bit 5 = `OTHER` came back down to `hypothesized`** — it rested on the
 > manual plus a pre-existing state, never on a write that isolated it. Bit 1
-> (`MOVE`) is unaffected: RECALL-05 measured it on a preset we wrote.
+> (`MOVE`) was unaffected: RECALL-05 measured it on a preset we wrote.
+>
+> **It is back up at `validated` (FW-03, 2026-08-27).** Two cues we wrote,
+> identical field by field except `f10` — 30 against 62, bit 5 alone —
+> recalled with the controller setting **on**: **exactly 18 channels** moved,
+> and exactly the eighteen the model predicts. Six group-A dimmers 69 → 220
+> (`106.f5` → `f6`), ten group-B reds 120 → 255, two group-C dimmers 0 → 255,
+> and nothing else in 2048. The manual, the 2.0.15 changelog and this write
+> now name the same bit by three independent paths.
+>
+> **Not `device-confirmed`, and the limit was published before the shot.**
+> The cue carries neither `f32`–`f35` nor an active gobo, so if the
+> `DIMMER` → `OTHER` rename of 2.0.15 widened the bit to cover those, this
+> experiment is blind to it. `validated` on the perimeter of a static cue.
 
 Screen order, left to right then down. Every bit is held by at least two
 independent readings — six photographs of factory presets plus targeted writes —
@@ -407,13 +493,27 @@ the ninth bit is never set. The flash slices 6–10 do set it (§5.7).
 | 0 | **Color FX** | equals `color_fx_actif`, 3696/3697 |
 | 1 | **Move FX** | equals `move_fx_actif`, 3697/3697 |
 | 2 | **Beam FX** | active only on beam-page presets |
-| 5 | static layer | 255 on every preset — **[hypothesized]** |
+| **3** | **unattributed — `0` on all 3697 presets** | nothing; the obvious candidate is the *second* Color FX engine (§5.4b) |
+| **4** | **unattributed — `0` on all 3697 presets** | nothing; the obvious candidate is the *second* Move FX engine (§5.4b) |
+| 5 | **the groups the preset addresses** | **[validated]** — the device's writer rewrote our clones' inherited 255 to **2** (= B) and **7** (= A+B+C), GEN-03. Contested by the second-Beam-engine reading, see §5.4b |
 | **6** | **`WOLF`** | device-confirmed, 511 when latched |
 | **7** | **`STROBE`** | device-confirmed, 511 |
 | **8** | **`BLACKOUT`** | device-confirmed, 511 |
 | **9** | **`BLINDER`** | device-confirmed, 511 |
 | **10** | **`SPEED`** | device-confirmed, 511 |
 | 11 | per-project constant | never varies between presets |
+
+**Slice 5 was read as "255 always" and it is not — [validated] (GEN-03).** Every
+preset of the corpus carries 255 there, over **2446** presets, and the reading
+was `correlated` on that strength. The uniformity was the writer's, not the
+field's: nothing in the corpus had ever varied it. Our generator cloned that 255
+into six appended presets, and the device's own save corrected each one to the
+groups its cue actually lights — **2** = B on the two group-B cues, **7** =
+A+B+C on the three three-group cues. The control is the exception: the single
+preset whose live copy lit all eight groups kept 255. What a writer should put
+there is not measured — our 255 clones recalled correctly before the device
+rewrote them — but the field is no longer a constant, and a generator that
+clones a donor preset inherits a mask that does not describe its own cue.
 
 A preset captures the **live flash-key state** when it is overwritten. Five of
 the six keys have a slice, each measured by its own latch; only `SMOKE` writes
@@ -436,6 +536,45 @@ engine 0 active implies `f4` bit 3, engine 1 bit 2, engine 2 bit 4, on every
 preset of every file. The implication is one-directional — a page may permit an
 engine none of its presets uses.
 
+### 5.4b The second FX engine has no proven group mask — **[correlated 45/45]**
+
+Firmware 2.0 ("Double Trouble") doubles the FX engines: two Color, two Move,
+two Beam, which the manual says can run **at once on different groups**. That
+last clause is from the manual and the trade press — an external source, so
+**[observed]** at best, and never verified on this controller.
+
+The **structure** is decoded and round-trips: `f1`/`f2` = Beam 1/2, `f5`/`f6` =
+Colour 1/2, `f21`/`f22` = Move 1/2. Slot 2 is not decorative — it holds values
+that differ from slot 1 on 742 colour, 1439 move and 1240 beam presets. And
+whenever a type's `f16` slice is non-zero, slot 2 differs from slot 1: 738/738,
+1439/1439, 1186/1186, no exception. An engine that is on stores two
+configurations.
+
+What is **not** established is which mask assigns groups to the **second**
+engine. Slices 3 and 4 — the obvious candidates for Colour 2 and Move 2 — are
+`0` on **all 3697 presets** of the corpus. That is the uniformity trap in its
+purest form: no operator in any of the four rigs ever switched a second engine
+on, so the corpus cannot speak. Do not read the zeros as "unused".
+
+This puts slice 5 in question too. If the layout is
+`[Colour1, Move1, Beam1, Colour2, Move2, Beam2]`, slice 5 is the **second Beam
+engine**, not "the groups the preset addresses" — and on this corpus the two
+readings are indistinguishable, because `f17` is `[255]×8` everywhere and slice
+5 is 255 everywhere. The only discriminating evidence is a single controller
+save (GEN-03), where the device wrote the addressed-group mask into slice 5 on
+cues whose beam engine was **off**. That favours the current reading; it rests
+on one file, and `wpj_identities.tranche5_f16` is trivially true on the corpus
+and discriminating only there.
+
+Slice 11 stays unattributed. Its values look like group masks — 5, 2 and 7 —
+but "the groups that have a fixture" fails on 44 of 45 files and "the schema
+number" fails because schema 11 carries both 2 and 5. It also varies between
+presets in one file of 42, which softens the "per-project constant" reading
+above without refuting it.
+
+The cheap discriminator is one preset and one save, no deploy:
+`research/wpj-format-registry.md`, FX2-01.
+
 ### 5.5 `f18` = the Live Edit mask — **[correlated]**
 
 The `LIVE EDIT` screen is 4 pages of 20 buttons; `f18` is 10 packed varints =
@@ -457,7 +596,15 @@ f3  f7  f14  f17  f23  f27  f28  f29  f30  f32  f33  f34  f35
 
 `f17` dimmers, `f28` positions, `f29` gobos, `f30` colour pattern are named. The
 other nine are **known to be per-group** even where their meaning is not, which
-rules out reading them as scalars. `f32`–`f35` appear at schema 10.
+rules out reading them as scalars. `f32`–`f35` appear at schema 10, and the
+vendor changelog dates them to firmware **2.0.5** — "Add the possibility to set a
+Prism, Focus, Zoom and Iris value on each group. These values can be stored in a
+preset like Gobo Rotate." — **[observed]** (FW-02). "On each group" corroborates
+the per-group shape from outside the bytes; "like Gobo Rotate" puts `f14`
+(`ROTATE`) **before** the four newcomers, which is why they sit at the tail of
+the field numbering: a protobuf field number is assigned at design time, so an
+addition starts from the tail — **the numbering tells the chronology** (FW-01
+reads the bits of `f10` the same way).
 
 **[device-confirmed]** five of them are the **`STATIC GOBO` features**, measured
 by setting all five on group A to distinct values and capturing them into a
@@ -470,8 +617,18 @@ preset:
 | `PRISM` | `f33` | | | |
 
 Their schema-10 defaults `50 / 0 / 100 / 100` on `f32`–`f35` read as Focus 50 %,
-Prism 0 %, Zoom 100 %, Iris 100 %. `f3`, `f7`, `f23` and `f27` remain
-unattributed.
+Prism 0 %, Zoom 100 %, Iris 100 %. **[observed]** The device writes those
+defaults out explicitly: a controller save of a file of ours that **omitted**
+the four tables brought all 88 presets back carrying `focus` = 50, `prism` = 0,
+`zoom` = 100, `iris` = 100 (GEN-03). **An absent field is not a zero field** —
+here the firmware makes the difference visible, and a reader that had reported
+the missing tables as `0` would have had Zoom and Iris wrong by their whole
+range and Focus wrong by half of it. **[hypothesized]** (FW-02) `f35` is a
+percentage inside the iris bounds the **fixture profile** carries — firmware
+2.0.9 added "Iris min and max selection from fixture builder" — which is
+exactly the shape GEN-02 measured for `f17` through `106.f5`/`f6`. `f3`, `f7`,
+`f23` and `f27` remain unattributed, and the changelog does not name them
+either (FW-02).
 
 These are **live state** until a preset captures them: a project save alone does
 not write them, only `SHIFT` + tapping a preset does.
@@ -526,9 +683,9 @@ Where both sources cover a value, they agree.
 | `f10` | speed source | `0` Clock (omitted), `1` Microphone, `2` Audio/BPM | correlated |
 | `f1` | BPM division | `0`→×8, `1`→×4, `2`→×2, `3`→×1, `4`→½, `5`→¼, `6`→⅛, `7`→1/16; default 3 | correlated |
 | `f2` | speed % | observed up to 200, above the 0–100 the toolkit documents | correlated |
-| `f8` | size %, default 100 | hypothesized |
-| `f6` / `f9` | **unattributed** between Phase, Order, Fade and (on move) Flick — the vendor's screens carry **four** properties for three fields. Modal values 25 (beam) / 20 (colour) on `f6`, 50 on `f9` | observed |
-| `f5` | Color FX: 2 varints = 16-bit **colour mask** over record 135's pads (v1 = pads 1–8, v2 = 9–16). Move FX: one varint = the **effect's position**, nine on screen, only 0/1/5/6 seen. Beam FX: see lead L1 | correlated (Color and Move) |
+| `f8` | size % | default 100 | hypothesized |
+| `f6` / `f9` | **unattributed** between Phase, Order, Fade and (on move) Flick — the vendor's screens carry **four** properties for three fields | modal values 25 (beam) / 20 (colour) on `f6`, 50 on `f9` | observed |
+| `f5` | Color FX: 16-bit **colour mask** over record 135's pads. Move FX: the **effect's position**. Beam FX: see lead L1 | Color: 2 varints (v1 = pads 1–8, v2 = 9–16). Move: one varint, nine on screen, only 0/1/5/6 seen | correlated (Color and Move) |
 
 Effect type `f7`, Beam: `0` Sin Wave · `1` Sparkle · `2` Chaser · `3` CanCan ·
 `4` Heartbeat · `5` Wolf Rider · `6–8` FX Seq 1–3.
@@ -660,7 +817,7 @@ The strongest structural result available. Eight identities hold **exactly,
 ```
 
 Three more, added once `105.f4` was corrected, and mechanically re-checked on
-**45/45** files by `tools/wpj_identities.py`, which now runs **sixteen** identities
+**45/45** files by `tools/wpj_identities.py`, which now runs **eighteen** identities
 plus two before/after pair checks (F30-04, FLASH-09):
 
 ```
@@ -876,9 +1033,16 @@ The slices **tile** `[0, count(151))` — the same (offset, length) couple as
 | Field | Screen | Encoding |
 |---|---|---|
 | `151.f1` | — | **fixture index**, absent = 0 |
-| `151.f2` | `FOCUS OFFSET` | signed, `(v − 32768) / 32767` |
+| `151.f2` | `FOCUS OFFSET` | signed, `(v − 32768) / 32767`; **[hypothesized]** relative to `165.f32` rather than absolute — see below |
 | `151.f3` | `PAN OFFSET` | signed, same |
 | `151.f4` | `TILT OFFSET` | signed, same |
+
+**[hypothesized]** (FW-02) `FOCUS OFFSET` is **relative to the group's focus
+value**, `165.f32`, not absolute: firmware 2.0.5 states "Position focus values
+are now applied as a focus offset, relative to the focus value set on the Gobo
+screen." A writer that sets both must **compose** them. Never measured here —
+the position model below is device-confirmed on **pan and tilt**, and the focus
+offset has no DMX capture behind it.
 
 ### The position model, end to end — **[device-confirmed]**
 
@@ -922,7 +1086,11 @@ new project without touching them works (ACC-01).
 
 **Byte 50 gates the schema.** `165.f32`–`f35` are absent from the one schema-8
 file and present in all 44 schema-10 and schema-11 files. Schema **11** is this
-firmware's. Record 151 is present at **every** schema and populated at 8, 10 and
+firmware's. **[observed]** (FW-02) The vendor changelog dates `f32`–`f35` to
+firmware **2.0.5**, which dates **schema 10 to firmware 2.0.5** — the first date
+attached to a schema number of this format, and a bound worth having: a
+schema-10 project was written by a 2.0.5 or newer. Record 151 is present at
+**every** schema and populated at 8, 10 and
 11 alike; what correlates with schema is only its **zero-length** form, in the
 same 9 files that also lack record 160 — the rigs that never detached a
 fixture. A writer must not raise the byte without emitting what the
@@ -969,6 +1137,25 @@ entries intact. What a generator must respect instead, all measured:
 The failure mode is loud and total — "Error opening project", not a silently
 dropped entry — which makes this one of the safer things to get wrong.
 
+### The live copy is not the file — **[device-confirmed]**
+
+Everything a recall measures, it measures on the controller's **live copy**, and
+that copy diverges from the stored file in silence. Three generated cues were
+identical field by field *in the file* — re-read twice, byte for byte after
+storage — and one of them was no longer identical *inside the device*: its `f17`
+read `[255]×8` live where the file said `[0, 120, 0, 0, 0, 0, 0, 0]`, and its
+`f28` had moved on group A. That divergence produced a perfectly reproducible
+anomaly — three recalls across two independent series — which pointed at `f31`,
+a field that had nothing to do with it (GEN-03). **Reproducibility protects
+nothing when it is the state, and not the measurement, that is stable.**
+
+The only way to see the divergence is a controller save followed by a download
+and a field-by-field diff against the bytes actually deployed.
+
+**Consequence for a generator: a cue meant for measurement must carry
+`LIVE EDIT` off — `f10` bit 4 set (§5.3).** Our cues left it on, which is what
+lets a gesture at the panel write into them between deployment and the shot.
+
 ### What a patch-editing writer must recompute
 
 Record **125**'s masks are fully derivable from 105 + 115 + 116, and the offsets
@@ -981,10 +1168,17 @@ records untouched — which `tools/wpjlib.py` does by construction.
 
 Saving on the W1 re-serialises some records into the firmware's canonical form.
 Observed: type 115 shrank 329 → 287 bytes as its 20 items each lost `f6` and `f7`
-and gained a sequential `f9`; `f7` never came back. Consequence: **a round-trip
+and gained a sequential `f9`; `f7` never came back. The same canonicalisation ran
+again on a file **our** writer produced (GEN-03): the twenty items dropped `f6` =
+94 and `f7` = 187 — identical on all twenty — for `f9` = the fixture's
+**sequential index** (0 omitted, then 1…19). **[observed]**; nothing is concluded
+from it beyond "the firmware's writer migrates this record". Consequence: **a round-trip
 through the device cannot be verified by file hash.** Differential experiments
-must compare record by record and expect canonicalisation noise. Record 165 is
-the happy exception (§5).
+must compare record by record and expect canonicalisation noise. Record 165 was
+long the happy exception, and it is **not** one for a file we wrote: the same
+save rewrote `165.f1`, corrected `165.f16` slice 5 on the presets whose mask we
+had inherited wrong, and emitted the four `STATIC GOBO` tables on all 88
+presets (§5, GEN-03).
 
 ### The USB serial link is not error-free — **[device-confirmed]**
 
@@ -1052,9 +1246,24 @@ the `wpj-toolkit` enumerations; neither source has them alone.
   times out of 5 — the panel itself does not always follow (RAW-01 and
   SCREEN-01, **device-confirmed**, 2026-08-27). RECALL-01 and RECALL-02
   measured correctly; their reading — "the event addresses nothing" — is
-  replaced by "we had never sent the index". The byte is the **id** (RECALL-03)
-  and a second byte is not read (RAW-02); what an id inside an interior gap
-  does is open.
+  replaced by "we had never sent the index". Two readings stay **refuted as
+  written**, both describing a protobuf the firmware never parses: SETP-01's
+  `f1` = id, and PRESET-07's `f2` = entry position clamped to the last entry.
+  PRESET-07 was wrong on both halves — it is not `f2`, and it is not a
+  position; PRESET-07's *file-side* results (the `f19` formula, gaps tolerated,
+  the manual open) are untouched. The byte is the **id** (RECALL-03)
+  and a second byte is not read (RAW-02). An **absent** id is a **no-op** —
+  the live frame is left exactly as it was, with no floor, no clamp to the last
+  entry, no fall-back to the first and no modulo. Proven on **three** cases:
+  above the highest present id (RECALL-04, bytes 7, 50 and 200 on a 6-entry
+  copy), inside an **interior hole** (RECALL-05, byte 90 between ids 81 and
+  100, four rival readings each killed on a measured frame), and with bit 7 set
+  (RECALL-06, byte 228 — a strict no-op). A **present** id
+  above **127** is recalled **exactly**, bit 7 and all: byte 140 rendered its
+  own cue to the channel, byte 141 likewise, and byte 228 — no such preset —
+  stayed a no-op, which kills the 7-bit-truncation reading on two distinct
+  measured frames (RECALL-06). The reachable domain is the panel's own,
+  **0–199**; 200–255 is unprobed.
   The long events stay protobuf.
 - **L8 — variants B and C.** Only the top level is mapped. A different
   serialisation of the same show; needs its own campaign.

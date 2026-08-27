@@ -10,7 +10,7 @@ the whole method.
 
 ## Before you open anything
 
-- Run `make check` from the repository root. Six self-checks; they need a
+- Run `make check` from the repository root. Nine self-checks; they need a
   corpus of your own ([`docs/corpus.md`](docs/corpus.md)).
 - If they abstain (`ignoré, aucun corpus`), nothing was verified. That is not a
   pass.

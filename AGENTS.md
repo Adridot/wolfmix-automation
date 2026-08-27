@@ -106,7 +106,14 @@ itself worth recording rather than silently resolving.
 A refutation is a result. `research/` contains several, and they are written up
 with the same care as the confirmations. A published status can also go **back
 down**: RECALL-01 (2026-08-27) withdrew a `device-confirmed` reading and, with
-it, four negatives that had rested on the same discriminator. When that happens,
+it, four negatives that had rested on the same discriminator. The same day,
+GEN-02 sent `165.f10` bit 5 (`OTHER`) from `device-confirmed` back to
+`hypothesized` — the dimmer silence it was thought to explain turned out to be
+a controller setting that had been off the whole time, and one cause is enough.
+It climbed back to `validated` only once FW-03 wrote that bit and nothing else
+(2026-08-27), which is the point: a status goes back up by measurement, not by
+the passage of time.
+When a status falls,
 follow the cascade and mark everything it touched as no longer established —
 neither confirmed nor refuted is an honest state, and it is the one that keeps
 the next experiment honest too.
@@ -125,7 +132,11 @@ predictions were wrong, and each was worth more than a vague success.
 - **A field that is uniform across the whole corpus may still be per-group, or
   per-anything.** Uniformity over thousands of samples is evidence about the
   *corpus*, not about the field: nothing had ever varied it. `f30` was read as
-  a scalar on those grounds and refuted by one photograph of the device.
+  a scalar on those grounds and refuted by one photograph of the device. It has
+  now happened three times: the latest is `165.f16` slice 5, `correlated` as
+  "always 255" over 2446 presets, then refuted when the device's own writer
+  saved a file of ours and put the mask of the groups each preset addresses
+  there (GEN-03, validated).
 - **Creating a preset does not save the project.** Nor does any other UI edit
   until the operator performs the separate project save. Read the `uint64` at
   offsets 40–47 before and after: if it has not incremented, nothing was
@@ -144,6 +155,17 @@ predictions were wrong, and each was worth more than a vague success.
   index. Prefer the reading that needs fewer new mechanisms — and when a whole
   family of values behaves identically, suspect the **encoding** before the
   semantics.
+- **The live copy is not the file, and it diverges in silence.** A recall
+  measures what the controller holds in RAM. `deploy` does not replace it — nor
+  does `store` + `RESTART`, nor a WTOOLS push; only a manual open on the panel
+  does (RELOAD-04). And with `LIVE EDIT` on (`165.f10` bit 4 clear), one gesture
+  at the panel rewrites a cue's live copy while the file stays exactly as
+  uploaded. That produced a perfectly reproducible anomaly — three shots, two
+  independent series — that pointed at the wrong field for a whole session
+  (GEN-03). Reproducibility protects nothing when it is the *state*, not the
+  measurement, that is stable. Cues meant for measurement carry `LIVE EDIT`
+  off, and a panel save followed by a download is the only way to see the
+  divergence.
 
 Much of the format can also be measured **without writing anything**: set a
 control on the device, capture `wolfmix.py dmx-envelope`, compare. Five of the

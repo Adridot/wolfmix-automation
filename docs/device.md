@@ -40,9 +40,15 @@ Events used: `GET_PROFILE_LIST` 2, `GET_PROFILE` 3, `GET_PROJECT_LIST` 4,
 recalls id 8, `f2=<anything>` id 16. For `preset`, the byte is the preset
 **id** (`id = (page-1)*20 + (slot-1)`), not the entry position, and **an id
 above the highest one present does nothing** — no floor, no clamp to the last
-entry, no wrap to the first, no modulo (RECALL-04). An id inside an *interior*
-gap has never been probed, and that is the generator's real case. An existing
-id above 127 is untested too: no project in the corpus has one.
+entry, no wrap to the first, no modulo (RECALL-04). **An id inside an
+*interior* gap does nothing either** — id 90, in the hole between 81 and 100,
+left the frame identical on all 2048 channels while the four rival readings
+each predicted a different measured frame (RECALL-05). That is the case a
+generated bank creates. **A present id above 127 is recalled exactly** — byte
+140 and byte 141 each rendered their own cue to the channel, while byte 228,
+where no preset exists, stayed a no-op; that kills the 7-bit-truncation reading
+on two distinct measured frames (RECALL-06). The reachable domain is the
+panel's own, **0–199**. Bytes 200–255 are unprobed.
 For `mode`, the index is usually the mode reached, but not always —
 index 40 lands on 42 — and a raw index can open a screen the panel menu does
 not expose, some of which act on entry (mode 42 tries to read a USB medium).
@@ -56,18 +62,23 @@ firing cues faster than that may drop them silently.
 
 **`mode` can trap the panel.** The reported `wolfmixMode` is not the screen on
 display: the controller answers the index you sent, and lights the matching
-LED, while the front panel stays where it was. Modal screens — 26 (Projects)
-— 26 (Projects) is entered remotely and not left: neither `mode 0` nor
+LED, while the front panel stays where it was. Modal screens trap it: 26
+(Projects) is entered remotely and not left — neither `mode 0` nor
 `mode 5` nor `mode 16` dismisses it. 42 (USB stick) escapes the same way
 (index 1) but has never been tested against 0/5/16. What breaks out of 26,
 measured: `1` (COLOR FX), `3` (MOVE FX), `8` (GOBO), `33` (BLACKOUT). What
 does not: `0` (HOME), `5` (PRESETS), `16` (the main menu). Why those four and
 not these three is a **hypothesis** ("the screens that act on the light"),
 with an untested rival and a pre-registered discriminator — indexes 28 and 30
-(SCREEN-02). What the panel's own HOME key does from that screen is open: the
-operator reported it stuck one day and working the next, on different live
-copies. Do not send a modal index to a controller
-in service; if one is stuck, send `mode 1`.
+(SCREEN-02). **The panel's keys and `SET_MODE` are two different paths**: from
+the Projects screen the physical keys — HOME included — do bring up their
+screen, while indexes 0, 5 and 16 do not, replayed on a second live copy
+(SCREEN-03, device-confirmed). Where an index does not take, the operator saw
+the key LED light and then fall back — watched at the panel, not instrumented
+— while `GET_SETTINGS` still reports the index you sent — so
+four things move independently: the reported mode, the key LEDs, the pads, and
+the screen. Do not send a modal index to a controller in service; if one is
+stuck, send `mode 1`.
 
 The first request after the port has been idle can time out; issue it again
 (`research/wpj-format-registry.md`, LINK-01 — observed five times, undiagnosed,
@@ -86,7 +97,7 @@ python3 tools/wolfmix.py [--port PATH] [--timeout SECONDS] <command>
 
 | Command | What it does |
 |---|---|
-| `settings` | full decoded settings/state as JSON |
+| `settings` | full decoded settings/state as JSON. Twenty fields are named; any field number the firmware sends that we cannot name appears under `unknownFields`, raw and unlabelled — that is how you would find a setting we have not mapped, by toggling it at the panel and diffing two reads. The twenty fields we have mapped do not carry `store group dimmers in preset`, and GEN-02 never located it in this message; until the decoder's `unknownFields` output is diffed across a toggle at the panel, whether the firmware sends it under a field number we cannot name is untested. Reading it stays a human check at the panel. |
 | `projects` | projects stored on the controller, with UUIDs |
 | `profiles` | fixture profiles on the controller |
 | `project UUID out.wpj` | download one project; refuses an existing output path |
@@ -157,6 +168,14 @@ python3 tools/wolfmix_experiment.py [--port P] [--state-dir DIR] <command>
 | `init` | `project` `--label L` | snapshot everything, upload the base project under the experiment UUID |
 | `arm` | `--label L` `--loaded-on-controller` | check the experiment project is still there under its name, record that you opened it, store the controller's current mode |
 | `deploy` | `project` `--label L` `--case ID` | save the current project as `before.wpj`, upload the candidate, verify, restart the controller, verify again, capture one DMX frame, journal |
+
+`deploy` prints one preflight warning on stderr, before it touches the
+controller: if the candidate writes group dimmers anywhere, it says so. Those
+values are inert unless the panel's `Settings > store group dimmers in preset`
+is **on**, and that condition lives in the device, not in the project (GEN-02) —
+so a show can compile, verify, deploy and still do nothing. The warning is
+unconditional because no read reports the flag — it has never been located in
+the Settings message, and no panel toggle has been diffed to place it there.
 | `campaign` | `manifest.json` `--label L` | deploy each case in a manifest in order |
 | `watch` | `--label L` `[--interval S]` | report what each controller-side save changes, record by record |
 | `status` | `--label L` | current state of that experiment |
@@ -225,10 +244,15 @@ identical (RECALL-03). And a **second byte is not read** — the one payload
 that seemed to prove otherwise was undone by its own control shot, and a fade
 parameter is excluded by the transient (RAW-02).
 
-What is open: what an id inside an **interior gap** does — only ids above the
-highest present one have been probed — and whether an existing id beyond 127
-is reachable at all. `SET_PROJECT` and the long events remain protobuf; the
-raw-byte reading is for the short ones.
+An absent id is now closed on both sides: nothing happens, whether the id sits
+above the highest one present (RECALL-04, bytes 7, 50 and 200) or inside an
+interior hole (RECALL-05, id 90 between 81 and 100 — the frame stayed identical
+on all 2048 channels, and the four rivals each predicted a different measured
+frame). And a **present** id beyond 127 is reachable: the byte is read as-is,
+bit 7 included, over the panel's whole range 0–199 (RECALL-06). Off the recall
+layer the cue behaves like any other — outside the groups it addresses, an
+id ≥ 128 leaves the same 2048 channels as an id < 128. `SET_PROJECT` and the
+long events remain protobuf; the raw-byte reading is for the short ones.
 
 ### Campaign manifest
 

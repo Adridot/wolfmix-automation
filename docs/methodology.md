@@ -73,6 +73,28 @@ A field that changes no channel in any state is recorded as **inert** — which
 is a result, and a publishable one. F11-01 in `research/` is exactly that: a
 refutation, written up as carefully as a confirmation.
 
+### The live copy is not the file
+
+The controller plays a **live copy**, and a recall measures that copy, not the
+bytes you deployed. Two consequences, both expensive:
+
+- `deploy` does not replace it — and `deploy` *is* `store` + `RESTART` under
+  the same UUID, so there is no second manoeuvre hiding there. Neither does a
+  WTOOLS push (RELOAD-02/03). Only a manual open on the panel does
+  (RELOAD-04) — measure before that open and you measure the previous show.
+- With `LIVE EDIT` on (`165.f10` bit 4 clear), one gesture at the panel
+  rewrites a cue's live copy while the file on the device stays exactly as
+  uploaded. The divergence is invisible until you save on the panel and
+  download the result.
+
+This is the most expensive measurement trap found here (the registry counts it
+as the fifth): it produced a perfectly reproducible anomaly — three shots, two
+independent series — that pointed at the wrong field for a whole session
+(GEN-03). **Reproducibility protects nothing when it is the state, not the
+measurement, that is stable.** A cue meant to be measured carries `LIVE EDIT`
+**off**, and a session that ends in doubt ends with a panel save and a
+download.
+
 ## A status can go back down
 
 Promotion is not one-way. On 2026-08-27 a `device-confirmed` reading of the
@@ -98,9 +120,11 @@ those, are writable without hedging.
 A patch that adds or changes a field interpretation needs:
 
 - **the prediction, written before the measurement** — which channel, which
-  value, which screen. This is now the dominant practice here: roughly seventeen
-  entries in `research/` are written that way, and two of those predictions were
-  wrong, which is exactly what makes the method worth the trouble;
+  value, which screen. This is now the dominant practice here: roughly twenty
+  entries in `research/` are written that way, and several of those predictions
+  were wrong — GEN-02 published four and lost all four, and the model that
+  replaced them was exact on seven measured points, which is exactly what makes
+  the method worth the trouble;
 - the exact single-variable manipulation, reproducible by someone else;
 - the SHA-256 sums of the before/after files — **the hashes, not the files**;
 - the `wpj_diff.py` output;

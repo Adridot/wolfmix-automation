@@ -1262,7 +1262,7 @@ road, and the base is still 0-based-vs-1-based undecided.
 ### Discriminator without a save — press a pad and measure — **[planned]**
 
 > **Fired 2026-08-26** — the result is the very next section, `Measured` (line
-> 1282, F29-01): both points exact, `f29` is the **0-based** static gobo index,
+> 1287, F29-01): both points exact, `f29` is the **0-based** static gobo index,
 > `device-confirmed`. The `[planned]` marker above is kept for the record; the
 > protocol below is what was actually run.
 
@@ -1860,10 +1860,10 @@ bit 0. Bits 1, 5, 6 and 7 are never seen except inside 255.
 ### The read-only measurement that settles it — **[planned]**
 
 > **Fired 2026-08-26** — and it did not settle what it set out to settle. F4-01
-> (line 1897) refuted the enumeration and read `f4` as a bitmask; F4-02 (line
-> 1987) then showed the **content mask is `f10`, not `f4`**, and F4-01's bit
-> assignments were retracted with it (line 2036). `f4` came back at F4-03 (line
-> 2924) as a **permission mask over the engines**. The screens this protocol
+> (line 1909) refuted the enumeration and read `f4` as a bitmask; F4-02 (line
+> 1999) then showed the **content mask is `f10`, not `f4`**, and F4-01's bit
+> assignments were retracted with it (line 2048). `f4` came back at F4-03 (line
+> 2949) as a **permission mask over the engines**. The screens this protocol
 > asked for were read; the field they were read against was the wrong one.
 
 No write, no save. Open `PRESET EDIT` (SHIFT + the pad) on one preset of each
@@ -2316,7 +2316,7 @@ reaches 201. They stay unnamed.
 
 ### The read-only test that would settle it — **[planned]**
 
-> **Fired 2026-08-26, and confirmed twice since** — POS-01 (line 2398) measured
+> **Fired 2026-08-26, and confirmed twice since** — POS-01 (line 2417) measured
 > `106.f5`/`f6` as the per-fixture travel limits on tilt, six for six. The same
 > two fields were measured again on a different **role** on 2026-08-27: GEN-02
 > found the group dimmer running through the identical formula,
@@ -2618,8 +2618,8 @@ neither is which fixture each item belongs to.
 ### The discriminator, published before measuring — **[planned]**
 
 > **Withdrawn before it was ever measured, 2026-08-26** — its own retraction is
-> at line 2646. The table below assumes record 151 holds **absolute positions**;
-> POS-04 (line 2615) decoded 151 as **offsets**, and the value in question is
+> at line 2672. The table below assumes record 151 holds **absolute positions**;
+> POS-04 (line 2640) decoded 151 as **offsets**, and the value in question is
 > negative, so the predicted DMX is wrong on both branches. Kept as written,
 > because a prediction built on the wrong model is the cheapest kind of lesson.
 
@@ -2791,7 +2791,14 @@ same file. It is the "global stored per slot" shape already noted on `115.f6`/
 `f7`, and this save re-stamped it. **[observed]**, and it carries no per-fixture
 information.
 
-> **Closed 2026-08-27** — settled by POS-07, line 2793 (`Crowd` recalled after the second detach: the only two channels that changed in 2048 were the tilt pair 33 and 35, tilt **77**, so the offset is clamped at 100 %; the pan channels did not move at all and channel 32 still read **176**, so detaching does not remove a fixture from the fan — both predictions exact). This protocol was fired as written.
+### The next prediction, published before measuring — **[planned]**
+
+> **Closed 2026-08-27** — settled by POS-07, line 2825 (`Crowd` recalled after
+> the second detach: the only two channels that changed in 2048 were the tilt
+> pair 33 and 35, tilt **77**, so the offset is clamped at 100 %; the pan
+> channels did not move at all and channel 32 still read **176**, so detaching
+> does not remove a fixture from the fan — both predictions exact). This
+> protocol was fired as written.
 
 `Crowd`'s new entry is fixture **2**, the lyre at DMX 32, with `PAN OFFSET 0 %`
 and `TILT OFFSET +91 %`. Recall `Crowd` and only channels 32, 33, 34, 35 should

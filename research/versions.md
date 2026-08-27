@@ -9,6 +9,7 @@
 | macOS | 26.6.2 (25G83) | `sw_vers` |
 | W1 Mk1 firmware | 2.0.18 | `GET_SETTINGS` champ 14, appareil branché |
 | wpj-toolkit | commit `2bd0ee3` (2026-08-14) | relevé externe, non revérifié |
+| Bundle firmware W1 en cache | 2.0.18, canal `debug`, `fwDate` 2026-07-07 | `~/Library/Application Support/com.nicolaudiegroup.wtools/wm-fw-bundle-2.0.18/` — image chiffrée, seul `changelog.json` est lisible (FW-01) |
 
 Le firmware est lu sur l'appareil, pas cité. **Piège** : le champ 13
 (`firmwareVersion`, flottant) vaut 0.0 sur ce firmware — lire le champ 14

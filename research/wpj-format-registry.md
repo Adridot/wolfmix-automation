@@ -6004,3 +6004,117 @@ Un champ absent n'est pas un champ à zéro, et l'appareil le rend explicite.
 les vingt entrées du fichier d'origine — disparaissent, remplacés par `f9` =
 **l'index séquentiel du luminaire** (0 omis, puis 1…19). **[observed]** : une
 migration de schéma par le graveur du firmware, sur laquelle rien n'est conclu.
+
+## FW-01 — `f10` bit 5 s'appelait `DIMMER` jusqu'en 2.0.15 — 2026-08-27 — **[observed]**
+
+### La source, et son rang
+
+Le contrôleur a été mis volontairement en mode bootloader ce jour-là. Le
+bootloader lui-même n'a rien donné : il énumère en `WOLFMIX_BL`
+(VID `0x6244` / PID `0x0623`, CDC-ACM, ni DFU ni mass storage), il reste
+**muet** — 4 s d'écoute passive, zéro octet, aucune écriture émise — et il ne
+sait que flasher.
+
+Ce qu'il a fait remonter, en revanche, c'est le cache de WTOOLS :
+`~/Library/Application Support/com.nicolaudiegroup.wtools/wm-fw-bundle-2.0.18/`.
+
+| Fichier | Lisible ? |
+|---|---|
+| `wolfmixFirmware.bin` (418 141 o) | **non — chiffré**. Entropie 7.99 sur les 16/16 blocs ; en-tête 8 o : taille en clair 418 068, puis `33`. Pas de rétro-ingénierie statique du firmware. |
+| `wolfmixFlash.bin`, `wolfmixFlash-reset.bin` | en clair, mais ce sont des données graphiques (LUT, dégradés). Rien du format projet. |
+| `changelog.json` (sha256 `66dc76d5…454714`) | **oui** — le vendeur décrit son propre firmware, version par version, de 2.0.5 à 2.0.18. `fwChannel: "debug"`, `modelId: "W1"`, `fwDate` 2026-07-07. |
+
+**Statut.** Source **externe et statique**, du même rang que le manuel : elle
+corrobore et elle date, elle ne confirme rien sur l'appareil, et elle ne peut
+relever aucune lecture au-dessus de `observed`. Les binaires ne sont pas
+commités (règle du dépôt) ; seul le chemin et l'empreinte sont cités.
+
+### Deux lignes, deux versions
+
+| Version | Ligne du changelog |
+|---|---|
+| **2.0.5** | « Add the possibility to exclude Gobo, Live Edit, and Dimmer values from a Preset. » |
+| **2.0.15** | « Change DIMMER preset part to OTHER. » |
+
+Trois bascules naissent **ensemble** en 2.0.5 — `GOBO`, `LIVE EDIT`, `DIMMER` —
+soit exactement les bits 3, 4 et 5 de `f10`, dans l'ordre de lecture d'écran
+établi par F4-02. Les bits 0–2 (`COLOR`, `MOVE`, `BEAM`) leur préexistent. **La
+numérotation des bits est chronologique**, et l'ordre de l'écran la suit.
+
+Et la sixième bascule s'appelait `DIMMER` avant de s'appeler `OTHER`.
+
+### Ce que ça règle
+
+Des trois lectures rivales laissées debout par GEN-01 — « le bit 5 n'est pas
+`OTHER` », « `f17` n'est pas le dimmer », « le canal dimmer sort des faders du
+panneau » — la première perd son dernier appui : le bit 5 est bien la bascule du
+dimmer, sous son nom d'origine. Le manuel (« `OTHER` includes the group dimmer
+values ») et le changelog désignent le même bit par deux chemins indépendants.
+
+### Ce que ça ouvre, et c'est le piège
+
+`OTHER` n'est **pas** un synonyme de `DIMMER` : c'est un **élargissement**, daté
+2.0.15. Le firmware de mesure est 2.0.18, postérieur. Donc la phrase du manuel
+décrit peut-être l'état d'avant le renommage, et **ce que le bit 5 gate en plus
+du dimmer n'est pas connu**. Un writer qui pose le bit 5 pour « ne pas rappeler
+les dimmers » éteint aussi tout ce qu'`OTHER` a absorbé depuis.
+
+Deuxième ligne dimmer dans la **même** version 2.0.15 : « Revert "Store group
+dimmers in Preset" operation to how it was in firmware 1.x. » Le réglage
+d'appareil qui gate ce qu'un preset stocke a donc changé de comportement deux
+fois. Conséquence de compatibilité honnête : **toute mesure de dimmer antérieure
+à 2.0.15 est hors sujet pour ce rig.**
+
+### Discriminateur, pas cher — **[planned]**
+
+Sur une cue à nous, dont les dimmers passent déjà par le chemin établi en
+GEN-02 : déployer la même cue deux fois, `f10 = 0` puis `f10 = 32` (bit 5 seul),
+rappeler chacune et comparer les enveloppes DMX agrégées. Ce qui s'éteint **en
+plus** des dimmers, c'est le contenu qu'`OTHER` a gagné en 2.0.15. Si rien
+d'autre ne bouge, `OTHER` = `DIMMER` et le renommage est cosmétique.
+
+## FW-02 — `f32`–`f35` sont datés : firmware 2.0.5, et ça date le schéma 10 — 2026-08-27 — **[observed]**
+
+Même source que FW-01.
+
+| Version | Ligne du changelog |
+|---|---|
+| **2.0.5** | « Add the possibility to set a Prism, Focus, Zoom and Iris value on each group. These values can be stored in a preset like Gobo Rotate. » |
+
+Trois corroborations en une phrase, sur une lecture déjà **device-confirmed**
+par GOBO-02 :
+
+1. **« on each group »** — les quatre champs sont des tableaux **par groupe**,
+   pas des scalaires. C'est la forme mesurée (groupe A seul non nul, zéro sur
+   les sept autres).
+2. **« like Gobo Rotate »** — `ROTATE` **préexiste** aux quatre autres. D'où
+   `f14` pour rotate et `f32`–`f35` pour les nouveaux : un numéro de champ
+   protobuf est attribué à la conception, donc un ajout part de la queue. **La
+   numérotation raconte la chronologie**, ici comme pour les bits de `f10` en
+   FW-01.
+3. **Quatre features, quatre champs** — Prism, Focus, Zoom, Iris. Le registre
+   les avait classés « a schema-10 addition, zeroed by the upgrade » sans
+   jamais les lire ; ce sont les ajouts du firmware **2.0.5**.
+
+**Donc schéma 10 ↔ firmware 2.0.5.** C'est la première date accrochée à un
+numéro de schéma de ce format, et elle donne une borne : un projet au schéma 10
+a été écrit par une 2.0.5 ou plus récente.
+
+### Ce que ça ne fait pas
+
+`f3`, `f7`, `f23` et `f27` **restent non attribués**. Le changelog ne les nomme
+pas. L'hypothèse « les cinq tableaux à zéro sont les cinq features gobo » a été
+rétractée par GOBO-02 — seul `f14` en était — et cette entrée ne la ressuscite
+pas. Le compte de cardinalité qui l'avait produite reste une erreur de méthode,
+pas une piste à reprendre.
+
+### Deux lignes voisines, pour plus tard
+
+- 2.0.5 : « Position focus values are now applied as a focus offset, relative to
+  the focus value set on the Gobo screen. » Le `FOCUS OFFSET` décodé en POS-04
+  (record 151) est donc **relatif à `f32`**, pas absolu. Un writer qui pose les
+  deux doit les composer. **[hypothesized]** — jamais mesuré ici.
+- 2.0.9 : « Add Iris min and max selection from fixture builder ». Les bornes
+  d'iris vivent dans le **profil**, pas dans le preset. **[hypothesized]** :
+  `f35` serait alors un pourcentage dans ces bornes, exactement la forme que
+  GEN-02 a mesurée pour `f17` via `106.f5`/`f6`.

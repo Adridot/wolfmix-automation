@@ -92,6 +92,7 @@ enum; where 2.0.2 renamed one, both are given.
 | 36 | DMX VALUES → beam editor | `BEAM_EDITOR` |
 | 41 | LIVE EDIT → SHIFT + one of the first three encoders | **`LIVE_EDIT_MACRO_EDIT`** (new) — present on MK1 |
 | 43 | main menu → Mappings | **`MAPPING`** (new) — present on MK1 |
+| 42 | **unreachable by menu** — `SET_MODE` raw index 40 lands here | **`USB_STICK`** (new) — operator-identified on screen |
 | 44 | HOME → touch the tempo readout | **`BPM`** (new) |
 
 **Result: the legacy 0–38 numbering is unchanged in firmware 2.0.18.** The
@@ -99,8 +100,20 @@ three names that vanished from the SDK are renames at their original values
 (8, 12, 34); the six genuinely new modes live at 39–44, of which `BPM` = 44 is
 confirmed and 43 is seen but unnamed.
 
-Still unmeasured: `FILE_BROWSER`, `SEQ_POSITION_PICKER` and `USB_STICK` share
-the three remaining slots 39, 40 and 42. The macro editor turned out to exist
+`USB_STICK` is now **42**, measured 2026-08-27: `SET_MODE` with the raw index
+byte **40** lands on mode 42, and the operator reads the screen — USB STICK,
+with import/export of project, fixtures and full backup. It attempts a read on
+entry and, with no medium (MK1 has no USB-A socket), shows "error reading
+project"; import repeats it, export gives "error backing up data". Two
+consequences: **the panel menu does not expose this screen, the raw index
+does** — so an index probe is not a neutral act, it can start an action — and
+the index→mode identity is not universal (0→0, 5→5, 16→16, 26→26 are exact,
+40→42 is not). **[device-confirmed]** for 42; **[hypothesized]** that 40 is
+`FILE_BROWSER` redirecting for want of a medium, leaving 39 for
+`SEQ_POSITION_PICKER` by elimination — neither is measured.
+
+Previously unmeasured: `FILE_BROWSER`, `SEQ_POSITION_PICKER` and `USB_STICK`
+shared the three remaining slots 39, 40 and 42. The macro editor turned out to exist
 on MK1 (feature list: PRISM ROT., SMOKE, STROBE, ZOOM, DIMMER, EFFECT, FOCUS,
 GOBO ROT., IRIS; value 0–100 %; per-fixture selection) and sits at 41. Neither picker showed up
 inside its parent editor: the whole sequence session (group toggle, step

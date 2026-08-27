@@ -5,7 +5,10 @@ proposée) → `correlated` (cohérent sur ≥2 fichiers indépendants) →
 `validated` (confirmé par expérience différentielle) → `device-confirmed`
 (accepté par le W1). Jamais de valeur inventée ; ambiguïté = candidats listés.
 
-Corpus de preuve : `corpus/SHA256SUMS`, relevé du 2026-08-25, WTOOLS 1.6.3.
+Corpus de preuve : `corpus/SHA256SUMS` (57 fichiers, régénéré le 2026-08-27).
+Les expériences ACC-* ont tourné sous WTOOLS 1.6.3 ; la machine est passée à
+WTOOLS 2.0.2 (build 248) depuis, et chaque entrée porte sa propre version —
+voir `versions.md`.
 
 ## Trois variantes de conteneur observées localement
 
@@ -4940,3 +4943,33 @@ est exacte.
 2. Le reste de la charge utile est-il lu (deuxième octet = paramètre) ?
 3. `SET_PROJECT` et consorts restent bien protobuf : la lecture « octet 0 =
    index » vaut pour les events courts (39, 41), pas pour tout le protocole.
+
+### MODE-40/42 — l'écran USB STICK, atteignable seulement par index brut — 2026-08-27 — **[device-confirmed]**
+
+Envoyer l'index **40** à `SET_MODE` fait atterrir l'appareil sur le mode
+**42**, que `GET_SETTINGS` rapporte et que l'opérateur identifie à l'écran :
+**USB STICK**, avec import / export de projet, de fixtures, et full backup.
+L'écran **tente une lecture dès son ouverture** : sans support (le MK1 n'a
+pas de socket USB-A), il affiche « error reading project » ; tout bouton
+*import* redonne la même erreur, *export* donne « error backing up data ».
+C'est l'origine des deux écrans trouvés au matin après le balayage
+d'index — aucun dégât, aucune écriture, le stockage relu octet pour octet.
+
+Deux enseignements :
+- `mode-map.md` classait `USB_STICK` et `FILE_BROWSER` comme inatteignables
+  sur MK1. Ils le sont **par le menu**. L'index brut de `SET_MODE` ouvre des
+  écrans que la navigation du panneau n'expose pas — donc ces sondes ne sont
+  pas neutres, et un index inconnu peut déclencher une action (ici une
+  lecture de média) sans validation de l'opérateur.
+- L'identité index → mode n'est **pas** universelle : 0→0, 5→5, 16→16 et
+  26→26 sont exacts, mais **40→42**. Candidat : 40 est un écran qui
+  redirige (`FILE_BROWSER` ?) faute de matériel. À ne pas lire comme un
+  décalage constant : quatre index sur cinq sont l'identité.
+
+### PROJECTS-01 — l'écran « Open » est atteignable à distance — 2026-08-27 — **[device-confirmed]**
+
+`SET_MODE` index **26** ouvre l'écran *main menu → Open*. L'opérateur
+confirme à l'écran : la **liste des 6 projets** stockés, dont les **deux
+`WMX EXP format-lab` homonymes** — l'original et le doublon ré-identifié par
+WTOOLS (RELOAD-02). C'est l'écran dont l'usage manuel remplace la copie
+vive. Manquent la sélection et la validation.

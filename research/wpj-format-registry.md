@@ -6449,3 +6449,52 @@ l'échelle** : 120 et non 255, sur les six familles de canaux. La lecture « le
 poids de l'octet de `f31` casse la mise à l'échelle au-delà de 16 » est donc
 réfutée par un second chemin, indépendant de la sauvegarde qui l'avait déjà
 expliquée. L'anomalie 102 était bien la copie vive, et rien d'autre.
+
+### PAL-01 mesuré — la palette écrite sort au canal, exactement — **[device-confirmed]**
+
+Déploiement du candidat (`Hooray!`, 40999 octets stockés), UNE ouverture
+manuelle, puis la même remise et la même cadence que la séance A. Le tir de
+contrôle — la cue 100 rejouée en fin de série — est à **0 canal** d'écart avec
+le premier.
+
+**La prédiction n° 1, publiée à p = 0,6, tient sur les deux tirs et sur les deux
+contrôles :**
+
+| Tir | Séance A (pad 6 = `{rouge: 255}`) | Séance B (pad 6 = `{rouge: 100}`) | Attendu | Canaux qui bougent |
+|---|---|---|---|---|
+| cue 100, `OTHER` allumé | rouge **120** | rouge **47** | `100 × 120/255` = 47,06 → **47** | **10**, les dix rouges du groupe B |
+| cue 101, `OTHER` éteint | rouge **255** | rouge **100** | le pad à pleine échelle → **100** | **10** |
+| cue 140, pad 10 **intact** | — | — | identique à la séance A | **0 sur les 2048** |
+
+Le tir 03 est le contrôle qui compte : la cue 140 tire sur le pad 10 de la même
+palette, et sa trame est identique à celle de la séance A **canal pour canal
+sur les 2048**. L'écriture n'a donc pas débordé — un pad a bougé, un seul, et
+les dix-neuf autres du même record sont inchangés à la sortie DMX.
+
+**Et un second chemin, indépendant du DMX** : l'opérateur rapporte que le pad 6
+de la palette du groupe B est passé de rouge saturé à rouge sombre **à
+l'écran**. Le panneau relit donc ce que nous avons écrit, avant tout rappel.
+
+| Rivale | Ce qu'elle prédisait | Mesuré |
+|---|---|---|
+| la palette n'est pas relue (moteur, ou palette vive qui prime) | rouge inchangé à 120 / 255 | 47 / 100 |
+| écriture normalisée par le graveur | une troisième valeur | 47, exactement la formule |
+| le projet refuse de s'ouvrir | — | il s'ouvre |
+
+> **`140.f5` est écrivable, et la valeur écrite est la valeur rendue.** Les trois
+> verrous de « read before write » sont levés dans l'ordre : round-trip
+> octet-identique (360 occurrences sur 51 fichiers), différentiel à une seule
+> variable (une composante d'un pad), et acceptation par l'appareil (stocké,
+> relu à l'écran, rendu au canal). **[device-confirmed]**
+
+Ce que ça change pour le générateur : la couleur d'une ambiance n'a plus à être
+approximée au pad le plus proche. Ce que ça ne change pas : chaque couleur
+distincte consomme **un des vingt pads** du groupe, et ces pads sont ceux que
+l'opérateur a sous les doigts. Écrire une palette est un arbitrage de métier,
+pas une conséquence automatique de la mesure — le générateur ne l'a donc pas
+été câblé dans la foulée.
+
+Portée honnête : un pad, un groupe, une composante (`rouge`), sur un profil qui
+a des canaux de couleur. Les composantes `ambre`, `lime`, `blanc` et `uv` du
+même sous-message n'ont pas été variées, et rien n'est mesuré sur un profil qui
+n'a pas de canal de couleur.

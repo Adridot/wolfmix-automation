@@ -53,11 +53,18 @@ rig.
 | 50–74 | `mouvement` | 225 | — | 110 % |
 | 75–100 | `mouvement+faisceau` | 255 | Chaser | 170 % |
 
-\* **The dimmer column has no measured effect.** GEN-01 deployed a cue with
-`f17` = 120 on one group and 0 on the others and *no* dimmer channel moved.
-The colour of a cue is device-confirmed; its intensity is not. Three readings
-are open — see `research/`, GEN-01 — and until one wins, treat the dimmer as
-selecting *which groups the cue is about*, not how bright they are.
+\* **The dimmer only acts if the controller says so.** The Settings menu carries
+`store group dimmers in preset`; with it **off**, a cue's dimmers do nothing at
+all and the show still looks compiled and correct (GEN-01/GEN-02). Some
+operators keep it off on purpose — it locks the rig's levels for a whole
+evening. A generated show is therefore **not self-contained on this point**:
+check the setting before blaming the file.
+
+With it on, the value is a **percentage**, not a DMX level: the output is
+`f5 + (dimmer/255)·(f6 − f5)` using that channel's travel limits, so a fixture
+with a floor never reaches 0. On a fixture that has colour channels the
+intensity is folded into the colour instead, and the dimmer channel stays at
+full.
 
 A family is a state of the first three `165.f16` engine slices — colour,
 movement, beam. All four have the **colour engine off**, which is what makes

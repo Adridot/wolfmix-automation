@@ -293,7 +293,7 @@ does not re-serialise it the way it does record 115.
 | `f29` | **gobo index per group A–H**, 8 packed varints, **0-based** into type 145, **255 = none and it clears the channel** | **device-confirmed** (§5.1) |
 | `f30` | **static-colour `PATTERN` per group A–H**, 8 packed varints, 11 modes | **device-confirmed** (§5.1) |
 | `f31` | **static colour: 20 bytes = 160 bits = eight 20-bit pad masks**, one per group A–H | **device-confirmed** (§5.1) |
-| `f17` | dimmer per group A–H, packed, default `[255]×8` | hypothesized |
+| `f17` | **dimmer per group A–H as a percentage of `255`**, packed, default `[255]×8`. Rendered through the channel's travel limits: `DMX = 106.f5 + (f17/255)·(106.f6 − 106.f5)`, the same formula as pan/tilt. On a fixture that has colour channels the intensity goes into the **colour** (`pad × f17/255`) and the dimmer channel stays at `f6`. Gated by the controller setting `store group dimmers in preset`. | **device-confirmed** (GEN-02) |
 | `f8` / `f24` | Color FX / Move FX active flag (packed, `[0]` or `[255]`) | correlated |
 | `f4` | **permission mask over the FX engines** — an engine active in `f16` implies its bit here | **[correlated]** (§5.4), checked by `f4_autorise_les_moteurs` |
 | `f16` | **twelve 9-bit group masks**, one per engine, five of them the flash keys | **device-confirmed** (§5.4, §5.7) |
@@ -373,13 +373,16 @@ The manual states what each includes: `COLOR` = Color FX **and static colours**,
 `LIVE EDIT` the corresponding parts, `OTHER` = **the group dimmer values**
 (record 165 `f17`).
 
-> **Open since GEN-01 (2026-08-27).** A preset *we wrote*, with `f10` = 14
-> (`OTHER` clear, so the toggle on) and `f17` = 120 on one group and 0 on the
-> others, changed no dimmer channel at all — the outputs stayed at 255, 220,
-> 255 across five captures. The same experiment showed bit 1 (`MOVE`) **is**
-> honoured on a preset we wrote. So `f10` is not inert; either bit 5 is not
-> `OTHER`, or `f17` is not the dimmer, or the dimmer channel carries the
-> panel's group faders rather than project data. See `research/`, GEN-01.
+> **A fourth gate, outside the file (GEN-02, 2026-08-27).** The Settings menu
+> carries **`store group dimmers in preset`**. With it off, a preset's `f17`
+> does nothing at all, whatever `f10` says — which is how GEN-01 measured five
+> captures with no dimmer moving. With it on, `f17` acts (§5.x, GEN-02).
+>
+> That confounds the `OTHER` attribution: ACC-02 ran with the setting off, so
+> it could never separate "bit 5 silenced the dimmers" from "the setting did".
+> **Bit 5 = `OTHER` comes back down to `hypothesized`** — it rests on the
+> manual plus a pre-existing state, never on a write that isolated it. Bit 1
+> (`MOVE`) is unaffected: RECALL-05 measured it on a preset we wrote.
 
 Screen order, left to right then down. Every bit is held by at least two
 independent readings — six photographs of factory presets plus targeted writes —

@@ -27,9 +27,9 @@ Pick a donor that already has the positions and pads you need — that constrain
 is rule 2 ("read before write") applied to editing.
 
 Scope is records 101, 165, 150 and 135, at evidence status `correlated` or
-better — with one exception in each direction. `dimmers` (`165.f17`) is writable
-although its status is `hypothesized`; `f29` (gobos) stays out of scope although
-it is device-confirmed, because nothing needs it yet. `size`/`fade`/`phase`
+better. `f29` (gobos) stays out of scope although it is device-confirmed,
+because nothing needs it yet. `dimmers` (`165.f17`) used to be the one field
+written below the threshold; GEN-02 moved it to device-confirmed. `size`/`fade`/`phase`
 (`f8`/`f6`/`f9`) are excluded on purpose: their attribution is still
 `hypothesized`, so they are readable via the codec but not writable here.
 
@@ -60,7 +60,7 @@ Addressed by `id`, which is the linear preset index
 | `modele` | int | ≥ 0 | id of the donor preset to **clone** into a new entry. Only on an id the donor does not have; refused on one it does. The clone carries every unknown field verbatim, which is the point. |
 | `nom` | string | **≤ 19 UTF-8 bytes** | preset name. **Enforced** — past 19 bytes the *whole project* refuses to open on the device (device-confirmed, PRESET-05), and auto-verify could not see it: the value reads back fine. |
 | `positions` | int[8] | ≥ 0 | position index per group A–H |
-| `dimmers` | int[8] | 0–255 | dimmer level per group A–H. **No measured effect**: GEN-01 wrote 120 and 0 with the `OTHER` toggle on and no dimmer channel moved. Writable, unproven — see the gates below. |
+| `dimmers` | int[8] | 0–255 | dimmer per group A–H, as a **percentage of 255** — the output is `f5 + (v/255)·(f6 − f5)` through the channel's travel limits, and on a fixture with colour channels it scales the colour instead. Device-confirmed (GEN-02), **but silent unless the controller setting `store group dimmers in preset` is on** — see the gates below. |
 | `masque_contenu` | int | 0–63 | `f10`, the six `PRESET EDIT` toggles: bit 0 `COLOR`, 1 `MOVE`, 2 `BEAM`, 3 `GOBO`, 4 `LIVE EDIT`, 5 `OTHER`. A **set** bit means the toggle is **off**. device-confirmed, F4-02. |
 | `pattern_couleur` | int[8] | 0–10 | `f30`, the static colour's spread mode per group; `9` = `SINGLE`. device-confirmed, F30-02. |
 | `couleur_statique` | 8 × int[] | pads 1–20 | `f31`, the static colour: for each group A–H, the pads of **that group's** palette (record 140) to light. device-confirmed. |
@@ -146,14 +146,14 @@ view and is device-confirmed on record **140**; record 135 inherits it at
 }
 ```
 
-## Two gates that make a clean compile do nothing
+## Three gates that make a clean compile do nothing
 
-The compiler verifies the **file**. Two masks decide whether the device acts on
-what it verified. One is now writable; the other is not — so pick a donor preset
-that already has it right.
+The compiler verifies the **file**. Three gates decide whether the device acts
+on what it verified — and one of them is not in the file at all.
 
 | Gate | What it silences | Where |
 |---|---|---|
+| **`store group dimmers in preset`**, a **controller setting** — not in the file at all | every `dimmers` value in the project, whatever `f10` says. A show can compile, verify and deploy perfectly and still move no level. | GEN-02, device-confirmed |
 | `165.f10`, the content mask — a **set** bit means the toggle is **off** | bit 1 (`MOVE`) written by us **is** honoured (GEN-01). Bit 5 (`OTHER`) was supposed to gate `dimmers`, and with it clear the dimmers still did nothing — so ACC-02's silence is *not* explained by this mask after all. **Writable since this version** via `masque_contenu`. | SPEC.md §5.3 |
 | `165.f16`, the engine group masks — slices 0/1/2 = Color/Move/Beam | an FX edit is invisible for a group the engine is not enabled on. ACC-03 set `color_fx_actif` without `f16` and the device followed `f16`. | SPEC.md §5.4, correlated |
 

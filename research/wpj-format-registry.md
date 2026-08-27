@@ -5884,3 +5884,50 @@ sur le pad **7** (bit 6) et l'autre sur le pad **10** (bit 9). Si seul le pad 9
 casse, c'est le pad ; si 10 casse aussi, c'est le rang du bit. Coût : un
 déploiement et une ouverture manuelle. Jusque-là, **ne pas lire « `f17` est
 appliqué » comme universel** — il l'est sur deux presets sur trois.
+
+## GEN-03 — le discriminateur de l'anomalie 102, posé — 2026-08-27
+
+Cinq cues de plus, **identiques à 101 sauf `f31`** — même modèle (20), même
+`f17` = 120 sur B et 0 ailleurs, même `f10` = 14, même `f30`. Vérifié champ par
+champ sur le candidat : la seule clé qui bouge est `couleur_statique`, plus
+l'id et le nom. Candidat sha256
+`7ce449110e99deb4a4d42c08625fb77d6a43c2fb3273c3ab814187a4b78b4a6c`,
+43158 octets, 93 presets, `f1` toujours 82.
+
+| id | pad | bit dans la fenêtre du groupe B | octet de `f31` | valeur | rôle |
+|---|---|---|---|---|---|
+| 120 | 7 | 6 | 3 | **4** | inconnue |
+| 121 | 10 | 9 | 3 | **32** | inconnue |
+| 122 | 6 | 5 | 3 | **2** | **contrôle** — doit se comporter comme 101 |
+| 123 | 9 | 8 | 3 | **16** | **contrôle** — doit se comporter comme 102 |
+| 124 | 20 | 19 | 4 | **128** | le seul cas à varint de deux octets |
+
+Ce que les trois mesures existantes disent déjà : l'octet **2** (pad 6) et
+l'octet **8** (pad 16) mettent le dimmer à l'échelle, l'octet **16** (pad 9) ne
+le fait pas. La rupture est donc dans l'intervalle `]8, 16]` si elle tient à la
+valeur de l'octet — et « le rang du bit dans la fenêtre de 20 » est **déjà
+réfuté** par le pad 16, dont le bit 15 est plus haut que le bit 8 du pad 9 et
+qui met pourtant à l'échelle.
+
+### Prédiction, publiée avant le déploiement
+
+| Lecture | 120 (4) | 121 (32) | 122 (2) | 123 (16) | 124 (128) | p |
+|---|---|---|---|---|---|---|
+| **le poids de l'octet** — rupture au bit 4 d'un octet, ou à la valeur ≥ 16 | échelle | **non** | échelle | **non** | **non** | 0,45 |
+| le pad 9, et lui seul | échelle | échelle | échelle | **non** | échelle | 0,2 |
+| l'anomalie ne suit pas `f31` (c'est l'entrée, la position, ou du bruit) | échelle | échelle | échelle | **échelle** | échelle | 0,2 |
+| autre chose | — | — | — | — | — | 0,15 |
+
+« Met à l'échelle » se lit sur trois familles de canaux à la fois, et chacune
+suffit : les dix pars du groupe B portent `pad × 120/255`, les six lyres du
+groupe A tombent à **69** (`f5` de leur canal dimmer) et les deux du groupe C
+à **0**. « Non » = les valeurs de la remise : couleur pleine, A à 220, C à 255.
+
+Le cas **124** est le seul où l'octet non nul de `f31` dépasse 127 et s'encode
+donc sur **deux** octets de varint. S'il est le seul à casser, la cause n'est
+pas la valeur mais l'encodage, et c'est une histoire différente — celle du
+codec, pas du moteur.
+
+Protocole : remise sur l'**id 0** avant chaque tir — la seule entrée du projet
+qui réécrive toutes les couches — 8 s de repos, 5 s d'enveloppe, et 122 rejoué
+en fin de série comme tir de contrôle.

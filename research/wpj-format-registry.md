@@ -5697,3 +5697,51 @@ canal (rouge pur sur les dix pars), celle de 100 aussi.
 Les cinq rivales prédisent cinq trames distinctes, et deux d'entre elles sont
 déjà sur le disque. Tir de contrôle : 101 rejoué après le test, qui doit
 reproduire la trame de remise sur les 2048 canaux — sans quoi rien n'est lu.
+
+### RECALL-05 mesuré — le trou intérieur ne fait rien non plus — **[device-confirmed]**
+
+Remise 101 → envoi de **90** → contrôle 101, 8 s de repos, 5 s d'enveloppe :
+
+```
+contrôle 101 vs remise 101 : IDENTIQUE sur les 2048 canaux
+test 90     vs remise 101 : 0 canal
+test 90     vs « 100 » sur disque : 30 canaux
+test 90     vs « 102 » sur disque : 20 canaux
+```
+
+**No-op.** La prédiction publiée à p ≈ 0,7 tient, et les quatre rivales
+tombent, chacune sur une trame mesurée :
+
+| Rivale | Ce qu'elle prédisait | Mesuré |
+|---|---|---|
+| première entrée d'id ≥ 90 → id 100 | 30 canaux d'écart avec 101 | 0 |
+| position d'entrée écrêtée → id 105 | des canaux **animés** (FX) | `animatedChannels` = 0 |
+| modulo 88 → id 2 | un preset `mouvement`, donc animé | `animatedChannels` = 0 |
+| dernière entrée d'id ≤ 90 → id 81 | — | rappelé exprès : **72 canaux** d'écart avec 101 |
+
+Le domaine de « un id absent ne fait rien » couvre donc maintenant les deux
+cas : **au-dessus du plus grand id** (RECALL-04, octets 7, 50, 200) et
+**dans un trou intérieur** (ici, 90 entre 81 et 100). C'est le cas que le
+générateur fabrique à chaque fois qu'il pose sa banque sur une page libre, et
+il est désormais sondé.
+
+### Le détour par 81 rend une deuxième mesure, non prévue
+
+Rappeler 81 puis revenir à 101 ne rend **pas** la trame de 101 : il reste
+**24 canaux** d'écart, et ce sont exactement le pan et le tilt des six lyres du
+groupe A, plus les deux canaux qui les suivent — ceux que le record 106 ne
+nomme pas pour ce profil, très probablement les octets fins du couple 16 bits
+(record 110 `f5`). Rien dans la couleur du groupe B, rien dans les dimmers.
+
+C'est le piège n° 2 en action — *les presets sont partiels* — et c'est aussi
+une mesure : le même preset, sous deux historiques différents, laisse le pan et
+le tilt **là où le preset précédent les avait mis**. `165.f10` bit 1 (`MOVE`)
+écrit par nous **est honoré** : un preset qui a la bascule `MOVE` éteinte ne
+touche pas la couche position. **[validated]** — un différentiel à une variable
+(l'historique), sur un preset que nous avons écrit.
+
+Ça resserre la question ouverte des dimmers. Le masque de contenu n'est pas
+inerte : au moins un de ses bits, écrit par nous, gate ce qu'il annonce. La
+lecture « `f10` écrit ne vaut rien » tombe ; restent « le bit 5 n'est pas
+`OTHER` », « `f17` n'est pas le dimmer », et « le canal dimmer sort les faders
+du panneau ».

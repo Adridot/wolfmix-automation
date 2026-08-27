@@ -6280,3 +6280,172 @@ Protocole, à la suite de celui de FW-03, même cadence : remise 0 → **12** �
 remise 0 → **140** → remise 0 → **141** → remise 0 → **228** → remise 0 →
 **100 rejoué**, tir de contrôle final qui doit reproduire le 100 de FW-03 sur
 les 2048 canaux.
+
+## PAL-01 — écrire une couleur de palette (record 140), posé — 2026-08-27
+
+Le générateur n'écrit **aucune** palette : il rend la couleur demandée par le
+pad **le plus proche** de ceux que le groupe porte déjà (GEN-01). C'est la
+dernière approximation du chemin intention → DMX, et la seule qui reste après
+que `f31`, `f30` et `f17` sont passés device-confirmed. Décision de périmètre
+prise le 2026-08-27 : on prouve l'écriture plutôt que de documenter la limite.
+
+### Le round-trip, préalable et déjà acquis — **[validated]**
+
+Le record 140 se décode et se ré-encode **octet pour octet** : 360 occurrences
+sur 51 fichiers du corpus, 360 round-trips identiques. Le premier des trois
+verrous de la règle « read before write » est donc levé sans matériel. Restent
+le différentiel à une variable et l'acceptation par l'appareil, que ce tir vise.
+
+### Le candidat, et pourquoi il ne contient qu'un seul octet de nouveau
+
+Le candidat de FW-03, **avec une seule composante changée** :
+
+```
+record 140, occurrence 1 (groupe B), pad 6 : {rouge: 255}  ->  {rouge: 100}
+```
+
+Vérifié par relecture : un seul des 26 records diffère, un seul des 20 pads de
+ce record, une seule des composantes de ce pad. Les palettes des sept autres
+groupes sont identiques octet pour octet. Fichier sha256
+`076911d109c6f8f02dd3e10a2c647244b202b0fdfba6b6ac5787c2407073ccb8`,
+40999 octets — un de moins que son parent, parce que 100 tient sur un octet de
+varint là où 255 en prend deux.
+
+Le pad 6 du groupe B est choisi parce que **les cues 100 et 101 de FW-03
+l'utilisent déjà** : leur trame est mesurée dans la séance A, avant ce tir.
+L'état « avant » n'est donc pas à construire, il est capturé.
+
+### Prédiction, publiée avant le déploiement
+
+Dépend de la séance A, qui doit avoir rendu ses trames. Sous la même remise
+(id 0) et la même cadence :
+
+| Lecture | rappel de 100 (`OTHER` allumé) | rappel de 101 (`OTHER` éteint) | p |
+|---|---|---|---|
+| **la palette écrite est lue** | rouge des dix pars B = `100 × 120/255` = **47** (séance A : 120) | rouge = **100** (séance A : 255) | **0,6** |
+| la palette n'est pas relue — moteur, ou palette vive qui prime comme la copie vive de GEN-03 | **120**, inchangé | **255**, inchangé | 0,2 |
+| écriture acceptée mais normalisée par le graveur | une troisième valeur, ni 47 ni 120 | — | 0,1 |
+| le projet refuse de s'ouvrir | — | — | 0,1 |
+
+Deux contrôles, et ils ne coûtent rien :
+
+- **rappel de 140** (pad 10, palette non touchée) : doit reproduire le tir 05 de
+  la séance A sur les 2048 canaux. Si cette trame bouge, c'est la palette
+  entière qui a été réécrite, pas le pad 6 — et la lecture change ;
+- **un regard au panneau** sur le pad 6 de la palette du groupe B : rouge sombre
+  au lieu de rouge saturé. Deuxième chemin d'évidence, indépendant du DMX.
+
+Falsificateur qui compte plus que les autres : si le rouge sort à 47 **et** que
+d'autres canaux bougent, l'écriture a débordé et il faut isoler quoi.
+
+### Une observation en passant, qui n'est pas une conclusion
+
+La clé `page` de `140.f2` porte les valeurs 0…7 sur les huit occurrences, et
+l'occurrence *n* est la palette du groupe *n* — GEN-01 l'a prouvé par le rendu
+(pad 16 du groupe B = `(255, 105, 8)`, mesuré, et non le `(255, 127, 80)` du
+même pad du groupe A). **`f2` est donc l'index de GROUPE, pas une page**, et le
+nom de la clé du codec induit en erreur. **[correlated]**, et device-confirmed
+par le rendu de GEN-01. Rien n'est renommé ici : un renommage touche le codec,
+la spec et les docs, et ça n'est pas le sujet de ce tir.
+
+### FW-03 mesuré — `OTHER` ne gate rien de plus que le dimmer, ici — **[validated]**
+
+Déploiement du candidat sur « WMX EXP format-lab » (store + les deux vérifs +
+RESTART), UNE ouverture manuelle au panneau, réglage `store group dimmers in
+preset` **actif**, puis la série à distance : `SET_MODE 1`, remise sur l'id 0
+avant chaque tir, 8 s de repos, 5 s d'enveloppe, 125 trames par capture.
+
+**Les deux tirs de contrôle sont identiques au premier 100 sur les 2048
+canaux** — celui d'après la paire, et celui de fin de série huit tirs plus
+loin. L'instrument n'a pas dérivé de toute la séance.
+
+**Exactement 18 canaux séparent `f10 = 30` de `f10 = 62`, et ce sont ceux
+annoncés.** La prédiction n° 1, publiée à p ≈ 0,5 :
+
+```
+ 8, 24, 40, 56, 72, 88   dimmer des six lyres A    69 -> 220     (f5 -> f6)
+101,111 … 191            rouge des dix pars B     120 -> 255
+206, 226                 dimmer des deux lyres C    0 -> 255
+                                                   ---
+                         et AUCUN autre des 2048    18
+```
+
+Les valeurs sont celles du modèle de GEN-02, sans un paramètre libre : sous
+`OTHER` allumé, `f17` = 120 rend `69 + (120/255)(220−69)` = 69 pour un groupe
+dont `f17` vaut 0, `255 × 120/255` = 120 pour le rouge du pad 6, et 0 pour le
+groupe C. Sous `OTHER` éteint, les trois couches gardent les valeurs de la
+remise — 220, 255 et 255.
+
+| Rivale | Ce qu'elle prédisait | Mesuré |
+|---|---|---|
+| 2 — plus de 18 canaux, `OTHER` a absorbé du contenu | des canaux en trop, qui le nomment | 18, pas un de plus |
+| 3 — le bit 5 n'est pas la bascule du dimmer | 0 canal | 18 |
+| 4 — autre chose | — | — |
+
+> **Le bit 5 de `165.f10` gate les dimmers de groupe, et rien d'autre de ce
+> qu'une cue statique porte.** Il remonte de `hypothesized` — où GEN-02 l'avait
+> fait redescendre — à **`validated`** : c'est un différentiel à une seule
+> variable, sur une paire que nous avons écrite, mesuré sur l'appareil. Le
+> manuel, le changelog 2.0.15 et cette écriture désignent maintenant le même
+> bit par trois chemins indépendants.
+
+**Ce que ça ne dit pas, et c'était annoncé avant le tir.** La cue ne porte ni
+`f32`–`f35` ni gobo actif. Si le renommage `DIMMER` → `OTHER` de 2.0.15 a
+absorbé ces contenus-là, cette expérience est aveugle dessus. Le statut est
+donc `validated` **sur le périmètre d'une cue statique**, et non
+`device-confirmed` sur `OTHER` en général — la nuance est la raison pour
+laquelle la limite avait été publiée d'avance.
+
+### RECALL-06 mesuré — le rappel est exact au-delà de 127 — **[device-confirmed]**
+
+Même séance, même série. Deux octets tirés, comme prévu.
+
+```
+octet 228 vs remise            : 0 canal          -> no-op strict
+octet 140 vs cue 100           : 10 canaux        -> les dix bleus de B, 0 -> 120
+octet 140 vs remise            : 64 canaux
+octet 140 vs id 12 (capturé)   : 91 canaux
+octet 141 vs cue 100           : 20 canaux        -> dix rouges et dix verts
+```
+
+Valeurs absolues sur le premier par du groupe B, adresses 100–103 :
+
+| Tir | dimmer | rouge | vert | bleu | pad attendu |
+|---|---|---|---|---|---|
+| remise (id 0) | 255 | 255 | 127 | 0 | pad 1 `(255, 127, 0)` |
+| **140** | 255 | **120** | 0 | **120** | pad 10 `(255, 0, 255)` × 120/255 |
+| **141** | 255 | 0 | **120** | 0 | pad 7 `(0, 255, 0)` × 120/255 |
+| 228 | 255 | 255 | 127 | 0 | identique à la remise |
+
+**La lecture publiée à p = 0,6 tient, et les deux rivales tombent :**
+
+| Rivale | Ce qu'elle prédisait pour 140 | Ce qu'elle prédisait pour 228 | Mesuré |
+|---|---|---|---|
+| troncature à 7 bits | la trame de l'id **12** | la trame de la cue **100** | 91 canaux d'écart avec 12 ; 0 canal d'écart avec la remise |
+| no-op au-dessus de 127 | identique à la remise | identique à la remise | 64 canaux d'écart avec la remise |
+
+> **Le domaine du rappel par USB est le domaine du panneau : les ids 0–199.**
+> `SET_PRESET` lit son octet tel quel, sans masque et sans borne à 127. Un id
+> présent est rappelé exactement, quel que soit son bit 7 ; un id absent reste
+> un no-op — troisième domaine après RECALL-04 (au-dessus du plus grand id) et
+> RECALL-05 (trou intérieur), et il couvre ici les ids ≥ 128.
+
+Deux réserves honnêtes. L'octet **228** dépasse le maximum du panneau (199) :
+son no-op peut venir de « aucun preset à cet id » comme d'une borne à 199, et
+cette série ne les sépare pas — mais ni l'un ni l'autre n'est une troncature,
+et c'est ce qui était en jeu. Et les ids testés, 140 et 141, sont dans la
+plage du panneau ; 200–255 n'est pas sondé.
+
+**Le rappel d'un id ≥ 128 est un rappel ordinaire sur toutes les couches.**
+Hors groupe B, les tirs 100, 140 et 141 sont identiques canal pour canal : le
+bit 7 de l'octet ne change rien à ce que le moteur fait des positions, des
+dimmers ou des groupes que la cue n'adresse pas.
+
+### La mesure gratuite annoncée : GEN-03 réfuté une seconde fois
+
+Les cues 140 et 141 portent dans `f31` les valeurs d'octet **32** et **4** —
+deux des cinq cas que GEN-03 avait construits. **Toutes deux mettent `f17` à
+l'échelle** : 120 et non 255, sur les six familles de canaux. La lecture « le
+poids de l'octet de `f31` casse la mise à l'échelle au-delà de 16 » est donc
+réfutée par un second chemin, indépendant de la sauvegarde qui l'avait déjà
+expliquée. L'anomalie 102 était bien la copie vive, et rien d'autre.

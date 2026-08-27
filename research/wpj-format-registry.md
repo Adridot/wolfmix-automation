@@ -6845,3 +6845,81 @@ deux pages **identiques**. L'identité est **retirée du code**.
 > écriture neuve**, et qu'ici elle a coûté un geste au panneau.
 
 `f3`, `f23` et `f27` restent nuls, et non attribués.
+
+### F7-01 confirmé à l'écran — `f7` est le sélecteur de page, et `f7[C]` n'était pas une anomalie — **[validated]**
+
+Trois photographies du panneau, prises sur l'état qui a produit le fichier :
+l'écran `HOME`, puis l'écran `COLOR FX` sur chacune des deux pages.
+
+L'écran `HOME` donne l'affectation par groupe, et le fichier la donne aussi.
+Correspondance **élément par élément** :
+
+| Groupe | `f7` | Page à l'écran | `f16` tranche 0 | Moteur à l'écran | `f17` | Dimmer à l'écran |
+|---|---|---|---|---|---|---|
+| A | **0** | `COLOR FX1` | bit mis | encadré = actif | 0 | 0 % |
+| B | **1** | `COLOR FX2` | bit mis | encadré = actif | 120 | **47 %** |
+| C | **1** | `COLOR FX2` | bit **clair** | texte simple = inactif | 0 | 0 % |
+| D–H | 0 | — | — | — | 0 | — |
+
+> **`165.f7` est le sélecteur de page du Color FX, par groupe : 0 = `FX1`,
+> 1 = `FX2`.** Huit éléments, trois groupes peuplés, deux valeurs distinctes, et
+> la lecture tombe juste sur les trois. **[validated]**
+
+### L'anomalie `f7[C]` est expliquée, et elle sépare deux champs
+
+Le groupe C portait `f7` = 1 alors que le moteur couleur ne l'adresse pas.
+L'opérateur : *« j'avais dû l'activer sur le C pour le tester, donc même s'il
+est off, il doit considérer que c'est le Color FX 2 qui est en attente »* — et
+l'écran le montre : le `COLOR FX2` du groupe C est écrit **sans cadre**, là où
+ceux de A et B sont encadrés.
+
+Ce n'était donc pas une anomalie mais **la mesure la plus utile de la série** :
+deux champs orthogonaux, qu'on aurait pu confondre indéfiniment sur un corpus
+où ils coïncident.
+
+| Champ | Ce qu'il dit |
+|---|---|
+| `f16` tranche 0 | quels groupes le moteur couleur **allume** |
+| `f7` | à quelle **page** chaque groupe est affecté, allumé **ou non** |
+
+Un groupe éteint garde sa page en attente. C'est aussi ce qui explique les
+quatre presets du corpus, dont le seul groupe B est en page 2 sans que rien
+d'autre ne le trahisse.
+
+### Pourquoi pas `device-confirmed`, et ce qu'il faudrait
+
+La lecture est prise sur **un** état d'écran. Nous n'avons jamais **écrit**
+`f7` nous-mêmes, et aucune page demandée par nous n'a été relue au panneau.
+Le pas suivant est le même que pour tous les autres champs : composer deux cues
+qui ne diffèrent que par `f7`, déployer, ouvrir, et vérifier à l'écran que la
+page demandée est celle affichée.
+
+**Le codec ne renomme pas `f7` pour autant.** Seule la couleur a été variée ;
+`f3`, `f23` et `f27` restent nuls, et rien ne dit encore si `f7` porte la page
+de la couleur seule ou si chaque moteur a la sienne. Un `fN` qui deviendrait
+`page_color_fx` alors qu'il porte la page de tous les moteurs serait exactement
+le renommage que ce dépôt existe pour éviter. Discriminateur : mettre un groupe
+en **Move FX2** et regarder si c'est `f7` ou `f23` qui bouge.
+
+### Corroboration gratuite pour GEN-02
+
+L'écran `HOME` affiche le dimmer du groupe B à **47 %** là où le fichier porte
+`f17` = 120. `120 / 255 = 47,06 %`, tronqué à **47**. Les groupes A et C, à
+`f17` = 0, affichent **0 %**.
+
+> `f17` est un **pourcentage** — GEN-02 l'avait établi par la sortie DMX et les
+> bornes de course `106.f5`/`f6` ; le panneau le dit maintenant en toutes
+> lettres, par un chemin qui ne passe pas du tout par le DMX. Deux voies
+> indépendantes, même lecture.
+
+### Les deux pages portent le même effet, et c'est pour ça que les slots sont égaux
+
+Les écrans `COLOR FX` des deux pages montrent le **même** effet — `RAINBOW`,
+`FADE` 100 %, `PHASE` 20 %, `SPEED` 50 %, `LINK GROUP` — ce qui explique
+`color_fx1 == color_fx2` dans le fichier sans rien de mystérieux : l'opérateur a
+affecté une page, pas réglé un effet différent dessus.
+
+C'est aussi ce qui a tué l'identité `deux_pages_fx` : elle supposait qu'un
+moteur allumé implique deux réglages distincts, alors que **la page est une
+affectation, pas une configuration**. Les deux notions sont indépendantes, et
+c'est la même confusion que celle entre `f16` et `f7` ci-dessus.

@@ -449,7 +449,9 @@ retraction of an entry above.
 > does nothing at all, whatever `f10` says — which is how GEN-01 measured five
 > captures with no dimmer moving. With it on, `f17` acts — through the travel
 > limits of `106.f5`/`f6`, see the `f17` row of §5's preset submessage table
-> (GEN-02).
+> (GEN-02). The panel says the same thing by a path that never touches DMX: a
+> preset carrying `f17` = 120 on one group prints that group's dimmer as
+> **47 %** on the `HOME` screen, and `120 / 255` = 47.06 (F7-01).
 >
 > That confounds the `OTHER` attribution: ACC-02 ran with the setting off, so
 > it could never separate "bit 5 silenced the dimmers" from "the setting did".
@@ -564,11 +566,12 @@ engine — is refuted: on that same device-composed preset the Beam engine is
 addressed-group reading no longer rests on a save of a file we wrote; it holds on
 an entry the firmware authored alone.
 
-**Where the page assignment does live: `f7`, on current evidence — [observed].**
-It is the only field of that preset that separates group A from group B — `0` on
-A, `1` on B, matching page 1 and page 2. See §5.6 and the registry, F7-01. Its
-third element is also `1` for a group the engine does not address, which is
-unexplained, so no name is given to the field.
+**Where the page assignment lives: `f7` — [validated].** A per-group selector,
+`0` = `FX1` and `1` = `FX2`, confirmed against a photograph of the `HOME` screen
+element by element. It is orthogonal to this slice: slice 0 is which groups the
+engine switches **on**, `f7` is which page each group is **assigned** to, on or
+off — a group with the engine off keeps its pending page. See §5.6 and the
+registry, F7-01.
 
 Slice 11 stays unattributed. Its values look like group masks — 5, 2 and 7 —
 but "the groups that have a fixture" fails on 44 of 45 files and "the schema
@@ -637,22 +640,32 @@ either (FW-02).
 These are **live state** until a preset captures them: a project save alone does
 not write them, only `SHIFT` + tapping a preset does.
 
-**`f7` carries the FX page selection, on current evidence — [observed]
-(F7-01, FX2-01).** A preset composed at the panel with Colour page 1 on group A
-and page 2 on group B came back with `f7` = `[0, 1, 1, 0, 0, 0, 0, 0]`: `0` on A,
-`1` on B, and it is the **only** field of that preset that separates the two
-groups. The reading that costs least is a per-group page selector, `0` = page 1
-and `1` = page 2, and it also explains the four corpus presets, whose group B is
-likewise the only one set.
+**`f7` is the per-group Colour FX page selector, `0` = `FX1` and `1` = `FX2` —
+[validated] (F7-01).** A preset composed at the panel came back with
+`f7` = `[0, 1, 1, 0, 0, 0, 0, 0]`, and a photograph of the `HOME` screen taken on
+that same state reads `COLOR FX1` for group A and `COLOR FX2` for groups B and C.
+Eight elements, three populated groups, two distinct values, and the mapping
+lands on all three.
 
-Two reasons it stays at `observed`. Its third element is `1` for a group the
-Colour engine does not even address, which nothing explains — so the index may
-not be the group at all. And an earlier reading of this field, "`f7` marks a
-preset whose Beam engine is off while its two Beam pages differ", was
-`observed` on four corpus presets and **refuted by the fifth sample**: this
-preset has `f7` set with its Beam pages identical. The guessed split
-`f3` = Colour / `f7` = Beam / `f23` = Move is refuted too — a **Colour** edit
-moved `f7` and left `f3` at zero.
+**`f7` and `f16` slice 0 are orthogonal, and the corpus hid it.** Slice 0 says
+which groups the Colour engine **switches on**; `f7` says which page each group
+is **assigned to**, switched on or not. On that preset slice 0 is `3` = A+B while
+`f7` marks B *and* C: group C is assigned to `FX2` with its engine off, and the
+screen prints its `COLOR FX2` without the box that A and B carry. A group keeps
+its pending page. That also explains the four corpus presets, where group B is
+the only one on page 2 and nothing else betrays it.
+
+Not `device-confirmed`: the mapping is read off one screen state, we have never
+**written** `f7`, and no page we asked for has been read back. **And the codec
+key is deliberately not renamed** — only Colour was varied, `f3`/`f23`/`f27` are
+still zero, and nothing yet says whether `f7` carries the Colour page alone or
+the page of every engine. Discriminator: put one group on **Move FX2** and see
+whether `f7` or `f23` moves.
+
+Two earlier readings of this field are **refuted**. "`f7` marks a preset whose
+Beam engine is off while its two Beam pages differ" held on four corpus presets
+and died on the fifth. And the guessed split `f3` = Colour / `f7` = Beam /
+`f23` = Move is wrong: a **Colour** edit moved `f7` and left `f3` at zero.
 
 The live-state rule above matters here: that value was captured off the panel by
 a `SHIFT` + tap, so it records what the operator had selected, not what a project

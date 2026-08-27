@@ -192,9 +192,15 @@ def decode_settings(data):
                else False if kind == "bool" else 0.0 if kind == "float" else 0)
         for name, kind in SETTINGS_FIELDS.values()
     }
+    inconnus = {}
     for number, wire_type, value in protobuf_fields(data):
         field = SETTINGS_FIELDS.get(number)
         if not field:
+            # Le firmware porte des réglages que nous ne savons pas nommer —
+            # « store group dimmers in preset » (GEN-02) en est peut-être un.
+            # Les rendre visibles permet de trancher par un simple diff avant
+            # et après une bascule au panneau, sans jamais leur donner de nom.
+            inconnus[number] = value.hex() if isinstance(value, bytes) else value
             continue
         name, kind = field
         if kind == "bool" and wire_type == 0:
@@ -211,6 +217,8 @@ def decode_settings(data):
             result.setdefault(name, []).append(value)
         else:
             raise ProtocolError(f"Unexpected wire type for Settings.{name}")
+    if inconnus:
+        result["unknownFields"] = inconnus
     return result
 
 
@@ -786,6 +794,9 @@ def self_test():
     assert settings["serialNumber"] == 1_234_567
     assert settings["firmwareVer"] == "2.0.18"
     assert settings["universeMapping"] == [0, 1, 2, 3]
+    assert "unknownFields" not in settings
+    inconnu = decode_settings(settings_payload + encode_protobuf_field(99, 0, 1))
+    assert inconnu["unknownFields"] == {99: 1}
 
     uuid_bytes = bytes(range(16))
     item = b"".join((

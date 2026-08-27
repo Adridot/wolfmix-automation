@@ -15,6 +15,7 @@ campaigns are automatic after that point.
 import argparse
 import datetime
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -73,6 +74,26 @@ def validate_project(path, project_name=None):
     else:
         data = path.read_bytes()
     return path, data
+
+
+def warn_about_dimmers(data):
+    """A preset that writes group dimmers is inert unless the controller's
+    Settings menu has ``store group dimmers in preset`` ON (GEN-02). That
+    condition lives in the device, not in the project, so a perfectly
+    compiled show can do nothing at all — and the Settings message we read
+    does not carry the flag. Say so rather than let it fail silently."""
+    try:
+        presets = wpj_codec.decode(165, wpjlib.Wpj.from_bytes(data).get(165))
+    except Exception:
+        return                      # no record 165, or no schema: nothing to say
+    entries = [p for p in presets.get("presets", ()) if isinstance(p, dict)]
+    with_dimmers = sum(1 for p in entries if any(p.get("dimmers") or ()))
+    if with_dimmers:
+        print(f"warning: {with_dimmers}/{len(entries)} presets write group "
+              "dimmers; those values stay inert unless the panel's "
+              "Settings > store group dimmers in preset is ON (GEN-02) — "
+              "the condition lives in the device, not in the project",
+              file=sys.stderr)
 
 
 def state_paths(state_root, label):
@@ -443,6 +464,7 @@ def deploy_one(args, candidate_path, case_id):
     if not state.get("armed"):
         raise wolfmix.WolfmixError("Experiment is not armed; run arm first")
     path, data = validate_project(candidate_path, state["name"])
+    warn_about_dimmers(data)
     run_dir = root / "runs" / f"{utc_id()}-{case_id}"
     run_dir.mkdir(parents=True, exist_ok=False)
     port = args.port or wolfmix.discover_port()
@@ -550,6 +572,16 @@ def self_test(_args):
     else:
         path, data = validate_project(Path(sample))
         assert path == Path(sample).resolve() and data
+        warned = io.StringIO()
+        stderr, sys.stderr = sys.stderr, warned
+        try:
+            warn_about_dimmers(data)          # a real project: says something
+            spoken = warned.getvalue()
+            warn_about_dimmers(b"not a project")   # garbage: stays quiet
+        finally:
+            sys.stderr = stderr
+        assert "store group dimmers" in spoken, spoken
+        assert warned.getvalue() == spoken, "warned on a non-project"
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory) / "state.json"
             value = {"sha256": sha256(data), "size": len(data)}

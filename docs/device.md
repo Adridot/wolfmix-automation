@@ -38,9 +38,12 @@ Events used: `GET_PROFILE_LIST` 2, `GET_PROFILE` 3, `GET_PROJECT_LIST` 4,
 `payload[0]` as the index: one raw byte, nothing else. A protobuf-shaped
 `[tag, value]` pair makes the controller read the *tag* — `f1=<anything>`
 recalls id 8, `f2=<anything>` id 16. For `preset`, the byte is the preset
-**id** (`id = (page-1)*20 + (slot-1)`); a missing id resolves to the greatest
-existing id below it, and anything past the last entry recalls that last
-entry. For `mode`, the index is usually the mode reached, but not always —
+**id** (`id = (page-1)*20 + (slot-1)`), not the entry position. What a
+*missing* id does is **open**: the reading published earlier that day (it
+floors to the greatest existing id below) was withdrawn the same day — a
+no-op reproduces the same measurements, and the runs meant to separate them
+were confounded by partial presets, by animation phase, and by a recall
+swallowed after a reset. Ids beyond 127 have never been sent. For `mode`, the index is usually the mode reached, but not always —
 index 40 lands on 42 — and a raw index can open a screen the panel menu does
 not expose, some of which act on entry (mode 42 tries to read a USB medium).
 See `research/wpj-format-registry.md`, sections RAW-01 and RECALL-03.
@@ -58,7 +61,9 @@ What breaks out, measured: `1` (COLOR FX), `3` (MOVE FX), `8` (GOBO), `33`
 `5` (PRESETS), `16` (the main menu). Do not send a modal index to a controller
 in service; if one is stuck, send `mode 1`.
 
-The first request after the port has been idle can time out; issue it again.
+The first request after the port has been idle can time out; issue it again
+(`research/wpj-format-registry.md`, LINK-01 — observed five times, undiagnosed,
+and deliberately not papered over with a retry in the tool).
 
 `GET_SETTINGS` returns 20 known fields, decoded by name: engine and USB-DMX
 state, lock flags, profile and project counts, free memory, serial number,
@@ -184,8 +189,8 @@ With a one-byte payload both events behave:
 
 | Event | Sent | Result |
 |---|---|---|
-| `SET_MODE` | `00`, `05`, `26`, `16`, `00` | modes 0, 5, 26, 16, 0 — **5 of 5** |
-| `SET_PRESET` | `01`, `05`, `01`, `05`, `01` | two stable fingerprints, each repeat identical to the channel |
+| `SET_MODE` | one byte: 0, 5, 26, 16, 0 (decimal) | modes 0, 5, 26, 16, 0 — **5 of 5** |
+| `SET_PRESET` | one byte: 1, 5, 1, 5, 1 (decimal) | two stable fingerprints, each repeat identical to the channel |
 
 **Addressed, deterministic, hands-off preset recall works.** And mode 26 —
 `main menu → Open`, the screen whose manual use reloads a project — is
@@ -197,10 +202,16 @@ situation was that we had never sent one. What stays refuted as written is
 `f1` = id (SETP-01) and `f2` = clamped entry position (PRESET-07) — both
 described a protobuf the firmware does not read.
 
-Still open: whether that byte is an **id or an entry position** (they diverge
-only at the tail of a sparse file), and whether a second byte is read at all.
-`SET_PROJECT` and the long events remain protobuf — the raw-byte reading is for
-the short ones.
+Both questions this paragraph used to leave open are now closed. The byte is
+the **id**, not the entry position: ids 99 and 114 recall two different
+presets, where a position reading makes both of them out of range and so
+identical (RECALL-03). And a **second byte is not read** — the one payload
+that seemed to prove otherwise was undone by its own control shot, and a fade
+parameter is excluded by the transient (RAW-02).
+
+What is open: what a **missing** id does — no-op, floor, clamp, or a common
+state — and whether ids beyond 127 behave at all. `SET_PROJECT` and the long
+events remain protobuf; the raw-byte reading is for the short ones.
 
 ### Campaign manifest
 

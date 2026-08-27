@@ -701,6 +701,10 @@ def index_payload(value):
     pair makes the controller read the *tag* byte as the index — the trap that
     produced a day of "the value is ignored" readings. See RAW-01 and RECALL-03
     in ``research/wpj-format-registry.md``.
+
+    The byte reading is established for values under 128 only: nothing above
+    0x7f has ever been sent except 200, whose outcome is confounded. Preset ids
+    run to 199 (ten pages of twenty), so pages 7 to 10 are untested.
     """
     if not 0 <= value <= 255:
         raise WolfmixError("Index must be between 0 and 255")
@@ -898,8 +902,8 @@ def build_parser():
         "preset", help="recall a preset by its id (id = (page-1)*20 + slot-1)"
     )
     preset.add_argument("id", type=int,
-                        help="preset id; a missing id resolves to the greatest "
-                             "existing id below it, out of range to the last entry")
+                        help="preset id; what a missing id does is not settled "
+                             "(see RECALL-03), and ids above 127 are untested")
     mode = commands.add_parser(
         "mode", help="switch the controller UI to a mode index"
     )
@@ -967,7 +971,9 @@ def main(argv=None):
                 connection.request(SET_PRESET, index_payload(args.id)),
                 f"Recalling preset {args.id}",
             )
-            print_json({"preset": args.id})
+            # The id sent is not necessarily the entry reached, and nothing
+            # in GET_SETTINGS names it — so report what was requested.
+            print_json({"requested": args.id})
         elif args.command == "mode":
             require_success(
                 connection.request(SET_MODE, index_payload(args.index)),

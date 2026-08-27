@@ -4743,9 +4743,19 @@ WTOOLS se juge alors ainsi, hands-off :
 - 10 skips après la poussée → 10 distinctes = **pas de rechargement** ;
   ≤ 6 distinctes avec répétitions = **rechargement**.
 
-Réserve explicite : l'ordre exact du parcours (positions ? pages ? entrées
-vides sautées ?) n'est **pas** établi. Le test ne repose que sur « moins
-d'entrées ⇒ répétitions plus tôt », ce qui suffit ici et rien de plus.
+Réserves explicites, et elles comptent :
+- L'ordre exact du parcours (positions ? pages ? entrées vides sautées ?)
+  n'est **pas** établi. Le test ne repose que sur « moins d'entrées ⇒
+  répétitions plus tôt ».
+- **Le bras positif de l'instrument n'a jamais été observé.** Toutes les
+  lectures produites à ce jour valent 10/10 ; que six entrées donnent bien
+  ≤ 6 apparences est une déduction par tiroirs, pas une mesure.
+- Une répétition pourrait **ne pas ressembler à une répétition** : RECALL-02
+  a mesuré une même entrée rendant des trames très éloignées selon l'état
+  sous-jacent (presets partiels). Le falsificateur n'est donc pas garanti de
+  se déclencher.
+Calibration qui lèverait les deux dernières réserves, une minute : ouvrir au
+panneau le fichier à 6 entrées déjà en mémoire, puis compter dix skips.
 
 ## RELOAD-02 mesuré — une poussée WTOOLS ne remplace pas la copie vive — 2026-08-27
 
@@ -4757,7 +4767,7 @@ RECALL-01. W1 MK1 fw 2.0.18, DMX débranché, `projectChanged` false du début
 
 | Étape | Mesure |
 |---|---|
-| Copie vive = fichier clairsemé (87 entrées), avant poussée | **10 apparences distinctes / 10 skips** (paire la plus proche : 13 canaux, amplitude 139) |
+| Copie vive = fichier clairsemé (87 entrées) — **ré-ouverte au panneau par l'opérateur juste avant**, sur demande — avant poussée | **10 apparences distinctes / 10 skips** (paire la plus proche : 13 canaux, amplitude 139) |
 | Poussée du fichier à 6 entrées depuis WTOOLS 2.0.2, WTOOLS refermé, **aucun geste au panneau** | — |
 | Après poussée | **10 apparences distinctes / 10 skips** |
 
@@ -4953,7 +4963,13 @@ L'écran **tente une lecture dès son ouverture** : sans support (le MK1 n'a
 pas de socket USB-A), il affiche « error reading project » ; tout bouton
 *import* redonne la même erreur, *export* donne « error backing up data ».
 C'est l'origine des deux écrans trouvés au matin après le balayage
-d'index — aucun dégât, aucune écriture, le stockage relu octet pour octet.
+d'index. Les boutons *import* et *export* ont été pressés **par l'opérateur**,
+au panneau, pour caractériser l'écran. Vérifié après coup : `projectChanged`
+est resté false, la liste des 6 projets est intacte avec les tailles
+attendues, et **le projet bac-à-sable** (`73d06df4…`) se relit enregistrement
+pour enregistrement identique à ce qui avait été déployé. Les cinq autres
+projets n'ont pas été re-téléchargés : leur intégrité repose sur la liste,
+pas sur une relecture.
 
 Deux enseignements :
 - `mode-map.md` classait `USB_STICK` et `FILE_BROWSER` comme inatteignables
@@ -4987,11 +5003,12 @@ maintenant complète.
 | Une poussée WTOOLS **ne rend pas vivant** le projet poussé (10 apparences distinctes sur 10 skips, avant comme après). | device-confirmed |
 | `store` + `RESTART` **sous le même UUID** ne recharge pas non plus (même mesure, plus la reproduction rang à rang du parcours de skip). | device-confirmed |
 | L'écran qui recharge — mode 26, *main menu → Open* — **est atteignable à distance** par index brut, liste des 6 projets à l'écran. | device-confirmed |
-| Sur cet écran, **`SKIP_PRESET` ne déplace rien** et **`SET_PRESET` ne fait rien**. Les deux seules primitives de la surface connue sont inertes là où il faudrait sélectionner et valider. | device-confirmed |
+| Sur cet écran, **`SKIP_PRESET` ne déplace rien** (trois envois espacés de 3 s) et **`SET_PRESET` avec l'octet 0 ne fait rien** (un envoi) : l'opérateur regardait le panneau et rapporte « il ne s'est rien passé ». Observation à l'œil, pas mesure instrumentée — le DMX n'était pas capturé. | observed (opérateur) |
 | Le binaire WTOOLS ne porte **aucune primitive d'entrée à distance** (encodeur, appui, touche) : `onPresetButtonPressed`/`onNavigationButtonPressed`/`onModeButtonPressed` sont les boutons de son interface Flutter, `setEncoderColour` ne pilote que des LED. | observed |
 
 **Lecture.** Le protocole expose le *changement de mode* et le *déclenchement
-de preset*, pas l'*entrée utilisateur*. On peut amener le panneau devant la
+de preset*, pas l'*entrée utilisateur*. (L'inertie sur l'écran Open est une
+observation à l'œil ; la ré-instrumenter au DMX la durcirait.) On peut amener le panneau devant la
 liste des projets ; on ne peut ni y déplacer le curseur ni valider. Le
 rechargement reste **un geste manuel irréductible**, et la prémisse de départ
 (« WTOOLS pousse des éditions qui apparaissent en direct ») était fausse :
@@ -5040,24 +5057,51 @@ Trois groupes : **{84, 85, 86}**, **{99}**, **{114, 200}**.
   devraient donner trois trames différentes. Elles n'en donnent qu'une.
   99, 114 et 200 sont tous hors domaine — ils devraient s'écraser sur le même
   écrêtage. 99 s'en distingue par 111 canaux. **Réfutée deux fois.**
-- Lecture « **id** » : 84, 99 et 114 sont les trois derniers ids existants.
-  84 est rappelé tel quel ; 85 et 86 n'existent pas et **retombent sur 84** ;
-  99 et 114 existent et sont distincts ; 200 est hors domaine et **retombe sur
-  114**, le dernier. **Tout est expliqué, rien ne reste.**
+- Lecture « **id** » : 84, 99 et 114 sont les trois derniers ids existants,
+  et ils rendent trois trames distinctes. C'est le point décisif : sous la
+  lecture « position », 99 **et** 114 seraient tous deux hors domaine et
+  devraient donner **le même** résultat. Ils diffèrent de 111 canaux.
+- Ce que la matrice ci-dessus ne dit **pas** : ce que devient un id absent.
+  Les zéros (85 ≡ 84, 200 ≡ 114) ont une cause plus simple que l'écrêtage,
+  voir la rétractation ci-dessous.
 
 **Confirmation visuelle par l'opérateur**, qui a suivi le panneau pendant le
 tir : le surlignage est passé par le 5e pad de la page 5 — `id = (5−1)·20 +
 (5−1) = 84` — puis « preset test auto » (id 99, dernier pad de la page 5),
 puis « Test » (id 114, page 6). Exactement les trois groupes, dans l'ordre.
 
-**Règle de résolution — mesurée** : l'octet **92** rappelle la même trame que
-l'octet 84 (0 canal d'écart) et non celle de 99. Or 92−84 = 8 > 99−92 = 7 :
-« le plus proche » est **réfuté**, c'est le **plancher**. Règle complète, et
-device-confirmed :
+**Ce qui est device-confirmed** :
 
-> `SET_PRESET`, charge utile = **un octet = l'id du preset**. Un id absent est
-> résolu vers **le plus grand id existant qui lui est inférieur** ; un octet
-> au-delà du dernier id rappelle **la dernière entrée**.
+> `SET_PRESET`, charge utile = **un octet = l'id du preset** — pas la position
+> d'entrée. Un id existant rappelle son preset.
+
+**Règle de résolution d'un id absent : RETIRÉE, question OUVERTE.** Elle avait
+été publiée comme « plancher » sur la foi des zéros de la matrice et d'un tir
+sur l'octet 92. Un audit adversarial du même jour a montré que **le rival
+« un id absent ne fait rien » reproduit toutes les cellules** : les tirs
+étaient en ordre croissant, donc un no-op laisse la trame du tir précédent —
+85 après 84 rend F84, 200 après 114 rend F114, et 92 avait 84 pour
+prédécesseur immédiat. Aucun des deux tirs ne discriminait quoi que ce soit.
+
+Les re-mesures à historique constant (remise à un preset de référence avant
+chaque tir) n'ont pas tranché non plus, et ont exhibé trois confusions qu'il
+faudra maîtriser pour y arriver :
+
+1. **Les presets sont partiels** — les pages usine séparent full / couleur /
+   move / beam. La trame obtenue dépend donc de ce qu'il y avait dessous :
+   comparer deux tirs d'historiques différents ne prouve rien.
+2. **Le rig anime en permanence.** Un même rappel se re-mesure à 32 canaux
+   d'écart en trame unique ; le plancher de bruit dépasse l'effet cherché.
+   L'oracle prévu pour ça est l'enveloppe min/max, pas la trame.
+3. **Le fondu, ou une garde d'anti-rebond, avale des rappels** : depuis une
+   remise à l'id 114, un rappel de 84 envoyé 4 s plus tard ne prend pas,
+   alors qu'il prend depuis une remise à l'id 5. Tant que ce délai n'est pas
+   caractérisé, tout protocole « remise puis tir » est suspect.
+
+Candidats encore en lice pour un id absent : **no-op**, **plancher**,
+**écrêtage à la dernière entrée**, **état commun distinct**. Le tir qui
+tranchera devra être jugé à l'enveloppe, à historique constant, et avec un
+délai de remise mesuré — pas supposé.
 
 Encodée dans l'outil : `wolfmix.py preset <id>` et `wolfmix.py mode <index>`,
 avec `index_payload()` et son self-check (l'octet 23 doit partir en `0x17`,
@@ -5122,8 +5166,13 @@ Trois faits, tous nouveaux :
 
 ## SCREEN-02 — comment sortir d'un écran modal, et ce que ça dit du menu — 2026-08-27 — **[device-confirmed]**
 
-Quatre essais, chacun : ouvrir Projects (index 26), attendre, envoyer un
-candidat, attendre. L'opérateur a relevé la suite des écrans affichés :
+Quatre essais, chacun : ouvrir Projects (index 26), attendre 6 s, envoyer un
+candidat, attendre 7 s. Ordre exact des **neuf** envois, tel que le script les
+a émis :
+
+    26, 8, 26, 16, 26, 3, 26, 33, puis 1 (remise)
+
+L'opérateur a relevé la suite des écrans affichés :
 
 > PROJECT, GOBO, PROJECT, MOVE FX, PROJECTS, BLACKOUT, COLOR FX
 
@@ -5141,10 +5190,15 @@ sur Projects, et la réouverture de l'essai 3 tombe sur un écran déjà là.
 | 5 | PRESETS | non |
 | 16 | SETUP, le menu parent | **non** |
 
-**La ligne de partage n'est pas « touche physique contre écran »** — PRESET
-est une touche physique et ne sort pas. Elle sépare les écrans qui
+**Lecture proposée — [hypothesized], pas mesurée.** La ligne de partage n'est
+pas « touche physique contre écran » : PRESET est une touche physique et ne
+sort pas. Elle sépare — sur sept points seulement — les écrans qui
 **agissent sur la sortie lumière** (racks FX, gobo statique, blackout) de ceux
-qui ne font que **naviguer** (HOME, grille des presets, menu principal).
+qui ne font que **naviguer** (HOME, grille des presets, menu principal). Un
+rival tient aussi bien sur ces sept points : « touches FX et flash contre les
+trois racines de navigation ». Prédiction publiée avant mesure pour les
+départager : sous le rival, **30 (SPEED)** et **28 (WOLF)** sortent du modal ;
+sous la règle proposée, non. **44 (BPM)** ne sort sous aucune des deux.
 
 ### Deux conséquences
 
@@ -5155,6 +5209,8 @@ qui ne font que **naviguer** (HOME, grille des presets, menu principal).
   hiérarchie de navigation n'écoute donc plus quand un modal est ouvert :
   le chemin « Open → sélection → validation » n'est pas pilotable par des
   changements de mode. **RELOAD-04 est confirmé par un troisième angle.**
+  Cette conséquence-là ne dépend pas de la lecture ci-dessus : elle tient au
+  seul point 16, mesuré.
 
 ## RAW-02 — le deuxième octet n'est pas lu — 2026-08-27 — **[device-confirmed]**
 
@@ -5212,3 +5268,15 @@ façon indépendante — le mode rapporté, les LED des pads, et l'écran. Le mo
 39 déplace les deux premières et laisse la troisième en place. Notre readback
 n'observe que la première ; c'est la limite qu'il faut garder en tête chaque
 fois qu'on écrit « l'appareil est sur tel écran ».
+
+## LINK-01 — la première requête après une inactivité expire — 2026-08-27 — **[observed]**
+
+Constaté **cinq fois** dans la journée, toujours à l'identique : après une
+pause (ou après qu'un autre processus a tenu le port), la première requête —
+un `GET_SETTINGS` — expire au bout du timeout de 5 s, et la suivante passe
+sans histoire. Aucune corrélation trouvée avec l'écran, le mode ou une
+opération en cours. Aucun diagnostic : ce peut être le CDC côté firmware, le
+pilote macOS, ou l'ouverture du tty elle-même. Consigne pratique, et rien de
+plus : **relancer la commande**. Documenté ainsi dans `docs/device.md` ; pas
+de nouvelle logique de retry dans l'outil tant que la cause n'est pas
+comprise — un retry masquerait aussi les vraies pannes.

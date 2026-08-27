@@ -5797,3 +5797,90 @@ Même série, mêmes presets, réglage maintenant **activé**. Les trois presets
 Et le `220` du groupe A, avec les potentiomètres en butée, reste inexpliqué :
 si la prédiction 2 tient, il vient d'ailleurs — un maximum par groupe, un
 `f17` de l'ancienne copie vive, ou un plafond du profil. À sonder après coup.
+
+### GEN-02 mesuré — `f17` est un pourcentage, et il passe par `106.f5`/`f6` — **[device-confirmed]**
+
+Même fichier, mêmes presets, même rig ; seul le réglage a bougé. Remise sur
+**l'id 0** avant chaque tir — rig-c id 0 « Startup » a `f10` **absent** (les six
+bascules allumées) et ses trois moteurs à l'arrêt : c'est la seule remise qui
+réécrive toutes les couches. Contrôle : 0 canal d'écart, et les trois remises
+identiques entre elles sur les 2048.
+
+**Les quatre prédictions sont fausses, et le résultat vaut mieux qu'elles.**
+
+| | Prédit | Mesuré |
+|---|---|---|
+| 1 | dimmer B → 120 | **255**, inchangé |
+| 2 | dimmers A et C → 0 | A → **69**, C → **0** |
+| 3 | rouge B reste 255 | **120** |
+| 4 | 18 canaux changent | 49 |
+
+### Le modèle, exact sur sept points
+
+`f17` n'est pas une valeur DMX, c'est un **pourcentage**, et il traverse les
+bornes de course du canal — la formule que POS-01 avait établie pour le pan et
+le tilt, appliquée au rôle **dimmer** :
+
+```
+DMX = f5 + (f17 / 255) × (f6 − f5)          bornes lues dans 106.f5/f6
+```
+
+Les six lyres du groupe A portent `f5 = 69, f6 = 220` sur leur canal dimmer ;
+le groupe C et les pars du groupe B portent `0`/`255`. Le fichier le disait
+avant la mesure :
+
+| Groupe | `f17` écrit | `f5`–`f6` | Attendu | Mesuré |
+|---|---|---|---|---|
+| A (6 lyres) | 0 | 69–220 | 69 | **69** |
+| A, sous la remise | 255 | 69–220 | 220 | **220** |
+| C (2 lyres) | 0 | 0–255 | 0 | **0** |
+| C, sous la remise | 255 | 0–255 | 255 | **255** |
+
+C'est aussi la fin du « `220` inexpliqué » de GEN-01 : ce n'était ni un fader
+ni un plafond mystérieux, c'est `f6` de ces six luminaires.
+
+**Et sur un luminaire qui a des canaux de couleur, l'intensité ne va PAS au
+canal dimmer** : celui du groupe B reste à 255 pendant que les canaux de
+couleur portent `pad × f17 / 255`, tronqué. Le pad 16 = `(255, 105, 8)` le
+donne sur trois canaux à la fois :
+
+```
+255 × 120/255 = 120   mesuré 120
+105 × 120/255 =  49,4 mesuré  49
+  8 × 120/255 =   3,8 mesuré   3
+```
+
+Le moteur rend donc *couleur × intensité* là où le luminaire a de la couleur,
+et l'intensité seule là où il n'en a pas.
+
+### Ce que ça règle, et ce que ça laisse ouvert
+
+`f17` = dimmer par groupe **[device-confirmed]** — il était `hypothesized`
+depuis le premier jour, et il était le seul champ que le compilateur écrivait
+sous ce statut. Le réglage `store group dimmers in preset` le gate
+entièrement : éteint, aucune des sept valeurs ci-dessus n'apparaît.
+
+**Conséquence pour un show généré : les dimmers ne sont pas auto-portants.**
+Le fichier peut être parfait et ne rien faire, parce que la condition vit dans
+les réglages de l'appareil et pas dans le projet. C'est le troisième gate de
+cette famille, après `f10` et `f16`, et le premier qui ne soit pas dans le
+fichier.
+
+**Anomalie, reproductible, non expliquée.** Le preset **102** se comporte comme
+si son `f17` valait 255 : bleu 255 au lieu de 120, A à 220, C à 255. Ses
+voisins 100 et 101 mettent le même `f17` à l'échelle. Les trois entrées stockées
+sont identiques **champ par champ sauf `f31`** — relu sur le fichier
+retéléchargé — et 102 a été rappelé trois fois, dans deux séries indépendantes,
+avec le même résultat.
+
+| Preset | pad | bit dans la fenêtre du groupe B | `f17` appliqué ? |
+|---|---|---|---|
+| 100 | 16 | 15 | oui |
+| 101 | 6 | 5 | oui |
+| 102 | 9 | 8 | **non** |
+
+Discriminateur, une seule variable : deux cues de plus, identiques à 101, l'une
+sur le pad **7** (bit 6) et l'autre sur le pad **10** (bit 9). Si seul le pad 9
+casse, c'est le pad ; si 10 casse aussi, c'est le rang du bit. Coût : un
+déploiement et une ouverture manuelle. Jusque-là, **ne pas lire « `f17` est
+appliqué » comme universel** — il l'est sur deux presets sur trois.

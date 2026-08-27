@@ -187,8 +187,11 @@ back and that **nothing else moved**. Key reference: [`docs/show-format.md`](doc
 
 ```mermaid
 flowchart LR
+    H["intent.json<br/>ambiances,<br/>energy, groups"] --> I["wpj_generate.py<br/>reads the rig,<br/>picks a template"]
+    I --> A
     A["show.json<br/>your edits"] --> B["wpj_show.py<br/>validates,<br/>refuses the unproven"]
-    D["donor .wpj<br/>one of yours"] --> B
+    D["donor .wpj<br/>one of yours"] --> I
+    D --> B
     B --> C["wpj_codec.py<br/>JSON to bytes,<br/>fidelity self-checked"]
     C --> E["wpjlib.py<br/>TLV container,<br/>SHA-1 recomputed"]
     E --> F["new .wpj<br/>auto-verified"]
@@ -213,6 +216,7 @@ Three properties hold at every stage:
 | [`wpj_codec.py`](tools/wpj_codec.py) | Semantic JSON ↔ bytes per record type. `decode` verifies its own round-trip or falls back to raw hex. |
 | [`wpj_identities.py`](tools/wpj_identities.py) | Arithmetic identities between records — refutes a wrong reading without touching hardware. |
 | [`wpj_show.py`](tools/wpj_show.py) | The show compiler: an edit spec applied to a donor, auto-verified. |
+| [`wpj_generate.py`](tools/wpj_generate.py) | The show generator: ambiances, energy and groups in, a preset bank out — the rig read from the donor. |
 | [`wpj_api.py`](tools/wpj_api.py) | Inspect JSON in the `wpj-toolkit` schema shape, local and offline. |
 | [`wpj_inspect.py`](tools/wpj_inspect.py) | Protobuf wire walk for variants B/C. Exits 2 rather than guess. |
 | [`wpj_diff.py`](tools/wpj_diff.py) | Byte-range diff — the first command of every experiment. |

@@ -47,6 +47,11 @@ _PRESET = {
                                           # 0-based, 255 = aucun — device-confirmed
     30: ("pattern_couleur", "packed"),    # PATTERN de la couleur statique par groupe
                                           # A–H (nom lu sur l'écran) — device-confirmed
+    # f31 : 20 varints packés = les octets d'un champ de bits de 160 bits,
+    # découpé en huit masques de 20 bits, un par groupe A–H ; bit n du groupe
+    # g = pad n+1 de la palette 140 de ce groupe — device-confirmed, registre
+    # « f31 — one 20-pad mask per group A–H ».
+    31: ("couleur_statique", "packed"),
     # f10 : masque de contenu, six bits, 1 = bascule ÉTEINTE, dans l'ordre de
     # l'écran PRESET EDIT — bit0 COLOR, 1 MOVE, 2 BEAM, 3 GOBO, 4 LIVE EDIT,
     # 5 OTHER (bit 5 prédit, pas encore mesuré). Voir le registre, F4-02.

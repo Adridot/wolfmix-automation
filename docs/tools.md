@@ -7,10 +7,11 @@ relative to the working directory.
 Three conventions hold everywhere:
 
 - **Run with no arguments = self-check.** Each tool proves its own invariant and
-  exits non-zero if it cannot. Five of them (`wpjlib`, `wpj_codec`, `wpj_api`,
-  `wpj_identities`, `wpj_show`) prove it over your corpus; the other three prove
-  it against frozen inputs in their own source (`wpj_inspect`, `wpj_position`)
-  or against the git index (`wpj_privacy`). `make check` runs eight of them;
+  exits non-zero if it cannot. Six of them (`wpjlib`, `wpj_codec`, `wpj_api`,
+  `wpj_identities`, `wpj_show`, `wpj_generate`) prove it over your corpus; the
+  other three prove it against frozen inputs in their own source
+  (`wpj_inspect`, `wpj_position`) or against the git index (`wpj_privacy`).
+  `make check` runs nine of them;
   `wpj_diff.py` self-checks too but is not wired into it.
 - **No corpus, no claim.** No project file ships with this repository
   ([`../LEGAL.md`](../LEGAL.md)). The corpus root is `corpus/`, or `$WPJ_CORPUS`
@@ -174,9 +175,17 @@ python3 tools/wpj_show.py verify base.wpj out.wpj     # list differing records
 python3 tools/wpj_show.py                             # self-check
 ```
 
-Applies a JSON edit spec to a donor project. Nothing is synthesised: a preset,
-position or palette entry being edited must already exist in the donor;
-everything else is preserved byte for byte by `wpjlib`.
+Applies a JSON edit spec to a donor project. A position or palette entry being
+edited must already exist in the donor; everything else is preserved byte for
+byte by `wpjlib`. A **preset** may also be created, by cloning one of the
+donor's with the `modele` key — appending a well-formed `165.f5` entry with a
+free, larger id is device-confirmed (PRESET-01/06/07), and `165.f1` is left
+verbatim because it gates nothing.
+
+Preset names are capped at **19 UTF-8 bytes** and the compiler now rejects a
+longer one: past that the *whole project* refuses to open on the device
+(PRESET-05), and the value reads back fine, so nothing downstream would catch
+it.
 
 After writing, it reloads its own output (revalidating the SHA-1), re-decodes
 every edited record, checks each requested value reads back, and confirms that
@@ -184,6 +193,24 @@ every edited record, checks each requested value reads back, and confirms that
 is deleted. Exit 1 on error, 2 on bad usage.
 
 Key reference: [`show-format.md`](show-format.md).
+
+## `wpj_generate.py` — show generator
+
+```bash
+python3 tools/wpj_generate.py rig donor.wpj                     # read the rig
+python3 tools/wpj_generate.py compose intent.json out.wpj       # compose
+python3 tools/wpj_generate.py compose intent.json out.wpj --spec spec.json
+python3 tools/wpj_generate.py                                   # self-check
+```
+
+One layer above `wpj_show.py`: it turns an **intention** — ambiances, energy,
+colour, groups — into the preset bank of a show, then hands the resulting edit
+spec to the compiler, so every guarantee above still applies. The rig is not
+described by hand; it is read out of the donor (groups, fixtures, named
+positions, per-group palettes). `--spec` writes the intermediate edit spec, and
+that file is the audit trail: it names every field written.
+
+Format reference: [`generator.md`](generator.md).
 
 ## `wpj_position.py` — the position model, executable
 

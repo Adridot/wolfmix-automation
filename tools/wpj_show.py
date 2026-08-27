@@ -2,9 +2,12 @@
 """Compilateur de show minimal, template-based (sur wpjlib + wpj_codec).
 
 Principe : on part TOUJOURS d'un projet donneur variante A existant et on
-applique une spec JSON d'édition. Aucune structure synthétisée from scratch :
-un preset / une position / une entrée de palette éditée doit déjà exister
-dans le donneur ; tout le reste est préservé octet pour octet par wpjlib.
+applique une spec JSON d'édition. Tout ce que la spec ne nomme pas est
+préservé octet pour octet par wpjlib. Une position et une entrée de palette
+éditées doivent exister dans le donneur ; un preset peut en plus être **créé
+en queue** en clonant un preset du donneur (clé `modele`) — l'ajout d'une
+entrée `165.f5` avec l'id suivant est device-confirmed, `165.f1` reste
+verbatim (registre, PRESET-01).
 Périmètre v1 = champs à statut ≥ correlated uniquement (records 101, 165,
 150, 135) ; size/fade/phase (f8/f6/f9, attribution hypothesized) exclus.
 
@@ -13,6 +16,7 @@ Usage :
   wpj_show.py verify base.wpj sortie.wpj     liste les records qui diffèrent
   wpj_show.py                                self-check (corpus, sans trace)
 """
+import copy
 import json
 import os
 import sys
@@ -27,7 +31,12 @@ _FX_NOMS = ("beam_fx1", "beam_fx2", "color_fx1", "color_fx2",
 _FX_CLES = {"effet": (0, 8), "vitesse": (0, 200), "link_order": (10, 13),
             "speed_source": (0, 2), "bpm_division": (0, 1 << 31)}
 _SHOW_CLES = ("base", "nom", "presets", "positions", "palette")
-_PRESET_CLES = ("id", "nom", "positions", "dimmers") + _FX_NOMS
+_PRESET_CLES = ("id", "modele", "nom", "positions", "dimmers",
+                "masque_contenu", "pattern_couleur",
+                "couleur_statique") + _FX_NOMS
+NOM_MAX_OCTETS = 19          # au-delà, le projet entier refuse de s'ouvrir
+NB_GROUPES = 8               # A–H
+PADS_PAR_GROUPE = 20         # un masque de 20 bits par groupe dans f31
 # Attribution device-confirmed (registre, type 150) : f6 = PAN, f7 = TILT,
 # f3 = FAN, f4 = FOCUS OFFSET. Une lecture antérieure plaçait pan/tilt en
 # f3/f4 ; elle est réfutée par l'écran d'édition du W1.
@@ -53,6 +62,39 @@ def _liste8(contexte, nom, v, lo, hi):
     if not isinstance(v, list) or len(v) != 8:
         raise ValueError(f"{contexte} : {nom} doit être une liste de 8 entiers")
     return [_borne(contexte, f"{nom}[{i}]", x, lo, hi) for i, x in enumerate(v)]
+
+
+def _pads_vers_masques(contexte, pads8):
+    """8 listes de numéros de pad (1–20) → les 20 octets packés de `f31`.
+
+    `f31` = 20 varints = 160 bits en petit-boutien, découpés en huit masques
+    de 20 bits (un par groupe A–H) ; le bit n du groupe g allume le pad n+1
+    de la palette 140 de ce groupe — device-confirmed.
+    """
+    if not isinstance(pads8, list) or len(pads8) != NB_GROUPES:
+        raise ValueError(f"{contexte} : couleur_statique doit être "
+                         f"{NB_GROUPES} listes de numéros de pad (1–"
+                         f"{PADS_PAR_GROUPE}), une par groupe A–H")
+    bits = 0
+    for g, pads in enumerate(pads8):
+        if not isinstance(pads, list):
+            raise ValueError(f"{contexte} : couleur_statique[{g}] doit être "
+                             "une liste de numéros de pad")
+        for pad in pads:
+            _borne(contexte, f"couleur_statique[{g}]", pad, 1, PADS_PAR_GROUPE)
+            bits |= 1 << (g * PADS_PAR_GROUPE + pad - 1)
+    return list(bits.to_bytes(NB_GROUPES * PADS_PAR_GROUPE // 8, "little"))
+
+
+def masques_vers_pads(v20):
+    """Inverse de _pads_vers_masques : les 20 octets → 8 listes de pads."""
+    if not isinstance(v20, list) or any(not isinstance(x, int) or not 0 <= x < 256
+                                        for x in v20):
+        return None                      # f31 illisible : pas d'interprétation
+    bits = int.from_bytes(bytes(v20), "little")
+    return [[p + 1 for p in range(PADS_PAR_GROUPE)
+             if bits >> (g * PADS_PAR_GROUPE + p) & 1]
+            for g in range(NB_GROUPES)]
 
 
 def compiler(spec, sortie):
@@ -86,22 +128,37 @@ def compiler(spec, sortie):
         _cles(pe, _PRESET_CLES, "preset")
         pid = _borne("preset", "id", pe.get("id", -1), 0, 1 << 31)
         d165 = rec(165)
+        ctx = f"preset id {pid}"
         cible = next((p for p in d165["presets"]
                       if isinstance(p, dict) and p.get("id", 0) == pid), None)
         if cible is None:
-            raise ValueError(f"preset id {pid} : création de preset non "
-                             "validée, utiliser un donneur qui a un preset "
-                             "à cet id")
-        ctx = f"preset id {pid}"
+            cible = _cree_preset(ctx, d165, pid, pe)
+        elif "modele" in pe:
+            raise ValueError(f"{ctx} : déjà présent dans le donneur, "
+                             "'modele' ne s'applique qu'à une création")
         if "nom" in pe:
             if not isinstance(pe["nom"], str):
                 raise ValueError(f"{ctx} : nom doit être une chaîne")
+            octets = len(pe["nom"].encode("utf-8"))
+            if octets > NOM_MAX_OCTETS:
+                raise ValueError(f"{ctx} : nom de {octets} octets UTF-8 > "
+                                 f"{NOM_MAX_OCTETS} — le projet ENTIER "
+                                 "refuserait de s'ouvrir (PRESET-05)")
             cible["nom"] = pe["nom"]
         if "positions" in pe:
             cible["positions"] = _liste8(ctx, "positions", pe["positions"],
                                          0, 1 << 31)
         if "dimmers" in pe:
             cible["dimmers"] = _liste8(ctx, "dimmers", pe["dimmers"], 0, 255)
+        if "masque_contenu" in pe:
+            cible["masque_contenu"] = _borne(ctx, "masque_contenu",
+                                             pe["masque_contenu"], 0, 63)
+        if "pattern_couleur" in pe:
+            cible["pattern_couleur"] = _liste8(ctx, "pattern_couleur",
+                                               pe["pattern_couleur"], 0, 10)
+        if "couleur_statique" in pe:
+            cible["couleur_statique"] = _pads_vers_masques(
+                ctx, pe["couleur_statique"])
         for fx in _FX_NOMS:
             if fx not in pe:
                 continue
@@ -113,7 +170,9 @@ def compiler(spec, sortie):
                                  "de sous-message FX non validée, utiliser un "
                                  "donneur où ce FX existe")
             cible[fx][0].update(pe[fx])
-        attendu = {k: pe[k] for k in pe if k != "id"}
+        attendu = {k: (_pads_vers_masques(ctx, v)
+                       if k == "couleur_statique" else v)
+                   for k, v in pe.items() if k not in ("id", "modele")}
         verifs.append((165, 0, ctx, lambda d, pid=pid, att=attendu:
                        _verif_preset(d, pid, att)))
 
@@ -189,6 +248,40 @@ def compiler(spec, sortie):
     return diffs
 
 
+def _cree_preset(ctx, d165, pid, pe):
+    """Crée un preset en queue de `165.f5` en clonant `modele`.
+
+    Device-confirmed (registre, PRESET-01/06/07) : appendre une entrée
+    bien formée avec un id libre suffit — l'appareil la stocke, l'affiche,
+    la rappelle et la conserve à travers store, RESTART et réouverture à
+    froid. `165.f1` ne garde rien (81 avec 85 entrées) : laissé verbatim.
+    Les trous d'id se chargent ; l'id doit rester croissant, donc la
+    création se fait en queue, comme les deux ajouts mesurés.
+    """
+    if "modele" not in pe:
+        raise ValueError(f"{ctx} : absent du donneur — donner 'modele' "
+                         "(id du preset à cloner) pour le créer en queue")
+    mid = _borne(ctx, "modele", pe["modele"], 0, 1 << 31)
+    modele = next((p for p in d165["presets"]
+                   if isinstance(p, dict) and p.get("id", 0) == mid), None)
+    if modele is None:
+        raise ValueError(f"{ctx} : modèle {mid} absent du donneur")
+    if "id" not in modele:
+        raise ValueError(f"{ctx} : le modèle {mid} n'écrit pas son id "
+                         "(l'id 0 omet le champ) — choisir un autre modèle")
+    maxi = max(p.get("id", 0) for p in d165["presets"] if isinstance(p, dict))
+    if pid <= maxi:
+        raise ValueError(f"{ctx} : création en queue seulement, l'id doit "
+                         f"dépasser {maxi} (le plus grand du donneur)")
+    if pid > 127:
+        print(f"attention : {ctx} — aucun preset d'id > 127 n'a jamais été "
+              "mesuré sur l'appareil", file=sys.stderr)
+    cible = copy.deepcopy(modele)
+    cible["id"] = pid
+    d165["presets"].append(cible)
+    return cible
+
+
 def _verif_preset(d165, pid, attendu):
     p = next((p for p in d165["presets"]
               if isinstance(p, dict) and p.get("id", 0) == pid), None)
@@ -243,11 +336,18 @@ def demo():
 
 def _demo_sur(base):
     import tempfile
+    ids = [p.get("id", 0) for p in
+           wpj_codec.decode(165, wpjlib.Wpj.load(base).get(165))["presets"]]
+    neuf = max(ids) + 3                       # création en queue, avec un trou
     spec = {"base": base, "nom": "WMX SHOW DEMO",
             "presets": [{"id": 80, "nom": "demo",
                          "beam_fx1": {"effet": 1, "vitesse": 120},
                          "positions": [4, 1, 1, 1, 1, 1, 1, 1],
-                         "dimmers": [200] * 8}],
+                         "dimmers": [200] * 8},
+                        {"id": neuf, "modele": 23, "nom": "cree",
+                         "masque_contenu": 24, "dimmers": [128] * 8,
+                         "pattern_couleur": [9] * 8,
+                         "couleur_statique": [[6]] * 2 + [[]] * 6}],
             "positions": [{"page": 1, "index": 1, "nom": "DemoPos",
                            "pan": 12345, "tilt": 54321, "fan": 32768}],
             "palette": [{"index": 0, "rouge": 10, "vert": 20, "bleu": 30}]}
@@ -268,6 +368,20 @@ def _demo_sur(base):
         assert e["f3"] == 32768
         assert wpj_codec.decode(135, w.get(135))["pads"][0] == \
             {"rouge": 10, "vert": 20, "bleu": 30}
+        # le preset créé : cloné, en queue, relu champ par champ
+        presets = wpj_codec.decode(165, w.get(165))["presets"]
+        c = presets[-1]
+        assert c["id"] == neuf and c["nom"] == "cree", c.get("id")
+        assert c["masque_contenu"] == 24 and c["dimmers"] == [128] * 8
+        assert masques_vers_pads(c["couleur_statique"]) == \
+            [[6], [6], [], [], [], [], [], []]
+        modele = next(p for p in presets if p.get("id", 0) == 23)
+        assert {k: v for k, v in c.items() if k not in
+                ("id", "nom", "masque_contenu", "dimmers", "pattern_couleur",
+                 "couleur_statique")} == \
+               {k: v for k, v in modele.items() if k not in
+                ("id", "nom", "masque_contenu", "dimmers", "pattern_couleur",
+                 "couleur_statique")}, "le clone doit être le modèle verbatim"
         # spec vide = round-trip octet-identique du donneur
         out2 = os.path.join(tmp, "ident.wpj")
         assert compiler({"base": base}, out2) == []
@@ -276,14 +390,25 @@ def _demo_sur(base):
         for mauvais in [{"base": base, "fondu": 1},
                         {"base": base, "presets": [{"id": 9999, "nom": "x"}]},
                         {"base": base, "presets": [{"id": 80, "size": 5}]},
-                        {"base": base, "palette": [{"index": 999, "rouge": 1}]}]:
+                        {"base": base, "palette": [{"index": 999, "rouge": 1}]},
+                        # nom de 20 octets : tueur device-confirmed
+                        {"base": base, "presets": [{"id": 80,
+                                                    "nom": "a" * 20}]},
+                        # création sous l'id le plus grand du donneur
+                        {"base": base, "presets": [{"id": 1, "modele": 23}]},
+                        # 'modele' sur un preset qui existe déjà
+                        {"base": base, "presets": [{"id": 80, "modele": 23}]},
+                        # pad hors de la grille de 20
+                        {"base": base, "presets": [
+                            {"id": neuf, "modele": 23,
+                             "couleur_statique": [[21]] + [[]] * 7}]}]:
             try:
                 compiler(mauvais, os.path.join(tmp, "err.wpj"))
                 raise AssertionError(f"erreur attendue : {mauvais}")
             except ValueError:
                 pass
         assert not os.path.exists(os.path.join(tmp, "err.wpj"))
-    print("self-check ok : compile + auto-verify + erreurs sur "
+    print("self-check ok : compile + création + auto-verify + erreurs sur "
           + os.path.basename(base), file=sys.stderr)
 
 

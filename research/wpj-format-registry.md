@@ -5415,3 +5415,97 @@ instrumentée ; `GET_SETTINGS` interrogé 1 s puis 5 s après l'envoi rendait, l
 l'index envoyé dans les deux cas (SCREEN-01). Le mode rapporté et la LED ne
 disent donc pas la même chose, et rien n'a encore mesuré lequel des deux suit
 le moteur.
+
+## GEN-01 — le générateur de shows, et sa prédiction publiée avant la mesure — 2026-08-27
+
+Le générateur (`tools/wpj_generate.py`) prend une **intention** — des ambiances
+avec une énergie, une couleur et des groupes — et rend un `.wpj` complet. Il ne
+décrit pas le rig : il le **lit dans le donneur** (groupes, luminaires, profils,
+positions nommées, palettes par groupe). Chaque ambiance devient un preset,
+créé en queue de `165.f5` en clonant un preset du donneur.
+
+### Ce sur quoi il s'appuie, et ce qu'il refuse d'inventer
+
+| Il écrit | Champ | Statut avant GEN-01 |
+|---|---|---|
+| le nom du preset | `f25` | device-confirmed, ≤ 19 octets (PRESET-05) |
+| l'entrée elle-même | `f5` en queue, `f1` verbatim | device-confirmed (PRESET-01/06/07) |
+| le masque de contenu | `f10` | device-confirmed en **lecture** (F4-02) — jamais écrit par nous |
+| les dimmers par groupe | `f17` | hypothesized ; écrits une fois (ACC-02) et **ignorés**, faute de `f10` |
+| la couleur statique | `f31` | device-confirmed en **lecture** — jamais écrit par nous |
+| le PATTERN de couleur | `f30` | device-confirmed en **lecture** — jamais écrit par nous |
+| la position par groupe | `f28` | correlated |
+| effet et vitesse d'un FX | `f7`/`f2` du sous-message | device-confirmed (ACC-04) |
+
+| Il n'écrit pas | Pourquoi |
+|---|---|
+| `f16`, les masques de moteurs | son doublon `color_fx_actif`/`move_fx_actif` doit suivre, et ACC-03 a montré ce que coûte un désaccord entre les deux. Le générateur **choisit** un preset du donneur dont les moteurs conviennent et le clone. |
+| le patch (105/106/110/111/115/116/125) | rien n'a été mesuré dans le sens de l'écriture ; un patch synthétisé n'aurait aucune preuve derrière lui. |
+| la palette (135/140) | aucune écriture vérifiée sur appareil. La couleur demandée est donc rendue par le **pad le plus proche** de ceux que le groupe porte déjà. |
+
+Les quatre familles du générateur — `statique`, `faisceau`, `mouvement`,
+`mouvement+faisceau` — ont toutes le **moteur couleur à l'arrêt**. C'est
+délibéré : c'est ce qui rend `f31` visible plutôt qu'écrasé par un Color FX.
+
+### Le candidat
+
+Donneur rig-c (82 presets, ids 0–81), page 6 libre, six ambiances → ids 100–105.
+Fichier sha256 `c9422393ba59289b541f606474e86848870dc0789d47ae99c03ed1b92eba1572`,
+41600 octets, 88 presets, `f1` laissé à 82.
+
+Trois des six sont là pour le show ; **trois pour l'expérience** :
+
+| id | nom | famille | groupes | dimmer | pad |
+|---|---|---|---|---|---|
+| 100 | Accueil | statique | B | 120 | 16 (255, 105, 8, blanc 64) |
+| 101 | Rouge B | statique | B | 120 | **6** (255, 0, 0, reste 0) |
+| 102 | Bleu B | statique | B | 120 | **9** (0, 0, 255, reste 0) |
+| 103 | Scene | faisceau | ABC | 180 | 3 |
+| 104 | Montee | mouvement | ABC | 225 | 14 |
+| 105 | Peak | mouvement+faisceau | ABC | 255 | 20 |
+
+**101 et 102 ne diffèrent que par `f31`** — vérifié champ par champ sur le
+fichier produit : `couleur_statique`, `id` et `nom`, rien d'autre. C'est
+l'expérience à une seule variable que la méthode réclame, en écriture cette
+fois.
+
+### Prédiction, publiée avant tout déploiement
+
+Le groupe B est fait de dix `6x18W 6in1 RGBAW UV` à 10 canaux, adresses
+1-based 100, 110, … 190. Les rôles `106.f4` donnent, par luminaire :
+dimmer à l'adresse, rouge +1, vert +2, bleu +3, extra 1/2/3 +4/+5/+6,
+shutter +7. Les deux `f10` valent 14 = `MOVE`, `BEAM`, `GOBO` éteints,
+`COLOR` et `OTHER` **allumés**.
+
+1. Le projet s'ouvre, la page 6 montre **six pads occupés** portant les six
+   noms ci-dessus. *(p ≈ 0,9 — les trous d'id et l'ajout en queue sont
+   device-confirmed ; c'est `f10`/`f30`/`f31` écrits par nous qui sont neufs.)*
+2. Rappel de **101** : les canaux 101, 111, … 191 (rouge) montent, les canaux
+   100, 110, … 190 (dimmer) montent, tout le reste du groupe B reste à 0.
+   Les groupes A et C ne s'allument pas. *(p ≈ 0,85)*
+3. Valeurs exactes : **rouge = 255 et dimmer = 120** — le pad porte la
+   couleur, le preset porte l'intensité. Rival : rouge = 120 et dimmer = 255,
+   si le moteur pré-multiplie. *(p ≈ 0,6 pour la première lecture)*
+4. Rappel de **102** : **exactement vingt canaux bougent** par rapport à 101 —
+   les dix rouges 255 → 0, les dix bleus 0 → 255. Aucun autre canal de
+   l'univers ne change. *(p ≈ 0,8)*
+5. Rappel de **100** : le pad 16 porte du blanc à 64 ; le canal `extra 2`
+   (adresse +5) monte, ce que ni 101 ni 102 ne font. *(p ≈ 0,5 — l'ordre
+   RGBAW+UV du profil n'est pas relu ici, seul `extra 2` est parié.)*
+
+Falsificateurs, dans l'ordre du coût :
+
+- la page 6 est vide ou le projet refuse de s'ouvrir → l'ajout en queue ne
+  survit pas à un `f10`/`f30`/`f31` écrits par nous, et il faut isoler lequel ;
+- les pads s'affichent mais aucun rappel ne peint → `f10` écrit ne vaut pas
+  `f10` écrit par l'appareil ;
+- le rappel peint mais la couleur ne suit pas le pad → `f31` n'est pas écrivable
+  tel que lu, et la lecture « huit masques de 20 bits » ne vaut que dans le sens
+  de la lecture ;
+- la couleur suit mais les dimmers non → le bit 5 d'`f10` n'est pas `OTHER`,
+  la seule attribution de F4-02 qui reposait sur un état déjà présent plutôt que
+  sur une écriture.
+
+Rappel des pièges de mesure applicables : juger à l'**enveloppe agrégée** et non
+à une trame, garder un historique constant entre deux rappels (les presets sont
+partiels), et rejouer 101 en fin de série — pas seulement 101 → 102 → 100.

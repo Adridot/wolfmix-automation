@@ -7130,3 +7130,35 @@ renommer sur cette base serait précisément la faute que ce dépôt existe pour
 Confirmation au passage, troisième d'affilée sur une entrée que l'appareil a
 composée seule : la tranche 5 vaut **2 = B**, exactement le masque des groupes
 dont `f17` est non nul.
+
+## F7-04 — `f3` et le troisième moteur, prédiction publiée avant lecture — 2026-08-27
+
+L'opérateur a mis le groupe **A en `BEAM FX2`** et le groupe **B en `BEAM FX1`**,
+capturé dans un preset et sauvegardé. Comme au tir précédent, la mesure existe
+déjà sur l'appareil : ces probabilités sont publiées **avant lecture**, pas avant
+la mesure, et c'est une garantie plus faible qu'il faut nommer.
+
+État attendu de l'entrée neuve, par report des deux tirs précédents : `f7` =
+`[0,1,1,0,…]` (couleur inchangée), `f23` = `[0,0,1,0,…]` (mouvement inchangé).
+
+| Lecture | `f3` | `f7` / `f23` | p |
+|---|---|---|---|
+| **`f3` est le sélecteur du faisceau** — le quadruplet tient sur les trois moteurs | **`[1, 0, 0, 0, 0, 0, 0, 0]`** | inchangés | **0,6** |
+| la page du faisceau vit ailleurs — `f16`, ou un champ traité en opaque | reste nul | inchangés | 0,2 |
+| c'est `f27` qui la porte, et le motif du quadruplet est une coïncidence | reste nul | inchangés, `f27` prend l'élément 0 | 0,1 |
+| `f3` bouge mais pas en position 0 | non nul ailleurs | — | 0,05 |
+| autre chose | — | — | 0,05 |
+
+**Le groupe B est le contrôle, et il n'était pas prévu au protocole.** L'opérateur
+l'a mis en `BEAM FX1` *explicitement*, alors que 0 est déjà la valeur d'un groupe
+auquel personne n'a touché. Si `f3[B]` vaut **0**, une page 1 posée à la main est
+indiscernable d'une page jamais réglée : le champ encode la page, pas le fait
+d'avoir été réglé. Une troisième valeur en position 1 dirait le contraire, et ce
+serait une découverte à part entière.
+
+Je ne prédis **pas** la tranche 2 de `f16`. Au tir précédent j'avais déduit
+l'état du moteur d'une photographie et je me suis trompé ; sans photo cette
+fois, je n'ai aucune base, et une case laissée vide vaut mieux qu'un pari
+déguisé en lecture.
+
+Id attendu : **84**, la première place libre.

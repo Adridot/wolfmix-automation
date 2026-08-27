@@ -7003,3 +7003,49 @@ Pour savoir si quelque chose a changé, il faut comparer les records.
 panneau ». Les deux rendent le même octet. L'écran `HOME` les sépare
 immédiatement : si le groupe C y affiche `MOVE FX2`, l'édition a pris et c'est
 bien la première lecture.
+
+### La réserve de F7-02 est levée — **[device-confirmed]**
+
+L'opérateur confirme que l'écran `HOME` affiche bien `MOVE FX2` sur le groupe C.
+L'édition avait donc **pris** et était restée dans l'état vif. Des deux lectures
+que le fichier ne pouvait pas séparer, c'est la bonne qui tenait : une
+sauvegarde de projet n'écrit pas un réglage de page, et le geste n'était pas en
+cause.
+
+## F7-03 — la capture dans un preset, prédiction publiée avant la sauvegarde — 2026-08-27
+
+Même état vif, cette fois **capturé** dans un preset — `SHIFT` + tap, le seul
+geste qui écrive cette famille de champs (SPEC §5.6, F7-02). L'opérateur annonce
+le pad « 84 » ; au tir précédent le pad « 83 » a rendu l'**id 82**, donc l'entrée
+attendue porte l'**id 83**, et cette correspondance pad = id + 1 est elle-même
+une prédiction.
+
+État vif à capturer, lu sur l'écran `HOME` : Color FX **A → FX1, B → FX2,
+C → FX2** ; Move FX **C → FX2**, A et B en FX1.
+
+| Lecture | `f7` | `f23` | p |
+|---|---|---|---|
+| **un sélecteur par moteur** — `f23` porte le mouvement | `[0,1,1,0,0,0,0,0]`, inchangé | **`[0,0,1,0,0,0,0,0]`** | **0,45** |
+| `f3` ou `f27` porte le mouvement, ma répartition est encore fausse | inchangé | reste nul, mais l'un des deux prend l'élément 2 | 0,2 |
+| `f7` est partagé, en masque par moteur | élément 2 : **1 → 3** | reste nul | 0,15 |
+| la page du mouvement vit ailleurs — dans `f16`, ou dans un champ qu'on traite en opaque | inchangé | reste nul | 0,15 |
+| autre chose | — | — | 0,05 |
+
+Ce qui se lit sur **l'élément 2 et lui seul** : les groupes A et B restent en
+`FX1` pour le mouvement, donc un champ qui porterait la page du mouvement doit
+valoir 0 sur A et B et 1 sur C. Une valeur non nulle ailleurs qu'en position 2
+réfute la lecture par groupe pour ce champ-là.
+
+Deux observations attendues en plus, gratuites :
+
+- le moteur mouvement est **à l'arrêt** sur les trois groupes (`MOVE FX1`/`FX2`
+  s'affichent sans cadre) ; la tranche 1 de `f16` doit donc valoir **0** alors
+  qu'un sélecteur de page marque C. C'est le même découplage que `f7[C]` a déjà
+  montré pour la couleur, et le revoir sur un autre moteur le généralise ;
+- `f7` de la nouvelle entrée doit reproduire `[0,1,1,0,…]`, puisque les pages
+  couleur n'ont pas bougé. S'il diffère, c'est que la capture ne fige pas ce
+  qu'on croit.
+
+**Il faut les deux gestes** : la capture écrit dans la copie vive, la sauvegarde
+de projet la porte au fichier. F7-02 vient de montrer qu'une sauvegarde seule ne
+suffit pas ; une capture seule ne suffira pas non plus.

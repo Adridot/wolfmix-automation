@@ -643,8 +643,26 @@ a page reassignment made at the panel and then saved left all 45054 bytes of the
 project identical but for the version counter's low byte and the SHA-1 header it
 forces. One byte of payload, and record 165 untouched.
 
+**The record files each engine as a regular quadruple — [validated] (F7-03).**
+Page 1, page 2, the page **selector**, then the "active" field:
+
+| Engine | page 1 | page 2 | selector | active |
+|---|---|---|---|---|
+| Beam | `f1` | `f2` | **`f3`** — *predicted, never measured* | *(`f4` sits here)* |
+| Colour | `f5` | `f6` | **`f7`** = `page_color_fx` | `f8` |
+| Move | `f21` | `f22` | **`f23`** = `page_move_fx` | `f24` |
+
+A selector is a per-group array of eight: `0` = `FX1`, `1` = `FX2`. Two of the
+three are measured; `f3` keeps its neutral key, because a slot in a regular
+pattern is not a measurement. `f4` occupies the Beam "active" slot but F4-03 read
+it as a permission mask over all three engines — the coincidence of position is
+noted, not read. `f27` does not follow the pattern (`f25` is the preset name) and
+stays unattributed.
+
 **`f7` is the per-group Colour FX page selector, `0` = `FX1` and `1` = `FX2` —
-[validated] (F7-01).** A preset composed at the panel came back with
+[validated] (F7-01, F7-03).** A change to the **Move** page left it byte-identical,
+which is the single-variable differential that makes it Colour-specific rather
+than a shared selector. A preset composed at the panel came back with
 `f7` = `[0, 1, 1, 0, 0, 0, 0, 0]`, and a photograph of the `HOME` screen taken on
 that same state reads `COLOR FX1` for group A and `COLOR FX2` for groups B and C.
 Eight elements, three populated groups, two distinct values, and the mapping
@@ -658,12 +676,15 @@ screen prints its `COLOR FX2` without the box that A and B carry. A group keeps
 its pending page. That also explains the four corpus presets, where group B is
 the only one on page 2 and nothing else betrays it.
 
-Not `device-confirmed`: the mapping is read off one screen state, we have never
-**written** `f7`, and no page we asked for has been read back. **And the codec
-key is deliberately not renamed** — only Colour was varied, `f3`/`f23`/`f27` are
-still zero, and nothing yet says whether `f7` carries the Colour page alone or
-the page of every engine. Discriminator: put one group on **Move FX2** and see
-whether `f7` or `f23` moves.
+That discriminator has been fired. A group put on **`MOVE FX2`**, captured into a
+preset and saved, produced `f23` = `[0, 0, 1, 0, 0, 0, 0, 0]` — element 2 and only
+element 2 — with `f7` untouched (F7-03). Neither is `device-confirmed`: we have
+never **written** a selector, and no page we asked for has been read back off the
+panel.
+
+**A project save alone writes none of this.** The same page change, made at the
+panel and saved without a preset capture, left all 45054 bytes identical but for
+the version counter (F7-02). The capture is what writes it.
 
 Two earlier readings of this field are **refuted**. "`f7` marks a preset whose
 Beam engine is off while its two Beam pages differ" held on four corpus presets

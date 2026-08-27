@@ -333,9 +333,12 @@ def tableaux_par_groupe_165(w):
     """Les champs par groupe du preset font exactement 8 varints.
 
     Contrainte non triviale : un découpage varint erroné, ou un champ pris
-    pour un scalaire, change immédiatement le compte. C'est ce qui range
-    `f3`, `f7`, `f14`, `f23` et `f27` — nuls dans tout le corpus — parmi les
-    valeurs par groupe plutôt que parmi les inconnues sans forme.
+    pour un scalaire, change immédiatement le compte. C'est ce qui a rangé
+    `f3`, `f7`, `f14`, `f23` et `f27` — alors tous nuls dans le corpus — parmi
+    les valeurs par groupe plutôt que parmi les inconnues sans forme. Le pari a
+    payé : `f7` et `f23` sont depuis mesurés comme les sélecteurs de page de la
+    couleur et du mouvement (registre, F7-01 et F7-03), et ce sont bien des
+    tableaux de huit. `f3` et `f27` restent nuls et non attribués.
     """
     for pre in _items(w, 165):
         for n in TABLEAUX_PAR_GROUPE:

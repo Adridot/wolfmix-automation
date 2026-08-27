@@ -63,6 +63,15 @@ _PRESET = {
     33: ("gobo_prism", "packed"), 34: ("gobo_zoom", "packed"),
     35: ("gobo_iris", "packed"),
     8: ("color_fx_actif", "packed"), 24: ("move_fx_actif", "packed"),
+    # Sélecteur de page par groupe A–H : 0 = FX1, 1 = FX2. Le record range
+    # chaque moteur en quadruplet — paire, sélecteur, actif : f1/f2/f3 pour le
+    # faisceau, f5/f6/f7/f8 pour la couleur, f21/f22/f23/f24 pour le mouvement.
+    # `f7` et `f23` sont mesurés (registre, F7-01 et F7-03) ; `f3` est la même
+    # place pour le faisceau et reste NON mesuré — personne n'a jamais posé de
+    # deuxième page de faisceau dans ce corpus, donc il garde sa clé neutre.
+    # Indépendant du masque de `f16` : un groupe garde sa page en attente même
+    # quand le moteur est à l'arrêt.
+    7: ("page_color_fx", "packed"), 23: ("page_move_fx", "packed"),
 }
 
 SCHEMAS = {

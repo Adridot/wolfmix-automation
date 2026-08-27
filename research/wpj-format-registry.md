@@ -7049,3 +7049,84 @@ Deux observations attendues en plus, gratuites :
 **Il faut les deux gestes** : la capture écrit dans la copie vive, la sauvegarde
 de projet la porte au fichier. F7-02 vient de montrer qu'une sauvegarde seule ne
 suffit pas ; une capture seule ne suffira pas non plus.
+
+### F7-03 mesuré — `f23` est le sélecteur du mouvement, et le record range ses moteurs en quadruplets — **[validated]**
+
+**Note de méthode, à charge.** La prédiction ci-dessus a été publiée et commitée
+**avant lecture** du fichier, mais l'opérateur avait déjà capturé et sauvegardé :
+la mesure existait sur l'appareil quand j'ai écrit les probabilités. La
+protection contre la confirmation rétrospective tient — rien n'avait été lu —
+mais la formule « publiée avant la mesure » ne s'applique pas ici, et il fallait
+le dire plutôt que de laisser la date du commit le suggérer.
+
+La capture crée l'entrée **id 83**, depuis le pad annoncé « 84 » : la
+correspondance **pad = id + 1** tient, comme au tir précédent. Aucun preset
+existant n'est modifié ; seul le record 165 grandit, de 31591 à 31928 octets.
+
+| | Prédit | Mesuré |
+|---|---|---|
+| `f23` | `[0, 0, 1, 0, 0, 0, 0, 0]` | **`[0, 0, 1, 0, 0, 0, 0, 0]`** |
+| `f7` | `[0, 1, 1, 0, 0, 0, 0, 0]`, inchangé | **inchangé** |
+| id de l'entrée | 83 | **83** |
+| `f16` tranche 1 (Move) | 0 | **4 = C** — *faux* |
+
+La favorite à **p = 0,45** est exacte, sur l'élément **2 et lui seul**. Les trois
+rivales tombent : `f7` n'a pas pris de second usage, `f3` et `f27` restent nuls.
+
+> **`165.f23` est le sélecteur de page du Move FX, par groupe : 0 = `FX1`,
+> 1 = `FX2`.** Et le tir vaut autant pour l'autre champ : une modification de la
+> page **mouvement** a laissé `f7` **rigoureusement identique**. C'est le
+> différentiel à une variable qui manquait pour dire que `f7` porte la couleur
+> **et elle seule**, au lieu d'un sélecteur partagé. Les deux montent à
+> `validated`.
+
+### Ce que je pariais en plus, et que j'ai raté
+
+J'avais prédit `f16` tranche 1 = **0**, en lisant sur la photographie que les
+`MOVE FX` sans cadre valaient « moteur à l'arrêt ». Mesuré : **4 = C**, le moteur
+mouvement est **allumé** sur ce groupe. Ma lecture de l'écran était fausse — ou
+l'opérateur a allumé le moteur en posant la page, et rien dans les photos ne
+permet de trancher.
+
+Le découplage annoncé survit quand même, mais sur la **couleur** et non sur le
+mouvement : la tranche 0 vaut `3` = A+B pendant que `f7` marque aussi **C**. Un
+groupe garde sa page couleur en attente, moteur éteint. Ce n'est plus une
+mesure nouvelle, c'est la même qu'en F7-01 — la généralisation à un second
+moteur, elle, n'a pas eu lieu.
+
+### La structure du record, et la place vide qu'elle désigne
+
+Les trois moteurs sont rangés en **quadruplets réguliers** : la paire de pages,
+le sélecteur, puis le champ « actif ».
+
+| Moteur | page 1 | page 2 | **sélecteur** | actif |
+|---|---|---|---|---|
+| Beam | `f1` | `f2` | **`f3`** | *(place occupée par `f4`)* |
+| Color | `f5` | `f6` | **`f7`** — mesuré | `f8` |
+| Move | `f21` | `f22` | **`f23`** — mesuré | `f24` |
+
+> **Prédiction structurelle : `f3` est le sélecteur de page du Beam FX.**
+> **[hypothesized]** — il est nul sur les 3697 occurrences du corpus parce que
+> personne n'y a jamais posé de deuxième page de faisceau, exactement comme
+> `f23` l'était avant ce tir. Le geste qui la teste est le même : mettre un
+> groupe en `BEAM FX2`, **capturer**, sauvegarder. Attendu :
+> `f3` = un 1 sur le groupe choisi, `f7` et `f23` inchangés.
+
+Deux réserves sur le tableau. `f4` occupe la place du « actif » du faisceau mais
+F4-03 en a fait un **masque de permission sur les trois moteurs** ; la
+coïncidence de position est notée, elle n'est pas une lecture. Et `f27` ne suit
+pas le motif — `f25` est le nom du preset — donc il reste sans emploi et sans
+nom.
+
+### Le codec nomme les deux champs prouvés, et pas le troisième
+
+`f7` devient `page_color_fx`, `f23` devient `page_move_fx`, tous deux en
+tableaux de huit varints. Round-trip octet-identique revérifié : 45/45 sur le
+corpus, plus les deux fichiers écrits par l'appareil ce soir. **`f3` garde sa
+clé neutre** : une place dans un motif régulier n'est pas une mesure, et le
+renommer sur cette base serait précisément la faute que ce dépôt existe pour
+éviter.
+
+Confirmation au passage, troisième d'affilée sur une entrée que l'appareil a
+composée seule : la tranche 5 vaut **2 = B**, exactement le masque des groupes
+dont `f17` est non nul.

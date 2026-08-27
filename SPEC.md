@@ -26,7 +26,8 @@ reported as `0` or `off`.
 
 Measurement base: W1 Mk1 (serial withheld), firmware **2.0.18**, macOS. WTOOLS
 **1.6.3** for the ACC-series acceptance tests; the host has since moved to WTOOLS
-**2.0.2** (build 248), which is what the later protocol work was read against.
+**2.0.2** build 248 — a **beta**, installed over the stable — which is what the
+later protocol work was read against.
 
 Corpus hashes in `corpus/SHA256SUMS` — 57 files, regenerated 2026-08-27.
 

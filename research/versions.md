@@ -2,8 +2,7 @@
 
 | Composant | Version | Source |
 |---|---|---|
-| WTOOLS | 2.0.2, build 248 | `sq.version` du bundle, installé le 2026-08-14 |
-| WTOOLS Beta | **non trouvée** | aucun bundle sur la machine au relevé — voir note |
+| WTOOLS | 2.0.2, build 248 — **beta** | `sq.version` du bundle, installée par-dessus la stable le 2026-08-14 |
 | Easy View 3 | 3.0.0 (`26.0819.661.293`) | `/Applications/Easy View/`, installé le 2026-08-20 |
 | EasyView 2 | 22.805.0.17 | `CFBundleVersion` seul (2024-01-11) |
 | EasyViewConnect | aucune version déclarée | Info.plist muet |
@@ -15,10 +14,11 @@ Le firmware est lu sur l'appareil, pas cité. **Piège** : le champ 13
 (`firmwareVersion`, flottant) vaut 0.0 sur ce firmware — lire le champ 14
 (`firmwareVer`, chaîne).
 
-**WTOOLS Beta.** Annoncée en `/Applications/WTOOLS Beta.app`, absente du disque
-au relevé (`ls`, `find`, Spotlight, `/Volumes`, Downloads). Les expériences
-ACC-* ont tourné sous WTOOLS 1.6.3 ; tout ce qui suit est sous 2.0.2. Une entrée
-beta sera ajoutée quand le bundle sera là pour être lu.
+La 2.0.2 est une **beta**, confirmée par l'opérateur : le paquet ne déclare
+aucun canal (`sq.version` : version 2.0.2, `channel` = l'architecture), et elle a
+remplacé la stable. Conséquence pour la règle de compatibilité honnête : tout ce
+qui a été mesuré après le 2026-08-14 l'a été contre une beta, et n'est pas promis
+sur la 2.0.x publique. Les expériences ACC-* sont antérieures, sous 1.6.3.
 
 ## Corpus local (copies figées, hashes dans `corpus/SHA256SUMS`)
 

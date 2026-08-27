@@ -12,7 +12,7 @@ measured on our own device rather than taken from a binary — see `LEGAL.md`.
 - **[observed]** The legacy WTOOLS 1.x SDK bundle ships the enum as plain
   TypeScript with numeric values: 39 entries, `WM_MODE_HOME = 0` …
   `WM_MODE_UNREGISTERED = 38`. Listed below as the legacy numbering.
-- **[observed]** WTOOLS 2.0.2 (build 248, Flutter AOT) carries 45 distinct
+- **[observed]** WTOOLS 2.0.2 beta (build 248, Flutter AOT) carries 45 distinct
   `WM_MODE_*` identifiers in its string pool, names only, no values.
 - **[observed]** The AOT string pool is not in declaration order
   (`WM_MODE_HOME` is the 41st string in binary order), so **no numeric value

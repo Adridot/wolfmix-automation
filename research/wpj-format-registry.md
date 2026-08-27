@@ -7,7 +7,7 @@ proposée) → `correlated` (cohérent sur ≥2 fichiers indépendants) →
 
 Corpus de preuve : `corpus/SHA256SUMS` (57 fichiers, régénéré le 2026-08-27).
 Les expériences ACC-* ont tourné sous WTOOLS 1.6.3 ; la machine est passée à
-WTOOLS 2.0.2 (build 248) depuis, et chaque entrée porte sa propre version —
+WTOOLS 2.0.2 beta (build 248) depuis, et chaque entrée porte sa propre version —
 voir `versions.md`.
 
 ## Trois variantes de conteneur observées localement

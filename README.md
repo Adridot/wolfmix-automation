@@ -11,7 +11,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.x%20stdlib%20only-3776AB.svg)](#requirements)
 [![Firmware](https://img.shields.io/badge/W1%20Mk1%20fw-2.0.18-orange.svg)](research/versions.md)
-[![WTOOLS](https://img.shields.io/badge/WTOOLS-2.0.2-lightgrey.svg)](research/versions.md)
+[![WTOOLS](https://img.shields.io/badge/WTOOLS-2.0.2%20beta-lightgrey.svg)](research/versions.md)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey.svg)](#requirements)
 [![Status](https://img.shields.io/badge/status-research-yellow.svg)](#where-the-format-stands)
 

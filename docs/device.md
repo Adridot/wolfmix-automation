@@ -38,26 +38,35 @@ Events used: `GET_PROFILE_LIST` 2, `GET_PROFILE` 3, `GET_PROJECT_LIST` 4,
 `payload[0]` as the index: one raw byte, nothing else. A protobuf-shaped
 `[tag, value]` pair makes the controller read the *tag* — `f1=<anything>`
 recalls id 8, `f2=<anything>` id 16. For `preset`, the byte is the preset
-**id** (`id = (page-1)*20 + (slot-1)`), not the entry position, and **a
-missing id does nothing** — no floor, no clamp to the last entry (RECALL-04,
-measured on a six-entry live copy where every id above 5 is missing). An
-existing id above 127 is still untested: no project in the corpus has one.
+**id** (`id = (page-1)*20 + (slot-1)`), not the entry position, and **an id
+above the highest one present does nothing** — no floor, no clamp to the last
+entry, no wrap to the first, no modulo (RECALL-04). An id inside an *interior*
+gap has never been probed, and that is the generator's real case. An existing
+id above 127 is untested too: no project in the corpus has one.
 For `mode`, the index is usually the mode reached, but not always —
 index 40 lands on 42 — and a raw index can open a screen the panel menu does
 not expose, some of which act on entry (mode 42 tries to read a USB medium).
 See `research/wpj-format-registry.md`, sections RAW-01 and RECALL-03.
 
 A recall changes what the controller is playing, live. It writes nothing:
-`projectChanged` stays false.
+`projectChanged` stays false. **Recalls sent close together can be swallowed**:
+from a settled state, recalls 8 s apart all landed, while one sent 4 s after a
+reset to id 114 did not. Delay and reset preset are still confounded — a script
+firing cues faster than that may drop them silently.
 
 **`mode` can trap the panel.** The reported `wolfmixMode` is not the screen on
 display: the controller answers the index you sent, and lights the matching
 LED, while the front panel stays where it was. Modal screens — 26 (Projects)
-and 42 (USB stick) — are entered remotely but not left: neither `mode 0` nor
-`mode 5` dismisses them, and **the panel's own HOME key does not either**.
-What breaks out, measured: `1` (COLOR FX), `3` (MOVE FX), `8` (GOBO), `33`
-(BLACKOUT) — the screens that act on the light. What does not: `0` (HOME),
-`5` (PRESETS), `16` (the main menu). Do not send a modal index to a controller
+— 26 (Projects) is entered remotely and not left: neither `mode 0` nor
+`mode 5` nor `mode 16` dismisses it. 42 (USB stick) escapes the same way
+(index 1) but has never been tested against 0/5/16. What breaks out of 26,
+measured: `1` (COLOR FX), `3` (MOVE FX), `8` (GOBO), `33` (BLACKOUT). What
+does not: `0` (HOME), `5` (PRESETS), `16` (the main menu). Why those four and
+not these three is a **hypothesis** ("the screens that act on the light"),
+with an untested rival and a pre-registered discriminator — indexes 28 and 30
+(SCREEN-02). What the panel's own HOME key does from that screen is open: the
+operator reported it stuck one day and working the next, on different live
+copies. Do not send a modal index to a controller
 in service; if one is stuck, send `mode 1`.
 
 The first request after the port has been idle can time out; issue it again
@@ -86,7 +95,7 @@ python3 tools/wolfmix.py [--port PATH] [--timeout SECONDS] <command>
 | `dmx-envelope out.json [--seconds N]` | per-channel min/max over a window |
 | `watch-mode [--interval S] [--seconds N]` | print every change of `wolfmixMode` |
 | `preset ID` | recall a preset by its id, hands-off |
-| `mode INDEX` | switch the controller UI to a mode index |
+| `mode INDEX` | set the reported mode; the panel does not always follow (SCREEN-01) |
 | `self-test` | protocol checks, no hardware needed |
 
 `dmx` enables USB DMX only if it was off, and disables it again on exit.
@@ -101,7 +110,11 @@ animated one keeps its range whatever the phase. That makes it the oracle for
 It is not the oracle for a **command**. Two separately captured envelopes cannot
 tell "nothing moved" apart from "the same thing was repainted", which is exactly
 how RECALL-01 first misread the preset recalls as inert. For a command, stream
-one continuous `dmx` capture and read the timestamped transitions.
+one continuous `dmx` capture and read the timestamped transitions. But on an
+animated rig the single frame sits below the noise floor — one recall
+re-measures 32 channels away from itself — so once the transition is located,
+hold the history constant and judge the **aggregate envelope**: non-zero
+channels, animated channels, sum of maxima (RECALL-04).
 
 The **envelope** is what refuted type 102 `field 11` as inert, and what
 confirmed the gobo palette: pressing pad *n* drove the group's gobo channel to
@@ -165,7 +178,11 @@ delete-store-restart, engine cycle — all judged with a preset-recall
 discriminator that RECALL-01 then withdrew. **One has since been re-proved with
 a discriminator that does not depend on it**: RELOAD-03 deployed a 6-entry file,
 restarted, then counted appearances over ten `SKIP_PRESET` — ten distinct ones,
-where a live 6-entry copy would have repeated by the seventh. Store + RESTART
+where a live 6-entry copy gives 8 of 10 with a period of six readable in the
+distances (RELOAD-05, the calibration). Note the falsifier is "fewer than ten
+**and** a periodicity", not "a repeat by the seventh skip": the instrument
+undercounts, because two of the four real returns did not reproduce their
+frame. Store + RESTART
 under the same UUID does not replace the live copy. A WTOOLS push does not
 either (RELOAD-02). The other two negatives are still to be replayed.
 
@@ -208,9 +225,10 @@ identical (RECALL-03). And a **second byte is not read** — the one payload
 that seemed to prove otherwise was undone by its own control shot, and a fade
 parameter is excluded by the transient (RAW-02).
 
-What is open: what a **missing** id does — no-op, floor, clamp, or a common
-state — and whether ids beyond 127 behave at all. `SET_PROJECT` and the long
-events remain protobuf; the raw-byte reading is for the short ones.
+What is open: what an id inside an **interior gap** does — only ids above the
+highest present one have been probed — and whether an existing id beyond 127
+is reachable at all. `SET_PROJECT` and the long events remain protobuf; the
+raw-byte reading is for the short ones.
 
 ### Campaign manifest
 

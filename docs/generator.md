@@ -106,5 +106,8 @@ python3 tools/wolfmix.py mode 1
 python3 tools/wolfmix.py preset 80
 ```
 
-`mode` first: the PRESETS screen (mode 5) swallows USB recalls silently. A
-missing id does nothing, and no preset above id 127 has ever been measured.
+`mode 1` first: it is the escape from any modal screen, and the panel's screen
+has been *suspected* of gating recalls — unsettled, since the runs that showed
+it were addressing the wrong id and judged by a withdrawn discriminator. An id
+above the highest one present does nothing; interior gaps are unprobed, and no
+preset above id 127 has ever been measured.

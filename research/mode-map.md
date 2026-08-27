@@ -82,7 +82,7 @@ enum; where 2.0.2 renamed one, both are given.
 | 19 | main menu → New, or Fixtures → ADD | `FIXTURE_SELECTION` |
 | 23 | main menu → DMX VALUES | `DMX_LEVELS` |
 | 25 | main menu → Settings | `SETTINGS` |
-| 26 | main menu → Open | `PROJECTS` — **modal**: entered by raw index, not left by 0/5/16 nor by the panel's own HOME key; escape with index 1 (registry SCREEN-01/02) |
+| 26 | main menu → Open | `PROJECTS` — **modal**: entered by raw index, not left by 0/5/16; escape with index 1. What the panel's own HOME key does from here is open — reported stuck one day, working the next (registry SCREEN-01/02/03) |
 | 28 | `WOLF` key (chevrons) | `WOLF` — the paparazzi flash effect |
 | 29 | `STROBE` | `STROBE` |
 | 30 | `SPEED` | `SPEED` |
@@ -94,7 +94,7 @@ enum; where 2.0.2 renamed one, both are given.
 | 43 | main menu → Mappings | **`MAPPING`** (new) — present on MK1 |
 | 39 | **unreachable by menu** — raw index 39; the **pads** light what the operator reads as the Move FX sequencer picker, while the **screen stays on HOME** | **`SEQ_POSITION_PICKER`** (new) — by elimination, name **hypothesized** |
 | 40 | **unreachable by menu** — raw index 40 **redirects to 42** (three times out of three) | **`FILE_BROWSER`** (new) — by elimination, name **hypothesized** |
-| 42 | **unreachable by menu** — `SET_MODE` raw index 40 lands here | **`USB_STICK`** (new) — operator-identified on screen; **modal**, and it attempts a read on entry: escape with index 1 |
+| 42 | **unreachable by menu** — `SET_MODE` raw index 40 lands here | **`USB_STICK`** (new) — operator-identified on screen; attempts a read on entry; escape with index 1 — never tested against 0/5/16, so "modal" is by analogy with 26, not measured |
 | 44 | HOME → touch the tempo readout | **`BPM`** (new) |
 
 **Result: the legacy 0–38 numbering is unchanged in firmware 2.0.18.** The

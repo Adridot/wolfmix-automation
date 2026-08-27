@@ -4393,6 +4393,12 @@ so the reboot must re-read storage — the new bytes.
 
 The run took a detour that rewrote the recall story first:
 
+- **[RÉTROGRADÉ le 2026-08-27 : [hypothesized], pas device-confirmed.** Ces
+  rappels partaient en `f1=`/`f2=`, donc le firmware lisait le tag et tirait
+  l'id 8 ou 16 quoi qu'on ait voulu (RAW-01) ; et le silence était jugé au
+  discriminateur retiré par RECALL-01. Rivaux nommés : adressage faux, et
+  rappel avalé (RECALL-03). À ajouter à la cascade de RECALL-01, qui l'avait
+  omis.]
 - **The PRESETS screen (mode 5) swallows USB recalls silently** — status
   still "Hooray!", frame untouched. Every "silent recall" observed today
   (including the early false "reload" verdicts) traces to the operator's
@@ -4735,13 +4741,20 @@ la sortie. Ce qui tombe : la lecture « f1 = id », et avec elle la dernière
 
 Un discriminateur qui n'a pas besoin d'adressage : **compter les apparences
 distinctes sur N `SKIP_PRESET`**. Contrôle fait aujourd'hui sur 101 entrées :
-10 skips → 10 apparences distinctes, aucune répétition. Sur une copie vive à
-6 entrées, la répétition est forcée au plus tard au 7e skip. La poussée
-WTOOLS se juge alors ainsi, hands-off :
+10 skips → 10 apparences distinctes, aucune répétition.
+
+**Formulation corrigée le 2026-08-27 (RELOAD-05)** : le falsificateur n'est
+PAS « une répétition au 7e skip » — la calibration a montré qu'une vraie copie
+à 6 entrées rend **8 apparences sur 10**, la seule paire de décalage 6 dans les
+sept premiers skips (1 contre 7) tombant à 31 canaux, au-dessus du seuil. Le
+falsificateur est **« moins de 10 apparences ET une périodicité dans les
+distances »**. Publier l'ancienne formulation ferait passer un vrai
+rechargement pour une absence de rechargement. La poussée WTOOLS se juge
+ainsi, hands-off :
 
 - 10 skips avant la poussée → attendu 10 distinctes (copie à 87 entrées) ;
 - 10 skips après la poussée → 10 distinctes = **pas de rechargement** ;
-  ≤ 6 distinctes avec répétitions = **rechargement**.
+  < 10 distinctes **avec une périodicité lisible** = **rechargement**.
 
 Réserves explicites, et elles comptent :
 - L'ordre exact du parcours (positions ? pages ? entrées vides sautées ?)
@@ -5146,9 +5159,13 @@ Trois faits, tous nouveaux :
 2. **L'état interne suit bien** : la LED HOME s'allume quand on envoie 0,
    pendant que l'écran montre Projects. Le firmware tient donc deux choses
    distinctes — un mode de navigation/moteur, et une façade.
-3. **L'écran Projects est modal, y compris pour l'opérateur** : appuyer sur
-   HOME au panneau ne le quitte pas non plus. Seul l'index 1 (COLOR FX) l'a
-   fait céder dans cette séquence.
+3. **L'écran Projects est modal** : seul l'index 1 (COLOR FX) l'a fait céder
+   dans cette séquence. — **[RÉTRACTÉ le 2026-08-27]** la clause « appuyer sur
+   HOME au panneau ne le quitte pas non plus » : le même opérateur rapporte
+   l'inverse le lendemain, sur une autre copie vive (SCREEN-03). Les deux sont
+   des rapports verbaux, non instrumentés, et la variable qui a changé entre
+   les deux (projet ouvert ? état hérité ?) n'est pas contrôlée. **Ce que fait
+   la touche HOME depuis l'écran Projects est ouvert.**
 
 ### Conséquences
 
@@ -5289,7 +5306,7 @@ panneau le fichier à **6 entrées**, et la même série a été rejouée.
 
 | Copie vive | Apparences distinctes / 10 skips |
 |---|---|
-| 87 entrées | **10 / 10**, trois fois (avant poussée, après poussée, après deploy+RESTART) |
+| 87 entrées | **10 / 10**, trois fois — mais **une seule** de ces trois séries a une copie vive établie indépendamment (celle d'avant poussée, ré-ouverte au panneau par l'opérateur). Les deux autres portent l'étiquette « 87 entrées » parce que RELOAD-02/03 l'ont *conclu* : c'est la conclusion qui sert de vérité de terrain dans son propre tableau de calibration. |
 | **6 entrées** | **8 / 10**, avec répétitions |
 
 Et le parcours se lit à nu dans les distances. Les quatre paires séparées de
@@ -5303,9 +5320,12 @@ Et le parcours se lit à nu dans les distances. Les quatre paires séparées de
 | skip 1 vs 7 | 31 |
 | … toute autre paire | 60 au minimum, **médiane 79** |
 
-**`SKIP_PRESET` parcourt donc les entrées en cycle, de période égale à leur
-nombre.** La prémisse du discriminateur n'est plus une déduction par tiroirs :
-elle est mesurée.
+**`SKIP_PRESET` parcourt donc les entrées en cycle**, et la période vaut 6 sur
+la copie à 6 entrées. Réserve : dix skips n'exposent que les décalages 1 à 9,
+donc les séries à 87 et 101 entrées n'excluent qu'une période ≤ 9. **L'égalité
+« période = nombre d'entrées » n'est mesurée qu'à un seul nombre.** La prémisse
+du discriminateur n'est plus une déduction par tiroirs, mais elle n'est
+étayée que là.
 
 **Et la réserve de l'audit se vérifie dans le même jeu** : deux des quatre
 retours au même preset ne rendent **pas** la même trame (16 et 31 canaux
@@ -5313,8 +5333,15 @@ d'écart — la phase des effets animés). Le seuil « moins de 8 canaux »
 sous-compte : le vrai cycle est 6, l'instrument affiche 8. Le falsificateur
 correct n'est donc pas « ≤ 6 apparences » mais **« moins de 10, et une
 périodicité dans les distances »**. Avec cette formulation, la séparation
-reste franche : 10/10 contre 8/10, et un rang de périodicité qui saute aux
-yeux d'un côté et n'existe pas de l'autre.
+reste franche du côté positif : 8/10 et une périodicité de 6 lisible dans les
+distances. **Du côté négatif elle reste [hypothesized]** : aucune table de
+distances par décalage n'a jamais été calculée sur une série à 87 entrées —
+seulement une paire la plus proche (13 canaux, amplitude 139, lue comme
+« différentes »), et 13 < 16, l'un des retours réels mesurés ici. Seules les
+amplitudes réconcilient les deux, et la table ci-dessus ne les publie pas.
+Les planchers de bruit diffèrent d'ailleurs par copie (paire non-périodique
+la plus proche : 60 canaux à 6 entrées, 13 à 87), donc un seuil absolu ne
+fait pas le même travail sur les deux bras.
 
 Ce que ça consolide : **RELOAD-02, RELOAD-03 et le verdict RELOAD-04**
 reposaient sur cet instrument. Son bras positif est maintenant démontré sur
@@ -5347,13 +5374,43 @@ au chiffre près, deux fois. L'id 5 rend une signature nettement autre, elle
 aussi reproduite au chiffre près.
 
 > **Règle, corrigée :** `SET_PRESET`, charge utile = **un octet = l'id du
-> preset**. Un id existant rappelle son preset. **Un id absent ne fait
-> rien** — pas de plancher, pas d'écrêtage sur la dernière entrée.
+> preset**. Un id existant rappelle son preset. **Un id absent au-dessus du
+> plus grand id existant ne fait rien** — pas de plancher, pas d'écrêtage sur
+> la dernière entrée, pas de repli sur la première, pas de modulo. Les trous
+> intérieurs ne sont **pas** sondés.
 
-Le rival proposé par l'audit l'emporte donc en entier, et les zéros de la
-matrice de RECALL-03 (85 ≡ 84, 200 ≡ 114) s'expliquent enfin sans rien
-inventer : les tirs étaient en ordre croissant, un no-op laisse la trame
-précédente.
+### Le tir qui tue les deux derniers rivaux — même jour
+
+Un second audit a montré que le tableau ci-dessus ne suffisait pas : la
+remise se faisait sur l'**id 0**, donc « un id absent se replie sur l'id 0 »
+prédisait la même chose que le no-op ; et **50 mod 6 = 200 mod 6 = 2**, donc
+« id modulo le nombre d'entrées » prédisait aussi leur égalité. Deux rivaux
+survivants, invisibles dans mon protocole.
+
+Le tir qui les sépare — remise sur l'**id 3**, puis l'octet **7** :
+
+| Tir | Non nuls | Animés | Somme des max |
+|---|---|---|---|
+| `3 → 3` (la remise) | 148 | 90 | **26742** |
+| `3 → 7` | 148 | 90 | **26742** |
+| `3 → 1` | 152 | 106 | 24715 |
+| `3 → 0` | 139 | 77 | 21671 |
+| `3 → 7` (répétition) | 148 | 90 | **26742** |
+| `3 → 3` (répétition) | 148 | 90 | **26742** |
+
+No-op prédisait 26742, repli-sur-0 prédisait 21671, modulo (7 mod 6 = 1)
+prédisait 24715. **C'est 26742, deux fois.** Les deux rivaux tombent, le
+no-op tient.
+
+**Domaine, et il est étroit** : tous les octets absents jamais tirés — 7, 50,
+200 — sont **au-dessus du plus grand id existant**. Un **trou intérieur** n'a
+jamais été sondé, et c'est pourtant le cas qui intéresse le générateur : la
+copie à 87 entrées a des trous en 85–98 et 100–113. À mesurer en rouvrant ce
+fichier-là.
+
+Les zéros de la matrice de RECALL-03 (85 ≡ 84, 200 ≡ 114) s'expliquent enfin
+sans rien inventer : les tirs étaient en ordre croissant, un no-op laisse la
+trame précédente.
 
 **Deux acquis de méthode**, chèrement payés :
 - la statistique qui marche sur ce rig est l'**enveloppe agrégée** (non nuls,
@@ -5368,12 +5425,14 @@ reste **non testé** — aucun projet du corpus n'en contient.
 
 ## SCREEN-03 — la façade cède aux touches, pas à `SET_MODE` : deux chemins distincts — 2026-08-27 — **[device-confirmed]**
 
-Rejeu à l'identique de la séquence de SCREEN-02, sur une **autre copie vive**
-(le fichier à 6 entrées, ouvert entre-temps au panneau) : ouvrir 26, envoyer
-0, puis 5, puis 16, chaque fois depuis l'écran Projects.
+Rejeu de **trois lignes** de la table de SCREEN-02 — les index 0, 5 et 16,
+ceux qui ne sortaient pas — sur une **autre copie vive** (le fichier à
+6 entrées, ouvert entre-temps au panneau) : ouvrir 26, envoyer le candidat,
+chaque fois depuis l'écran Projects ; puis l'index 1 pour libérer la façade.
+Les quatre lignes positives (1, 3, 8, 33) n'ont **pas** été rejouées.
 
-**L'écran est resté sur Projects pour les trois.** SCREEN-02 n'était donc pas
-un artefact d'état : ni le projet vif, ni le modal hérité de l'écran USB de la
+**L'écran est resté sur Projects pour les trois.** Ces trois lignes-là ne
+sont donc pas un artefact d'état : ni le projet vif, ni le modal hérité de l'écran USB de la
 nuit n'y étaient pour quelque chose. La table tient.
 
 ### Ce que les LED ont montré en plus

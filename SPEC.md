@@ -1037,11 +1037,13 @@ the `wpj-toolkit` enumerations; neither source has them alone.
   was `[tag, value]`, so the device read our *tag* byte — `f1` → 8, `f2` → 16,
   `f3` → 24 — which is exactly why one appearance per "field" and never a
   reaction to the value. With a one-byte payload, recall is addressed,
-  deterministic and reproducible, and `SET_MODE` lands the panel on a requested
-  mode 5 times out of 5 (RAW-01, **device-confirmed**, 2026-08-27). RECALL-01
-  and RECALL-02 measured correctly; their reading — "the event addresses
-  nothing" — is replaced by "we had never sent the index". Still open: whether
-  the byte is an **id or an entry position**, and whether a second byte is read.
+  deterministic and reproducible, and `SET_MODE` sets the **reported** mode 5
+  times out of 5 — the panel itself does not always follow (RAW-01 and
+  SCREEN-01, **device-confirmed**, 2026-08-27). RECALL-01 and RECALL-02
+  measured correctly; their reading — "the event addresses nothing" — is
+  replaced by "we had never sent the index". The byte is the **id** (RECALL-03)
+  and a second byte is not read (RAW-02); what an id inside an interior gap
+  does is open.
   The long events stay protobuf.
 - **L8 — variants B and C.** Only the top level is mapped. A different
   serialisation of the same show; needs its own campaign.

@@ -702,9 +702,10 @@ def index_payload(value):
     produced a day of "the value is ignored" readings. See RAW-01 and RECALL-03
     in ``research/wpj-format-registry.md``.
 
-    A missing id is a no-op (RECALL-04). Byte 200 crosses 0x7f and behaves as
-    an ordinary missing id, but no project in the corpus holds an id above 127,
-    so recalling one — pages 7 to 10 — is untested.
+    An id above the highest one present is a no-op (RECALL-04); interior gaps
+    are unprobed. Nothing above 0x7f has produced anything but that no-op, which
+    a byte rejected or masked at the far end would produce too — so ids 128-199,
+    pages 7 to 10, are untested either way.
     """
     if not 0 <= value <= 255:
         raise WolfmixError("Index must be between 0 and 255")
@@ -902,10 +903,11 @@ def build_parser():
         "preset", help="recall a preset by its id (id = (page-1)*20 + slot-1)"
     )
     preset.add_argument("id", type=int,
-                        help="preset id; a missing id does nothing, and an "
-                             "existing id above 127 is untested")
+                        help="preset id; an id above the highest one present "
+                             "does nothing, interior gaps and ids above 127 "
+                             "are untested")
     mode = commands.add_parser(
-        "mode", help="switch the controller UI to a mode index"
+        "mode", help="set the reported mode; the panel does not always follow"
     )
     mode.add_argument("index", type=int,
                       help="mode index (research/mode-map.md); raw indexes reach "

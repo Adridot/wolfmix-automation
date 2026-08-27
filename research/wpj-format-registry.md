@@ -5016,3 +5016,142 @@ une sonde matérielle.
 - Mode **42 = `USB_STICK`**, atteignable seulement par index brut.
 - La recette du générateur, à jour : transfert **à distance**, rechargement
   **un geste manuel**, rappel **à distance et adressé**.
+
+## RECALL-03 — l'octet de `SET_PRESET` est l'**id**, pas la position — 2026-08-27 — **[device-confirmed]**
+
+Copie vive : 87 entrées, positions 0..86, ids 0..84 puis 99 et 114 — les deux
+lectures ne divergent qu'en queue. Matrice des écarts entre trames (canaux
+différents), octets rappelés un à un, DMX en flux continu :
+
+```
+       5    84    85    86    99   114   200
+  5    0    32    32    32    94    59    59
+ 84   32     0     0     0    93    60    60
+ 85   32     0     0     0    93    60    60
+ 86   32     0     0     0    93    60    60
+ 99   94    93    93    93     0   111   111
+114   59    60    60    60   111     0     0
+200   59    60    60    60   111     0     0
+```
+
+Trois groupes : **{84, 85, 86}**, **{99}**, **{114, 200}**.
+
+- Lecture « **position** » : 84, 85, 86 sont trois entrées différentes — elles
+  devraient donner trois trames différentes. Elles n'en donnent qu'une.
+  99, 114 et 200 sont tous hors domaine — ils devraient s'écraser sur le même
+  écrêtage. 99 s'en distingue par 111 canaux. **Réfutée deux fois.**
+- Lecture « **id** » : 84, 99 et 114 sont les trois derniers ids existants.
+  84 est rappelé tel quel ; 85 et 86 n'existent pas et **retombent sur 84** ;
+  99 et 114 existent et sont distincts ; 200 est hors domaine et **retombe sur
+  114**, le dernier. **Tout est expliqué, rien ne reste.**
+
+**Confirmation visuelle par l'opérateur**, qui a suivi le panneau pendant le
+tir : le surlignage est passé par le 5e pad de la page 5 — `id = (5−1)·20 +
+(5−1) = 84` — puis « preset test auto » (id 99, dernier pad de la page 5),
+puis « Test » (id 114, page 6). Exactement les trois groupes, dans l'ordre.
+
+**Règle de résolution — mesurée** : l'octet **92** rappelle la même trame que
+l'octet 84 (0 canal d'écart) et non celle de 99. Or 92−84 = 8 > 99−92 = 7 :
+« le plus proche » est **réfuté**, c'est le **plancher**. Règle complète, et
+device-confirmed :
+
+> `SET_PRESET`, charge utile = **un octet = l'id du preset**. Un id absent est
+> résolu vers **le plus grand id existant qui lui est inférieur** ; un octet
+> au-delà du dernier id rappelle **la dernière entrée**.
+
+Encodée dans l'outil : `wolfmix.py preset <id>` et `wolfmix.py mode <index>`,
+avec `index_payload()` et son self-check (l'octet 23 doit partir en `0x17`,
+jamais en `08 17`).
+
+### Ce que ça referme
+
+- **PRESET-07 est renversé** : `f2` = position écrêtée était faux sur les deux
+  points — ce n'est ni `f2`, ni une position. C'est l'octet 0, et c'est l'id.
+- **SETP-01 avait raison sur la sémantique** (« l'id ») et tort sur
+  l'encodage ; ses deux mesures restent invalides — la charge utile `08 17`
+  rappelait l'id 8.
+- **La recette du générateur est complète et hands-off à un geste près** :
+  écrire les entrées avec la formule d'id (trous tolérés), déployer à
+  distance, **une ouverture manuelle**, puis rappeler n'importe quelle entrée
+  à distance par `SET_PRESET` avec **un octet = l'id**.
+
+Note pour l'opérateur : chaque rappel **change le preset joué en direct** —
+c'est visible au panneau et sur la sortie DMX. Rien n'est écrit en mémoire
+(`projectChanged` reste false du début à la fin), mais l'état vif bouge à
+chaque tir.
+
+## SCREEN-01 — le mode rapporté n'est pas l'écran affiché — 2026-08-27 — **[device-confirmed]**
+
+Séquence envoyée à `SET_MODE`, un index toutes les 5 s, l'opérateur regardant
+le panneau, l'appareil partant de l'écran Projects :
+
+| Envoyé | `wolfmixMode` relu | Écran affiché |
+|---|---|---|
+| 5 | 5 | **Projects** (inchangé) |
+| 0 | 0 | **Projects** (inchangé), **LED HOME allumée** |
+| 26 | 26 | Projects |
+| 0 | 0 | **Projects** (inchangé) |
+| 1 | 1 | **COLOR FX** — la façade suit enfin |
+
+Trois faits, tous nouveaux :
+
+1. **`wolfmixMode` répond docilement l'index envoyé, sans que la façade
+   bouge.** Le readback n'est donc **pas** une preuve de ce qui est affiché.
+   Le `mode-map` a été bâti dans le sens panneau → readback, qui reste
+   valide ; c'est le sens télécommande → écran qui ne l'est pas.
+2. **L'état interne suit bien** : la LED HOME s'allume quand on envoie 0,
+   pendant que l'écran montre Projects. Le firmware tient donc deux choses
+   distinctes — un mode de navigation/moteur, et une façade.
+3. **L'écran Projects est modal, y compris pour l'opérateur** : appuyer sur
+   HOME au panneau ne le quitte pas non plus. Seul l'index 1 (COLOR FX) l'a
+   fait céder dans cette séquence.
+
+### Conséquences
+
+- **Rectification de PROJECTS-01** : « l'écran Open est atteignable à
+  distance » reste vrai (l'opérateur l'a lu à l'écran), mais il faut y
+  ajouter : **on entre, on ne sort pas** par `SET_MODE 0` ni `5`, et le
+  panneau lui-même est piégé. Un `mode 26` envoyé sur un appareil en
+  exploitation immobilise la façade devant la liste des projets.
+- **Ça éclaire l'inertie mesurée sur cet écran** (RELOAD-04) : `SKIP_PRESET`
+  et `SET_PRESET` n'y font rien parce que la façade est en attente d'une
+  action locale, alors même que le protocole continue de répondre « Hooray! ».
+- **Danger d'exploitation** à documenter dans `docs/device.md` : `mode` avec
+  un index modal (26, 42) laisse l'appareil dans un état dont l'opérateur ne
+  sort pas par HOME.
+
+## SCREEN-02 — comment sortir d'un écran modal, et ce que ça dit du menu — 2026-08-27 — **[device-confirmed]**
+
+Quatre essais, chacun : ouvrir Projects (index 26), attendre, envoyer un
+candidat, attendre. L'opérateur a relevé la suite des écrans affichés :
+
+> PROJECT, GOBO, PROJECT, MOVE FX, PROJECTS, BLACKOUT, COLOR FX
+
+Sept écrans pour neuf envois — la lecture est forcée : les deux envois
+manquants sont ceux qui **n'ont rien changé**. Le candidat 16 laisse l'écran
+sur Projects, et la réouverture de l'essai 3 tombe sur un écran déjà là.
+
+| Index | Écran | Sort du modal ? |
+|---|---|---|
+| 1 | COLOR FX | **oui** |
+| 3 | MOVE FX | **oui** |
+| 8 | GOBO | **oui** |
+| 33 | BLACKOUT | **oui** |
+| 0 | HOME | non |
+| 5 | PRESETS | non |
+| 16 | SETUP, le menu parent | **non** |
+
+**La ligne de partage n'est pas « touche physique contre écran »** — PRESET
+est une touche physique et ne sort pas. Elle sépare les écrans qui
+**agissent sur la sortie lumière** (racks FX, gobo statique, blackout) de ceux
+qui ne font que **naviguer** (HOME, grille des presets, menu principal).
+
+### Deux conséquences
+
+- **Échappatoire fiable, à documenter** : pour libérer une façade coincée,
+  envoyer 1, 3, 8 ou 33. C'est utile au-delà de nos sondes, puisque la touche
+  HOME du panneau n'y suffit pas non plus.
+- **Le menu parent ne reprend PAS la main** (16 ne sort pas de 26). La
+  hiérarchie de navigation n'écoute donc plus quand un modal est ouvert :
+  le chemin « Open → sélection → validation » n'est pas pilotable par des
+  changements de mode. **RELOAD-04 est confirmé par un troisième angle.**

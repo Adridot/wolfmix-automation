@@ -5568,3 +5568,102 @@ Falsificateurs, dans l'ordre du coût :
 Rappel des pièges de mesure applicables : juger à l'**enveloppe agrégée** et non
 à une trame, garder un historique constant entre deux rappels (les presets sont
 partiels), et rejouer 101 en fin de série — pas seulement 101 → 102 → 100.
+
+### GEN-01 mesuré — `f31` écrit rend exactement ce qu'il lit ; les dimmers, non — **[device-confirmed]**
+
+Déploiement du candidat sur « WMX EXP format-lab » (store + les deux vérifs +
+RESTART), puis UNE ouverture manuelle au panneau, puis la série à distance :
+`SET_MODE 1`, puis base → 101 → 102 → 100 → **101 rejoué en fin de série**,
+8 s de repos après chaque rappel, 5 s d'enveloppe, 125 trames par capture.
+
+Le fichier stocké est identique au candidat **sauf** le record 101 (le runner y
+écrit le nom du projet expérimental) et le préfixe (UUID + compteur) : les six
+presets sont arrivés octet pour octet, `f10`, `f17`, `f28`, `f30`, `f31`
+compris.
+
+**Le tir de contrôle est identique au premier 101 sur les 2048 canaux.**
+L'instrument ne dérive pas ; tout ce qui suit se lit sur des différences
+réelles.
+
+| Prédiction | Résultat |
+|---|---|
+| 1 — six pads occupés page 6, les six noms | **tenue** — rapportée par l'opérateur |
+| 2 — le rouge monte sur les dix pars, rien d'autre dans le groupe B | **tenue pour la couleur**, réfutée pour le dimmer (voir 3) ; A et C ne s'éteignent pas |
+| 3 — rouge 255, dimmer 120 | **réfutée**, et sa rivale aussi : rouge 255, **dimmer 255** |
+| 4 — 101 → 102 : exactement vingt canaux bougent | **tenue à la lettre** |
+| 5 — le pad 16 fait monter un canal « extra » que 101/102 ne touchent pas | **tenue**, mais sur `extra 1`, pas `extra 2` comme parié |
+
+### Ce que la paire 101/102 établit
+
+101 → 102, deux presets qui ne diffèrent que par `f31` :
+
+```
+101 : rouge 255 vert 0 bleu 0   sur les dix pars (adresses 101, 111 … 191)
+102 : rouge 0   vert 0 bleu 255 sur les dix pars (adresses 103, 113 … 193)
+diff : 20 canaux, et AUCUN autre des 2048
+```
+
+Pad 6 = `(255, 0, 0)`, pad 9 = `(0, 0, 255)` dans la palette 140 du groupe B.
+La sortie est la palette, canal pour canal.
+
+> **`165.f31` est écrivable, et la lecture « huit masques de 20 bits, bit n du
+> groupe g = pad n+1 » vaut dans les deux sens.** Elle n'était device-confirmed
+> qu'en lecture ; elle l'est maintenant en écriture, par une expérience à une
+> seule variable. `f30 = 9` (SINGLE) écrit par nous rend bien **une** couleur,
+> identique sur les dix luminaires du groupe — pas d'alternance.
+
+Le pad 16 ajoute une correspondance : `(255, 105, 8, blanc 64)` sort en
+rouge 255, vert 105, bleu 8 et **`extra 1` (rôle 6, adresse +4) = 64**. Le
+canal `blanc` du pad pilote donc `extra 1`. **Rétractation** : la prédiction 5
+pariait `extra 2` ; le pari était faux, la structure était juste.
+
+### Ce qui est réfuté : les dimmers du preset n'atteignent pas le DMX
+
+Les trois presets écrivent `f17` = 120 sur le groupe B et **0** sur A et C,
+avec `f10` = 14 — bit 5 (`OTHER`) **clair**, donc la bascule allumée, donc les
+dimmers lus, si le modèle tient. Mesuré, dans les cinq captures :
+
+```
+dimmers groupe B (100, 110 … 190) : 255   (écrit : 120)
+dimmers groupe A (8, 24 … 88)     : 220   (écrit : 0)
+dimmers groupe C (206, 226)       : 255   (écrit : 0)
+```
+
+Aucun ne bouge d'une capture à l'autre. La valeur écrite n'apparaît nulle part,
+et la rivale publiée (« rouge 120, dimmer 255 », un moteur qui pré-multiplie)
+tombe avec elle : le rouge vaut 255.
+
+Trois lectures survivent, aucune n'est départagée :
+
+1. **le bit 5 de `f10` n'est pas `OTHER`.** C'est la plus faible attribution de
+   F4-02 : les cinq autres bits ont été épinglés par une écriture ou par trois
+   écrans, le bit 5 par un état **déjà présent** sur un preset que la sauvegarde
+   n'a pas touché. Une attribution qui n'a jamais été testée par une écriture
+   vient d'être testée par une écriture ;
+2. **`f17` n'est pas le dimmer.** Son statut est resté `hypothesized` depuis le
+   début, et il est le seul champ que le compilateur écrit sous ce statut ;
+3. **la sortie du canal dimmer est l'état vif des faders de groupe du panneau**,
+   pas de la donnée de projet. `220` sur A pendant que B et C sont à `255`
+   ressemble beaucoup à un fader qui n'est pas tout en haut — et cette lecture
+   explique aussi, sans mécanisme nouveau, l'« ACC-02 : dimmers ignorés » de
+   2026-08-25, qu'on avait mis sur le dos de `f10`.
+
+Le discriminateur le moins cher est un regard : **où sont les faders de groupe
+au panneau ?** Si A est aux environs de 86 % et B et C en butée, la lecture 3
+passe devant les deux autres et il faut la tester par une écriture qui varie
+`f17` sans rien d'autre. Sinon, l'A/B à construire est un preset identique à
+101 à `f17` près, ce qui coûte un déploiement et une ouverture manuelle.
+
+Jusqu'à ce que ce soit tranché, **`dimmers` reste écrit par le générateur mais
+son effet est inconnu** : la couleur d'une ambiance est device-confirmed, son
+intensité ne l'est pas.
+
+### Deux observations qui ne sont pas des conclusions
+
+- Au premier rappel, la roue de couleur des six lyres du groupe A passe de 16 à
+  47 et **n'en bouge plus** sur les trois pads suivants. C'est cohérent : les
+  trois presets ne nomment que le groupe B, donc le masque `f31` de A est
+  **vide**. Ce que fait le moteur d'un masque vide — 47 — n'est pas expliqué.
+- `animatedChannels` vaut 0 dans les cinq captures : sous un preset `statique`,
+  rien n'anime. La note permanente « le rig anime tout le temps » décrit les
+  presets à FX, pas cet état.

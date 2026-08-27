@@ -4973,3 +4973,46 @@ confirme à l'écran : la **liste des 6 projets** stockés, dont les **deux
 `WMX EXP format-lab` homonymes** — l'original et le doublon ré-identifié par
 WTOOLS (RELOAD-02). C'est l'écran dont l'usage manuel remplace la copie
 vive. Manquent la sélection et la validation.
+
+## RELOAD-04 — verdict : l'event de rechargement n'existe pas dans la surface atteignable — 2026-08-27
+
+Question de la séance : quel event du protocole USB remplace la copie vive
+sans geste au panneau. **Réponse : aucun**, et la chaîne de preuve est
+maintenant complète.
+
+| Preuve | Statut |
+|---|---|
+| Le guide embarqué du vendeur énumère les fonctions de WTOOLS 2.0.2 : sync BPM, 3D Link, add-ons, sync projets, sync profils, lock/unlock, factory reset, renommage. **Aucun éditeur, aucun rechargement.** | observed |
+| La surface API contrôleur du binaire ne contient **aucun verbe de chargement** (`loadProject`, `openProject`, `reloadProject`, `setActiveProject`… tous absents ; les seuls `load…` chargent un fichier dans l'app). | observed |
+| Une poussée WTOOLS **ne rend pas vivant** le projet poussé (10 apparences distinctes sur 10 skips, avant comme après). | device-confirmed |
+| `store` + `RESTART` **sous le même UUID** ne recharge pas non plus (même mesure, plus la reproduction rang à rang du parcours de skip). | device-confirmed |
+| L'écran qui recharge — mode 26, *main menu → Open* — **est atteignable à distance** par index brut, liste des 6 projets à l'écran. | device-confirmed |
+| Sur cet écran, **`SKIP_PRESET` ne déplace rien** et **`SET_PRESET` ne fait rien**. Les deux seules primitives de la surface connue sont inertes là où il faudrait sélectionner et valider. | device-confirmed |
+| Le binaire WTOOLS ne porte **aucune primitive d'entrée à distance** (encodeur, appui, touche) : `onPresetButtonPressed`/`onNavigationButtonPressed`/`onModeButtonPressed` sont les boutons de son interface Flutter, `setEncoderColour` ne pilote que des LED. | observed |
+
+**Lecture.** Le protocole expose le *changement de mode* et le *déclenchement
+de preset*, pas l'*entrée utilisateur*. On peut amener le panneau devant la
+liste des projets ; on ne peut ni y déplacer le curseur ni valider. Le
+rechargement reste **un geste manuel irréductible**, et la prémisse de départ
+(« WTOOLS pousse des éditions qui apparaissent en direct ») était fausse :
+WTOOLS n'édite rien, il transfère.
+
+**Incertitude résiduelle, assumée.** Les ids d'events jamais émis
+(0, 1, 10, 11, 13–15, 17, 22–38, 40, 42, 45+) restent non testés. L'un d'eux
+pourrait être une primitive d'entrée. Nous ne les sondons pas à l'aveugle :
+le vocabulaire lu dans le binaire place `setFirmware`, `setFlashData` et
+`factoryReset` dans ce même espace, et MODE-40/42 vient de démontrer qu'un
+index inconnu peut déclencher une action sans validation. Trancher demanderait
+une capture du bus USB — impossible sur cette machine arm64 (RELOAD-01) — ou
+une sonde matérielle.
+
+### Ce que la séance a acquis, malgré la réfutation
+
+- **Les events courts ne sont pas du protobuf** : `payload[0]` est l'index
+  (RAW-01). Le rappel adressé est restauré, déterministe au canal près.
+- Un discriminateur de copie vive **sans adressage** : le comptage
+  d'apparences distinctes sur 10 `SKIP_PRESET`.
+- WTOOLS **ré-attribue un UUID** à l'import (deux homonymes sur l'appareil).
+- Mode **42 = `USB_STICK`**, atteignable seulement par index brut.
+- La recette du générateur, à jour : transfert **à distance**, rechargement
+  **un geste manuel**, rappel **à distance et adressé**.

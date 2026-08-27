@@ -5667,3 +5667,33 @@ intensité ne l'est pas.
 - `animatedChannels` vaut 0 dans les cinq captures : sous un preset `statique`,
   rien n'anime. La note permanente « le rig anime tout le temps » décrit les
   presets à FX, pas cet état.
+
+## RECALL-05 — le trou intérieur, posé — 2026-08-27
+
+Le second audit ferme RECALL-04 en écrivant son domaine : les trois octets
+absents jamais tirés (7, 50, 200) sont **tous au-dessus du plus grand id
+présent**, donc « un id absent ne fait rien » ne vaut que là. Le trou
+**intérieur** reste non sondé — et c'est précisément ce que le générateur
+fabrique : il pose sa banque sur une page libre, donc au-dessus, en laissant
+un trou derrière lui.
+
+La copie vive porte exactement ce cas : ids **0–81** puis **100–105**,
+88 entrées, trou intérieur **82–99**. Octet de test : **90**.
+
+Remise sur **101** et non sur 0 — la leçon de l'audit : une remise sur 0 rend
+« repli sur 0 » indiscernable d'un no-op. La trame de 101 est connue canal par
+canal (rouge pur sur les dix pars), celle de 100 aussi.
+
+### Prédiction, publiée avant le tir
+
+| Lecture | Trame attendue après l'envoi de 90 |
+|---|---|
+| **no-op** *(p ≈ 0,7)* | identique à 101 sur les 2048 canaux |
+| première entrée d'id ≥ 90 *(p ≈ 0,15)* | celle de **100** — vert 105, bleu 8, `extra 1` 64 |
+| dernière entrée d'id ≤ 90 | celle de **81** |
+| position d'entrée écrêtée | position 90 > 87 → celle de **105** (FX, canaux animés) |
+| modulo le nombre d'entrées | 90 mod 88 = 2 → celle de l'id **2** |
+
+Les cinq rivales prédisent cinq trames distinctes, et deux d'entre elles sont
+déjà sur le disque. Tir de contrôle : 101 rejoué après le test, qui doit
+reproduire la trame de remise sur les 2048 canaux — sans quoi rien n'est lu.

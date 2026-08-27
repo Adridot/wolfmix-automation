@@ -5745,3 +5745,55 @@ inerte : au moins un de ses bits, écrit par nous, gate ce qu'il annonce. La
 lecture « `f10` écrit ne vaut rien » tombe ; restent « le bit 5 n'est pas
 `OTHER` », « `f17` n'est pas le dimmer », et « le canal dimmer sort les faders
 du panneau ».
+
+## GEN-02 — le dimmer manquant était un réglage d'appareil — 2026-08-27
+
+L'opérateur tranche les trois lectures ouvertes par GEN-01, et aucune ne
+gagne : **les potentiomètres sont tous à 100 %** — la lecture « le canal dimmer
+sort les faders » tombe, et le `220` du groupe A n'est pas une position de
+fader. La bonne réponse n'était dans aucune des trois :
+
+> Le menu Settings porte une option **`store group dimmers in preset`**, et
+> elle était **désactivée**. L'opérateur la garde éteinte par choix de métier :
+> ça verrouille les dimmers pour une soirée entière — les pars LED plus
+> discrets en plein jour — sans qu'un rappel de preset vienne les rehausser.
+
+Il l'a activée et rapporte que **le changement de dimmer suivant le preset
+fonctionne alors**. Donc `f17` *est* le dimmer, et il est gated par un réglage
+qui ne vit pas dans le projet.
+
+### Ce que ça retire au registre
+
+**Rétractation.** « `dimmers` sont ignorés tant que le bit 5 (`OTHER`) de `f10`
+n'est pas clair », attribué à ACC-02 et porté **device-confirmed** dans
+SPEC.md §5.3, est **confondu** : le réglage était éteint le 2026-08-25 comme il
+l'était aujourd'hui, donc ACC-02 ne pouvait pas distinguer les deux causes. Le
+silence des dimmers d'ACC-02 s'explique intégralement par le réglage, sans
+recourir au masque. Le bit 5 redescend à **hypothesized** — l'attribution
+`OTHER` vient du manuel et d'un état déjà présent (F4-02), jamais d'une
+écriture qui l'ait isolé.
+
+Ce qui survit de GEN-01 sur `f10` : le bit 1 (`MOVE`) écrit par nous **est**
+honoré, mesuré par le résidu de pan/tilt de RECALL-05. Le masque n'est pas
+inerte ; c'est l'attribution du bit 5 qui n'a jamais été mesurée.
+
+### Prédiction, publiée avant la re-mesure
+
+Même série, mêmes presets, réglage maintenant **activé**. Les trois presets
+écrivent `f17` = 120 sur B et 0 sur A et C.
+
+1. Les dix canaux dimmer du groupe B (100, 110 … 190) passent à **120**.
+   *(p ≈ 0,85 ; rival : une valeur mise à l'échelle, 120/255 d'un maximum
+   propre au luminaire.)*
+2. Les six dimmers du groupe A (8, 24 … 88) et les deux du groupe C (206, 226)
+   passent à **0**. *(p ≈ 0,85)*
+3. Le rouge du groupe B **reste 255** sous 101 : le luminaire a un canal dimmer
+   dédié, le moteur n'a pas à pré-multiplier la couleur. *(p ≈ 0,85 ; rival :
+   rouge = 120, et alors GEN-01 aurait vu 255 parce que le dimmer valait 255.)*
+4. Les **dix-huit** canaux de dimmer sont les seuls à changer par rapport à la
+   trame de 101 mesurée sous le réglage éteint, résidu de position mis à part.
+   *(p ≈ 0,7)*
+
+Et le `220` du groupe A, avec les potentiomètres en butée, reste inexpliqué :
+si la prédiction 2 tient, il vient d'ailleurs — un maximum par groupe, un
+`f17` de l'ancienne copie vive, ou un plafond du profil. À sonder après coup.

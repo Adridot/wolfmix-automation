@@ -7162,3 +7162,66 @@ fois, je n'ai aucune base, et une case laissée vide vaut mieux qu'un pari
 déguisé en lecture.
 
 Id attendu : **84**, la première place libre.
+
+### F7-04 mesuré — le quadruplet tient sur les trois moteurs — **[validated]**
+
+La capture crée l'entrée **id 84**, et aucun preset existant ne bouge. Records
+touchés : 165, plus la migration habituelle de 115.
+
+| | Prédit | Mesuré |
+|---|---|---|
+| `f3` | `[1, 0, 0, 0, 0, 0, 0, 0]` | **`[1, 0, 0, 0, 0, 0, 0, 0]`** |
+| `page_color_fx` (`f7`) | `[0, 1, 1, 0, …]`, inchangé | **inchangé** |
+| `page_move_fx` (`f23`) | `[0, 0, 1, 0, …]`, inchangé | **inchangé** |
+| id | 84 | **84** |
+| `f27` | — | reste nul |
+
+La favorite à **p = 0,6** est exacte, et les trois rivales tombent. Deux pages
+posées sur deux moteurs différents, deux tirs plus tôt, n'ont pas bougé d'un
+octet : c'est le différentiel à une variable, pour la troisième fois d'affilée.
+
+> **`165.f3` est le sélecteur de page du Beam FX, par groupe.** Le record range
+> ses trois moteurs en **quadruplets réguliers** — paire, sélecteur, actif — et
+> le motif est maintenant mesuré sur les trois, pas déduit sur deux.
+
+| Moteur | page 1 | page 2 | sélecteur | actif | tir |
+|---|---|---|---|---|---|
+| Beam | `f1` | `f2` | **`f3`** | *(`f4`)* | F7-04 |
+| Color | `f5` | `f6` | **`f7`** | `f8` | F7-01 |
+| Move | `f21` | `f22` | **`f23`** | `f24` | F7-03 |
+
+### Le contrôle que l'opérateur a ajouté sans le vouloir
+
+Le groupe B a été mis en `BEAM FX1` **explicitement**, alors que 0 est déjà la
+valeur d'un groupe auquel personne n'a touché. Mesuré : **`f3[B]` = 0**.
+
+> Une page 1 posée à la main est **indiscernable** d'une page jamais réglée. Le
+> champ encode la **page**, pas le fait d'avoir été réglé. C'est ce qui autorise
+> à lire les zéros des sept autres groupes comme « page 1 » et non comme
+> « absent », et ça vaut pour les trois sélecteurs.
+
+### La case que je n'ai pas remplie
+
+J'avais refusé de prédire la tranche 2 de `f16`, après m'être trompé au tir
+précédent en déduisant l'état d'un moteur d'une photographie. Mesuré :
+**3 = A+B**, le moteur faisceau est allumé sur les deux groupes. La retenue
+était justifiée — je n'avais aucune base — et l'abstention n'a rien coûté au
+tir.
+
+### Ce que ça ferme, et ce qui reste
+
+Les quatre tableaux par groupe non attribués de 165 étaient `f3`, `f7`, `f23` et
+`f27`. **Trois sont maintenant nommés**, un tir chacun, et le codec leur donne
+leur clé sémantique : `page_beam_fx`, `page_color_fx`, `page_move_fx`. Round-trip
+octet-identique revérifié : 45/45 sur le corpus et sur les trois fichiers écrits
+par l'appareil.
+
+**`f27` reste seul et sans emploi.** Il ne suit pas le motif du quadruplet —
+`f25` est le nom du preset — et il est nul sur les 3697 occurrences comme sur les
+trois entrées neuves. Aucune hypothèse à discriminateur pas cher n'a émergé, et
+c'est la condition que T6 posait pour aller au matériel.
+
+Ce que « Double Trouble » ajoutait au format est donc décrit en entier côté
+fichier : deux configurations par moteur, un masque de groupes par moteur qui
+couvre les deux, et un sélecteur par groupe qui dit laquelle est en service —
+indépendant de l'allumage du moteur.

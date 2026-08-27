@@ -336,9 +336,9 @@ def tableaux_par_groupe_165(w):
     pour un scalaire, change immédiatement le compte. C'est ce qui a rangé
     `f3`, `f7`, `f14`, `f23` et `f27` — alors tous nuls dans le corpus — parmi
     les valeurs par groupe plutôt que parmi les inconnues sans forme. Le pari a
-    payé : `f7` et `f23` sont depuis mesurés comme les sélecteurs de page de la
-    couleur et du mouvement (registre, F7-01 et F7-03), et ce sont bien des
-    tableaux de huit. `f3` et `f27` restent nuls et non attribués.
+    payé sur trois des quatre : `f3`, `f7` et `f23` sont les sélecteurs de page
+    du faisceau, de la couleur et du mouvement (registre, F7-01/03/04), et ce
+    sont bien des tableaux de huit. `f27` reste nul et non attribué.
     """
     for pre in _items(w, 165):
         for n in TABLEAUX_PAR_GROUPE:

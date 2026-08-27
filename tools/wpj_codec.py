@@ -66,11 +66,12 @@ _PRESET = {
     # Sélecteur de page par groupe A–H : 0 = FX1, 1 = FX2. Le record range
     # chaque moteur en quadruplet — paire, sélecteur, actif : f1/f2/f3 pour le
     # faisceau, f5/f6/f7/f8 pour la couleur, f21/f22/f23/f24 pour le mouvement.
-    # `f7` et `f23` sont mesurés (registre, F7-01 et F7-03) ; `f3` est la même
-    # place pour le faisceau et reste NON mesuré — personne n'a jamais posé de
-    # deuxième page de faisceau dans ce corpus, donc il garde sa clé neutre.
-    # Indépendant du masque de `f16` : un groupe garde sa page en attente même
-    # quand le moteur est à l'arrêt.
+    # Les trois sont mesurés, un tir chacun : F7-01 couleur, F7-03 mouvement,
+    # F7-04 faisceau. Indépendant du masque de `f16` : un groupe garde sa page
+    # en attente même quand le moteur est à l'arrêt. Une page 1 posée à la main
+    # vaut 0, comme une page jamais réglée — le champ encode la page, pas le
+    # fait d'avoir été réglé (contrôle de F7-04).
+    3: ("page_beam_fx", "packed"),
     7: ("page_color_fx", "packed"), 23: ("page_move_fx", "packed"),
 }
 

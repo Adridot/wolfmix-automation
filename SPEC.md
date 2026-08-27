@@ -646,18 +646,23 @@ forces. One byte of payload, and record 165 untouched.
 **The record files each engine as a regular quadruple — [validated] (F7-03).**
 Page 1, page 2, the page **selector**, then the "active" field:
 
-| Engine | page 1 | page 2 | selector | active |
-|---|---|---|---|---|
-| Beam | `f1` | `f2` | **`f3`** — *predicted, never measured* | *(`f4` sits here)* |
-| Colour | `f5` | `f6` | **`f7`** = `page_color_fx` | `f8` |
-| Move | `f21` | `f22` | **`f23`** = `page_move_fx` | `f24` |
+| Engine | page 1 | page 2 | selector | active | shot |
+|---|---|---|---|---|---|
+| Beam | `f1` | `f2` | **`f3`** = `page_beam_fx` | *(`f4` sits here)* | F7-04 |
+| Colour | `f5` | `f6` | **`f7`** = `page_color_fx` | `f8` | F7-01 |
+| Move | `f21` | `f22` | **`f23`** = `page_move_fx` | `f24` | F7-03 |
 
-A selector is a per-group array of eight: `0` = `FX1`, `1` = `FX2`. Two of the
-three are measured; `f3` keeps its neutral key, because a slot in a regular
-pattern is not a measurement. `f4` occupies the Beam "active" slot but F4-03 read
-it as a permission mask over all three engines — the coincidence of position is
-noted, not read. `f27` does not follow the pattern (`f25` is the preset name) and
-stays unattributed.
+A selector is a per-group array of eight: `0` = `FX1`, `1` = `FX2`. All three are
+measured, one shot each, and each shot left the other two byte-identical. `f4`
+occupies the Beam "active" slot but F4-03 read it as a permission mask over all
+three engines — the coincidence of position is noted, not read. `f27` does not
+follow the pattern (`f25` is the preset name), is zero on all 3697 occurrences
+and on all three fresh entries, and stays unattributed.
+
+**A hand-set page 1 is indistinguishable from a page never set.** A group put on
+`BEAM FX1` explicitly came back as `0`, exactly like the six groups nobody
+touched (F7-04). The field encodes the page, not the fact of having been set —
+which is what licenses reading every zero as "page 1" rather than "absent".
 
 **`f7` is the per-group Colour FX page selector, `0` = `FX1` and `1` = `FX2` —
 [validated] (F7-01, F7-03).** A change to the **Move** page left it byte-identical,
@@ -676,11 +681,10 @@ screen prints its `COLOR FX2` without the box that A and B carry. A group keeps
 its pending page. That also explains the four corpus presets, where group B is
 the only one on page 2 and nothing else betrays it.
 
-That discriminator has been fired. A group put on **`MOVE FX2`**, captured into a
-preset and saved, produced `f23` = `[0, 0, 1, 0, 0, 0, 0, 0]` — element 2 and only
-element 2 — with `f7` untouched (F7-03). Neither is `device-confirmed`: we have
-never **written** a selector, and no page we asked for has been read back off the
-panel.
+That discriminator has been fired three times, once per engine, and each shot
+left the other two selectors byte-identical (F7-01, F7-03, F7-04). None is
+`device-confirmed`: we have never **written** a selector, and no page we asked for
+has been read back off the panel.
 
 **A project save alone writes none of this.** The same page change, made at the
 panel and saved without a preset capture, left all 45054 bytes identical but for

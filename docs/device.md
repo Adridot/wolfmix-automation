@@ -64,10 +64,19 @@ one-universe-per-packet layout is still handled.
 **Why the envelope.** A single DMX frame is not comparable between runs because
 effects animate. Per-channel min/max is: a static channel has `min == max`, an
 animated one keeps its range whatever the phase. That makes it the oracle for
-"did this project change alter the output at all". It is what refuted type 102
-`field 11` as inert, and what confirmed the gobo palette: pressing pad *n*
-drove the group's gobo channel to the lower bound of range *n*, with nothing
-else moving in 2048 channels.
+"did this **file** change alter the output at all".
+
+It is not the oracle for a **command**. Two separately captured envelopes cannot
+tell "nothing moved" apart from "the same thing was repainted", which is exactly
+how RECALL-01 first misread the preset recalls as inert. For a command, stream
+one continuous `dmx` capture and read the timestamped transitions.
+
+The **envelope** is what refuted type 102 `field 11` as inert, and what
+confirmed the gobo palette: pressing pad *n* drove the group's gobo channel to
+the lower bound of range *n*, with nothing else moving in 2048 channels beyond a
+±1 dither already present in the baseline. A pad press was judgeable that way
+because the discriminator was a static channel going 0 → 70 — there, "nothing
+moved" and "the same thing repainted" cannot be confused.
 
 Read the whole state, not the delta you expect: the same captures pinned
 `115.f2` as the 0-based DMX start address, because the block boundaries were
@@ -83,11 +92,16 @@ A transactional runner for project experiments, without WTOOLS in the loop.
 
 **The safety envelope.** It only ever writes a project UUID derived
 deterministically (UUID v5) from the experiment label, named `WMX EXP <label>`
-(the device truncates the name to 19 characters).
+— the **client** truncates that name to 19 characters and refuses a longer one
+before it reaches the wire. What the firmware does with an over-long *project*
+name has not been measured; for *preset* names it has, and the answer is brutal:
+past 19 UTF-8 bytes the whole project refuses to open.
 It cannot collide with one of your projects. Before initialising it snapshots
 every project on the controller. Every upload is verified by downloading it
-back and comparing bytes. On failure it restores the previous experiment
-project. Each run is journalled.
+back and comparing the **record list** — payload by payload, prefix excluded,
+because the controller stamps its own version counter there. `deploy` verifies
+twice: once right after the store, once after the restart. On failure it
+restores the previous experiment project. Each run is journalled.
 
 ```bash
 python3 tools/wolfmix_experiment.py [--port P] [--state-dir DIR] <command>
@@ -96,8 +110,8 @@ python3 tools/wolfmix_experiment.py [--port P] [--state-dir DIR] <command>
 | Command | Arguments | What it does |
 |---|---|---|
 | `init` | `project` `--label L` | snapshot everything, upload the base project under the experiment UUID |
-| `arm` | `--label L` `[--loaded-on-controller]` | record that the experiment project is the one loaded, capture the reference DMX |
-| `deploy` | `project` `--label L` `--case ID` | upload one candidate, verify, capture DMX, journal |
+| `arm` | `--label L` `--loaded-on-controller` | check the experiment project is still there under its name, record that you opened it, store the controller's current mode |
+| `deploy` | `project` `--label L` `--case ID` | save the current project as `before.wpj`, upload the candidate, verify, restart the controller, verify again, capture one DMX frame, journal |
 | `campaign` | `manifest.json` `--label L` | deploy each case in a manifest in order |
 | `watch` | `--label L` `[--interval S]` | report what each controller-side save changes, record by record |
 | `status` | `--label L` | current state of that experiment |
@@ -105,11 +119,60 @@ python3 tools/wolfmix_experiment.py [--port P] [--state-dir DIR] <command>
 
 ### The one manual step
 
-Firmware 2.0.18 exposes no USB command to *select* a project. So:
+Firmware 2.0.18 exposes no USB command **we have found** to *select* a project.
+So:
 
 1. `init` — uploads `WMX EXP <label>`.
-2. **Open that project once on the W1 itself.**
+2. **Open that project once on the W1 itself, and save it without changes** —
+   `arm` refuses to proceed while the controller reports unsaved changes.
 3. `arm` — from here everything is automatic.
+
+That sentence went through a full cycle on 2026-08-27. SETP-02 had closed the
+question with four negatives across three manoeuvres — RESTART (twice),
+delete-store-restart, engine cycle — all judged with a preset-recall
+discriminator that RECALL-01 then withdrew. **One has since been re-proved with
+a discriminator that does not depend on it**: RELOAD-03 deployed a 6-entry file,
+restarted, then counted appearances over ten `SKIP_PRESET` — ten distinct ones,
+where a live 6-entry copy would have repeated by the seventh. Store + RESTART
+under the same UUID does not replace the live copy. A WTOOLS push does not
+either (RELOAD-02). The other two negatives are still to be replayed.
+
+And the screen itself is now reachable: `SET_MODE` with a one-byte payload lands
+the panel on mode 26, `main menu → Open`. What has no known command is the
+selection gesture on that screen.
+
+### Recalling a preset over USB — the payload is not protobuf
+
+The short events do **not** carry protobuf. For `SET_MODE` (39) and
+`SET_PRESET` (41) the firmware reads **`payload[0]` as the index** and parses
+nothing — device-confirmed, 2026-08-27.
+
+That was found by sweeping `SET_MODE`'s fields: sending `f1=0` … `f4=0`
+selected modes 8, 16, 24 and 32 — which are exactly the protobuf **tag bytes**
+`0x08 0x10 0x18 0x20`. The device had been reading our tag as the index all
+along, so the value behind it could never matter.
+
+With a one-byte payload both events behave:
+
+| Event | Sent | Result |
+|---|---|---|
+| `SET_MODE` | `00`, `05`, `26`, `16`, `00` | modes 0, 5, 26, 16, 0 — **5 of 5** |
+| `SET_PRESET` | `01`, `05`, `01`, `05`, `01` | two stable fingerprints, each repeat identical to the channel |
+
+**Addressed, deterministic, hands-off preset recall works.** And mode 26 —
+`main menu → Open`, the screen whose manual use reloads a project — is
+reachable remotely.
+
+This supersedes two earlier readings on this page. RECALL-01 and RECALL-02
+measured correctly and concluded that the event carried no target; the real
+situation was that we had never sent one. What stays refuted as written is
+`f1` = id (SETP-01) and `f2` = clamped entry position (PRESET-07) — both
+described a protobuf the firmware does not read.
+
+Still open: whether that byte is an **id or an entry position** (they diverge
+only at the tail of a sparse file), and whether a second byte is read at all.
+`SET_PROJECT` and the long events remain protobuf — the raw-byte reading is for
+the short ones.
 
 ### Campaign manifest
 
@@ -139,7 +202,9 @@ runs/<utc>-<case>/    before.wpj, candidate.wpj, dmx.bin, journal.json
 ```
 
 `runs/` is the audit trail: what was deployed, what came back, what the DMX
-output looked like. It is what a write-up in `research/` cites.
+output looked like. It stays on your machine — `.wolfmix-state/` is git-ignored.
+What a write-up in `research/` cites is the extract copied out of it into
+`corpus/experiments/<ID>/`.
 
 ## Failure modes
 

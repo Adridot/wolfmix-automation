@@ -101,13 +101,16 @@ make check
 ```
 
 ```text
-self-check ok : round-trip octet-identique sur 27 fichiers
-fidélité octet vérifiée sur 27 fichiers variante A
-4 identités vérifiées sur 27 fichiers variante A
+self-check ok : round-trip octet-identique sur 45 fichiers
+fidélité octet vérifiée sur 45 fichiers variante A
+16 identités vérifiées sur 45 fichiers variante A (+ paires F30-04 / FLASH-09)
+self-check ok : 12/12 tilt, 11/12 pan, offsets et clamp
+wpj_privacy : 13 motifs, aucune occurrence dans 58 fichiers suivis
 ```
 
-Six self-checks: byte-identical round-trip, codec fidelity per record type,
-wire parsing, the show compiler, the inspect API, and the structural identities.
+Eight self-checks: byte-identical round-trip, codec fidelity per record type,
+wire parsing, the show compiler, the inspect API, the structural identities, the
+position model against four DMX captures, and the anonymisation guard.
 
 > [!IMPORTANT]
 > With no project files present, the self-checks **abstain** — one line each,
@@ -215,24 +218,33 @@ Three properties hold at every stage:
 | [`wpj_diff.py`](tools/wpj_diff.py) | Byte-range diff — the first command of every experiment. |
 | [`wolfmix.py`](tools/wolfmix.py) | The device: settings, projects, download, live DMX, mode watch. |
 | [`wolfmix_experiment.py`](tools/wolfmix_experiment.py) | Transactional experiments: snapshot → deploy → verify → restore on failure. |
+| [`wpj_position.py`](tools/wpj_position.py) | The position model, executable: the DMX a recalled position emits, computed from the project alone. |
+| [`wpj_privacy.py`](tools/wpj_privacy.py) | The anonymisation guard: fails `make check` if a real name reaches a tracked file. |
 
-Run any of them with **no arguments** to execute its self-check.
+Run any of them with **no arguments** to execute its self-check — except
+`wolfmix.py` and `wolfmix_experiment.py`, which take it as a subcommand
+(`python3 tools/wolfmix.py self-test`), and `tlv.py` / `dump.py`, which are
+argument-only helpers.
 
 ## Where the format stands
 
 | Area | State |
 |---|---|
 | Variant-A container, SHA-1 header, project name | 🟢 **device-confirmed** — our files are accepted and stored byte-identically |
-| Record inventory — 20 types | 🟢 13 decoded, 7 round-tripped verbatim |
-| Patch model (105/106/110/111/115/116/120/125) | 🟢 locked by 11 arithmetic identities; the DMX address is `115.f2`, confirmed on live DMX |
+| Record inventory — 20 types | 🟢 14 decoded, 6 round-tripped verbatim |
+| Patch model (105/106/110/111/115/116/120/125) | 🟢 locked by arithmetic — **16 identities** re-checked on every file; the DMX address is `115.f2`, confirmed on live DMX |
 | Static palettes — colour, gobo, position (140/145/150) | 🟢 **device-confirmed**, one record per group A–H |
-| FX sequences (155) | 🟢 decoded — 16 steps × 8 groups |
-| Presets — the four per-group arrays (165) | 🟢 **device-confirmed** — positions, gobos, colour masks and the 11-mode colour `PATTERN` |
-| Presets — FX submessage (165) | 🟡 effect type device-confirmed; `size`/`fade`/`phase` still hypotheses; the content mask `f4` is next |
-| Flash FX settings (102) | 🟡 closed end to end except three fields — one of them **refuted as inert** |
-| UI mode enum (`WM_MODE_*`) | 🟡 26+ values measured on the device, not read out of a binary |
+| Positions, end to end (150/151/106) | 🟢 **device-confirmed** — fan, per-fixture offsets, clamping and travel limits; the emitted DMX is computable from the file alone |
+| FX sequences (155) | 🟢 **device-confirmed** — 16 steps × 8 groups, step-major, packed varints |
+| Flash keys in a preset (165 `f16`) | 🟢 **device-confirmed both ways** — five slices captured from the panel and written back |
+| Flash FX settings (102) | 🟢 ten of eleven fields **device-confirmed**; `f11` alone stays unattributed and inert, and the search is stopped |
+| Presets — the per-group arrays (165) | 🟢 thirteen fields proven per-group; four named and **device-confirmed** |
+| Presets — writing new entries | 🟡 append works; names are capped at **19 bytes** or the project refuses to open |
+| Presets — FX submessage (165) | 🟡 effect type device-confirmed; `f4` reads as a permission mask; `f6`/`f9` unattributed between four screen properties |
+| UI mode enum (`WM_MODE_*`) | 🟡 **29 values device-confirmed** on the panel, never read out of a binary |
+| Hands-off preset recall over USB | 🟢 **device-confirmed** — the short events are not protobuf at all: the firmware reads `payload[0]` as the index |
 | Variants B and C | 🔴 top level only — read-only by rule |
-| MIDI mapping record | 🔴 not located — the gateway to live control |
+| The DMX mapping record | 🔴 not located. MIDI mapping is **MK2 and higher**, so it cannot exist in this MK1 corpus |
 
 <details>
 <summary><b>A worked example: the gobo palette is not stored, it is derived</b></summary>
@@ -244,10 +256,33 @@ so **the palette is generated from the patch**. Two consequences:
 - the identity is checkable on any corpus, forever, by `wpj_identities.py`;
 - it predicts DMX. Pressing pad *n* should drive the group's gobo channel to
   the **lower bound** of range *n*. Measured: pad 1 → 7, pad 10 → 70, and
-  nothing else moved in 2048 channels.
+  nothing else moved in 2048 channels beyond a ±1 dither on three channels that
+  was already there in the baseline. Measured on one group of one rig with one
+  fixture profile — the general rule is **[hypothesized]** until another is
+  exercised.
 
 That is the standard this repository holds itself to: a reading that predicts
 an observation, then the observation.
+
+</details>
+
+<details>
+<summary><b>A second worked example: the payload that was never protobuf</b></summary>
+
+Every message in the controller's USB protocol is protobuf-shaped, so recalling
+a preset was encoded as protobuf too. It never addressed anything: whatever
+value we sent, the device produced one of two fixed outputs. Two sessions were
+spent measuring that, and one reading — "the event carries no target" — reached
+`device-confirmed` before it was retracted.
+
+The answer came from sweeping the neighbouring event and noticing the modes it
+selected: 8, 16, 24, 32. Those are `0x08 0x10 0x18 0x20` — the protobuf **tag
+bytes**. For these short events the firmware does not parse; it reads
+`payload[0]`. We had been sending the tag and calling the rest a value.
+
+One-byte payloads, and the recall is addressed, deterministic and reproducible.
+The retraction is kept in `research/` alongside the fix, because the mistake —
+assuming the encoding from the neighbours — is more instructive than the result.
 
 </details>
 
@@ -273,7 +308,8 @@ AGENTS.md          orientation for coding agents and automated contributors
 tools/             the implementation — stdlib only, self-checking
 docs/              task-oriented guides (corpus, tools, show format, device…)
 research/          the working log, in French — one write-up per experiment
-corpus/            where you drop your own projects; ships only SHA256SUMS
+corpus/            where you drop your own projects; ships only hashes, a
+                   README and the experiment recipes
 ```
 
 > [!TIP]
@@ -373,10 +409,14 @@ are still French.
 | ✅ | Variant-A writer with a byte-identical round-trip, device-confirmed |
 | ✅ | Record inventory, patch model, preset/FX sub-message |
 | ✅ | Static colour / gobo / position palettes, FX sequences |
+| ✅ | The position model — six records, one formula, checked against live DMX |
+| ✅ | Record 102 closed but for one inert field; the five flash slices, both directions |
 | ✅ | Template-based show compiler, transactional device experiment runner |
-| 🔜 | `size`/`fade`/`phase` attribution — one clean experiment each |
-| 🔜 | Record 102 `f5`/`f6`/`f11` — three unattributed values, highest value per unit of effort |
-| 🔮 | The MIDI mapping record — live control |
+| ✅ | The anonymisation guard, wired into `make check` |
+| 🔜 | `f6`/`f9` in the FX submessage — four screen properties, three fields, one save each |
+| 🔜 | Whether that index byte is a preset **id** or an entry **position**, and whether a second byte is read |
+| 🔜 | A generator that writes a page of presets end to end, within the 19-byte cap |
+| 🔮 | The DMX mapping record — live control on MK1 |
 | 🔮 | Variant B/C writer, fixture profile generation |
 
 ## Documentation

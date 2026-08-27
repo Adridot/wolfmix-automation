@@ -24,16 +24,19 @@ Never invent a name for an unconfirmed enum value. Ambiguity is recorded as a
 list of candidates, not resolved by guessing. Absent fields are *absent*, never
 reported as `0` or `off`.
 
-Measurement base: W1 Mk1 (serial withheld), firmware **2.0.18**, WTOOLS **1.6.3**,
-macOS. Corpus hashes in `corpus/SHA256SUMS`.
+Measurement base: W1 Mk1 (serial withheld), firmware **2.0.18**, macOS. WTOOLS
+**1.6.3** for the ACC-series acceptance tests; the host has since moved to WTOOLS
+**2.0.2** (build 248), which is what the later protocol work was read against.
 
-**On file counts.** The measurement corpus holds **27 variant-A files**, but only
+Corpus hashes in `corpus/SHA256SUMS` — 57 files, regenerated 2026-08-27.
+
+**On file counts.** The measurement corpus holds **45 variant-A files**, but only
 **4 are independent rigs** (*rig-a* 10 fixtures, *rig-b* 15, *rig-c* 20,
 *rig-c-bug* 22 = a re-patched *rig-c*). The rest are derived: files written
 by our own writer from *rig-a*, and controller saves of one copy of
 *rig-c*. An identity holding on all of them is strong enough to **kill** a
 hypothesis; it is not by itself enough to call anything device-confirmed.
-Counts written "27/27" below are re-checked by `make check` on whatever corpus
+Counts written "45/45" below are re-checked by `make check` on whatever corpus
 is present.
 
 ---
@@ -46,7 +49,7 @@ others.
 
 | Variant | Layout | Origin | Corpus |
 |---|---|---|---|
-| **A** | 20-byte SHA-1 + opaque prefix + TLV container | device dumps, WLINK imports | 19 files |
+| **A** | 20-byte SHA-1 + opaque prefix + TLV container | device dumps, WLINK imports | 45 files |
 | **B** | 20-byte SHA-1 + bare protobuf from offset 20 | current WTOOLS projects | 5 files |
 | **C** | bare protobuf from offset 0, no digest | older WTOOLS projects | 1 file |
 
@@ -101,12 +104,12 @@ every run.
 
 ---
 
-## 3. Record inventory — **[correlated 18/18]**
+## 3. Record inventory — **[correlated 45/45]**
 
 | Type | Size (bytes) | Items | Identification | Status |
 |---|---|---|---|---|
 | 101 | 12–20 | — | project name (`f1` UTF-8) | **device-confirmed** (§4) |
-| 102 | 16–22 | — | flash-FX settings, 6 keys | **device-confirmed** (§6) |
+| 102 | 16–28 | — | flash-FX settings, 6 keys | **device-confirmed** (§6) |
 | 105 | 114–351 | 10–27 | **patch index**: one entry per DMX block, slicing record 106 | correlated (§7) |
 | 106 | 600–2614 | 50–201 | one entry per **mapped** channel, `f2` = absolute DMX channel | correlated (§7) |
 | 110 | 210–775 | 22–80 | flattened channel table of all profiles | correlated |
@@ -115,18 +118,20 @@ every run.
 | 116 | 162–334 | 3–7 | **fixture profile catalogue** | correlated |
 | 120 | 532–1199 | 86–258 | flat per-fixture-channel value table | correlated |
 | 125 | 111–137 | **9** | **the 8 groups A–H + a 9th slot**: name + profile bitmask | correlated (§7.2) |
-| 130 | **102** | **9** | byte-identical in 27/27 files | observed — no project data |
+| 130 | **102** | **9** | one single payload across 45/45 files | observed — no project data |
 | 135 | 140–145 | **16** | the 16 ColorFX palette pads (RGBWALU) | correlated |
 | 140 ×8 | 182–189 | **20** each | **static COLOUR palette**, one per group A–H, `f2` = group 0…7 | **device-confirmed** (§3.3) |
 | 145 ×8 | 40–159 | **20** each | **static GOBO palette**, one per group A–H, `f2` = group 0…7 | **device-confirmed** (§3.4) |
-| 150 ×8 | 483–491 | **20** each | **static POSITION palette**, one per group A–H, `f2` = group 0…7 | **device-confirmed** (§3.2) |
-| 151 | 0 or 64 | 0 or **4** | 4 × three 16-bit values centred on 32767 | observed |
-| 155 | 562–563 | **4** | **4 FX sequences**, 8 × 16 grid + step count | correlated (§8) |
-| 160 | 393–542, **optional** | 8–11 | named macros | correlated |
+| 150 ×8 | 483–498 | **20** each | **static POSITION palette**, one per group A–H, `f2` = group 0…7 | **device-confirmed** (§3.2) |
+| 151 | 0–93 | 0 or **4–6** | **detached-fixture position offsets**, sliced by record 150 | **device-confirmed** (§8.1) |
+| 155 | 562–567 | **4** | **4 FX sequences**, 16 steps × 8 groups + step count | **device-confirmed** (§8) |
+| 160 | 393–542, **optional** | 7–9 | named macros | correlated |
 | 161 | 599–604 | **3** | 3 × ~190-byte blob, volatile | observed |
-| 165 | 26219–29831 | 80–82 | preset container | correlated (§5) |
+| 165 | 26219–30882 | 80–85 | preset container | correlated (§5) |
 
-160 is the only optional record: 40 records without it, 41 with.
+160 is the only record ever absent outright: **9** files without it, **36** with.
+Record 151 is present in all 45 but carries a **zero-length payload** in exactly
+those same 9 — the rigs that never detached a fixture.
 
 `gitfeber/wpj-toolkit` documents only types 101, 135 and 165; its published
 inspect model emits the other 17 as `unknown_tlvs`, type and length only.
@@ -154,13 +159,20 @@ files, 4 independent rigs and two writers.
 field 1 = 20                     slot count
 field 2 = 0…7                    group index, absent for A
 field 5 × 20                     one per slot
-  f3  FAN            unsigned, value = percent × 65535
+  f1  slice length   number of record-151 entries this slot owns  (§8.1)
+  f2  slice offset   where they start in record 151                (§8.1)
+  f3  FAN            unsigned, value = percent × 65536
   f4  FOCUS OFFSET   signed, 32768 = 0 %, 65535 = +100 %
   f5  name           UTF-8, absent when the slot is empty
-  f6  PAN            unsigned, percent × 65535
-  f7  TILT           unsigned, percent × 65535, absent = 0
+  f6  PAN            unsigned, percent × 65536
+  f7  TILT           unsigned, percent × 65536, absent = 0
   f8  CROSS          [hypothesized]
 ```
+
+**The divisor is 65536, not 65535** — POS-02 measured it: 32768/65535 is
+0.500008, which pushes two predicted channels one unit off, while 32768/65536 is
+exactly 0.5 and every predicted channel lands. The difference only shows up once
+you predict DMX, which is why the earlier reading survived so long.
 
 Read off the device's own edit screen (SHIFT + a position pad shows PAN, TILT,
 FOCUS OFFSET and FAN | CROSS as percentages), on slots where the four values
@@ -249,9 +261,15 @@ Experiment ACC-01: a file whose only edit was this string was accepted by WTOOLS
 
 ### Envelope — **[correlated]**
 
-`field 1` varint = preset count (80–82 observed), then repeated `field 5`, one
-submessage per preset. Layout: 4 factory pages × 20 (block 1 full presets,
-block 2 colour, block 3 move, block 4 beam), then user presets appended.
+`field 1` is a varint whose meaning is **open — [observed]**, then repeated
+`field 5`, one submessage per preset. Layout: 4 factory pages × 20 (block 1 full
+presets, block 2 colour, block 3 move, block 4 beam), then user presets appended.
+
+**`f1` is not the preset count.** It equals it on 26 of the 45 corpus files and
+disagrees on the other 19. Both candidate rules die on a single device-written
+pair: in F30-04 the controller itself added a preset, and `f1` went 82 → **81**
+while the count went 82 → 83, with 81 *named* presets on both sides. A writer
+preserves it verbatim and maintains nothing.
 
 **[correlated]** Preset identity, agreeing with `wpj-toolkit`: the UI is 1-based,
 20 slots per page, `id = (page - 1) * 20 + (slot - 1)`. Id 0 is omitted from the
@@ -265,8 +283,8 @@ does not re-serialise it the way it does record 115.
 
 | Field | Meaning | Status |
 |---|---|---|
-| `f19` | preset id | correlated 5/5 |
-| `f25` | name, UTF-8 | correlated (82 names) |
+| `f19` | preset id, `id = (page − 1) × 20 + (slot − 1)`; **gaps are tolerated by the loader** | **device-confirmed** (PRESET-07) |
+| `f25` | name, UTF-8, **capped at 19 bytes by the loader** — a longer one makes the whole project refuse to open | **device-confirmed** (§5.8) |
 | `f1` / `f2` | Beam FX 1 / 2 | correlated |
 | `f5` / `f6` | Color FX 1 / 2 | correlated |
 | `f21` / `f22` | Move FX 1 / 2 (extra `f3`, default 50) | correlated |
@@ -276,12 +294,14 @@ does not re-serialise it the way it does record 115.
 | `f31` | **static colour: 20 bytes = 160 bits = eight 20-bit pad masks**, one per group A–H | **device-confirmed** (§5.1) |
 | `f17` | dimmer per group A–H, packed, default `[255]×8` | hypothesized |
 | `f8` / `f24` | Color FX / Move FX active flag (packed, `[0]` or `[255]`) | correlated |
-| `f4` | content mask (255 full, 8 colour, 17 beam, 5 move) | hypothesized |
-| `f16` | ~13 varints, FX-bank masks per group in complementary pairs | hypothesized |
-| `f11` | 500 / 2000 / 4000 — fade time in ms? | hypothesized |
-| `f10` | factory library version? | observed |
+| `f4` | **permission mask over the FX engines** — an engine active in `f16` implies its bit here | **[correlated]** (§5.4), checked by `f4_autorise_les_moteurs` |
+| `f16` | **twelve 9-bit group masks**, one per engine, five of them the flash keys | **device-confirmed** (§5.4, §5.7) |
+| `f11` | **FADE in milliseconds**, absent = 0 | **device-confirmed** (§5.3) |
+| `f10` | **content mask**: the six `PRESET EDIT` toggles, a set bit = toggle **off** | **device-confirmed** (§5.3) |
 | `f32`…`f35` | per-group arrays added at schema 10, defaults `50 / 0 / 100 / 100`; all zero in a project upgraded from schema 8 | correlated |
-| `f9`=1, `f15`=1000, `f13`×6, `f18`, `f3`, `f7`, `f14`, `f23`, `f26`, `f27` | unknown, all zero on the measured rig | observed |
+| `f15` | **HOLD**, 1000 ↔ `00:01.00` on all 3697 corpus presets, never varied | correlated (§5.3) |
+| `f18` | the **Live Edit mask** | correlated (§5.5) |
+| `f9`=1, `f13`×6, `f3`, `f7`, `f23`, `f26`, `f27` | unknown | observed |
 
 `f28` read from named factory presets: `Floor` = `[0]×8`, `Center` = `[1]×8`,
 `Crowd` = `[3]×8`, `Ceiling` = `[4]×8` — the values index into type 150.
@@ -356,23 +376,24 @@ Screen order, left to right then down. Every bit is held by at least two
 independent readings — six photographs of factory presets plus targeted writes —
 and three of them by a single-variable differential. Corpus values re-read
 sensibly: `51` = BEAM + GOBO, `61` = MOVE alone, `62` = COLOR alone, and nothing
-above 62 in 2612 presets.
+above 62 in 3697 presets.
 
 `f11` is **FADE in milliseconds**, absent = 0: 4000 → `00:04.00`, 2000 →
 `00:02.00`, 500 → `00:00.50`, absent → `00:00.00`, all measured on screen.
 `f15` is **HOLD**, 1000 ↔ `00:01.00`, consistent on six screens but never varied
 — **[correlated]**.
 
-### 5.4 `f16` — twelve 9-bit group masks — **[correlated 32/32]**
+### 5.4 `f16` — twelve 9-bit group masks — **[correlated 45/45]**
 
 `f16`'s packed varints are the **bytes of a little-endian bit field**, the same
 construction as `f31`. Cut at a stride of **9** — nine because record 125 has
-nine slots — every slice is a group mask and the ninth bit is never set.
+nine slots — every slice is a group mask, and on the six **engine** slices 0–5
+the ninth bit is never set. The flash slices 6–10 do set it (§5.7).
 
 | Slice | Engine | Pinned by |
 |---|---|---|
-| 0 | **Color FX** | equals `color_fx_actif`, 2445/2446 |
-| 1 | **Move FX** | equals `move_fx_actif`, 2446/2446 |
+| 0 | **Color FX** | equals `color_fx_actif`, 3696/3697 |
+| 1 | **Move FX** | equals `move_fx_actif`, 3697/3697 |
 | 2 | **Beam FX** | active only on beam-page presets |
 | 5 | static layer | 255 on every preset — **[hypothesized]** |
 | **6** | **`WOLF`** | device-confirmed, 511 when latched |
@@ -390,8 +411,9 @@ exclusion mask in record 102 and having a slice here are **independent** —
 including the effects slot, where the FX engines stop at 255.
 
 The alignment tests itself: at a stride of 8, slice 1 would read 254 where
-`move_fx_actif` says 255. Across 29352 slice extractions not one falls outside
-`{0, 1, 2, 5, 7, 255}`.
+`move_fx_actif` says 255. Across 44364 slice extractions not one falls outside
+`{0, 1, 2, 5, 7, 255, 511}` — 511 being the five flash slices, which set all nine
+bits at once (§5.7).
 
 **A writer must set both carriers.** `color_fx_actif` and `move_fx_actif`
 duplicate slices 0 and 1; ACC-03b wrote one and not the other, and the firmware
@@ -412,7 +434,7 @@ top of page 1 — out of eighty possible.
 `f10`'s `LIVE EDIT` bit says *whether* a preset carries Live Edits; `f18` says
 *which*.
 
-### 5.6 Thirteen per-group arrays — **[correlated 32/32]**
+### 5.6 Thirteen per-group arrays — **[correlated 45/45]**
 
 Sweeping the whole format for fields that always decode to exactly 8 packed
 varints returns thirteen, all in record 165:
@@ -442,6 +464,43 @@ unattributed.
 These are **live state** until a preset captures them: a project save alone does
 not write them, only `SHIFT` + tapping a preset does.
 
+### 5.7 The flash keys live in `f16` — **[device-confirmed]**
+
+Five of the twelve 9-bit slices of `f16` (§5.4) carry the **flash key state** a
+preset captures:
+
+| Slice | Key |
+|---|---|
+| 6 | `WOLF` |
+| 7 | `STROBE` |
+| 8 | `BLACKOUT` |
+| 9 | `BLINDER` |
+| 10 | `SPEED` |
+
+A latched key writes **511** into its slice — all nine bits — which is why 511
+is the only value outside `{0, 1, 2, 5, 7, 255}` in the whole corpus.
+
+All five are confirmed **in both directions**: captured from a latched key into
+the file, and written into a file the controller then acted on. `SMOKE` is the
+sixth flash key and writes **nothing** — proven by the capture where it was
+latched **alongside `STROBE`**: slice 7 rose and no second slice did, which a
+solo capture could not have separated from "not latched". The six keys are
+completely accounted for.
+
+Whether a preset carries flash state at all is a Settings toggle (`Include Flash
+buttons in Preset`), not a property of the file format.
+
+### 5.8 Preset names are capped at 19 UTF-8 bytes — **[device-confirmed]**
+
+A name of 23 bytes does not get truncated and the entry is not dropped: the
+**whole project refuses to open**, with `Error opening project` on the panel.
+Re-cutting the same file with a 16-byte name opens normally, which isolates the
+name as the sole cause (PRESET-05, PRESET-06).
+
+No name in the 3697-preset corpus exceeds 19 bytes, and
+`tools/wpj_identities.py` asserts it on every file so a generator cannot
+regress past it.
+
 ### FX submessage — shared by Beam, Color and Move
 
 The wire fields are ours; the enum *labels* are cross-referenced with
@@ -455,8 +514,9 @@ Where both sources cover a value, they agree.
 | `f10` | speed source | `0` Clock (omitted), `1` Microphone, `2` Audio/BPM | correlated |
 | `f1` | BPM division | `0`→×8, `1`→×4, `2`→×2, `3`→×1, `4`→½, `5`→¼, `6`→⅛, `7`→1/16; default 3 | correlated |
 | `f2` | speed % | observed up to 200, above the 0–100 the toolkit documents | correlated |
-| `f8` / `f6` / `f9` | size % / fade % / phase %, defaults 100 / 25 / 50 | hypothesized |
-| `f5` | Color FX: 2 varints = 16-bit pad mask (v1 = pads 1–8, v2 = 9–16). Move FX: one varint 0–6. Beam FX: see lead L1 | correlated (Color) |
+| `f8` | size %, default 100 | hypothesized |
+| `f6` / `f9` | **unattributed** between Phase, Order, Fade and (on move) Flick — the vendor's screens carry **four** properties for three fields. Modal values 25 (beam) / 20 (colour) on `f6`, 50 on `f9` | observed |
+| `f5` | Color FX: 2 varints = 16-bit **colour mask** over record 135's pads (v1 = pads 1–8, v2 = 9–16). Move FX: one varint = the **effect's position**, nine on screen, only 0/1/5/6 seen. Beam FX: see lead L1 | correlated (Color and Move) |
 
 Effect type `f7`, Beam: `0` Sin Wave · `1` Sparkle · `2` Chaser · `3` CanCan ·
 `4` Heartbeat · `5` Wolf Rider · `6–8` FX Seq 1–3.
@@ -467,28 +527,33 @@ ACC-04 wrote `f7` 3 → 2 on a Color FX and the operator read **Chaser** on the
 device — matching the Color enumeration at index 2, an independent confirmation
 of both the field and the label set.
 
-**[hypothesized]** Merging the two sources resolves `f8`/`f6`/`f9`: the toolkit
-names `sizePercent` / `fadePercent` / `phasePercent` in 0–100 and our defaults
-are 100 / 25 / 50, which reads naturally as size 100 %, fade 25 %, phase 50 %.
-Not yet tested by a single-variable save.
+**Do not merge the two sources on `f6`/`f9`.** An earlier revision of this
+document read `f8`/`f6`/`f9` as size/fade/phase by lining our three fields up
+with the toolkit's three names. Reading the vendor manual killed the argument:
+the FX screens carry **four** properties — Speed, Phase | Order, Size, Fade, and
+Flick on move — so three fields cannot hold them, and which name belongs to
+`f6` and `f9` is **[observed]**, not decided. `wpj_show.py` refuses to write
+them for exactly this reason. One single-variable save settles it.
 
 ---
 
 ## 6. Type 102 — flash FX settings
 
-Full field census over 18 files:
+Full field census over the 45 variant-A files:
 
 | Field | Values seen | Reading | Status |
 |---|---|---|---|
-| 2 | 1, absent | present only in WTOOLS-written files, never after a controller save | observed — legacy, dropped by fw 2.0.18 |
-| 3 | 2, absent | same | observed — legacy |
+| 1 | absent, 8 | **BLACKOUT excluded groups**, bitmask | **device-confirmed** (FX-09) |
+| 2 | 1, 3, 4, absent | **BLINDER fade-out**, index into 0 / 0.2 / 0.5 / 1 / 2 s | **device-confirmed** (FX-08) |
+| 3 | 2, 4, absent | **BLINDER excluded groups**, bitmask, bit 0 = A | **device-confirmed** (FX-08) |
 | 4 | 6-byte array | release mode per flash key | **device-confirmed** |
-| 5 | **100 in 18/18** | never moved | unattributed |
-| 6 | **100 in 18/18** | never moved | unattributed |
+| 5 | 100, 70 | **SMOKE fan speed**, 0–100 | **device-confirmed** (FX-07) |
+| 6 | 100, 40 | **SMOKE intensity**, 0–100 | **device-confirmed** (FX-07) |
 | 7 | absent, 1, 2, 4 | SPEED multiplier | **device-confirmed**, see below |
-| 8 | absent, 1 | group-exclusion mask | hypothesized |
+| 8 | absent, 1, 3 | **STROBE excluded groups**, bitmask, bit 0 = A (A+B wrote 3) | **device-confirmed** (FX-09) |
 | 9 | 1, 72, 75, 80, 100 | STROBE speed, stored 1–100 | **device-confirmed** |
-| 11 | **100 in 18/18** | never moved | unattributed |
+| 10 | absent, 32 | **WOLF excluded groups**, bitmask | **device-confirmed** (FX-10) |
+| 11 | 100, 0, absent | **unattributed and inert** — see below | correlated (F11-01) |
 
 ### `field 4` = release mode of the six flash keys — **[device-confirmed]**
 
@@ -527,27 +592,49 @@ integer steps and reserve 1 for 0.5×**. A `1 << rank` reading also fits all fou
 points. Still open: **8× and FREEZE** separate them — the rank reading predicts
 16 for the next step, the enumeration predicts 8.
 
-### The three unattributed 100s — the highest-value single experiment
+### The three 100s — resolved, except one
 
-Guide 10 lists exactly **three** per-effect parameters still unaccounted for:
-BLINDER fade-out, SMOKE intensity, SMOKE fan speed. Record 102 has exactly
-**three** fields that read 100 in every file and have never moved (`f5`, `f6`,
-`f11`). The assignment is a 3! = 6-way permutation, and **one save with three
-distinct values resolves it completely.**
+An earlier revision of this document framed `f5`/`f6`/`f11` as a 3! permutation
+over the three guide parameters left unaccounted for. The framing was wrong, and
+one save (FX-07) showed why: `f5` went to **70** and `f6` to **40** with
+distinct values, naming them SMOKE **fan speed** and SMOKE **intensity**, while
+the third parameter — BLINDER fade-out — turned out not to be a 100 at all. It
+is a **new field `f2`** that only appeared once the operator moved it (FX-08).
+A field can be absent until it is used; a permutation argument over the fields
+present cannot see that.
 
-### `field 8` — **[hypothesized]** excluded-group bitmask
+### `field 11` — unattributed and inert — **[correlated]**
 
-Appeared as `1` exactly when group A was excluded from STROBE. Bit 0 = group A.
-Six effects can each exclude groups, so `f8` is either STROBE's own mask with
-five siblings elsewhere, or a shared one. Excluding A + C (expect 5) then moving
-the exclusion to another effect separates the two readings.
+`f11` is the last unknown in record 102, and the search for it is deliberately
+**stopped**. No UI control moves it, the firmware-2.0 manual lists no setting
+that would, F11-03 ruled out `Button brightness`, and F11-01 wrote `f11` = 0
+into a project the controller accepted: neither the display nor a single one of
+2048 DMX channels moved, idle or with the blinder active. Since then the device
+re-emits the field **absent**, so absent and 0 are the same value. Preserve it
+verbatim; do not spend another experiment on it.
+
+### `field 8` — STROBE's excluded groups — **[device-confirmed]**
+
+Excluding A + B wrote **3**, so it is a per-group bitmask with bit 0 = A. The
+masks are **per effect, in separate fields**: `f1` BLACKOUT, `f3` BLINDER, `f8`
+STROBE, `f10` WOLF. Exactly four, because the Settings list offers `Exclude
+Wolf / Strobe / Blinder / Blackout` and nothing for SPEED or SMOKE — the field
+count and the menu agree.
+
+### What record 102 does not hold
+
+**FREEZE writes 0** — absent, indistinguishable from normal speed (FX-07,
+re-confirmed FX-08): either it is not persisted, or it lives elsewhere. And a
+contradiction inside `research/` is carried here rather than resolved: the
+closing maps list `8` as a `f7` SPEED value, while FX-04's own table records 8×
+as never measured and no corpus file carries `f7` = 8. One save settles it.
 
 ---
 
 ## 7. The patch model — six record types locked by arithmetic
 
 The strongest structural result available. Eight identities hold **exactly,
-18/18 files, with no fitted constants**:
+45/45 files, with no fitted constants**:
 
 ```
 1.  count(116)                    == 116.field1
@@ -561,7 +648,8 @@ The strongest structural result available. Eight identities hold **exactly,
 ```
 
 Three more, added once `105.f4` was corrected, and mechanically re-checked on
-**27/27** files by `tools/wpj_identities.py`:
+**45/45** files by `tools/wpj_identities.py`, which now runs **sixteen** identities
+plus two before/after pair checks (F30-04, FLASH-09):
 
 ```
 9.  the [f4, f4+f7) intervals of 105, sorted by f4, tile [0, count(106))
@@ -641,7 +729,7 @@ it. This matters: if the firmware indexes 120 by `115.f2`, an un-compacted arena
 is a second independent way to read zeros — though it does not by itself explain
 the rig-c blackout, since the healthy revision has out-of-range offsets too.
 
-### 7.2 Record 125 is fully derived — **[correlated 18/18]**
+### 7.2 Record 125's masks are fully derived — **[correlated 45/45]** — but they are groups, not categories
 
 Nine items in every file. Item *i* carries `f4` = a 7-byte blob and `f8` = an
 optional UTF-8 name (the operator's own group names). The first 6 bytes of `f4`, read
@@ -651,7 +739,7 @@ little-endian, are exactly:
 mask[i] = OR over fixture rows r of (1 << 115[r].f3)   where category(r) == i
 ```
 
-Verified bit for bit, 18/18, with four independent name↔content matches. So
+Verified bit for bit, 45/45, with four independent name↔content matches. So
 **125 is the 9 fixture categories, not the 8 groups A–H**, and its masks are
 recomputable from 105 + 115 + 116. Only `f8`, the user-editable category name,
 carries information a writer must preserve.
@@ -659,16 +747,18 @@ carries information a writer must preserve.
 **Retracted 2026-08-26**: they are the **8 fixture groups A–H plus a ninth slot** for the fixtures that have no group pads. See the registry, *The fixture → group assignment*. `rig-b` groups two different profiles into slot 0, which a model-derived category could not do, and slots 0/1/2 are the DMX-measured groups A/B/C.
 
 The fixture → group assignment itself is `115[r].f4`, mirrored on every patch
-entry as `105[e].f6`: 457/457 fixture rows agree across 27 files, checked by
+entry as `105[e].f6`: 817/817 fixture rows agree across 45 files, checked by
 `groupe_fixture` in `tools/wpj_identities.py`.
 
-**[observed]** The 7th byte of `f4` is `0x30` in the *rig-a* family and `0x38`
-in the rig-c family — a per-project constant replicated on all 9 items,
-correlating with record 151 being populated.
+**[observed]** The 7th byte of `f4` is `0x30` or `0x38` — a per-project constant
+replicated on all 9 items. It flipped `0x30` → `0x38` **within one project** when
+the device added a preset (F30-04), so it tracks something the device writes;
+what, is open. An earlier reading tied it to record 151 being populated: that is
+withdrawn, since 15 of the 24 files at `0x30` carry a populated 151.
 
 ### 7.3 Record 130 carries no project data — **[observed]**
 
-102 bytes, 9 items, byte-identical in 18/18 files across 4 rigs with 3–7
+102 bytes, 9 items, byte-identical in 45/45 files across 4 rigs with 3–7
 profiles and 10–22 fixtures. Items 0–7 read `{f2 = i, f4 = 20, f6 = i, f7 = 1,
 f8 = 1}`, item 8 reads `{f4 = 27, f6 = 8, f8 = 1}`. The 9-item shape matches
 record 125's nine slots one-for-one and `f4 = 20` matches the pads-per-page
@@ -678,11 +768,11 @@ operator edits something category-related.
 
 ---
 
-## 7.4 The fixture → group assignment — **[correlated 32/32]**
+## 7.4 The fixture → group assignment — **[correlated 45/45]**
 
 `115[r].f4` is the fixture's **group index**, absent meaning 0 = group A, and
 `105[e].f6` repeats it on every patch entry of that fixture. The two agree on
-**457/457 fixture rows across 32 files**.
+**817/817 fixture rows across 45 files**.
 
 Record **125**'s nine items are the eight groups **A–H plus a ninth slot** that
 collects fixtures with no group pads — foggers, sparks — and `125[i].f8` is the
@@ -691,7 +781,7 @@ the group's fixtures, a **profile** mask, which is why the record reads as
 derived and why §7.2's "nine categories" was wrong: `rig-b` puts two different
 profiles in slot 0, which a model-derived category cannot do.
 
-## 7.5 Record 106 — the channel roles — **[correlated 32/32]**
+## 7.5 Record 106 — the channel roles — **[correlated 45/45]**
 
 Each `106` entry targets a channel of its fixture's profile through
 `106.f2 − 115.f2 + 116.f3`. Its fields then read:
@@ -700,7 +790,7 @@ Each `106` entry targets a channel of its fixture's profile through
 |---|---|
 | `f2` | absolute 0-based DMX channel |
 | `f4` | the channel's **role in the W1 engine** |
-| `f1`, `f3` | the **DMX window** the role drives — one of the channel's `111` ranges on 2643 of 3775 entries |
+| `f1`, `f3` | the **DMX window** the role drives — one of the channel's `111` ranges on 4188 of 6070 entries |
 | `f5`, `f6` | the fixture's **travel limits**, per fixture and per axis |
 
 Seventeen roles, in bijection with the profile feature `110.f4`:
@@ -718,22 +808,43 @@ carries this fixture's red" without inferring anything from channel order.
 
 - `110.f5` is the **index of the channel this one belongs to**: a principal
   channel points at itself, a **fine** channel at its coarse half, and the
-  pointed channel always carries the same feature. 1100/1100, no exception. A
+  pointed channel always carries the same feature. 1581/1581, no exception. A
   16-bit pan is emitted without guessing byte order or adjacency.
 - `111.f1`/`f2` are a range's **first and last DMX value**. Every channel falls
-  into one of three cases with nothing left over: **944** whose ranges tile
-  `[0, 255]`, **53** unassigned (no `f4`, one *empty* `111` item), and **29**
+  into one of three cases with nothing left over: **1454** whose ranges tile
+  `[0, 255]`, **83** unassigned (no `f4`, one *empty* `111` item), and **44**
   carrying an isolated `{f1: 255, f3: 41}` on `110.f4 = 18`.
 
-## 8. Type 155 — 4 FX sequences — **[correlated]**
+## 8. Type 155 — the 4 FX sequences — **[device-confirmed]**
 
-`field 1` = 4, then four `field 5` items, each with `f1 = 8`, `f2 ∈ {1,2}`,
-`f3 ∈ {2,4}` and `f4` = a 128-byte array.
+`field 1` = 4, then four `field 5` items:
+
+```
+f1 = 8        groups per step
+f2 ∈ {1,2}    sequence flavour
+f3            step count, 1…16
+f4            128 PACKED VARINTS — not a byte array
+```
+
+`f4` is packed varints, which is why its byte length varies: 128 bytes in most
+files, 133 when five of the values need two bytes. Reading it as raw bytes works
+by accident until one value exceeds 127.
+
+**The layout is step-major: 16 steps × 8 groups**, index = `step × 8 + group`,
+group 0 = A. Reading it the other way round produces ragged nonsense. Each value
+is a **position index into that group's own record-150 palette**, domain 0–19,
+with **255 = no position for that group at that step**.
+
+Confirmed against the device: the operator photographed the SEQUENCER screen at
+every step from 1/16 to 16/16 and the decoded array predicts each screen exactly,
+including the case where one index means a different named position in each
+group — because each group indexes its own palette.
+
+`f3` is the step count: SHIFT + a step pad sets it, and SHIFT + step 1 took it
+from 16 to 1.
 
 **Refuted**: 4 × 128 = 512 is *not* a DMX universe. The DMX patch is record 105
-(identity 5 above). The arrays are **8 groups × 16 steps**, four sequences, and
-`f3` is a step count — it moved 4 → 16 when the operator touched the sequence
-editor's STEP control.
+(identity 5 above).
 
 ---
 
@@ -780,12 +891,12 @@ fan; the offset stacks on top of the group value and is clamped.
 | Offset | Content | Status |
 |---|---|---|
 | 20–35 | 16-byte project UUID = the `wlinkData` file name | correlated |
-| 36–39 | constant `15 2b 10 c0` in 18/18 | observed — container magic |
+| 36–39 | constant `15 2b 10 c0` in 45/45 | observed — container magic |
 | **40–47** | **little-endian uint64 version**, incremented by one per save | **correlated** |
-| 48–49 | constant `01 f9` in 18/18 | observed |
-| 50 | **schema version**: 8, 10 or 11 | correlated 32/32 |
+| 48–49 | constant `01 f9` in 45/45 | observed |
+| 50 | **schema version**: 8 (×1), 10 (×11) or 11 (×33) | correlated 45/45 |
 | 51 | constant 0 | observed |
-| 52–63 | constant `02 be e8 1c a2 6c cb 54 6d c7 b6 ec` in 18/18 | observed |
+| 52–63 | constant `02 be e8 1c a2 6c cb 54 6d c7 b6 ec` in 45/45 | observed |
 
 **This corrects an earlier claim that byte 40 is a save counter.** Byte 40 is the
 *least significant byte* of a 64-bit version field the firmware increments by one
@@ -798,12 +909,15 @@ increments and offset 40 drops to `0x00`. **A writer must treat 40–47 as one
 new project without touching them works (ACC-01).
 
 **Byte 50 gates the schema.** `165.f32`–`f35` are absent from the one schema-8
-file and present in all 31 schema-10 and schema-11 files. Schema **11** is this
-firmware's and is the one that carries the detach feature: every schema-11 file
-has record 151. A writer must not raise the byte without emitting what the
+file and present in all 44 schema-10 and schema-11 files. Schema **11** is this
+firmware's. Record 151 is present at **every** schema and populated at 8, 10 and
+11 alike; what correlates with schema is only its **zero-length** form, in the
+same 9 files that also lack record 160 — the rigs that never detached a
+fixture. A writer must not raise the byte without emitting what the
 schema requires. Across seven consecutive saves of one project **only byte 40
-moved**; 24 of the 44 prefix bytes are constant in every file and carry no
-project information at all.
+moved**; 21 of the 44 prefix bytes take the same value in every corpus file.
+Two of those 21 are the high bytes of the version counter, so "constant" there
+means "not yet reached", not "carries nothing".
 
 ---
 
@@ -820,9 +934,28 @@ rejects, or worse, silently corrupt a show.
 4. **Verify by re-reading.** Reload the written file, re-decode, compare against
    what was asked, and diff record-by-record against the source: any record that
    moved outside the intended edit is a bug, not a detail.
-5. **Edit, do not synthesize.** Every preset, position or palette entry written
-   must already exist in the donor file. Creating structures from scratch is not
-   validated by anything in this document.
+5. **Edit, do not synthesize — with one measured exception.** Prefer donor
+   entries for anything you do not fully understand; that is caution about
+   unknown fields, not a measured constraint. The exception is record 165: a
+   preset **is** added by appending a well-formed `f5` entry — see §10.1.
+
+### 10.1 Adding a preset — **[device-confirmed]**
+
+An earlier revision of this document said the device deletes preset entries it
+did not create. **That is retracted**: the measurement behind it (FLASH-09) was
+a mis-attributed download, and PRESET-01 showed a cold open with the added
+entries intact. What a generator must respect instead, all measured:
+
+| Rule | Evidence |
+|---|---|
+| Append an `f5` entry with `f19` = `id = (page − 1) × 20 + (slot − 1)` | PRESET-01, PRESET-07 |
+| **Names are capped at 19 UTF-8 bytes.** A 23-byte name does not get truncated — the whole project **refuses to open** | PRESET-05, and no name in the 3697-preset corpus exceeds 19 bytes |
+| **Id gaps are fine.** A sparse page loads; the gap was never the fatal variable | PRESET-07 |
+| Maintain no count: `165.f1` is not one (§5) | F30-04 |
+| The project is not live until a manual `Main Menu → Projects` open. `RESTART` does not substitute | FLASH-08, PRESET-07 |
+
+The failure mode is loud and total — "Error opening project", not a silently
+dropped entry — which makes this one of the safer things to get wrong.
 
 ### What a patch-editing writer must recompute
 
@@ -849,6 +982,12 @@ produced an unparseable body, one returned the correct length with wrong bytes
 download.** Accept a transfer whose SHA-1 header verifies, otherwise require two
 identical consecutive transfers.
 
+**Uploads are corruptible too.** A 43 KB `SET_PROJECT` was refused by the
+firmware with its own message — `invalid wire_type` — and succeeded unchanged on
+retry. So a writer must verify in both directions: read the project back after
+storing it, and be prepared to retry a rejected store rather than treating the
+rejection as a verdict on the file.
+
 ---
 
 ## 11. Open leads
@@ -865,8 +1004,11 @@ the `wpj-toolkit` enumerations; neither source has them alone.
   group masks, not complementary pairs. The stride is nine because record 125
   has nine slots. Slice 0 equals `color_fx_actif` and slice 1 `move_fx_actif`
   exactly; slice 2 is the Beam FX, slice 7 the strobe.
-- **L3 — record 102 `f5`/`f6`/`f11`.** Three fields at 100, three unassigned
-  guide parameters, one save (§6). **Highest value per unit of effort.**
+- ~~**L3 — record 102 `f5`/`f6`/`f11`.**~~ **Closed** (§6): `f5` = SMOKE fan
+  speed and `f6` = SMOKE intensity (FX-07); BLINDER fade-out was not a 100 at
+  all but the new field `f2` (FX-08); and `f11` was chased to exhaustion and
+  recorded as unattributed and inert. Record 102 is closed but for that one
+  field, and the search on it is stopped.
 - ~~**L4 — static colour `f31`.**~~ **Closed** (§5.1): eight 20-bit masks, one
   per group A–H, confirmed at the bit level by a save carrying three different
   masks. The "4 repetitions" reading was cutting 160 bits into the wrong slices.
@@ -880,17 +1022,26 @@ the `wpj-toolkit` enumerations; neither source has them alone.
   entry as `105[e].f6`. It had been decoded all along under the name
   *category*. Record 125 is the eight groups plus a ninth slot, not nine
   categories.
-- **L5 — MIDI mapping record.** The W1 accepts MIDI (preset select by note,
-  group/master dimmers by CC, MIDI clock at 24 PPQN) and the map is learned per
-  project on `WM_MODE_MAPPING = 43`, so it must live in the file. Not yet
-  located. This is the gateway to live control.
-- ~~**L6 — record 151.**~~ **Closed** (§8.1): the **detached-fixture offsets**.
-  One entry per fixture positioned independently of its group, carrying
-  `f1` = fixture index, `f2` = `FOCUS OFFSET`, `f3` = `PAN OFFSET`,
-  `f4` = `TILT OFFSET`, all signed as `(v − 32768) / 32767`. `150.f2`/`f1` are
-  the offset and length of each position slot's slice.
-- ~~**L7 — the 115 arena.**~~ **Closed** (§7.1): `115.f2` is the DMX start
-  address, and identities 10 and 11 pin it. There is no arena.
+- **L5 — the mapping record**, reframed. The `Mappings` screen (mode 43) exists
+  on this hardware, but the vendor manual scopes **MIDI to MK2 and higher**: on
+  a MK1 only the **DMX** side is mappable (categories Group Dimmer, Preset,
+  Preset Page, Flash, General). So the original premise — a MIDI map in the
+  file — **cannot be tested on this hardware**, and what to look for is a
+  DMX-mapping record. Still not located; still the gateway to live control.
+- **L9 — the FX submessage's `f6`/`f9`.** Four screen properties, three fields
+  (§5). One single-variable save on a named preset separates them.
+- ~~**L10 — hands-off preset recall.**~~ **Closed** — and the way it closed is
+  the lesson. `SET_PRESET` (41) and `SET_MODE` (39) do **not carry protobuf**:
+  the firmware reads **`payload[0]` as the index**. Every payload we had sent
+  was `[tag, value]`, so the device read our *tag* byte — `f1` → 8, `f2` → 16,
+  `f3` → 24 — which is exactly why one appearance per "field" and never a
+  reaction to the value. With a one-byte payload, recall is addressed,
+  deterministic and reproducible, and `SET_MODE` lands the panel on a requested
+  mode 5 times out of 5 (RAW-01, **device-confirmed**, 2026-08-27). RECALL-01
+  and RECALL-02 measured correctly; their reading — "the event addresses
+  nothing" — is replaced by "we had never sent the index". Still open: whether
+  the byte is an **id or an entry position**, and whether a second byte is read.
+  The long events stay protobuf.
 - **L8 — variants B and C.** Only the top level is mapped. A different
   serialisation of the same show; needs its own campaign.
 

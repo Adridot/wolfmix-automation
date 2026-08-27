@@ -63,9 +63,9 @@ wpjlib : ignoré, aucun corpus dans corpus/ (voir docs/corpus.md)
 that everything passed. With a corpus present you get the real thing:
 
 ```
-self-check ok : round-trip octet-identique sur 25 fichiers
-fidélité octet vérifiée sur 25 fichiers variante A
-2 identités vérifiées sur 25 fichiers variante A
+self-check ok : round-trip octet-identique sur 45 fichiers
+fidélité octet vérifiée sur 45 fichiers variante A
+16 identités vérifiées sur 45 fichiers variante A (+ paires F30-04 / FLASH-09)
 ```
 
 ## What makes a good corpus

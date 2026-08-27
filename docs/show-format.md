@@ -13,13 +13,19 @@ see [`corpus.md`](corpus.md).
 
 ## Why template-based
 
-Creating a record from scratch has never been validated on a device, so the
-compiler refuses to. A preset, a position or a palette entry you edit must
+Creating a record from scratch is not something the compiler does. For
+**presets** that is now caution rather than a measured limit — PRESET-01 and
+PRESET-07 showed that appending a well-formed entry works, is accepted, and
+survives store, restart and a cold reopen. For positions and palette entries
+nothing equivalent has been measured, and the compiler treats all three alike. A preset, a position or a palette entry you edit must
 already exist in the donor. Pick a donor that already has the slots you need —
 that constraint is rule 2 ("read before write") applied to editing.
 
-Scope is limited to fields at evidence status `correlated` or better, in
-records 101, 165, 150 and 135. `size`/`fade`/`phase` (`f8`/`f6`/`f9`) are
+Scope is records 101, 165, 150 and 135, at evidence status `correlated` or
+better — with one exception in each direction. `dimmers` (`165.f17`) is writable
+although its status is `hypothesized`; several **device-confirmed** preset fields
+(`f29` gobos, `f30` colour pattern, `f31` static colour) are outside the scope
+because nothing needs them yet. `size`/`fade`/`phase` (`f8`/`f6`/`f9`) are
 excluded on purpose: their attribution is still `hypothesized`, so they are
 readable via the codec but not writable here.
 
@@ -32,7 +38,7 @@ Keys are French, matching the codec's key names.
 | `base` | string | **required** — path to the donor variant-A `.wpj` |
 | `nom` | string | new project name (record 101) |
 | `presets` | array | preset edits (record 165) |
-| `positions` | array | named pan/tilt positions (record 150, 8 pages) |
+| `positions` | array | named pan/tilt positions (record 150, one copy per group A–H) |
 | `palette` | array | Color FX palette pads (record 135) |
 
 Any other key is an error. A spec with only `base` is legal and produces a
@@ -47,9 +53,9 @@ Addressed by `id`, which is the linear preset index
 | Key | Type | Bounds | Meaning |
 |---|---|---|---|
 | `id` | int | ≥ 0 | **required** — must match an existing preset in the donor |
-| `nom` | string | — | preset name |
+| `nom` | string | **≤ 19 UTF-8 bytes** | preset name. **The compiler does not enforce this** and auto-verify cannot see the problem — the value reads back fine. On the device, a longer name makes the *whole project* refuse to open (device-confirmed, PRESET-05). |
 | `positions` | int[8] | ≥ 0 | position index per group A–H |
-| `dimmers` | int[8] | 0–255 | dimmer level per group A–H |
+| `dimmers` | int[8] | 0–255 | dimmer level per group A–H. Read by the device **only if the preset's `OTHER` toggle is on** — see the gates below. |
 | `beam_fx1`, `beam_fx2` | object | see below | beam effect slots |
 | `color_fx1`, `color_fx2` | object | see below | colour effect slots |
 | `move_fx1`, `move_fx2` | object | see below | movement effect slots |
@@ -63,11 +69,11 @@ The same shape for all six slots. Only these keys are accepted:
 
 | Key | Bounds | Meaning |
 |---|---|---|
-| `effet` | 0–8 | effect type (enum labels from `wpj-toolkit`, see `SPEC.md` §5) |
+| `effet` | 0–8 | effect type, device-confirmed (ACC-04). The bound is the **Beam** enum; Color defines only `0`–`7` and no enum is published for Move, so the compiler accepts out-of-enum values on those slots — check the right enum yourself (`SPEC.md` §5). |
 | `vitesse` | 0–200 | speed percent |
-| `link_order` | 10–13 | link order |
+| `link_order` | 10–13 | link order, **Group family only**. The field's domain is `0–3` None, `10–13` Group, `20–23` Fixture; the compiler accepts only the Group range. |
 | `speed_source` | 0–2 | speed source |
-| `bpm_division` | int | BPM division |
+| `bpm_division` | int | BPM division: `0`→×8 … `7`→1/16, default 3. **The compiler does not enforce 0–7** — any non-negative int passes. |
 
 ## `positions[]`
 
@@ -104,8 +110,10 @@ hypothesised; neither is writable here.
 | `vert` | int | 0–255 | green |
 | `bleu` | int | 0–255 | blue |
 
-The remaining four pad channels (`blanc`, `ambre`, `lime`, `uv`) decode fine
-but are not writable yet — no experiment has confirmed them.
+The remaining four pad channels (`blanc`, `ambre`, `lime`, `uv`) decode fine but
+are not writable here. The seven-channel order was read off the W1's own `RGB+`
+view and is device-confirmed on record **140**; record 135 inherits it at
+`correlated`, and no write to 135 has been checked on a device either.
 
 ## Example
 
@@ -129,6 +137,20 @@ but are not writable yet — no experiment has confirmed them.
   ]
 }
 ```
+
+## Two gates that make a clean compile do nothing
+
+The compiler verifies the **file**. Two masks decide whether the device acts on
+what it verified, and both are outside this scope — so pick a donor preset that
+already has them right.
+
+| Gate | What it silences | Where |
+|---|---|---|
+| `165.f10`, the content mask — a **set** bit means the toggle is **off** | `dimmers` are ignored unless bit 5 (`OTHER`) is clear. ACC-02 wrote dimmers into a beam-only preset and the device ignored them. | SPEC.md §5.3, device-confirmed |
+| `165.f16`, the engine group masks — slices 0/1/2 = Color/Move/Beam | an FX edit is invisible for a group the engine is not enabled on. ACC-03 set `color_fx_actif` without `f16` and the device followed `f16`. | SPEC.md §5.4, correlated |
+
+`color_fx_actif` and `move_fx_actif` duplicate slices 0 and 1 of `f16`. They are
+redundant, and a writer must not let them drift apart.
 
 ## What compile guarantees
 

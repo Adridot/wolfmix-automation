@@ -53,6 +53,17 @@ The compiler detected that an edit changed something it did not intend to. The
 output file is deleted. This is a bug worth reporting, with the spec and the
 donor.
 
+**`wpj_privacy : N occurrence(s) de nom réel dans des fichiers suivis`**
+A real venue, client, project, group or device name reached a tracked file, and
+`make check` refuses to pass. Replace it with the neutral label the rest of the
+tree uses — `rig-a`/`rig-b`/`rig-c`, `<group-A name>`, serial withheld — and
+re-run. The message prints `file:line` and which pattern matched.
+
+**`wpj_privacy : ignoré, pas de .wpj-private-names`**
+Expected on a fresh clone: the pattern list is deliberately not distributed
+([`../LEGAL.md`](../LEGAL.md)). Create one at the repository root, one regex per
+line, if you keep material that must never be published.
+
 ## Device
 
 **`No USB modem port found`**

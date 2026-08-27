@@ -28,7 +28,7 @@ Three rules go with the ladder:
 None of the corpus is published ([`../LEGAL.md`](../LEGAL.md)); what follows is
 about how it was counted while measuring, and applies just as much to yours.
 
-The variant-A corpus used here holds 27 files, but only **four independent
+The variant-A corpus used here holds 45 files, but only **four independent
 rigs**:
 *rig-a* (10 fixtures), *rig-b* (15), *rig-c* (20) and
 *rig-c-bug* (22, a re-patched *rig-c*). The rest are derived — seven
@@ -73,6 +73,18 @@ A field that changes no channel in any state is recorded as **inert** — which
 is a result, and a publishable one. F11-01 in `research/` is exactly that: a
 refutation, written up as carefully as a confirmation.
 
+## A status can go back down
+
+Promotion is not one-way. On 2026-08-27 a `device-confirmed` reading of the
+USB preset-recall payload was withdrawn, and it took four negatives with it —
+they had all been judged with the discriminator that turned out not to
+discriminate. The honest state after a retraction is usually **neither confirmed
+nor refuted**, and saying so is what stops the next experiment from being built
+on sand.
+
+When you retract, follow the cascade: list every claim that rested on the same
+evidence and mark each one explicitly, including the ones you would rather keep.
+
 ## Promotion to `device-confirmed`
 
 `validated` becomes `device-confirmed` only when a file **we generated** is
@@ -85,6 +97,10 @@ those, are writable without hedging.
 
 A patch that adds or changes a field interpretation needs:
 
+- **the prediction, written before the measurement** — which channel, which
+  value, which screen. This is now the dominant practice here: roughly seventeen
+  entries in `research/` are written that way, and two of those predictions were
+  wrong, which is exactly what makes the method worth the trouble;
 - the exact single-variable manipulation, reproducible by someone else;
 - the SHA-256 sums of the before/after files — **the hashes, not the files**;
 - the `wpj_diff.py` output;

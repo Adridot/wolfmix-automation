@@ -5155,3 +5155,60 @@ qui ne font que **naviguer** (HOME, grille des presets, menu principal).
   hiérarchie de navigation n'écoute donc plus quand un modal est ouvert :
   le chemin « Open → sélection → validation » n'est pas pilotable par des
   changements de mode. **RELOAD-04 est confirmé par un troisième angle.**
+
+## RAW-02 — le deuxième octet n'est pas lu — 2026-08-27 — **[device-confirmed]**
+
+Question laissée ouverte par RAW-01 : la charge utile au-delà de `payload[0]`
+sert-elle à quelque chose ?
+
+**`SET_MODE`** — cinq charges utiles, mode relu à chaque fois :
+`05` → 5, `05 00` → 5, `05 c8` → 5, `08` → 8, `08 ff` → 8. **Le mode ne
+dépend que de l'octet 0.**
+
+**`SET_PRESET`** — d'abord un faux positif, gardé ici parce qu'il a failli
+passer : `63 ff` (id 99 + 0xff) rendait une trame à 27 canaux d'écart du tir
+nu `63`, alors que `63 00` et `63 07 07 07` étaient identiques. Le contrôle
+qui tue l'hypothèse est le **dernier tir de la série, un `63` nu** : il
+diffère lui aussi du premier `63` des mêmes 27 canaux. L'écart suit donc un
+**état de l'appareil qui a changé en cours de série et n'est pas revenu**,
+pas la charge utile. Sans ce contrôle, on écrivait « le 2e octet est un
+drapeau ».
+
+**Et ce n'est pas non plus un fondu.** Une empreinte posée 4 s après le
+rappel ne verrait pas un paramètre de fondu ; on a donc capturé le
+**transitoire**, distance à la trame finale échantillonnée dès l'envoi.
+Les courbes de `63` et de `63 ff` se superposent (pic ≈ 10 000, mêmes
+valeurs à chaque palier, stabilisation à 4,0 s dans les quatre passes) — et
+l'oscillation qu'on y voit est celle de l'effet animé du preset, pas une
+rampe.
+
+**Portée** : aucun effet observable sur le mode atteint, sur la trame
+stabilisée, ni sur le transitoire à 4 s. Cela n'exclut pas un effet sur
+quelque chose que nous n'observons pas (un paramètre qui ne toucherait ni
+l'écran ni le DMX). En l'état, **envoyer un seul octet est la forme juste**,
+et c'est ce que fait `wolfmix.py`.
+
+## MODE-39/40 — les deux derniers slots, et une troisième couche — 2026-08-27
+
+Envoi de l'index brut depuis HOME, échappatoire COLOR FX après chaque essai,
+l'opérateur lisant le panneau.
+
+- **Index 39** — mode rapporté 39. **L'écran ne bouge pas** (il reste sur
+  HOME) mais **les pads changent** : l'opérateur y reconnaît le sélecteur de
+  positions du séquenceur Move FX, sans que l'écran correspondant s'affiche.
+- **Index 40** — mode rapporté **42**, écran USB STICK et son erreur de
+  chargement. **Troisième reproduction** de la redirection 40 → 42.
+
+**Attributions**, portées au `mode-map.md` : 39 = `SEQ_POSITION_PICKER` et
+40 = `FILE_BROWSER`, toutes deux **[hypothesized]** par élimination sur la
+liste d'identifiants de 2.0.2 — un sélecteur qui peint des pads sans écran
+d'un côté, un navigateur de fichiers qui retombe sur l'écran USB faute de
+support de l'autre. Le comportement, lui, est **[device-confirmed]**. Rien
+dans le binaire ne relie l'un ou l'autre nom à un numéro : les noms restent
+des candidats, pas des faits.
+
+**Ce que 39 ajoute à SCREEN-01** : le firmware déplace **trois** choses de
+façon indépendante — le mode rapporté, les LED des pads, et l'écran. Le mode
+39 déplace les deux premières et laisse la troisième en place. Notre readback
+n'observe que la première ; c'est la limite qu'il faut garder en tête chaque
+fois qu'on écrit « l'appareil est sur tel écran ».

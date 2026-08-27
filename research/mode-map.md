@@ -92,6 +92,8 @@ enum; where 2.0.2 renamed one, both are given.
 | 36 | DMX VALUES → beam editor | `BEAM_EDITOR` |
 | 41 | LIVE EDIT → SHIFT + one of the first three encoders | **`LIVE_EDIT_MACRO_EDIT`** (new) — present on MK1 |
 | 43 | main menu → Mappings | **`MAPPING`** (new) — present on MK1 |
+| 39 | **unreachable by menu** — raw index 39; the **pads** light what the operator reads as the Move FX sequencer picker, while the **screen stays on HOME** | **`SEQ_POSITION_PICKER`** (new) — by elimination, name **hypothesized** |
+| 40 | **unreachable by menu** — raw index 40 **redirects to 42** (three times out of three) | **`FILE_BROWSER`** (new) — by elimination, name **hypothesized** |
 | 42 | **unreachable by menu** — `SET_MODE` raw index 40 lands here | **`USB_STICK`** (new) — operator-identified on screen |
 | 44 | HOME → touch the tempo readout | **`BPM`** (new) |
 
@@ -111,6 +113,21 @@ the index→mode identity is not universal (0→0, 5→5, 16→16, 26→26 are e
 40→42 is not). **[device-confirmed]** for 42; **[hypothesized]** that 40 is
 `FILE_BROWSER` redirecting for want of a medium, leaving 39 for
 `SEQ_POSITION_PICKER` by elimination — neither is measured.
+
+The other two slots were measured the same day, same method. **Index 39**:
+the screen does not move — it stays on HOME — but the **pads change**, and the
+operator reads them as the Move FX sequencer's position picker. **Index 40**:
+the panel shows the USB-stick screen and its "cannot load a project" error,
+i.e. it **redirects to 42**, reproduced three times. Behaviour
+**[device-confirmed]**; the two *names* are **[hypothesized]**, by elimination
+against the 2.0.2 identifier list — a picker that paints pads without a screen
+fits `SEQ_POSITION_PICKER`, and a browser that falls through to the USB screen
+for want of a medium fits `FILE_BROWSER`. Nothing in the binary binds either
+name to either number.
+
+Note what index 39 adds to SCREEN-01: the firmware moves **three** things
+independently — the reported mode, the pad LEDs, and the screen. Mode 39
+moves the first two and leaves the third alone.
 
 Previously unmeasured: `FILE_BROWSER`, `SEQ_POSITION_PICKER` and `USB_STICK`
 shared the three remaining slots 39, 40 and 42. The macro editor turned out to exist

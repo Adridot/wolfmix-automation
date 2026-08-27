@@ -6073,6 +6073,11 @@ rappeler chacune et comparer les enveloppes DMX agrégées. Ce qui s'éteint **e
 plus** des dimmers, c'est le contenu qu'`OTHER` a gagné en 2.0.15. Si rien
 d'autre ne bouge, `OTHER` = `DIMMER` et le renommage est cosmétique.
 
+> **Repris le 2026-08-27 par FW-03**, avec une correction : la paire devient
+> `f10 = 30` / `f10 = 62` et non `0` / `32`. `f10 = 0` laisse `LIVE EDIT`
+> allumé, et GEN-03 a montré ce que ça coûte — la copie vive peut diverger du
+> fichier en silence. Les deux cues portent maintenant le verrou de mesure.
+
 ## FW-02 — `f32`–`f35` sont datés : firmware 2.0.5, et ça date le schéma 10 — 2026-08-27 — **[observed]**
 
 Même source que FW-01.
@@ -6118,3 +6123,160 @@ pas une piste à reprendre.
   d'iris vivent dans le **profil**, pas dans le preset. **[hypothesized]** :
   `f35` serait alors un pourcentage dans ces bornes, exactement la forme que
   GEN-02 a mesurée pour `f17` via `106.f5`/`f6`.
+
+## FW-03 — le périmètre du bit 5 (`OTHER`), posé — 2026-08-27
+
+Tire le discriminateur laissé `[planned]` par FW-01 : le bit 5 de `165.f10`
+s'appelait `DIMMER` jusqu'en 2.0.15 et `OTHER` depuis, sur un firmware de
+mesure (2.0.18) postérieur au renommage. Ce qu'il gate **en plus** du dimmer
+n'est pas connu, et un writer qui pose ce bit pour « ne pas rappeler les
+dimmers » éteint aussi tout ce qu'`OTHER` a absorbé.
+
+### Le protocole change sur un point, et GEN-03 en est la raison
+
+FW-01 esquissait la paire `f10 = 0` puis `f10 = 32`. **`f10 = 0` laisse
+`LIVE EDIT` allumé** (bit 4 clair = bascule allumée), or GEN-03 vient de
+montrer qu'une cue à `LIVE EDIT` allumé peut être réécrite dans la copie vive
+sans que le fichier bouge — et c'est exactement ce qui a produit une anomalie
+reproductible pointant vers le mauvais champ. La paire devient donc
+**`f10 = 30` puis `f10 = 62`** : mêmes six bascules qu'avant, plus le verrou
+de mesure sur les deux.
+
+| | bit 0 `COLOR` | bit 1 `MOVE` | bit 2 `BEAM` | bit 3 `GOBO` | bit 4 `LIVE EDIT` | bit 5 `OTHER` |
+|---|---|---|---|---|---|---|
+| `f10 = 30` | allumé | éteint | éteint | éteint | **éteint (verrou)** | **allumé** |
+| `f10 = 62` | allumé | éteint | éteint | éteint | **éteint (verrou)** | **éteint** |
+
+La seule variable reste le bit 5.
+
+### Le candidat
+
+Donneur rig-c (82 presets, ids 0–81). Quatre cues ajoutées en queue —
+deux pour FW-03, deux pour RECALL-06 ci-dessous. Fichier sha256
+`582876a155efa30ed4d7f6c764eaf85b3b20610cc16112e2264faaeb26f7dac9`,
+41000 octets, 86 presets, `f1` laissé à 82.
+
+| id | nom | pad (groupe B) | `f17` | `f10` | rôle |
+|---|---|---|---|---|---|
+| 100 | `FW OTHER ON` | 6 — (255, 0, 0) | 120 sur B, 0 ailleurs | **30** | `OTHER` allumé |
+| 101 | `FW OTHER OFF` | 6 — (255, 0, 0) | 120 sur B, 0 ailleurs | **62** | `OTHER` éteint |
+
+**100 et 101 ne diffèrent que par `masque_contenu`** — relu champ par champ sur
+le fichier produit : `id`, `nom`, `masque_contenu`, rien d'autre. `f17`, `f30`,
+`f31`, `f16`, les deux FX et les positions sont identiques.
+
+### Prédiction, publiée avant le déploiement
+
+Remise sur l'**id 0** avant chaque tir : `f10` absent (les six bascules
+allumées), `f17` = 255 partout, les trois moteurs à l'arrêt — la seule entrée
+du projet qui réécrive toutes les couches (GEN-02). Sous cette remise, le
+modèle de GEN-02 donne : groupe A (six lyres, `106.f5`/`f6` = 69/220) →
+dimmer **220** ; groupe C → **255** ; groupe B → son pad de remise (pad 1,
+`(255, 127, 0)`) à pleine échelle.
+
+| | Sous 100 (`OTHER` allumé) | Sous 101 (`OTHER` éteint) |
+|---|---|---|
+| rouge des dix pars B (101, 111 … 191) | `255 × 120/255` = **120** | **255** — le dimmer n'est pas lu, l'échelle reste celle de la remise |
+| vert des dix pars B (102, 112 … 192) | **0** | **0** |
+| dimmer des six lyres A (8, 24 … 88) | `f5` = **69** | **220**, inchangé depuis la remise |
+| dimmer des deux lyres C (206, 226) | **0** | **255**, inchangé depuis la remise |
+
+1. **Exactement 18 canaux** diffèrent entre le tir 100 et le tir 101 : les dix
+   rouges du groupe B, les six dimmers du groupe A, les deux du groupe C. Aucun
+   autre des 2048. → **`OTHER` = `DIMMER`, le renommage de 2.0.15 est
+   cosmétique pour ce que cette cue porte.** *(p ≈ 0,5)*
+2. **Plus de 18 canaux** diffèrent. Les canaux en trop nomment ce
+   qu'`OTHER` a absorbé, et c'est le résultat qu'on vient chercher.
+   *(p ≈ 0,35)*
+3. **Zéro canal** ne diffère : le bit 5 n'est pas la bascule du dimmer, ce qui
+   contredirait à la fois le manuel et le changelog par deux chemins
+   indépendants. *(p ≈ 0,1)*
+4. Autre chose — moins de 18, ou 18 mais pas ceux-là. *(p ≈ 0,05)*
+
+**Ce que ce tir ne peut pas voir, et il faut le dire avant.** La cue ne porte
+**ni `f32`–`f35`** (Prism, Focus, Zoom, Iris — le générateur ne les écrit pas,
+et le modèle cloné ne les porte pas non plus) **ni gobo actif** (bit 3 éteint).
+Si `OTHER` a absorbé ces contenus-là, l'expérience est **aveugle** : un
+résultat à 18 canaux dit « rien d'autre **de ce que cette cue porte** », pas
+« `OTHER` = `DIMMER` » en général. La lecture 1 ne monterait donc qu'à
+`validated` sur ce périmètre, pas au-delà.
+
+Falsificateurs, dans l'ordre du coût :
+
+- le projet refuse de s'ouvrir ou la page 6 est vide → l'écriture de `f10` = 62
+  par nous casse quelque chose que `f10` = 30 ne casse pas ;
+- les deux tirs sont identiques → lecture 3 ;
+- le tir de contrôle ne reproduit pas le premier 100 → l'instrument a dérivé et
+  rien n'est lu (le piège n° 3).
+
+Protocole : remise 0 → 100 → remise 0 → 101 → remise 0 → **100 rejoué en fin de
+série**, 8 s de repos et 5 s d'enveloppe par tir, jugement à l'enveloppe agrégée
+sur les 2048 canaux et jamais à une trame.
+
+**Le réglage `store group dimmers in preset` doit être ACTIF** pour ce tir :
+c'est lui qui ouvre le chemin mesuré en GEN-02, et sans lui les deux tirs
+seraient identiques pour une raison qui n'a rien à voir avec le bit 5.
+
+## RECALL-06 — les ids ≥ 128, posé — 2026-08-27
+
+Domaine prouvé du rappel par USB : **ids 0–127**. `SET_PRESET` porte l'id sur
+un seul octet (RECALL-03), le deuxième n'est pas lu (RAW-02), et tous les tirs
+publiés — RECALL-03, RECALL-04, RECALL-05 — tiennent sous 128. Le panneau, lui,
+va jusqu'à **199** (page 10, slot 20). Rien ne dit ce que fait le firmware d'un
+octet dont le bit 7 est mis.
+
+### Le candidat, et pourquoi deux octets et non un
+
+Les mêmes quatre cues que FW-03 ; ces deux-ci sont sur la page 8.
+
+| id | nom | pad (groupe B) | couleur du pad | `f17` | `f10` |
+|---|---|---|---|---|---|
+| 140 | `R06 CIBLE 140` | 10 | (255, 0, 255) | 120 sur B | 30 |
+| 141 | `R06 CIBLE 141` | 7 | (0, 255, 0) | 120 sur B | 30 |
+
+140 et 141 ne diffèrent de 100 que par `couleur_statique` (et l'id, et le nom).
+Trous d'id : 82–99, 102–139 — le cas du trou intérieur, déjà mesuré comme
+no-op en RECALL-05, reste donc en place et n'est pas une variable ici.
+
+**Deux octets sont tirés, pas un**, parce qu'un seul ne sépare pas les rivales :
+
+- **octet 140** — un preset existe à cet id. `140 & 0x7F` = **12**, un preset du
+  donneur dont la trame est inconnue : elle est donc **capturée avant le tir**,
+  ce qui la rend prédictive au même titre que les autres.
+- **octet 228** — aucun preset à cet id (le panneau s'arrête à 199).
+  `228 & 0x7F` = **100**, qui est la cue `FW OTHER ON` de FW-03, mesurée dans la
+  même séance. Une troncature à 7 bits est donc lisible sur une trame que nous
+  aurons écrite nous-mêmes.
+
+### Prédiction, publiée avant le tir
+
+Remise sur l'id 0 avant chaque tir, comme en FW-03.
+
+| Lecture | octet 140 | octet 228 | p |
+|---|---|---|---|
+| **rappel exact au-delà de 127** | la trame de **140** : magenta sur les dix pars B — rouge `255 × 120/255` = **120** ET bleu **120**, vert 0 | **no-op** (aucun preset d'id 228) : identique à la remise | **0,6** |
+| **troncature à 7 bits** | la trame de l'**id 12**, capturée avant | la trame de **100** : rouge 120, vert 0, bleu 0 | 0,1 |
+| **no-op au-dessus de 127** | identique à la remise sur les 2048 canaux | identique à la remise | 0,25 |
+| autre chose | — | — | 0,05 |
+
+Les trois lectures prédisent **six trames**, et cinq d'entre elles seront
+mesurées dans la même séance — la remise, l'id 12, la cue 100, la cue 140 et la
+cue 141. C'est la forme que RECALL-05 a validée : autant de trames distinctes
+que de rivales.
+
+`141` est tiré aussi, pour la même raison qu'un contrôle : un id ≥ 128 qui
+marche une fois peut être un accident de table ; deux, sur deux pads
+différents, non. `141 & 0x7F` = 13, encore un preset du donneur.
+
+**Une mesure gratuite au passage.** Les pads 10 et 7 portent dans `f31` les
+valeurs d'octet **32** et **4** — exactement deux des cinq cas que GEN-03 avait
+construits avant d'être retiré. Si 140 et 141 mettent tous deux `f17` à
+l'échelle, la lecture « le poids de l'octet de `f31` casse la mise à l'échelle
+au-delà de 16 », déjà expliquée par la copie vive, est **réfutée une seconde
+fois et par un autre chemin**. Si l'un des deux ne met pas à l'échelle, GEN-03
+revient de sa retraite.
+
+Protocole, à la suite de celui de FW-03, même cadence : remise 0 → **12** →
+remise 0 → **140** → remise 0 → **141** → remise 0 → **228** → remise 0 →
+**100 rejoué**, tir de contrôle final qui doit reproduire le 100 de FW-03 sur
+les 2048 canaux.

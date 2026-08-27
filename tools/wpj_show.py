@@ -274,8 +274,14 @@ def _cree_preset(ctx, d165, pid, pe):
         raise ValueError(f"{ctx} : création en queue seulement, l'id doit "
                          f"dépasser {maxi} (le plus grand du donneur)")
     if pid > 127:
-        print(f"attention : {ctx} — aucun preset d'id > 127 n'a jamais été "
-              "mesuré sur l'appareil", file=sys.stderr)
+        # `SET_PRESET` porte l'id sur un seul octet (RECALL-03) et le deuxième
+        # n'est pas lu (RAW-02) ; tous les tirs publiés tiennent dans 0–127.
+        # Au-delà, rappel exact, troncature à 7 bits et no-op restent tous
+        # possibles. Le panneau, lui, va jusqu'à 199 : la cue est rappelable
+        # à la main, pas forcément à distance.
+        print(f"attention : {ctx} — le rappel par USB n'a jamais été mesuré "
+              "au-dessus de l'id 127 (RECALL-06) ; au panneau, oui",
+              file=sys.stderr)
     cible = copy.deepcopy(modele)
     cible["id"] = pid
     d165["presets"].append(cible)

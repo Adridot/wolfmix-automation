@@ -6647,3 +6647,110 @@ vérifiée sur cet appareil.
 
 Si la tranche 3 s'allume, la tranche 5 redevient douteuse et il faut rejouer
 GEN-03 : deux lectures se disputeraient à nouveau le même masque.
+
+**À lire au même tir : F7-01.** La passe corpus sur `f3`/`f7`/`f23`/`f27` a
+trouvé un champ qui bouge — `f7`, non nul sur quatre presets, et exactement les
+quatre dont le moteur faisceau est éteint alors que ses deux pages diffèrent.
+C'est un second candidat pour porter la sélection de page. La même sauvegarde
+répond aux deux entrées ; il suffit de regarder `f3` en plus de la tranche 3.
+
+## F7-01 — `f7` n'est pas vide, et il pointe vers la question de FX2-01 — 2026-08-27 — **[observed]**
+
+T6 demandait « corpus d'abord » sur les quatre tableaux par groupe non attribués
+de 165 — `f3`, `f7`, `f23`, `f27`. La passe coûte une commande et rend un
+résultat sur les quatre :
+
+| Champ | Valeurs sur les 3697 occurrences |
+|---|---|
+| `f3` | `0000000000000000` — **toujours** |
+| `f23` | `0000000000000000` — **toujours** |
+| `f27` | `0000000000000000` — **toujours** |
+| **`f7`** | `0000000000000000` × 3643, **`0001000000000000` × 54** |
+
+### Le compte honnête est 4, pas 54
+
+Le corpus porte 3697 *occurrences* de preset mais seulement **352 presets
+distincts par contenu** : sept fichiers écrits par notre propre writer et sept
+sauvegardes d'une même copie, plus les paires avant/après des expériences,
+répliquent les mêmes entrées. Les 54 occurrences de `f7` non nul sont
+**4 presets distincts** — ids 1, 82, 83 et 84 — recopiés dans 33 fichiers.
+
+C'est le piège que `docs/methodology.md` décrit sous « compter le corpus
+honnêtement », et il fallait le vérifier avant d'écrire « 54/54 ». La
+corrélation ci-dessous porte sur **quatre échantillons**, pas cinquante-quatre,
+et c'est ce qui l'empêche de dépasser `observed`.
+
+### Ce que les quatre partagent
+
+Les quatre presets ont **exactement le même profil `f16`** — tranches 0 à 5 :
+
+```
+[255, 255, 0, 0, 0, 255]
+ │    │    │  │  │  └── tranche 5
+ │    │    │  └──┴───── tranches 3 et 4, nulles comme partout
+ │    │    └─────────── Beam FX : ÉTEINT
+ │    └──────────────── Move FX : allumé sur les huit groupes
+ └───────────────────── Color FX : allumé sur les huit groupes
+```
+
+Et leurs **trois** types d'effet ont slot 1 ≠ slot 2. Sur tout le corpus,
+`f7` non nul et « moteur faisceau éteint **et** ses deux pages diffèrent »
+coïncident sans exception dans les deux sens — sur ces quatre presets.
+
+`f7` vaut toujours la même chose : élément **1** = 1, les sept autres nuls. Si
+la lecture « tableau par groupe » de §5 tient, c'est le groupe **B**. Mais ces
+presets adressent les **huit** groupes (tranches à 255), donc « le groupe B et
+lui seul » n'a pas d'explication évidente, et une lecture « index » ou
+« compteur » n'est pas écartée. **Aucun nom n'est proposé.**
+
+### Pourquoi ça compte pour FX2-01
+
+FX2-01 laissait une question ouverte : où vit l'affectation de la **deuxième
+page** d'un effet ? `f7` est le premier champ du record qui bouge en même temps
+qu'une deuxième page de faisceau. Candidat, à ce titre seulement :
+**`f7` sélectionne la page active du Beam FX**, `f3` et `f23` faisant de même
+pour Color et Move — ce qui expliquerait qu'ils soient nuls partout, personne
+n'ayant jamais sélectionné une deuxième page dans ce corpus. `f27` resterait
+sans emploi dans cette lecture, ce qui est un point contre elle : trois moteurs,
+quatre champs.
+
+Rivales, aucune départagée :
+
+- `f7` sélectionne la page du Beam FX, par groupe ;
+- `f7` marque « ce preset porte une configuration de faisceau en réserve », un
+  drapeau et non un masque, et le `1` à l'élément 1 est un artefact d'encodage ;
+- `f7` n'a aucun rapport avec les pages, et la coïncidence tient à quatre
+  presets issus de la même séance d'édition — ce qui, à quatre échantillons,
+  reste parfaitement possible.
+
+### Ce que ça coûte de trancher
+
+**Rien de plus que le discriminateur déjà posé en FX2-01** : un preset, une
+sauvegarde au panneau, un téléchargement, un diff. Il suffit d'y ajouter une
+lecture. Prédictions publiées, sur la cue où Color FX page 1 tourne sur A et
+page 2 sur B :
+
+| Lecture | `f16` tranche 3 | `f3` |
+|---|---|---|
+| la page vit dans `f16` (FX2-01, lecture 1) | **2** (= B) | inchangé, nul |
+| la page vit dans `f3`/`f7`/`f23` (celle-ci) | 0 | **non nul**, élément 1 |
+| les deux portent l'information | **2** | **non nul** |
+| ni l'un ni l'autre | 0 | nul — et il faut chercher ailleurs |
+
+Une seule sauvegarde répond aux deux entrées. C'est la raison d'écrire celle-ci
+maintenant plutôt que de la garder pour plus tard : elle change ce qu'il faut
+regarder après le tir, pas ce qu'il faut tirer.
+
+### Un détail qui change la lecture
+
+SPEC §5.6 note que ces quatre champs sont de l'**état vif** jusqu'à ce qu'un
+preset les capture : une sauvegarde de projet ne les écrit pas, seul un
+`SHIFT` + tap sur un pad le fait. Le `1` de `f7` n'a donc pas été tapé par
+l'auteur du projet — il a été **cueilli au panneau** dans l'état où l'opérateur
+l'avait laissé. Ça renforce la lecture « sélecteur » et affaiblit « drapeau
+écrit par le writer » : un champ qui enregistre une sélection d'écran est
+exactement ce qu'un sélecteur de page serait.
+
+`f3`, `f23` et `f27` restent **non attribués**, et le corpus ne peut rien en
+dire : ils sont nuls sur les 3697 occurrences. Uniformité du corpus, pas du
+champ — pour la cinquième fois dans ce registre.

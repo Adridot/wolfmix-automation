@@ -633,6 +633,17 @@ either (FW-02).
 These are **live state** until a preset captures them: a project save alone does
 not write them, only `SHIFT` + tapping a preset does.
 
+**`f7` is not empty, though — [observed] (F7-01).** It reads `0` on every preset
+of the corpus but **four**, where it carries element 1 = 1 and the rest zero.
+Those four share one `f16` profile — Colour and Move on across all eight groups,
+**Beam off** — and all three of their FX types have slot 1 ≠ slot 2. The one
+field that moves is the one that moves alongside a second Beam page, which makes
+it a candidate for the page selector §5.4b is missing. Four samples, one shape,
+and no name is proposed. The live-state rule above matters here: that `1` was
+captured off the panel by a `SHIFT` + tap, so it records what the operator had
+selected, not what the project author typed. `f3`, `f23` and `f27` are `0` on
+all 3697 occurrences — corpus uniformity, not field uniformity.
+
 ### 5.7 The flash keys live in `f16` — **[device-confirmed]**
 
 Five of the twelve 9-bit slices of `f16` (§5.4) carry the **flash key state** a

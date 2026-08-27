@@ -757,7 +757,7 @@ def self_test():
     settings_payload = b"".join((
         encode_protobuf_field(1, 0, 1),
         encode_protobuf_field(3, 0, 0),
-        encode_protobuf_field(9, 0, 2_001_998),
+        encode_protobuf_field(9, 0, 1_234_567),
         encode_protobuf_field(13, 5, struct.pack("<f", 2.018)),
         encode_protobuf_field(14, 2, b"2.0.18"),
         encode_protobuf_field(15, 2, b"\x00\x01\x02\x03"),
@@ -765,7 +765,7 @@ def self_test():
     settings = decode_settings(settings_payload)
     assert settings["dmxEngineState"] is True
     assert settings["dmxUsbSendState"] is False
-    assert settings["serialNumber"] == 2_001_998
+    assert settings["serialNumber"] == 1_234_567
     assert settings["firmwareVer"] == "2.0.18"
     assert settings["universeMapping"] == [0, 1, 2, 3]
 

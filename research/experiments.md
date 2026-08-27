@@ -56,7 +56,7 @@ réécrit : nom → « WMX TEST ACC-01 », seul record différent, SHA-1 recalcu
 - Import WTOOLS 1.6.3 : accepté, affiché comme projet séparé (pas de
   confusion avec rig-a malgré les octets 20–35 inchangés).
 - Stockage wlinkData : octet pour octet IDENTIQUE à notre fichier, sous
-  un nouveau nom de fichier d43f1fc0-a05f-11f1-… (UUID attribué par
+  un nouveau nom de fichier <UUID neuf> (UUID attribué par
   WTOOLS ; les octets internes 20–35 ne servent donc pas de clé
   d'identité à l'import).
 - Synchro W1 fw 2.0.18 : acceptée, projet ouvert sur l'appareil

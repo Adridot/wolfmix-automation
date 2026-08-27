@@ -9,7 +9,7 @@ Corpus de preuve : `corpus/SHA256SUMS`, relevé du 2026-08-25, WTOOLS 1.6.3.
 
 ## Trois variantes de conteneur observées localement
 
-### Variante C — protobuf nu (1 fichier : f4a5d15f « Mariage Hermine »)
+### Variante C — protobuf nu (1 fichier, `rig-C1`)
 - **[correlated]** Fichier entier = wire format protobuf valide depuis
   l'offset 0 (parcours complet sans erreur, 275 516 octets).
 - **[observed]** Champ 1 varint = **6**.
@@ -31,9 +31,9 @@ Statut global : conteneur + SHA-1 + record 101 **device-confirmed**
 fw 2.0.18, stocké octet-identique). Octets 20–35 : PAS une clé
 d'identité à l'import (nouveau projet créé sans les modifier).
 - **[correlated]** Octets 0–19 = SHA-1 de bytes[20:EOF] (idem B).
-- **[observed]** Octets 20–63 : zone d'en-tête contenant notamment
-  `cc 21 80 71` (répété, = moitié de l'UUID du nom de fichier) —
-  **[hypothesized]** numéro de série W1.
+- **[observed]** Octets 20–63 : zone d'en-tête contenant notamment un motif
+  répété qui reprend la moitié de l'UUID du nom de fichier —
+  **[hypothesized]** numéro de série W1. Ni l'un ni l'autre n'est reproduit ici.
 - **[correlated]** Offset **0x40** : `uint32 LE longueur` + `uint16 LE type`,
   type racine **100**, longueur = taille fichier − 0x46 (vérifié 3/3).
   Enregistrements imbriqués : même en-tête. Type **101** observé avec
@@ -64,7 +64,7 @@ Relevé sur f4a5d15f (C) ; à corréler sur les fichiers B (offset 20).
 | Champ | Type wire | Occurrences | Interprétation | Statut |
 |---|---|---|---|---|
 | 1 | varint | 1 | version du format (6 ou 7) | hypothesized |
-| 2 | len | 1 | **nom du projet** UTF-8 (« Mariage Hermine », « 2 Lyres ») | correlated |
+| 2 | len | 1 | **nom du projet** UTF-8 | correlated |
 | 3 | len ×100 | 100 | **presets** (sous-msg : champ1=nom, champ2=varint 1000, champ4=blob 135 o) | correlated (le manuel donne **10 pages × 20**, soit 200 slots) |
 | 15 | len ×2048 | 2048 | inconnu (gros volume — steps ? séquences ?) | observed |
 | 5 | len ×80 | 80 | inconnu | observed |
@@ -120,7 +120,7 @@ carries a **4** at index 5, so the domain is **[hypothesized]** 0–4 with 2/3/4
 the three timers.
 
 **Experiment FX-01, 2026-08-25, W1 (serial withheld), fw 2.0.18.**
-Request: `GET_PROJECT` on `73d06df4-9b5d-5cd1-9645-51ba125f71a5`
+Request: `GET_PROJECT` on `<experiment-uuid>`
 (`WMX EXP format-lab`, the dedicated experiment project) before and after the
 operator moved **STROBE only** from FLASH to TOGGLE with the fourth encoder
 and saved on the controller.
@@ -1237,7 +1237,7 @@ Surveying `f29` over all 25 variant-A files (four rigs, 2038 presets), exactly
 | `[9, 255×7]` | 7 | **only** the rig lineage that has a gobo palette |
 
 **In favour.** The `[9, 255×7]` presets are `Get Moving`, `Candy Floss Swing`,
-`valse`, and the four factory MOVE presets id 56–59 (`D A N C E`, `J U M P`,
+`<nom utilisateur>`, and the four factory MOVE presets id 56–59 (`D A N C E`, `J U M P`,
 `Point to Point`, `Lights to the Siren`). Those last four are **the same factory
 presets in every rig**, and in `rig-a` and `rig-b` — whose eight gobo palettes
 are all empty, no gobo-wheel fixture patched — they carry all-255 instead. So
@@ -1790,8 +1790,8 @@ Three things refute the category reading:
    off the DMX as the six `Lyre ZQ02244` and group B as the ten pars (F30-02,
    and again on `Milky Way`); those are precisely the members of slots 0 and 1.
    Slot 2 is the two `Lyre ZQ02344`, the operator's group C.
-3. **`f8` is a *group* name.** The experiment project names slot 0 `Beam` and
-   slot 1 `Pars` — the operator's own names for their moving-head group and
+3. **`f8` is a *group* name.** The experiment project names slot 0 `<group-A name>` and
+   slot 1 `<group-B name>` — the operator's own names for their moving-head group and
    their par group, not category labels the firmware would ship.
 
 `rig-c-bug`'s seventh profile at slot 3 is a `LASERBAR`: a fourth group, `D`.
@@ -1803,7 +1803,7 @@ of `f28`/`f29`/`f30`/`f31` in every preset address exactly those fixtures. The
 group *names* are readable too, from `125[i].f8`.
 
 Still open, and cheap to settle with one photograph: whether the device's
-group A screen displays the name `Beam`. That would take the slot → letter
+group A screen displays the name `<group-A name>`. That would take the slot → letter
 mapping from *measured membership* to *named on the device*, and would confirm
 slots 3–7 as D–H without patching anything.
 
@@ -1995,7 +1995,7 @@ on all three page-5 presets. `f10` moved instead:
 
 | Preset | Toggle switched off | `f10` before | after |
 |---|---|---|---|
-| page 5 slot 1, `valse` | `GOBO` | absent | **8** = bit 3 |
+| page 5 slot 1, `<nom utilisateur>` | `GOBO` | absent | **8** = bit 3 |
 | page 5 slot 2 | `LIVE EDIT` | absent | **16** = bit 4 |
 | page 5 slot 3 | `OTHER` | absent | absent — nothing changed |
 
@@ -2017,7 +2017,7 @@ then the bottom row:
 | Bit | 0 | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|---|
 | Toggle | `COLOR` | `MOVE` | `BEAM` | `GOBO` | `LIVE EDIT` | `OTHER` |
-| Pinned by | three screens | three screens | four screens | the `valse` write | the slot-2 write | slot 3's stored 32, read on the screen |
+| Pinned by | three screens | three screens | four screens | the `<nom utilisateur>` write | the slot-2 write | slot 3's stored 32, read on the screen |
 
 `f10` is **≤ 62 on all 2197 presets of the corpus** and never reaches 64, which
 is exactly a six-bit field. Every value the corpus holds reads cleanly:
@@ -2112,9 +2112,9 @@ stronger statement than "`f10` changed when we pressed it", and it comes free.
 **[device-confirmed]**
 
 **Negative**: switching a toggle off does **not** imply the masked content is
-cleared. `valse` did lose its group-A gobo (`f29[A]` 9 → 255) in the same save,
+cleared. `<nom utilisateur>` did lose its group-A gobo (`f29[A]` 9 → 255) in the same save,
 but across the corpus `f10` bit 3 and an all-255 `gobos` array agree on only
-595/2197 presets, and bit 0 versus an empty `f31` on 1693/2197. The `valse`
+595/2197 presets, and bit 0 versus an empty `f31` on 1693/2197. The `<nom utilisateur>`
 erasure came from something else in that save, which also moved
 `move_fx_actif`, `f16`, `f18` and two `move_fx1` fields.
 
@@ -2385,7 +2385,7 @@ decisive: switching `LIVE EDIT` off on page 5 slot 2 took `f18[0]` from **24 to
 
 **It does not hold**: 84 presets violate it, all of them page-3 presets carrying
 `f18[0] = 3` against `f10 = 5`. And the companion differential disagrees too —
-switching `GOBO` off on `valse` took `f18[0]` from **11 to 0**, not to 3.
+switching `GOBO` off on `<nom utilisateur>` took `f18[0]` from **11 to 0**, not to 3.
 
 `f18[0]` takes the values 1, 3, 8, 9, 11, 16, 19, 24 across the corpus, on
 presets whose names are all movement-flavoured (`Get Moving`, `Runway`, `Aim`,
@@ -3144,7 +3144,7 @@ button numbers and nothing else:
 | `Aim`, `Candy Floss Swing`, `D A N C E`, `J U M P`, `Point to Point`, `Lights to the Siren` | 1, 2 |
 | `Get Moving` | 1, 2, 5 — and 1, 20 in one file |
 | `Runway` | 5 |
-| `valse` | 1, 2, 4 → 1, 4 |
+| `<nom utilisateur>` | 1, 2, 4 → 1, 4 |
 | page 5 slot 2 | 4, 5 → 4 |
 
 **Out of 80 possible bits the corpus only ever sets 1, 2, 4, 5 and 20** — the
@@ -3960,7 +3960,7 @@ Only `f16` is touched, on three presets, in one record:
 
 | Preset | Slice set to 511 | Predicted key on recall |
 |---|---|---|
-| page 5 slot 1 (`valse`) | 6 | **`WOLF`** |
+| page 5 slot 1 (`<nom utilisateur>`) | 6 | **`WOLF`** |
 | page 5 slot 2 | 7 | **`STROBE`** |
 | page 5 slot 3 | 8 | **`BLACKOUT`** |
 
@@ -4261,7 +4261,7 @@ slice each:
 
 | Slot | Slice | Key |
 |---|---|---|
-| 1 (`valse`) | 6 | `WOLF` |
+| 1 (`<nom utilisateur>`) | 6 | `WOLF` |
 | 2 | 7 | `STROBE` |
 | 3 | 8 | `BLACKOUT` |
 | 4 | 9 | `BLINDER` |
@@ -4682,3 +4682,261 @@ inertes » — était fausse et est retirée. Les rappels agissent ; ils
 agissent seulement toujours pareil. La sonde à enveloppes séparées ne
 pouvait pas distinguer « rien ne bouge » de « on repeint la même chose » ;
 c'est le flux continu, avec les transitions horodatées, qui a tranché.
+
+## RECALL-02 — l'event 41 n'adresse rien : ce qu'il fait vraiment — 2026-08-27
+
+Projet vif : le projet donneur `f2737ec3` (101 presets), ouvert au panneau —
+c'est-à-dire **le projet même sur lequel SETP-01 avait été mesuré**. W1 MK1
+fw 2.0.18, mode 0 (HOME), DMX débranché. Méthode : un seul flux DMX continu,
+une empreinte de trame complète prise 4 s après chaque commande, aucune
+comparaison entre fenêtres de capture séparées.
+
+### Mesures — **[device-confirmed]**
+
+1. **`f1` = un état absolu, idempotent.** `f1=23`, `f1=22`, `f1=76` donnent
+   des trames **identiques au canal près** (0 écart), et cette empreinte
+   (75 canaux non nuls, somme 10455) revient à l'identique après n'importe
+   quelle autre manipulation, y compris dix `SKIP_PRESET`.
+   **SETP-01 ne se reproduit pas sur son propre projet** : « f1=23 → Deep
+   Red, f1=22 → Deep Green » est **réfuté**, pas seulement contesté.
+2. **`f2` = un état qui dépend du contexte courant** : `f2=23` en début de
+   séance donnait 70 non nuls / somme 10013 ; `f2=0` après une série de
+   skips donne 87 / 9462. La valeur ne change rien, le contexte si.
+3. **`f3`, `f4`, `f5` = des bascules.** Séquence `f3` = 0, 1, 2, 10, 50,
+   100, 200, 1, 0 → sommes 5544, 8606, 5548, 8606, 5490, 9140, 5490, 9140,
+   5490 : **alternance bas/haut calée sur le rang de l'envoi**, pas sur la
+   valeur. `f3=10` rend exactement l'empreinte de `f3=1` (0 canal d'écart) ;
+   `f3=1` rend deux empreintes différentes selon son rang. Un adressage ne
+   peut pas faire ça.
+4. **Forme imbriquée** `f1={f1:v}` (`0a 02 08 v`) : 8 canaux d'écart entre
+   v=23 et v=1 — même famille de bascules, aucun adressage.
+5. **`SKIP_PRESET` (43) parcourt bien des presets** : dix envois → dix
+   empreintes distinctes (non nuls 93, 56, 59, 89, 97, 85, 83, 85, 51, 73).
+6. `projectChanged` reste `false` de bout en bout : rien n'est écrit dans le
+   projet, ces sondes ne touchent que l'état vif.
+
+### Lecture
+
+L'event 41 ne transporte **aucune cible numérique** dans les champs 1 à 5,
+ni en varint nu ni en sous-message. Il agit sur un **état courant** — une
+sélection — que `SKIP_PRESET` déplace. La télécommande du W1 existe donc,
+mais elle est **relative** (avancer, basculer), pas **adressée** (« joue le
+preset n »). Tant que la cible n'est pas trouvée, aucun rappel hands-off
+d'un preset choisi n'est acquis.
+
+Ce qui reste vrai de SETP-01 : `SET_PRESET` est bien accepté et **agit** sur
+la sortie. Ce qui tombe : la lecture « f1 = id », et avec elle la dernière
+étape de la recette du générateur.
+
+### Réparation du discriminateur de RELOAD-02
+
+Un discriminateur qui n'a pas besoin d'adressage : **compter les apparences
+distinctes sur N `SKIP_PRESET`**. Contrôle fait aujourd'hui sur 101 entrées :
+10 skips → 10 apparences distinctes, aucune répétition. Sur une copie vive à
+6 entrées, la répétition est forcée au plus tard au 7e skip. La poussée
+WTOOLS se juge alors ainsi, hands-off :
+
+- 10 skips avant la poussée → attendu 10 distinctes (copie à 87 entrées) ;
+- 10 skips après la poussée → 10 distinctes = **pas de rechargement** ;
+  ≤ 6 distinctes avec répétitions = **rechargement**.
+
+Réserve explicite : l'ordre exact du parcours (positions ? pages ? entrées
+vides sautées ?) n'est **pas** établi. Le test ne repose que sur « moins
+d'entrées ⇒ répétitions plus tôt », ce qui suffit ici et rien de plus.
+
+## RELOAD-02 mesuré — une poussée WTOOLS ne remplace pas la copie vive — 2026-08-27
+
+Discriminateur : nombre d'**apparences distinctes sur 10 `SKIP_PRESET`**
+(RECALL-02), seuil « même apparence » = moins de 8 canaux d'écart et
+amplitude < 32. Aucun adressage requis, donc immunisé à la rétractation
+RECALL-01. W1 MK1 fw 2.0.18, DMX débranché, `projectChanged` false du début
+à la fin.
+
+| Étape | Mesure |
+|---|---|
+| Copie vive = fichier clairsemé (87 entrées), avant poussée | **10 apparences distinctes / 10 skips** (paire la plus proche : 13 canaux, amplitude 139) |
+| Poussée du fichier à 6 entrées depuis WTOOLS 2.0.2, WTOOLS refermé, **aucun geste au panneau** | — |
+| Après poussée | **10 apparences distinctes / 10 skips** |
+
+Si la copie vive était passée à 6 entrées, une répétition était forcée au 7e
+skip au plus tard. Elle n'a pas eu lieu. **La poussée WTOOLS ne rend pas
+vivant le projet qu'elle vient d'envoyer.** — **[device-confirmed]**
+
+### Un fait révélé par la même manipulation
+
+WTOOLS **ré-attribue un UUID** au fichier importé : la liste des projets du
+contrôleur montre l'original `<experiment-uuid>` (45112 o) intact, **plus** une
+nouvelle entrée `ad80395f…` (15684 o = notre fichier au bit près) portant le
+**même nom** `WMX EXP format-lab`. Deux projets homonymes coexistent.
+Son estampille de version est `1787769278710000`, mille fois l'ordre de
+grandeur des estampilles écrites par l'appareil (`1787766751371`) —
+**[observed]**, candidat : microsecondes côté WTOOLS, millisecondes côté
+firmware. — **[device-confirmed]** pour la ré-attribution.
+
+Conséquence sur la portée : ce qui est mesuré est « la poussée ne rend pas
+vivant le projet poussé ». La variante stricte — pousser de **nouveaux
+octets sous le même UUID** et voir si la copie vive se rafraîchit — est
+**hors de portée par WTOOLS**, qui ré-identifie systématiquement. Elle reste
+testable par notre outil, qui écrit sous UUID dérivé constant.
+
+### Ce que ça ferme, ce que ça laisse ouvert
+
+- **Ferme** : la prémisse du lead SETP-02 (« WTOOLS pousse des éditions qui
+  apparaissent en direct, donc l'event de rechargement existe et transite »)
+  est **réfutée par la mesure**, après l'avoir été par la documentation du
+  vendeur (RELOAD-01). Rien ne devient vivant sans geste au panneau.
+- **Laisse ouvert** : les quatre négatifs de SETP-02 (RESTART,
+  delete-store-restart, cycle moteur), toujours à re-prouver avec le
+  discriminateur réparé — c'est maintenant faisable sans matériel humain, en
+  déployant le fichier à 6 entrées sous l'UUID du bac-à-sable puis en
+  comptant les apparences.
+- **À nettoyer** : le doublon `ad80395f…` créé par WTOOLS sur l'appareil.
+  Notre outil n'écrit que sous UUID dérivé ; cette suppression revient à
+  l'opérateur, depuis WTOOLS.
+
+## RELOAD-03 — re-preuve des négatifs de SETP-02 au discriminateur réparé — 2026-08-27
+
+Les quatre négatifs de rechargement de SETP-02 avaient été jugés à un
+discriminateur depuis réfuté (RECALL-01). On les rejoue au comptage
+d'apparences sur 10 `SKIP_PRESET`, cette fois sous **le même UUID** — la
+variante stricte que WTOOLS ne permet pas (RELOAD-02).
+
+### Prédictions, publiées avant le déploiement
+
+1. `deploy` (store du fichier à 6 entrées sous `<experiment-uuid>` + vérification
+   octet-à-octet + RESTART) : le stockage passe, les deux vérifications
+   passent. **p ≈ 0,95**.
+2. Après le RESTART du deploy, 10 skips → **encore 10 apparences
+   distinctes** : la copie vive reste celle à 87 entrées, FLASH-08
+   re-confirmé avec un discriminateur valide. **p ≈ 0,85**.
+   Falsificateur net : une répétition au plus tard au 7e skip.
+3. Rival explicite : le RESTART recharge bel et bien, et le négatif
+   d'origine n'était qu'un artefact du discriminateur réfuté. **p ≈ 0,15**.
+
+### RELOAD-03 mesuré — **[device-confirmed]**
+
+`deploy` du fichier à 6 entrées sous `73d06df4…` : stockage accepté
+(15684 o, « Hooray! »), les deux vérifications par re-téléchargement passent
+(comparaison enregistrement par enregistrement), RESTART inclus. Prédiction
+1 confirmée.
+
+Puis, sans toucher au panneau : 10 skips → **10 apparences distinctes**.
+Aucune répétition, alors qu'une copie vive à 6 entrées en forçait une au 7e
+skip au plus tard. **La copie vive reste celle à 87 entrées après
+store + RESTART sous le même UUID.** Prédiction 2 confirmée, rival 3 écarté.
+
+Corroboration de rang à rang avec la série d'avant la poussée : les rangs 3
+et 10 rendent des trames **identiques au canal près**, les rangs 1 et 8 à
+1–4 canaux près (amplitude 1) ; les six autres diffèrent, ce qu'explique la
+phase des effets animés. Le parcours du skip est donc **le même parcours,
+au même point de départ** — la copie vive n'a pas bougé.
+
+**FLASH-08 est re-prouvé avec un discriminateur valide** : le RESTART ne
+recharge pas. Les trois autres négatifs de SETP-02 (delete-store-restart,
+cycle moteur) restent à rejouer de la même manière.
+
+## RAW-01 — la charge utile n'est PAS du protobuf : l'octet 0 est l'index — 2026-08-27
+
+Découvert en balayant les champs de `SET_MODE`. Ce que l'appareil a répondu,
+`f<N>=0` signifiant une charge utile `[(N<<3)|0, 0x00]` :
+
+| Envoyé | Octets | Mode obtenu |
+|---|---|---|
+| `f1=0` | `08 00` | 8 |
+| `f2=0` | `10 00` | 16 |
+| `f3=0` | `18 00` | 24 |
+| `f4=0` | `20 00` | 32 |
+| `f5=0` | `28 00` | 42 (≠ 40 : à re-mesurer) |
+| `f6=0` | `30 00` | **erreur « Mode index too high »** |
+
+8, 16, 24, 32 sont exactement `0x08, 0x10, 0x18, 0x20` — **l'octet de tag
+protobuf lui-même**. Lecture : pour cet event, le firmware ne parse pas du
+protobuf ; il lit **l'octet 0 de la charge utile comme l'index**. Nos
+« champs » n'étaient qu'un octet de tag pris pour une valeur, et c'est
+pourquoi la valeur qui suivait n'a jamais rien changé — ni ici, ni sur
+`SET_PRESET` (RECALL-01/02).
+
+### Prédictions, publiées avant la mesure
+
+1. `SET_MODE` avec la charge utile d'**un seul octet** `1a` (26) amène le
+   panneau sur **mode 26 = PROJECTS**, l'écran « main menu → Open » dont
+   l'usage manuel recharge le projet. **p ≈ 0,8**.
+2. `SET_MODE` `00` → mode 0 (HOME), `05` → mode 5 (PRESETS) : l'octet est
+   l'index, sans décalage. **p ≈ 0,8**.
+3. `SET_PRESET` avec un seul octet `17` (23) rappelle l'entrée 23 et non
+   plus l'entrée 8 ; deux octets distincts donnent deux apparences DMX
+   distinctes, le même octet répété fait **basculer** (les pads du panneau
+   sont des bascules — c'est l'alternance observée en RECALL-02 sur `f3`,
+   qui adressait en réalité toujours l'entrée 24). **p ≈ 0,7**.
+4. Si (3) tient, le rappel adressé hands-off est **restauré**, et les
+   rétractations de RECALL-01/02 se relisent ainsi : l'adressage existait,
+   c'est notre encodage protobuf qui le masquait.
+
+### RAW-01 mesuré — l'octet 0 EST l'index, sur les deux events — **[device-confirmed]**
+
+`SET_MODE`, charge utile d'un seul octet, mode relu par `GET_SETTINGS` :
+
+| Octet envoyé | 0 | 5 | 26 | 16 | 0 |
+|---|---|---|---|---|---|
+| Mode obtenu | 0 | 5 | **26** | 16 | 0 |
+
+**5 sur 5.** Prédictions 1 et 2 confirmées. `1a` seul n'est pas du protobuf
+valide (en-tête tronqué d'un champ length-delimited) et donne pourtant le
+mode 26 : le firmware lit bien `payload[0]`, il ne parse pas.
+**Le mode 26 « main menu → Open » est donc atteignable à distance.**
+
+`SET_PRESET`, charge utile d'un seul octet, sur le projet clairsemé vif :
+
+| Envoyé | 1 | 5 | 1 | 5 | 1 |
+|---|---|---|---|---|---|
+| Empreinte | 130 non nuls / 19111 | 102 / 15287 | 130 / 19111 | 102 / 15287 | 130 / 19111 |
+
+Les trois envois de `01` rendent la **même trame au canal près** (0 écart,
+trois fois) ; les deux envois de `05` aussi ; `01` vs `05` = 88 canaux
+d'écart. **Le rappel adressé, déterministe et reproductible, est restauré.**
+Prédiction 3 confirmée pour la partie adressage ; la « bascule » supposée
+n'en était pas une (voir ci-dessous).
+
+### Relecture des rétractations — l'adressage existait, notre encodage le masquait
+
+Nos charges utiles « protobuf » étaient `[tag, valeur]`. Le firmware lisait
+le **tag** : `f1=<v>` → `08` → toujours l'entrée **8** ; `f2=<v>` → `16` ;
+`f3=<v>` → `24` ; `f4=<v>` → `32` ; `f5=<v>` → `40`. D'où, mécaniquement :
+une apparence par « champ », insensible à la valeur. RECALL-01 et RECALL-02
+ont **bien mesuré** ce qu'ils ont mesuré ; leur lecture (« la valeur est
+ignorée, l'event n'adresse rien ») est **remplacée** par : nous n'avions
+jamais envoyé l'index. Restent réfutées telles qu'écrites : « `f1` = id »
+(SETP-01) et « `f2` = position écrêtée » (PRESET-07) — les deux décrivaient
+un protobuf que le firmware ne lit pas. Ce que SETP-01 avait vu en croyant
+rappeler l'id 23 était l'entrée **8**.
+
+L'« alternance » de RECALL-02 sur `f3` (toujours l'entrée 24) se relit sans
+bascule : un preset partiel — les pages usine séparent full / couleur /
+move / beam — rappelé par-dessus un état animé ne redonne pas la même trame.
+Sur les presets **complets** de la page 1 (octets 1 et 5), la reproduction
+est exacte.
+
+### Corroboration statique (WTOOLS 2.0.2, lecture de noms) — **[observed]**
+
+- Les 15 classes protobuf que l'app désérialise (`X.fromBuffer`) sont
+  `Beat, DmxPacket, PatchItem, PatchList, PbStatus, Profile, ProfileList,
+  ProfileListItem, Progress, Project, ProjectList, ProjectListItem,
+  RequestData, Settings, elementSettingsMsg_t`. **Aucun message de preset.**
+- `_omitFieldNames` / `_omitMessageNames` : **zéro occurrence**. Les noms de
+  champs ne sont donc pas retirés à la compilation — l'absence de `presetId`,
+  `presetIndex`, `preset`, `id`, `idx` est **significative**, pas vacante.
+- Le chemin de WTOOLS vers `setPreset` est un **bouton** (`getPresetButton`,
+  `onPresetButtonPressed`, action OS2L « Set Wolfmix Preset ») — cohérent
+  avec « appui de pad », pas avec un message porteur d'un champ cible.
+- Rappel de prudence : les ids 39/41/43 viennent de `tools/wolfmix.py`, pas
+  du binaire ; rien dans le binaire ne relie une classe à un id d'event, et
+  le `.proto` n'est pas récupérable (aucun descripteur embarqué).
+
+### Reste ouvert
+
+1. **L'octet est-il un id ou une position ?** Elles ne divergent qu'en queue
+   du fichier clairsemé (position 85 = id 99, position 86 = id 114).
+   Un tir sur les octets 85, 86, 99, 114 tranche en une minute.
+2. Le reste de la charge utile est-il lu (deuxième octet = paramètre) ?
+3. `SET_PROJECT` et consorts restent bien protobuf : la lecture « octet 0 =
+   index » vaut pour les events courts (39, 41), pas pour tout le protocole.

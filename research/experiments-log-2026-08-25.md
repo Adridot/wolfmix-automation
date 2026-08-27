@@ -2,7 +2,7 @@
 
 ## Constat bloquant : W1 connecté
 
-Screenshot initial de WTOOLS (écran « LG HDR WQHD », page Settings), zoom de
+Screenshot initial de WTOOLS (page Settings), zoom de
 confirmation :
 
 - Contrôleur **W1 (série non publiée), badge vert « Connected »**.

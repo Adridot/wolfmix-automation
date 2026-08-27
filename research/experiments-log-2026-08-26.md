@@ -5,7 +5,7 @@ retractions, in `research/wpj-format-registry.md`.
 
 W1 Mk1, firmware 2.0.18, DMX outputs physically disconnected, WTOOLS closed
 throughout. Experiment project `WMX EXP format-lab`
-(`73d06df4-9b5d-5cd1-9645-51ba125f71a5`), version 1787670974700 at the start.
+(`<experiment-uuid>`), version 1787670974700 at the start.
 
 ## Corpus only, no hardware
 

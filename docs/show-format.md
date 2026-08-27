@@ -60,7 +60,7 @@ Addressed by `id`, which is the linear preset index
 | `modele` | int | ≥ 0 | id of the donor preset to **clone** into a new entry. Only on an id the donor does not have; refused on one it does. The clone carries every unknown field verbatim, which is the point. |
 | `nom` | string | **≤ 19 UTF-8 bytes** | preset name. **Enforced** — past 19 bytes the *whole project* refuses to open on the device (device-confirmed, PRESET-05), and auto-verify could not see it: the value reads back fine. |
 | `positions` | int[8] | ≥ 0 | position index per group A–H |
-| `dimmers` | int[8] | 0–255 | dimmer level per group A–H. Read by the device **only if the preset's `OTHER` toggle is on** — see the gates below. |
+| `dimmers` | int[8] | 0–255 | dimmer level per group A–H. **No measured effect**: GEN-01 wrote 120 and 0 with the `OTHER` toggle on and no dimmer channel moved. Writable, unproven — see the gates below. |
 | `masque_contenu` | int | 0–63 | `f10`, the six `PRESET EDIT` toggles: bit 0 `COLOR`, 1 `MOVE`, 2 `BEAM`, 3 `GOBO`, 4 `LIVE EDIT`, 5 `OTHER`. A **set** bit means the toggle is **off**. device-confirmed, F4-02. |
 | `pattern_couleur` | int[8] | 0–10 | `f30`, the static colour's spread mode per group; `9` = `SINGLE`. device-confirmed, F30-02. |
 | `couleur_statique` | 8 × int[] | pads 1–20 | `f31`, the static colour: for each group A–H, the pads of **that group's** palette (record 140) to light. device-confirmed. |
@@ -154,7 +154,7 @@ that already has it right.
 
 | Gate | What it silences | Where |
 |---|---|---|
-| `165.f10`, the content mask — a **set** bit means the toggle is **off** | `dimmers` are ignored unless bit 5 (`OTHER`) is clear. ACC-02 wrote dimmers into a beam-only preset and the device ignored them. **Writable since this version** via `masque_contenu`. | SPEC.md §5.3, device-confirmed |
+| `165.f10`, the content mask — a **set** bit means the toggle is **off** | bit 1 (`MOVE`) written by us **is** honoured (GEN-01). Bit 5 (`OTHER`) was supposed to gate `dimmers`, and with it clear the dimmers still did nothing — so ACC-02's silence is *not* explained by this mask after all. **Writable since this version** via `masque_contenu`. | SPEC.md §5.3 |
 | `165.f16`, the engine group masks — slices 0/1/2 = Color/Move/Beam | an FX edit is invisible for a group the engine is not enabled on. ACC-03 set `color_fx_actif` without `f16` and the device followed `f16`. | SPEC.md §5.4, correlated |
 
 `color_fx_actif` and `move_fx_actif` duplicate slices 0 and 1 of `f16`. They are

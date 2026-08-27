@@ -46,12 +46,18 @@ dimmer level and an FX speed. The values are settings, not measurements — the
 table lives at the top of `wpj_generate.py` and is meant to be retuned on the
 rig.
 
-| `energie` | family | dimmer | beam FX | speed |
+| `energie` | family | dimmer* | beam FX | speed |
 |---|---|---|---|---|
 | 0–24 | `statique` | 120 | — | — |
 | 25–49 | `faisceau` | 180 | Sparkle | 45 % |
 | 50–74 | `mouvement` | 225 | — | 110 % |
 | 75–100 | `mouvement+faisceau` | 255 | Chaser | 170 % |
+
+\* **The dimmer column has no measured effect.** GEN-01 deployed a cue with
+`f17` = 120 on one group and 0 on the others and *no* dimmer channel moved.
+The colour of a cue is device-confirmed; its intensity is not. Three readings
+are open — see `research/`, GEN-01 — and until one wins, treat the dimmer as
+selecting *which groups the cue is about*, not how bright they are.
 
 A family is a state of the first three `165.f16` engine slices — colour,
 movement, beam. All four have the **colour engine off**, which is what makes

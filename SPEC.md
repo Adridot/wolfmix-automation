@@ -373,6 +373,14 @@ The manual states what each includes: `COLOR` = Color FX **and static colours**,
 `LIVE EDIT` the corresponding parts, `OTHER` = **the group dimmer values**
 (record 165 `f17`).
 
+> **Open since GEN-01 (2026-08-27).** A preset *we wrote*, with `f10` = 14
+> (`OTHER` clear, so the toggle on) and `f17` = 120 on one group and 0 on the
+> others, changed no dimmer channel at all — the outputs stayed at 255, 220,
+> 255 across five captures. The same experiment showed bit 1 (`MOVE`) **is**
+> honoured on a preset we wrote. So `f10` is not inert; either bit 5 is not
+> `OTHER`, or `f17` is not the dimmer, or the dimmer channel carries the
+> panel's group faders rather than project data. See `research/`, GEN-01.
+
 Screen order, left to right then down. Every bit is held by at least two
 independent readings — six photographs of factory presets plus targeted writes —
 and three of them by a single-variable differential. Corpus values re-read

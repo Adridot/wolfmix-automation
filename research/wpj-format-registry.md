@@ -5931,3 +5931,76 @@ codec, pas du moteur.
 Protocole : remise sur l'**id 0** avant chaque tir — la seule entrée du projet
 qui réécrive toutes les couches — 8 s de repos, 5 s d'enveloppe, et 122 rejoué
 en fin de série comme tir de contrôle.
+
+### GEN-03 retiré, et l'anomalie 102 expliquée : la copie vive n'est pas le fichier — **[device-confirmed]**
+
+Le déploiement de GEN-03 a été **refusé** par le runner : `projectChanged` était
+vrai. L'opérateur a sauvegardé, et le diff de cette sauvegarde contre les octets
+exactement déployés répond à la question que GEN-03 devait poser. **Le
+discriminateur est retiré sans être tiré** — les cinq cues restent construites
+et vérifiées, elles ne servent plus.
+
+Un seul preset sur 88 voit ses `dimmers` ou ses `positions` changer, et c'est
+**102** :
+
+```
+102  dimmers   [0, 120, 0, 0, 0, 0, 0, 0]  ->  [255, 255, 255, 255, 255, 255, 255, 255]
+102  positions [1, 1, 1, 1, 1, 1, 1, 1]    ->  [4, 1, 1, 1, 1, 1, 1, 1]
+```
+
+Sa **copie vive** portait donc `f17` = 255 partout, pas le 120 du fichier. Et à
+`f17` = 255 le modèle de GEN-02 prédit exactement ce qui a été mesuré, sans un
+paramètre libre : groupe A → `f6` = **220**, groupe C → **255**, bleu →
+**255**. L'anomalie n'a jamais eu de rapport avec `f31`.
+
+> **La copie vive diverge du fichier, en silence.** Tout ce qu'un rappel mesure,
+> il le mesure sur la copie vive. Mes trois cues étaient identiques *dans le
+> fichier* — relu deux fois, champ par champ — et l'une d'elles ne l'était plus
+> dans l'appareil. `f10` bit 4 (`LIVE EDIT`) est **allumé** sur les cues du
+> générateur, donc un geste au panneau écrit dedans. Le seul moyen de voir la
+> divergence est une sauvegarde suivie d'un téléchargement.
+
+C'est un cinquième piège de mesure, et le plus coûteux rencontré ici : il a
+produit une anomalie parfaitement reproductible — trois tirs, deux séries
+indépendantes — qui pointait vers le mauvais champ. La reproductibilité ne
+protège de rien quand c'est l'état, et non la mesure, qui est stable.
+
+**Conséquence pour le générateur** : une cue destinée à une mesure doit porter
+`LIVE EDIT` **éteint** (bit 4 de `f10` mis), sinon le panneau peut la réécrire
+entre le déploiement et le tir.
+
+### Ce que la sauvegarde apprend en plus, gratuitement
+
+L'écriture de l'appareil sur un fichier que **nous** avons écrit est une source
+rare. Records touchés : 115 et 165, plus le compteur de version.
+
+**`f16` tranche 5 = le masque des groupes que le preset adresse.**
+**[validated]** — refute la lecture « tranche 5 = 255 toujours »
+(`correlated`, 2446 presets). Nos clones héritaient du 255 du modèle ;
+l'appareil les a corrigés :
+
+| Preset | groupes que la cue allume | tranche 5 avant | après |
+|---|---|---|---|
+| 100, 101 | B | 255 | **2** = B |
+| 103, 104, 105 | A, B, C | 255 | **7** = A+B+C |
+| 102 | *ses dimmers vifs sont à 255 partout* | 255 | **255**, inchangé |
+
+Le contrôle est dans l'exception : 102 est le seul preset dont la tranche 5 ne
+bouge pas, et c'est le seul dont la copie vive allume les huit groupes. Le
+corpus était uniforme à 255 parce que **rien n'y avait jamais varié** — le
+piège de l'uniformité, pour la troisième fois dans ce registre, et cette fois
+c'est le graveur de l'appareil qui l'a cassé.
+
+**Le graveur de l'appareil écrit `165.f1` = le nombre d'entrées** : 82 → **88**,
+et il y avait bien 88 entrées des deux côtés. Ça ne contredit pas PRESET-01 —
+`f1` ne *gate* rien à la lecture — mais ça dit ce que l'appareil, lui, y met.
+
+**Il émet aussi les quatre tableaux de l'écran STATIC GOBO sur les 88 presets**,
+à leurs valeurs par défaut, là où le fichier d'origine les omettait :
+`gobo_focus` = 50, `gobo_zoom` = 100, `gobo_iris` = 100, `gobo_prism` = 0.
+Un champ absent n'est pas un champ à zéro, et l'appareil le rend explicite.
+
+**Record 115, entrées de luminaire** : `f6` = 94 et `f7` = 187 — identiques sur
+les vingt entrées du fichier d'origine — disparaissent, remplacés par `f9` =
+**l'index séquentiel du luminaire** (0 omis, puis 1…19). **[observed]** : une
+migration de schéma par le graveur du firmware, sur laquelle rien n'est conclu.

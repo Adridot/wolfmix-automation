@@ -20,6 +20,8 @@ MAX_DEPTH_DEFAULT = 6
 def read_varint(buf, i):
     v = shift = 0
     while True:
+        if i >= len(buf):
+            raise ValueError(f"varint tronqué à {i}")   # fin de tampon : pas du protobuf
         b = buf[i]
         i += 1
         v |= (b & 0x7F) << shift
@@ -117,6 +119,12 @@ def demo():
         raise AssertionError("aurait dû rejeter")
     except ValueError:
         pass
+    for tronque in (b"\x08", b"\x08\x80", b"\x12\x05abc"):
+        try:
+            walk(tronque, 0, 3)
+            raise AssertionError(f"aurait dû rejeter {tronque!r}")
+        except ValueError:
+            pass                       # tampon tronqué -> ValueError, jamais IndexError
     print("self-check ok", file=sys.stderr)
 
 

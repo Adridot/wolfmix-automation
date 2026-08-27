@@ -10,6 +10,9 @@ La liste des motifs interdits vit HORS du dépôt, sinon le garde-fou publierait
 exactement ce qu'il protège : un fichier `.wpj-private-names` (git-ignoré) à la
 racine, ou $WPJ_PRIVATE_NAMES. Un motif par ligne, insensible à la casse,
 syntaxe d'expression régulière Python ; `#` en début de ligne = commentaire.
+Un motif préfixé `cs:` est comparé en respectant la casse — indispensable quand
+le nom propre interdit s'écrit comme un mot courant du code (« Marche », le
+lieu, contre « marche », le verbe).
 
 Sans liste, le contrôle s'abstient (exit 0) et le dit — comme les self-checks
 sans corpus.
@@ -35,7 +38,15 @@ def motifs(chemin=None):
             lignes = [l.strip() for l in flux]
     except OSError:
         return []
-    return [re.compile(l, re.I) for l in lignes if l and not l.startswith("#")]
+    regles = []
+    for ligne in lignes:
+        if not ligne or ligne.startswith("#"):
+            continue
+        if ligne.startswith("cs:"):
+            regles.append(re.compile(ligne[3:]))
+        else:
+            regles.append(re.compile(ligne, re.I))
+    return regles
 
 
 def fichiers_suivis():
@@ -71,6 +82,17 @@ def demo():
         trouves = controle([sale], regles)
         assert [(n, m) for _, n, m in trouves] == [(2, "interdit"), (3, r"\b12345\b")], trouves
         assert motifs(os.path.join(tmp, "absent")) == []
+        # cs: = sensible à la casse, pour un nom propre homographe d'un mot courant
+        liste = os.path.join(tmp, "noms")
+        open(liste, "w").write("# commentaire\ncs:\\bMarche\\b\nautre\n")
+        cs, insensible = motifs(liste)
+        propre2 = os.path.join(tmp, "verbe.md")
+        open(propre2, "w").write("le décodeur marche sur ce fichier\n")
+        assert controle([propre2], [cs]) == []
+        sale2 = os.path.join(tmp, "nom-propre.md")
+        open(sale2, "w").write("les projets Marche\n")
+        assert len(controle([sale2], [cs])) == 1
+        assert insensible.flags & __import__("re").I
     print("self-check ok : détection, casse ignorée, absence de liste tolérée",
           file=sys.stderr)
 

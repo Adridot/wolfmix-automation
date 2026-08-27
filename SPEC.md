@@ -662,7 +662,7 @@ The fixture → group assignment itself is `115[r].f4`, mirrored on every patch
 entry as `105[e].f6`: 457/457 fixture rows agree across 27 files, checked by
 `groupe_fixture` in `tools/wpj_identities.py`.
 
-**[observed]** The 7th byte of `f4` is `0x30` in the *Porte* projects and `0x38`
+**[observed]** The 7th byte of `f4` is `0x30` in the *rig-a* family and `0x38`
 in the rig-c family — a per-project constant replicated on all 9 items,
 correlating with record 151 being populated.
 

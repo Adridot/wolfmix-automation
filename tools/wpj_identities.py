@@ -143,6 +143,34 @@ def moteurs_f16(w):
             f"{actif} dans {h['hex']}"
 
 
+def tranche5_f16(w):
+    """165.f16 tranche 5 == le masque des groupes dont le dimmer f17 est non nul.
+
+    Le registre lisait « tranche 5 = 255 toujours » sur 2446 presets. C'était
+    le piège de l'uniformité : dans tout le corpus, `f17` vaut [255]×8, donc le
+    masque vaut 255 et rien ne pouvait varier. Le graveur de l'appareil l'a
+    cassé en récrivant un fichier que nous avions écrit (registre, « GEN-03
+    retiré ») : sur des cues qui n'allument qu'un groupe, il a mis la tranche 5
+    à 2 = B, et à 7 = A+B+C sur celles qui en allument trois.
+
+    L'identité est donc trivialement vraie sur le corpus et discriminante sur
+    tout fichier où un preset n'allume pas tous les groupes — le nôtre, ou
+    n'importe quel projet où l'opérateur a éteint un groupe dans un preset.
+    Déposez-en un dans `corpus/` et cette assertion le vérifiera.
+    """
+    for pre in _items(w, 165):
+        h, d = pre.get("f16"), pre.get("f17")
+        if not h or not d:
+            continue
+        gros = int.from_bytes(bytes(_varints(h["hex"])), "little")
+        tranche = (gros >> (9 * 5)) & 0x1FF
+        dimmers = _varints(d["hex"])
+        attendu = sum(1 << i for i, v in enumerate(dimmers[:8]) if v)
+        assert tranche == attendu, \
+            f"165.f16 : tranche 5 = {tranche} mais les dimmers non nuls " \
+            f"donnent {attendu} ({dimmers})"
+
+
 def plages_111(w):
     """111.f1/f2 = bornes DMX d'une plage, et tout canal tombe dans un cas.
 
@@ -483,7 +511,8 @@ def ajout_de_preset():
 
 
 IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
-              groupe_fixture, moteurs_f16, plages_111, roles_106,
+              groupe_fixture, moteurs_f16, tranche5_f16,
+              plages_111, roles_106,
               ordre_fixtures_115, bornes_106, tranches_151,
               tableaux_par_groupe_165, f4_autorise_les_moteurs,
               schema_du_prefixe, canal_principal_110, noms_de_preset_bornes)

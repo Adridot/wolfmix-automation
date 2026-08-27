@@ -37,6 +37,7 @@ twenty ambiances simply spill onto the next page.
 | `groupes` | array of `"A"`…`"H"` | which groups light; default = every group that has a fixture |
 | `position` | string | a named position from record 150, e.g. `"Crowd"` |
 | `dimmer` | int 0–255 | override the ladder's dimmer level; energy says how busy the cue is, this says how bright |
+| `live_edit` | bool | `false` locks the cue against panel edits. Default: inherit the template's. **Set it `false` for any cue you intend to measure** — with LIVE EDIT on, a gesture at the panel rewrites the cue's *live copy* while the file stays exactly as deployed, and a recall then measures something else (GEN-03). |
 | `modele` | int | force a template preset id instead of the one the ladder picks |
 
 ## The energy ladder

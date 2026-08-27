@@ -63,7 +63,7 @@ PALIERS = (
 )
 _INTENTION_CLES = ("base", "nom", "page", "ambiances")
 _AMBIANCE_CLES = ("nom", "energie", "couleur", "groupes", "position",
-                  "modele", "dimmer")
+                  "modele", "dimmer", "live_edit")
 
 
 # --- lecture du rig ----------------------------------------------------------
@@ -222,7 +222,8 @@ def composer(intention):
                   "dimmers": [dimmer if g in lus else 0
                               for g in range(len(GROUPES))],
                   "masque_contenu": _masque(mouvement or "position" in amb,
-                                            faisceau, rig, modele)}
+                                            faisceau, rig, modele,
+                                            amb.get("live_edit"))}
         if rgb is not None:
             entree["couleur_statique"] = pads
             entree["pattern_couleur"] = [SINGLE] * len(GROUPES)
@@ -266,12 +267,22 @@ def _coupe(nom):
     return "?"
 
 
-def _masque(mouvement, faisceau, rig, modele):
+def _masque(mouvement, faisceau, rig, modele, live_edit):
     """`f10` : COLOR et OTHER allumés (la couleur et les dimmers écrits sont
-    lus), MOVE/BEAM selon la famille, GOBO éteint — on n'écrit pas de gobo —
-    et LIVE EDIT repris du modèle, dont la sémantique n'est pas établie."""
+    lus), MOVE/BEAM selon la famille, GOBO éteint — on n'écrit pas de gobo.
+
+    LIVE EDIT est repris du modèle par défaut. `live_edit: false` l'éteint —
+    à faire pour toute cue destinée à une mesure : allumé, un geste au panneau
+    réécrit la copie vive de la cue **sans toucher au fichier**, et le rappel
+    mesure alors autre chose que ce qu'on croit avoir déployé. Ça a coûté une
+    anomalie parfaitement reproductible qui pointait vers le mauvais champ
+    (registre, « GEN-03 retiré »).
+    """
     src = next((p for p in rig["presets"] if p.get("id", 0) == modele), {})
-    masque = src.get("masque_contenu", 0) & (1 << BIT_LIVE)
+    if live_edit is None:
+        masque = src.get("masque_contenu", 0) & (1 << BIT_LIVE)
+    else:
+        masque = 0 if live_edit else 1 << BIT_LIVE
     masque |= 1 << BIT_GOBO
     if not mouvement:
         masque |= 1 << BIT_MOVE
@@ -402,6 +413,13 @@ def _demo_sur(base):
     for p in spec["presets"]:
         assert not p["masque_contenu"] & (1 << BIT_COLOR)
         assert not p["masque_contenu"] & (1 << BIT_OTHER)
+    # live_edit: false verrouille la cue contre une réécriture au panneau
+    verrou, _ = composer({**intention, "ambiances": [
+        {**intention["ambiances"][0], "live_edit": False}]})
+    assert verrou["presets"][0]["masque_contenu"] & (1 << BIT_LIVE)
+    ouvert, _ = composer({**intention, "ambiances": [
+        {**intention["ambiances"][0], "live_edit": True}]})
+    assert not ouvert["presets"][0]["masque_contenu"] & (1 << BIT_LIVE)
     with tempfile.TemporaryDirectory() as tmp:
         out = os.path.join(tmp, "gen.wpj")
         diffs = wpj_show.compiler(spec, out)

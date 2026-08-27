@@ -5365,3 +5365,53 @@ précédente.
 Note sur les ids hauts : l'octet **200** franchit bien 0x7f et se comporte
 comme un id absent ordinaire. Un id existant supérieur à 127 (pages 7 à 10)
 reste **non testé** — aucun projet du corpus n'en contient.
+
+## SCREEN-03 — la façade cède aux touches, pas à `SET_MODE` : deux chemins distincts — 2026-08-27 — **[device-confirmed]**
+
+Rejeu à l'identique de la séquence de SCREEN-02, sur une **autre copie vive**
+(le fichier à 6 entrées, ouvert entre-temps au panneau) : ouvrir 26, envoyer
+0, puis 5, puis 16, chaque fois depuis l'écran Projects.
+
+**L'écran est resté sur Projects pour les trois.** SCREEN-02 n'était donc pas
+un artefact d'état : ni le projet vif, ni le modal hérité de l'écran USB de la
+nuit n'y étaient pour quelque chose. La table tient.
+
+### Ce que les LED ont montré en plus
+
+L'opérateur regardait la façade entière, pas seulement l'écran :
+
+| Index envoyé | LED de la touche | Écran |
+|---|---|---|
+| 0 (HOME) | **s'allume, puis s'éteint** | inchangé |
+| 5 (PRESETS) | **s'allume, puis s'éteint** | inchangé |
+| 16 (SETUP) | rien de visible — le menu principal est une icône tactile, sans touche dédiée | inchangé |
+| 1 (COLOR FX) | s'allume **et reste allumée** | suit |
+
+Les **pads** changeaient aussi pendant la séquence. On a donc maintenant
+**quatre** choses qui bougent indépendamment : le mode rapporté par
+`GET_SETTINGS`, les LED des touches, les pads, et l'écran. Là où un mode
+« prend », tout suit ; là où il ne prend pas, la LED s'allume puis retombe —
+le firmware accepte la commande, puis la façade reprend la main.
+
+### Le fait qui compte pour la télécommande
+
+Au **panneau**, l'opérateur rapporte que depuis l'écran Projects les touches
+live — WOLF et SPEED comprises — affichent bien leur écran, **et HOME aussi**.
+Par le **protocole**, ni 0 ni 5 ni 16 n'y parviennent.
+
+> **Appuyer sur une touche et envoyer `SET_MODE` ne sont pas le même chemin.**
+> La touche traverse le modal ; l'index ne le traverse que pour les modes qui
+> agissent sur la lumière.
+
+Ça referme la spéculation ouverte en séance (« si HOME sort maintenant, la
+section décrit un état ») : **non**, le HOME qui sortait était la *touche*, pas
+l'index. Et ça renforce RELOAD-04 par un quatrième angle : le protocole
+n'atteint même pas la puissance des touches physiques, alors que ce sont ces
+touches — encodeur, validation — qu'il faudrait pour recharger un projet
+depuis l'écran Open.
+
+Réserve : « la LED s'allume puis s'éteint » est une observation à l'œil, non
+instrumentée ; `GET_SETTINGS` interrogé 1 s puis 5 s après l'envoi rendait, lui,
+l'index envoyé dans les deux cas (SCREEN-01). Le mode rapporté et la LED ne
+disent donc pas la même chose, et rien n'a encore mesuré lequel des deux suit
+le moteur.

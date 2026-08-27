@@ -6950,3 +6950,56 @@ en capturant un preset.
 Un sélecteur partagé en masque prédit `1 → 3`, ce qui le rend distinguable d'un
 « rien ne bouge » ; c'était le point faible de la formulation initiale du
 discriminateur, où « partagé » et « rien » rendaient la même trame.
+
+### F7-02 mesuré — la rivale à p = 0,25 gagne, et le compteur de version ment — **[validated]**
+
+Téléchargement après la sauvegarde. Le fichier fait toujours 45054 octets et
+**vingt et un octets** le séparent du précédent :
+
+```
+positions 0–19  : l'en-tête SHA-1, recalculé par construction
+position     40 : l'octet de poids faible du compteur de version, …666 -> …667
+ailleurs        : RIEN, sur 45054 octets
+```
+
+Les 87 presets sont identiques champ par champ. `f7` n'a pas bougé — id 1 reste
+`[0,1,0,…]`, id 82 reste `[0,1,1,…]` — et `f3`, `f23`, `f27` restent nuls.
+
+| Lecture publiée | p | Verdict |
+|---|---|---|
+| un sélecteur par moteur — `f23` prend le mouvement | 0,4 | **non testée** : le tir n'est pas allé jusqu'à elle |
+| sélecteur partagé en masque par moteur, `1 → 3` | 0,2 | **réfutée** : `f7[C]` reste 1 |
+| c'est `f3` ou `f27` | 0,1 | **réfutée** : les deux restent nuls |
+| **rien ne bouge : la page est de l'état vif, qu'une sauvegarde de projet n'écrit pas** | **0,25** | **tenue, à l'octet près** |
+
+> **Confirmation propre de la règle de SPEC §5.6.** Un réglage de page fait au
+> panneau ne quitte pas l'état vif : la sauvegarde de projet ne l'écrit pas dans
+> le record 165. Seule une **capture de preset** — `SHIFT` + tap sur un pad — le
+> fait, et c'est bien ainsi que la cue 82 avait reçu son `f7`. C'est un
+> différentiel à une seule variable, et son résultat tient sur un octet.
+
+**La question du sélecteur du Move FX reste donc entière.** Elle n'est pas
+réfutée, elle n'a pas été posée : il faut refaire le geste en **capturant** la
+cue dans un preset.
+
+### Le compteur de version s'incrémente sur une sauvegarde qui n'écrit rien — **[validated]**
+
+Le compteur des octets 40–47 est passé de `1787841428666` à `1787841428667`,
+l'appareil rapporte la nouvelle version, `projectChanged` est retombé à `false`
+— et **pas un octet de donnée n'a changé**.
+
+`AGENTS.md` porte la consigne : « si le compteur n'a pas bougé, rien n'a été
+écrit ». Elle reste vraie. **Sa réciproque est fausse, et c'est nouveau** : un
+compteur qui s'incrémente ne prouve **pas** qu'une donnée a changé. Le piège
+avait déjà été mal lu deux fois sur une seule expérience, dans les deux sens ;
+voici le troisième cas, celui où le compteur dit « oui » et le contenu dit
+« non ».
+
+Conséquence pratique : le compteur est un oracle **négatif** et rien d'autre.
+Pour savoir si quelque chose a changé, il faut comparer les records.
+
+**Une réserve, et elle coûte un regard.** Ce fichier ne peut pas distinguer
+« l'édition est restée dans l'état vif » de « l'édition n'a jamais pris au
+panneau ». Les deux rendent le même octet. L'écran `HOME` les sépare
+immédiatement : si le groupe C y affiche `MOVE FX2`, l'édition a pris et c'est
+bien la première lecture.

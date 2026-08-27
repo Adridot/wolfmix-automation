@@ -145,8 +145,11 @@ predictions were wrong, and each was worth more than a vague success.
 - **Creating a preset does not save the project.** Nor does any other UI edit
   until the operator performs the separate project save. Read the `uint64` at
   offsets 40–47 before and after: if it has not incremented, nothing was
-  written, whatever the screen shows. That counter has been misread twice on one
-  experiment, in opposite directions — check it, do not assume it.
+  written, whatever the screen shows. **The converse is false** — on 2026-08-27
+  a save incremented that counter and left all 45054 payload bytes identical
+  (F7-02), so an increment proves nothing about the content. It is a
+  **negative** oracle only; to know whether anything changed, diff the records.
+  Misread three times now, in all three directions — check it, do not assume it.
 - **A probe that cannot separate "nothing moved" from "the same thing was
   repainted" proves nothing.** Two separately captured DMX envelopes cannot tell
   those apart, which is how RECALL-01 first concluded that preset recalls were

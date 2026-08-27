@@ -101,6 +101,14 @@ measurement, that is stable.** A cue meant to be measured carries `LIVE EDIT`
 **off**, and a session that ends in doubt ends with a panel save and a
 download.
 
+### The version counter is a negative oracle only
+
+The `uint64` at offsets 40–47 increments when the controller saves. If it has
+**not** moved, nothing was written — that direction holds. The other direction
+does not: on 2026-08-27 a save incremented it while leaving all 45054 payload
+bytes identical (F7-02). An increment says a save happened, never that the
+content changed. Diff the records.
+
 ## A status can go back down
 
 Promotion is not one-way. On 2026-08-27 a `device-confirmed` reading of the

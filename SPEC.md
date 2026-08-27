@@ -638,7 +638,10 @@ exactly the shape GEN-02 measured for `f17` through `106.f5`/`f6`. `f3`, `f7`,
 either (FW-02).
 
 These are **live state** until a preset captures them: a project save alone does
-not write them, only `SHIFT` + tapping a preset does.
+not write them, only `SHIFT` + tapping a preset does. **[validated] (F7-02)** —
+a page reassignment made at the panel and then saved left all 45054 bytes of the
+project identical but for the version counter's low byte and the SHA-1 header it
+forces. One byte of payload, and record 165 untouched.
 
 **`f7` is the per-group Colour FX page selector, `0` = `FX1` and `1` = `FX2` —
 [validated] (F7-01).** A preset composed at the panel came back with

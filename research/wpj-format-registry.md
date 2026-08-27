@@ -4747,15 +4747,15 @@ Réserves explicites, et elles comptent :
 - L'ordre exact du parcours (positions ? pages ? entrées vides sautées ?)
   n'est **pas** établi. Le test ne repose que sur « moins d'entrées ⇒
   répétitions plus tôt ».
-- **Le bras positif de l'instrument n'a jamais été observé.** Toutes les
-  lectures produites à ce jour valent 10/10 ; que six entrées donnent bien
-  ≤ 6 apparences est une déduction par tiroirs, pas une mesure.
-- Une répétition pourrait **ne pas ressembler à une répétition** : RECALL-02
-  a mesuré une même entrée rendant des trames très éloignées selon l'état
-  sous-jacent (presets partiels). Le falsificateur n'est donc pas garanti de
-  se déclencher.
-Calibration qui lèverait les deux dernières réserves, une minute : ouvrir au
-panneau le fichier à 6 entrées déjà en mémoire, puis compter dix skips.
+- ~~Le bras positif de l'instrument n'a jamais été observé.~~ **Levé le
+  2026-08-27, voir RELOAD-05** : sur la copie vive à 6 entrées, la même série
+  rend 8 apparences sur 10, et les quatre paires distantes de six skips sont
+  les quatre plus proches de la série. Le parcours est cyclique, de période
+  égale au nombre d'entrées.
+- Une répétition peut **ne pas ressembler à une répétition** — vérifié : deux
+  des quatre retours au même preset diffèrent de 16 et 31 canaux (phase des
+  effets). Le seuil sous-compte, d'où le falsificateur reformulé en
+  « moins de 10 apparences **et** une périodicité dans les distances ».
 
 ## RELOAD-02 mesuré — une poussée WTOOLS ne remplace pas la copie vive — 2026-08-27
 
@@ -5280,3 +5280,88 @@ pilote macOS, ou l'ouverture du tty elle-même. Consigne pratique, et rien de
 plus : **relancer la commande**. Documenté ainsi dans `docs/device.md` ; pas
 de nouvelle logique de retry dans l'outil tant que la cause n'est pas
 comprise — un retry masquerait aussi les vraies pannes.
+
+## RELOAD-05 — l'instrument est calibré sur ses deux bras — 2026-08-27 — **[device-confirmed]**
+
+Réserve levée : le discriminateur « apparences distinctes sur 10
+`SKIP_PRESET` » n'avait jamais été vu se déclencher. L'opérateur a ouvert au
+panneau le fichier à **6 entrées**, et la même série a été rejouée.
+
+| Copie vive | Apparences distinctes / 10 skips |
+|---|---|
+| 87 entrées | **10 / 10**, trois fois (avant poussée, après poussée, après deploy+RESTART) |
+| **6 entrées** | **8 / 10**, avec répétitions |
+
+Et le parcours se lit à nu dans les distances. Les quatre paires séparées de
+**six** skips sont, de très loin, les plus proches de toute la série :
+
+| Paire | Canaux d'écart |
+|---|---|
+| skip 2 vs 8 | **0** |
+| skip 3 vs 9 | **0** |
+| skip 4 vs 10 | 16 |
+| skip 1 vs 7 | 31 |
+| … toute autre paire | 60 au minimum, **médiane 79** |
+
+**`SKIP_PRESET` parcourt donc les entrées en cycle, de période égale à leur
+nombre.** La prémisse du discriminateur n'est plus une déduction par tiroirs :
+elle est mesurée.
+
+**Et la réserve de l'audit se vérifie dans le même jeu** : deux des quatre
+retours au même preset ne rendent **pas** la même trame (16 et 31 canaux
+d'écart — la phase des effets animés). Le seuil « moins de 8 canaux »
+sous-compte : le vrai cycle est 6, l'instrument affiche 8. Le falsificateur
+correct n'est donc pas « ≤ 6 apparences » mais **« moins de 10, et une
+périodicité dans les distances »**. Avec cette formulation, la séparation
+reste franche : 10/10 contre 8/10, et un rang de périodicité qui saute aux
+yeux d'un côté et n'existe pas de l'autre.
+
+Ce que ça consolide : **RELOAD-02, RELOAD-03 et le verdict RELOAD-04**
+reposaient sur cet instrument. Son bras positif est maintenant démontré sur
+le même appareil, le même jour, avec le fichier même qui servait de cible.
+
+## RECALL-04 — un id absent ne fait rien — 2026-08-27 — **[device-confirmed]**
+
+La copie vive est le fichier à **6 entrées, ids 0..5** : aucun trou intérieur,
+donc tout id ≥ 6 est absent, et les deux lectures rivales prédisent des
+choses opposées — no-op laisse la trame de la remise, plancher comme écrêtage
+la remplacent par celle de l'id 5.
+
+Précautions tirées des échecs de la matinée : historique constant, **remise
+longue (8 s)** contre le rappel avalé, et jugement à l'**enveloppe** — trois
+statistiques insensibles à la phase : canaux non nuls, canaux animés, somme
+des maxima.
+
+| Tir | Non nuls | Animés | Somme des max |
+|---|---|---|---|
+| `0 → 0` (la remise elle-même) | 122 | 0 | **18516** |
+| `0 → 3` | 148 | 96 | 28652 |
+| `0 → 5` | 122 | 60 | **21753** |
+| `0 → 50` | 122 | 0 | **18516** |
+| `0 → 200` | 122 | 0 | **18516** |
+| `0 → 5` (répétition) | 122 | 60 | **21753** |
+| `0 → 0` (répétition) | 122 | 0 | **18516** |
+
+Les ids absents 50 et 200 rendent **exactement** la signature de la remise,
+au chiffre près, deux fois. L'id 5 rend une signature nettement autre, elle
+aussi reproduite au chiffre près.
+
+> **Règle, corrigée :** `SET_PRESET`, charge utile = **un octet = l'id du
+> preset**. Un id existant rappelle son preset. **Un id absent ne fait
+> rien** — pas de plancher, pas d'écrêtage sur la dernière entrée.
+
+Le rival proposé par l'audit l'emporte donc en entier, et les zéros de la
+matrice de RECALL-03 (85 ≡ 84, 200 ≡ 114) s'expliquent enfin sans rien
+inventer : les tirs étaient en ordre croissant, un no-op laisse la trame
+précédente.
+
+**Deux acquis de méthode**, chèrement payés :
+- la statistique qui marche sur ce rig est l'**enveloppe agrégée** (non nuls,
+  animés, somme des maxima), pas la trame unique — deux répétitions y sont
+  identiques au chiffre près là où la trame variait de 32 canaux ;
+- **8 s de remise** suffisent à faire disparaître le rappel avalé qui avait
+  ruiné les essais depuis l'id 114. Le délai exact reste non caractérisé.
+
+Note sur les ids hauts : l'octet **200** franchit bien 0x7f et se comporte
+comme un id absent ordinaire. Un id existant supérieur à 127 (pages 7 à 10)
+reste **non testé** — aucun projet du corpus n'en contient.

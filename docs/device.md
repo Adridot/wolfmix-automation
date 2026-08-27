@@ -38,12 +38,11 @@ Events used: `GET_PROFILE_LIST` 2, `GET_PROFILE` 3, `GET_PROJECT_LIST` 4,
 `payload[0]` as the index: one raw byte, nothing else. A protobuf-shaped
 `[tag, value]` pair makes the controller read the *tag* — `f1=<anything>`
 recalls id 8, `f2=<anything>` id 16. For `preset`, the byte is the preset
-**id** (`id = (page-1)*20 + (slot-1)`), not the entry position. What a
-*missing* id does is **open**: the reading published earlier that day (it
-floors to the greatest existing id below) was withdrawn the same day — a
-no-op reproduces the same measurements, and the runs meant to separate them
-were confounded by partial presets, by animation phase, and by a recall
-swallowed after a reset. Ids beyond 127 have never been sent. For `mode`, the index is usually the mode reached, but not always —
+**id** (`id = (page-1)*20 + (slot-1)`), not the entry position, and **a
+missing id does nothing** — no floor, no clamp to the last entry (RECALL-04,
+measured on a six-entry live copy where every id above 5 is missing). An
+existing id above 127 is still untested: no project in the corpus has one.
+For `mode`, the index is usually the mode reached, but not always —
 index 40 lands on 42 — and a raw index can open a screen the panel menu does
 not expose, some of which act on entry (mode 42 tries to read a USB medium).
 See `research/wpj-format-registry.md`, sections RAW-01 and RECALL-03.

@@ -6923,3 +6923,30 @@ C'est aussi ce qui a tué l'identité `deux_pages_fx` : elle supposait qu'un
 moteur allumé implique deux réglages distincts, alors que **la page est une
 affectation, pas une configuration**. Les deux notions sont indépendantes, et
 c'est la même confusion que celle entre `f16` et `f7` ci-dessus.
+
+### F7-02 — le sélecteur est-il par moteur ? Prédiction publiée avant lecture — 2026-08-27
+
+L'opérateur a mis le groupe **C en `MOVE FX2`** et sauvegardé. Le fichier n'a pas
+encore été téléchargé au moment où ces lignes sont écrites.
+
+État de départ, celui de la cue 82 déjà mesurée : `f7` = `[0, 1, 1, 0, 0, 0, 0, 0]`
+(A en `COLOR FX1`, B et C en `COLOR FX2`), `f23` = `0000000000000000`, moteur
+mouvement **éteint** (tranche 1 de `f16` = 0).
+
+| Lecture | `f7` élément 2 | `f23` élément 2 | p |
+|---|---|---|---|
+| **un sélecteur par moteur** — `f7` couleur, `f23` mouvement | reste **1** | devient **1** | 0,4 |
+| un sélecteur partagé, en **masque par moteur** (bit 0 couleur, bit 1 mouvement) | **1 → 3** | reste 0 | 0,2 |
+| c'est `f3` ou `f27` qui porte le mouvement — ma répartition est encore fausse | reste 1 | reste 0, mais l'un des deux autres bouge | 0,1 |
+| **rien ne bouge dans le record 165** : la page est de l'état vif, et une sauvegarde de projet ne l'écrit pas — seul un `SHIFT` + tap sur un pad le fait (SPEC §5.6) | reste 1 | reste 0 | **0,25** |
+| autre chose | — | — | 0,05 |
+
+La quatrième rivale n'est pas un remplissage : c'est la règle que SPEC énonce
+déjà pour cette famille de champs, et la cue 82 n'avait reçu son `f7` que parce
+qu'un preset avait été **capturé**. Si elle gagne, le résultat est une
+confirmation de la règle et non un échec du tir — et il faudra refaire le geste
+en capturant un preset.
+
+Un sélecteur partagé en masque prédit `1 → 3`, ce qui le rend distinguable d'un
+« rien ne bouge » ; c'était le point faible de la formulation initiale du
+discriminateur, où « partagé » et « rien » rendaient la même trame.

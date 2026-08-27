@@ -39,6 +39,12 @@ So an identity that holds on every file is strong enough to **kill** a
 hypothesis. It is not by itself enough to promote one. Derived files inherit
 their parent's structure; they are not independent evidence.
 
+And count what is **distinct**, not what is present. The 45 files hold 3697
+preset occurrences but only **352 presets distinct by content**: the derived
+files replicate the same entries. A correlation announced as "54 for 54" was
+four presets copied into thirty-three files (F7-01). Check that ratio before
+publishing any count.
+
 ## The differential protocol
 
 Software-only, no device connected. This is how EXP-01…05 in

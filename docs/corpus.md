@@ -65,7 +65,7 @@ that everything passed. With a corpus present you get the real thing:
 ```
 self-check ok : round-trip octet-identique sur 45 fichiers
 fidélité octet vérifiée sur 45 fichiers variante A
-18 identités vérifiées sur 45 fichiers variante A (+ paires F30-04 / FLASH-09)
+17 identités vérifiées sur 45 fichiers variante A (+ paires F30-04 / FLASH-09)
 ```
 
 ## What makes a good corpus

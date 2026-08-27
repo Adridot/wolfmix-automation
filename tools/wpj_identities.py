@@ -153,11 +153,11 @@ def tranche5_f16(w):
     retiré ») : sur des cues qui n'allument qu'un groupe, il a mis la tranche 5
     à 2 = B, et à 7 = A+B+C sur celles qui en allument trois.
 
-    Contestée, et il faut le savoir avant de s'appuyer dessus : si les tranches
-    3/4/5 sont les SECONDS moteurs (couleur, mouvement, faisceau), la tranche 5
-    est le masque de Beam FX 2 et non les groupes adressés. Les deux lectures
-    sont indiscernables sur le corpus. Seule la sauvegarde de GEN-03 les sépare,
-    sur un fichier (registre, « FX2-01 »).
+    Contestation levée le 2026-08-27 (registre, « FX2-01 mesuré ») : sur un
+    preset que L'APPAREIL a créé de zéro — pas un clone du nôtre — la tranche 5
+    vaut 2 = B, exactement le seul groupe dont `f17` est non nul, alors que le
+    moteur faisceau est ÉTEINT. La lecture rivale « tranche 5 = masque de
+    Beam FX 2 » ne survit pas à ça.
 
     L'identité est donc trivialement vraie sur le corpus et discriminante sur
     tout fichier où un preset n'allume pas tous les groupes — le nôtre, ou
@@ -175,37 +175,6 @@ def tranche5_f16(w):
         assert tranche == attendu, \
             f"165.f16 : tranche 5 = {tranche} mais les dimmers non nuls " \
             f"donnent {attendu} ({dimmers})"
-
-
-def deux_pages_fx(w):
-    """Un moteur d'effet allumé stocke DEUX configurations, pas une.
-
-    « Double Trouble » (firmware 2.0) double les moteurs : deux Color FX, deux
-    Move FX, deux Beam FX. Le record 165 porte les deux slots — `f1`/`f2`
-    faisceau, `f5`/`f6` couleur, `f21`/`f22` mouvement — et sur tout le corpus,
-    dès que la tranche `f16` du type est non nulle, le slot 2 diffère du slot 1 :
-    738/738 en couleur, 1439/1439 en mouvement, 1186/1186 en faisceau, zéro
-    exception. L'inverse est faux — 54 presets portent deux slots différents
-    avec la tranche à zéro — donc l'implication ne va que dans un sens.
-
-    Ce qui reste NON attribué, et que cette identité ne prétend pas couvrir :
-    quel masque affecte des groupes au DEUXIÈME moteur. Les tranches 3 et 4 sont
-    nulles sur les 3697 presets du corpus (registre, « FX2-01 »).
-    """
-    for pre in _items(w, 165):
-        h = pre.get("f16")
-        if not h:
-            continue
-        gros = int.from_bytes(bytes(_varints(h["hex"])), "little")
-        # `_items` rend les clés brutes : slot 1 / slot 2 par numéro de champ.
-        for i, nom, a, b in ((0, "color", "f5", "f6"),
-                             (1, "move", "f21", "f22"),
-                             (2, "beam", "f1", "f2")):
-            if not (gros >> (9 * i)) & 0x1FF:
-                continue
-            assert pre.get(a) != pre.get(b), \
-                f"165 : {nom} FX allumé (tranche {i}) mais ses deux slots sont " \
-                f"identiques — preset {pre.get('f19', '?')}"
 
 
 def plages_111(w):
@@ -548,7 +517,7 @@ def ajout_de_preset():
 
 
 IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
-              groupe_fixture, moteurs_f16, tranche5_f16, deux_pages_fx,
+              groupe_fixture, moteurs_f16, tranche5_f16,
               plages_111, roles_106,
               ordre_fixtures_115, bornes_106, tranches_151,
               tableaux_par_groupe_165, f4_autorise_les_moteurs,

@@ -6754,3 +6754,94 @@ exactement ce qu'un sélecteur de page serait.
 `f3`, `f23` et `f27` restent **non attribués**, et le corpus ne peut rien en
 dire : ils sont nuls sur les 3697 occurrences. Uniformité du corpus, pas du
 champ — pour la cinquième fois dans ce registre.
+
+## FX2-01 et F7-01 mesurés — la page n'est pas dans `f16`, et j'ai posé une identité fausse — 2026-08-27
+
+Le discriminateur a été tiré tel que publié : l'opérateur a composé au panneau
+une cue **Color FX page 1 sur le groupe A, page 2 sur le groupe B**, puis a
+sauvegardé. `projectChanged` valait `true` avant la sauvegarde et `false` après,
+le fichier passe de 40999 à 45054 octets, et le preset créé est **l'id 82** —
+dans le trou intérieur 82–99, celui que le générateur laisse derrière lui.
+
+### Ce que la sauvegarde a touché, et rien d'autre
+
+| Record | Changement |
+|---|---|
+| 165 | une entrée neuve (id 82), les quatre tableaux `STATIC GOBO` écrits sur **les 86** presets, et `f16` réécrit sur **exactement les quatre cues que nous avions écrites** (100, 101, 140, 141) |
+| 115 | 349 → 287 octets, la migration `f6`/`f7` → `f9` séquentiel |
+
+GEN-03 est reconfirmé point par point sur une seconde sauvegarde indépendante.
+
+### FX2-01 : la prédiction à p = 0,55 est fausse
+
+| | Prédit | Mesuré |
+|---|---|---|
+| `f16` tranche 0 (Color FX) | **1** = A | **3 = A+B** |
+| `f16` tranche 3 | **2** = B | **0** |
+| `f16` tranche 4 | — | 0 |
+
+| Lecture publiée | p | Verdict |
+|---|---|---|
+| `[C1, M1, B1, C2, M2, B2]` — les tranches 3/4/5 sont les seconds moteurs | 0,55 | **réfutée** : la tranche 3 reste nulle alors qu'une deuxième page est en service |
+| le masque de la page 2 vit **ailleurs** | 0,2 | **tenue** |
+| les deux pages ne sont pas per-groupe, SHIFT bascule tout le preset | 0,2 | numériquement compatible (tranche 0 = 3), mais **son mécanisme est réfuté** : un champ par groupe distingue bien A de B, voir plus bas |
+| autre chose | 0,05 | — |
+
+> **Une seule tranche de `f16` porte un moteur d'effet, et elle couvre tous les
+> groupes que ce moteur adresse — les deux pages comprises.** Le moteur couleur
+> de la cue 82 vaut `3` = A+B, un seul masque pour deux pages. Les tranches 3
+> et 4 restent nulles, y compris quand une deuxième page est réellement en
+> service. Elles ne sont donc **pas** les seconds moteurs. **[validated]**
+
+### La tranche 5 est tranchée, et gratuitement
+
+La cue 82 a été **créée par l'appareil**, pas clonée par nous. Ses dimmers
+valent `[0, 120, 0, 0, 0, 0, 0, 0]` — le groupe B seul — et sa tranche 5 vaut
+**2 = B**. Son moteur faisceau est **éteint**.
+
+> La rivale « la tranche 5 est le masque de Beam FX 2 » **tombe** : le faisceau
+> est à l'arrêt et la tranche suit exactement le masque des dimmers non nuls. La
+> lecture de GEN-03 ne repose plus sur une seule sauvegarde d'un fichier que
+> nous avions écrit — elle tient sur une entrée que le firmware a composée seul.
+> `tranche5_f16` passe sur ce fichier.
+
+### F7-01 : ma corrélation ET mon attribution sont réfutées
+
+`f7` de la cue 82 vaut **`[0, 1, 1, 0, 0, 0, 0, 0]`**, contre `[0, 1, 0, …]` sur
+les quatre presets du corpus.
+
+| Ce que F7-01 affirmait | Verdict |
+|---|---|
+| `f7` non nul ⟺ moteur faisceau éteint **et** ses deux pages diffèrent | **réfutée** : la cue 82 a `f7` non nul, le faisceau éteint et ses deux pages **identiques**. Le cinquième échantillon a tué une corrélation qui en avait quatre, exactement comme annoncé |
+| répartition supposée `f3` = couleur, `f7` = faisceau, `f23` = mouvement | **réfutée** : c'est une édition de **couleur** qui a fait bouger `f7`, et `f3` est resté nul |
+
+Ce qui reste, et c'est le résultat : **`f7` est le seul champ du record qui
+distingue le groupe A du groupe B dans cette cue.** L'opérateur a mis A en
+page 1 et B en page 2 ; `f7` vaut 0 sur A et 1 sur B. La lecture la plus
+économique est un **sélecteur de page par groupe, 0 = page 1, 1 = page 2** —
+et elle explique aussi les quatre presets du corpus, dont le groupe B est le
+seul en page 2.
+
+**Une anomalie franche, non expliquée : `f7[C]` vaut 1 aussi**, alors que le
+moteur couleur de la cue n'adresse que A et B et que l'opérateur n'a nommé que
+ces deux groupes. Trois lectures, aucune départagée : le groupe C a été touché
+sans que ce soit rapporté ; le panneau applique la page à une sélection plus
+large que les groupes du moteur ; ou l'index de `f7` n'est pas le groupe.
+**Aucun nom n'est proposé pour `f7`, et son statut reste `observed`.**
+
+### Une identité fausse, posée par moi ce matin, réfutée par l'appareil ce soir
+
+`deux_pages_fx` affirmait qu'un moteur allumé stocke toujours **deux
+configurations différentes** — 738/738, 1439/1439, 1186/1186 sur le corpus,
+zéro exception. La cue 82 a le moteur couleur **allumé** (tranche 0 = 3) et ses
+deux pages **identiques**. L'identité est **retirée du code**.
+
+> C'est le piège de l'uniformité pour la cinquième fois dans ce registre, et
+> cette fois c'est l'auteur de l'avertissement qui est tombé dedans, dans la
+> même journée. Une corrélation sans exception sur 3697 occurrences n'était,
+> encore une fois, qu'un fait sur le **corpus** : personne n'avait jamais
+> enregistré une cue dont un moteur tourne avec ses deux pages au même réglage.
+> La leçon n'est pas « vérifier plus » — elle est que **la seule défense est une
+> écriture neuve**, et qu'ici elle a coûté un geste au panneau.
+
+`f3`, `f23` et `f27` restent nuls, et non attribués.

@@ -103,7 +103,7 @@ make check
 ```text
 self-check ok : round-trip octet-identique sur 45 fichiers
 fidélité octet vérifiée sur 45 fichiers variante A
-18 identités vérifiées sur 45 fichiers variante A (+ paires F30-04 / FLASH-09)
+17 identités vérifiées sur 45 fichiers variante A (+ paires F30-04 / FLASH-09)
 self-check ok : 12/12 tilt, 11/12 pan, offsets et clamp
 wpj_privacy : 14 motifs, aucune occurrence dans 60 fichiers suivis
 ```
@@ -240,7 +240,7 @@ argument-only helpers.
 |---|---|
 | Variant-A container, SHA-1 header, project name | 🟢 **device-confirmed** — our files are accepted and stored byte-identically |
 | Record inventory — 20 types | 🟢 14 decoded, 6 round-tripped verbatim |
-| Patch model (105/106/110/111/115/116/120/125) | 🟢 locked by arithmetic — **18 identities** re-checked on every file; the DMX address is `115.f2`, confirmed on live DMX |
+| Patch model (105/106/110/111/115/116/120/125) | 🟢 locked by arithmetic — **17 identities** re-checked on every file; the DMX address is `115.f2`, confirmed on live DMX |
 | Static palettes — colour, gobo, position (140/145/150) | 🟢 **device-confirmed**, one record per group A–H — and record 140 is **device-confirmed in writing** too: one pad component changed, and the DMX followed the formula exactly |
 | Positions, end to end (150/151/106) | 🟢 **device-confirmed** — fan, per-fixture offsets, clamping and travel limits; the emitted DMX is computable from the file alone |
 | FX sequences (155) | 🟢 **device-confirmed** — 16 steps × 8 groups, step-major, packed varints |

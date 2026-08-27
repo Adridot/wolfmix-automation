@@ -493,9 +493,9 @@ the ninth bit is never set. The flash slices 6–10 do set it (§5.7).
 | 0 | **Color FX** | equals `color_fx_actif`, 3696/3697 |
 | 1 | **Move FX** | equals `move_fx_actif`, 3697/3697 |
 | 2 | **Beam FX** | active only on beam-page presets |
-| **3** | **unattributed — `0` on all 3697 presets** | nothing; the obvious candidate is the *second* Color FX engine (§5.4b) |
-| **4** | **unattributed — `0` on all 3697 presets** | nothing; the obvious candidate is the *second* Move FX engine (§5.4b) |
-| 5 | **the groups the preset addresses** | **[validated]** — the device's writer rewrote our clones' inherited 255 to **2** (= B) and **7** (= A+B+C), GEN-03. Contested by the second-Beam-engine reading, see §5.4b |
+| **3** | **unattributed, and *not* the second Colour engine** | `0` even on a preset that really runs a second Colour page — **[validated]**, FX2-01 |
+| **4** | **unattributed, and *not* the second Move engine** | same shot, same reasoning |
+| 5 | **the groups the preset addresses** | **[validated]** — the device's writer rewrote our clones' 255 to **2** (= B) and **7** (= A+B+C) (GEN-03), and a preset the device composed **from scratch** carries `2` = the one group whose `f17` is non-zero, with its Beam engine off (FX2-01) |
 | **6** | **`WOLF`** | device-confirmed, 511 when latched |
 | **7** | **`STROBE`** | device-confirmed, 511 |
 | **8** | **`BLACKOUT`** | device-confirmed, 511 |
@@ -550,21 +550,25 @@ whenever a type's `f16` slice is non-zero, slot 2 differs from slot 1: 738/738,
 1439/1439, 1186/1186, no exception. An engine that is on stores two
 configurations.
 
-What is **not** established is which mask assigns groups to the **second**
-engine. Slices 3 and 4 — the obvious candidates for Colour 2 and Move 2 — are
-`0` on **all 3697 presets** of the corpus. That is the uniformity trap in its
-purest form: no operator in any of the four rigs ever switched a second engine
-on, so the corpus cannot speak. Do not read the zeros as "unused".
+**One slice per engine, covering both pages — [validated] (FX2-01).** A preset
+composed at the panel with Colour page 1 on group A and page 2 on group B
+carries slice 0 = **3** = A+B: a single mask for the engine, whichever page each
+group is on. Slices 3 and 4 stayed `0` **while a second page was genuinely in
+service**, so they are not the second Colour and Move engines. What they are is
+still unknown, and the zeros across the corpus remain uninformative.
 
-This puts slice 5 in question too. If the layout is
-`[Colour1, Move1, Beam1, Colour2, Move2, Beam2]`, slice 5 is the **second Beam
-engine**, not "the groups the preset addresses" — and on this corpus the two
-readings are indistinguishable, because `f17` is `[255]×8` everywhere and slice
-5 is 255 everywhere. The only discriminating evidence is a single controller
-save (GEN-03), where the device wrote the addressed-group mask into slice 5 on
-cues whose beam engine was **off**. That favours the current reading; it rests
-on one file, and `wpj_identities.tranche5_f16` is trivially true on the corpus
-and discriminating only there.
+That also settles slice 5. The rival reading — layout
+`[Colour1, Move1, Beam1, Colour2, Move2, Beam2]`, making slice 5 the second Beam
+engine — is refuted: on that same device-composed preset the Beam engine is
+**off** and slice 5 reads `2`, exactly the one group whose `f17` is non-zero. The
+addressed-group reading no longer rests on a save of a file we wrote; it holds on
+an entry the firmware authored alone.
+
+**Where the page assignment does live: `f7`, on current evidence — [observed].**
+It is the only field of that preset that separates group A from group B — `0` on
+A, `1` on B, matching page 1 and page 2. See §5.6 and the registry, F7-01. Its
+third element is also `1` for a group the engine does not address, which is
+unexplained, so no name is given to the field.
 
 Slice 11 stays unattributed. Its values look like group masks — 5, 2 and 7 —
 but "the groups that have a fixture" fails on 44 of 45 files and "the schema
@@ -633,16 +637,27 @@ either (FW-02).
 These are **live state** until a preset captures them: a project save alone does
 not write them, only `SHIFT` + tapping a preset does.
 
-**`f7` is not empty, though — [observed] (F7-01).** It reads `0` on every preset
-of the corpus but **four**, where it carries element 1 = 1 and the rest zero.
-Those four share one `f16` profile — Colour and Move on across all eight groups,
-**Beam off** — and all three of their FX types have slot 1 ≠ slot 2. The one
-field that moves is the one that moves alongside a second Beam page, which makes
-it a candidate for the page selector §5.4b is missing. Four samples, one shape,
-and no name is proposed. The live-state rule above matters here: that `1` was
-captured off the panel by a `SHIFT` + tap, so it records what the operator had
-selected, not what the project author typed. `f3`, `f23` and `f27` are `0` on
-all 3697 occurrences — corpus uniformity, not field uniformity.
+**`f7` carries the FX page selection, on current evidence — [observed]
+(F7-01, FX2-01).** A preset composed at the panel with Colour page 1 on group A
+and page 2 on group B came back with `f7` = `[0, 1, 1, 0, 0, 0, 0, 0]`: `0` on A,
+`1` on B, and it is the **only** field of that preset that separates the two
+groups. The reading that costs least is a per-group page selector, `0` = page 1
+and `1` = page 2, and it also explains the four corpus presets, whose group B is
+likewise the only one set.
+
+Two reasons it stays at `observed`. Its third element is `1` for a group the
+Colour engine does not even address, which nothing explains — so the index may
+not be the group at all. And an earlier reading of this field, "`f7` marks a
+preset whose Beam engine is off while its two Beam pages differ", was
+`observed` on four corpus presets and **refuted by the fifth sample**: this
+preset has `f7` set with its Beam pages identical. The guessed split
+`f3` = Colour / `f7` = Beam / `f23` = Move is refuted too — a **Colour** edit
+moved `f7` and left `f3` at zero.
+
+The live-state rule above matters here: that value was captured off the panel by
+a `SHIFT` + tap, so it records what the operator had selected, not what a project
+author typed. `f3`, `f23` and `f27` are `0` on all 3697 occurrences — corpus
+uniformity, not field uniformity.
 
 ### 5.7 The flash keys live in `f16` — **[device-confirmed]**
 
@@ -828,7 +843,7 @@ The strongest structural result available. Eight identities hold **exactly,
 ```
 
 Three more, added once `105.f4` was corrected, and mechanically re-checked on
-**45/45** files by `tools/wpj_identities.py`, which now runs **eighteen** identities
+**45/45** files by `tools/wpj_identities.py`, which now runs **seventeen** identities
 plus two before/after pair checks (F30-04, FLASH-09):
 
 ```

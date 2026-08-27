@@ -133,10 +133,15 @@ predictions were wrong, and each was worth more than a vague success.
   per-anything.** Uniformity over thousands of samples is evidence about the
   *corpus*, not about the field: nothing had ever varied it. `f30` was read as
   a scalar on those grounds and refuted by one photograph of the device. It has
-  now happened three times: the latest is `165.f16` slice 5, `correlated` as
-  "always 255" over 2446 presets, then refuted when the device's own writer
-  saved a file of ours and put the mask of the groups each preset addresses
-  there (GEN-03, validated).
+  now happened five times. `165.f16` slice 5 was `correlated` as "always 255"
+  over 2446 presets, then refuted when the device's own writer put the mask of
+  the groups each preset addresses there (GEN-03). And on 2026-08-27 an identity
+  added to `wpj_identities.py` that morning — "an FX engine that is on stores two
+  *different* page configurations", 3697 occurrences, zero exceptions — was
+  refuted the same evening by one preset composed at the panel (FX2-01). **The
+  author of this warning fell into it inside a day.** A correlation with no
+  exception over the whole corpus is a fact about the corpus until a fresh write
+  tests it; the defence is the write, not more counting.
 - **Creating a preset does not save the project.** Nor does any other UI edit
   until the operator performs the separate project save. Read the `uint64` at
   offsets 40–47 before and after: if it has not incremented, nothing was

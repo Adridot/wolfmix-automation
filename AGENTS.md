@@ -13,7 +13,7 @@ read and write it, plus a client for the W1 controller's USB protocol. Python
 ## The one command
 
 ```bash
-make check          # from the repository root — nine self-checks
+make check          # from the repository root — ten self-checks
 ```
 
 Green means the structural claims hold on the corpus present — **file-format
@@ -84,7 +84,7 @@ itself worth recording rather than silently resolving.
 - **Codec keys:** a proven field gets a semantic key (`nom`, `profil`,
   `effet`); an unidentified one keeps a neutral `fN` key. Renaming `fN` → a
   guess is exactly the failure mode this repository exists to avoid.
-- **Self-check idiom:** the nine tools in `make check`, plus `wpj_diff.py`,
+- **Self-check idiom:** the ten tools in `make check`, plus `wpj_diff.py`,
   run their own check with no arguments. `wolfmix.py` and
   `wolfmix_experiment.py` use a `self-test` subcommand; `tlv.py` and `dump.py`
   are argument-only helpers. New non-trivial logic follows the idiom — one

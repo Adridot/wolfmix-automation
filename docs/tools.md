@@ -11,7 +11,7 @@ Three conventions hold everywhere:
   `wpj_identities`, `wpj_show`, `wpj_generate`) prove it over your corpus; the
   other three prove it against frozen inputs in their own source
   (`wpj_inspect`, `wpj_position`) or against the git index (`wpj_privacy`).
-  `make check` runs nine of them;
+  `make check` runs ten of them;
   `wpj_diff.py` self-checks too but is not wired into it.
 - **No corpus, no claim.** No project file ships with this repository
   ([`../LEGAL.md`](../LEGAL.md)). The corpus root is `corpus/`, or `$WPJ_CORPUS`
@@ -318,7 +318,14 @@ inside the windows it aimed at.
 python3 tools/gobo_write.py                              # self-check
 python3 tools/gobo_write.py patch out.bin 342=icon.png   # 24×24 PNG, RGB or RGBA
 python3 tools/gobo_write.py patch out.bin 342='#ff00ff'  # a flat colour, no file
+python3 tools/gobo_write.py patch out.bin 342=mask:big.png  # silhouette
 ```
+
+Any **square** PNG larger than 24×24 is reduced by exact area averaging, so a
+1024×1024 export patches directly. The `mask:` prefix reads luminance × alpha
+as the icon's alpha channel and renders the shape in white — the inverse of a
+"white motif on a black background" image, which is what an image generator
+produces most reliably (see [`gobo-icons.md`](gobo-icons.md)).
 
 Two refusals, both deliberate. Writing an icon whose pointer is shared is
 blocked: in 2.0.18 `Open` (`0x1029417E`) serves 96 entries, and overwriting it
@@ -331,6 +338,31 @@ RGBA when the shape matters.
 Uploading the result is a separate, device-side act; see
 [`../research/flash-gobo-plan.md`](../research/flash-gobo-plan.md) for the order
 of operations and the way back.
+
+## `wpj_gobopage.py` — renaming and reordering the gobo page
+
+Project-side companion to the flash tools, carried by two device-confirmed
+facts (RENAME-01, SORT-01 — `SPEC.md` §3.4): a pad's name is `145.f3`, and
+the pad order is the wire order of the wheel ranges in record 111.
+
+```bash
+python3 tools/wpj_gobopage.py                                # self-check
+python3 tools/wpj_gobopage.py rename in.wpj out.wpj 342=Papillon 344=Soleil
+python3 tools/wpj_gobopage.py order in.wpj out.wpj 342,343,425,424
+```
+
+`order` takes the complete id list of the wheel (the open range without an id
+stays first, outside the palette) and refuses anything else. Record 111 is
+permuted byte for byte — each range keeps its DMX bounds, nothing outside the
+wheel slice moves — and record 145 is rewritten consistently: ids and names
+travel together, glyphs are reassigned sequentially. Names are capped at 19
+UTF-8 bytes (the preset-name limit, PRESET-05; unmeasured here, so refused
+conservatively).
+
+Self-check: on every corpus palette, the identity permutation is a byte-level
+no-op and a rotation composed with its inverse restores the original record.
+Deploying the result is `wolfmix_experiment.py deploy`, then the manual
+project reload ([`device.md`](device.md)).
 
 ## `wolfmix.py` / `wolfmix_experiment.py`
 

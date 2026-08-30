@@ -279,6 +279,28 @@ palette stores `f1 = ' '`, while a wholly empty palette stores bare empty items
 head). Nothing contradicts the general rule, but transposition to another rig
 is **[hypothesized]** until measured.
 
+### Writable, and the order is free — **[device-confirmed]**
+
+Two deploys on the same rig (RENAME-01, SORT-01, 2026-08-30) extend the
+reading from *derived* to *editable*:
+
+- **`f3` written outside the device displays as-is.** Eleven names set in one
+  edit all appeared on their pads after a reload. Cap names at **19 UTF-8
+  bytes**: the limit is measured for preset names (PRESET-05, where exceeding
+  it bricks the project open) and unmeasured here, so the tool refuses longer.
+- **The wire order of the wheel ranges *is* the pad order.** Permuting the
+  `f3 = 14` sub-messages of record 111 — each range keeping its own DMX
+  bounds — reordered the page exactly, and the firmware accepted the
+  resulting **non-monotonic** range list without re-sorting it. Pads still
+  drive each range's lower bound.
+- **Names follow their entries, not their positions**, when 145 is rewritten
+  consistently with 111 (ids and names permuted together, glyphs reassigned
+  sequentially from `!` — the shape device-written files use).
+
+`tools/wpj_gobopage.py` implements both edits and reproduces the two accepted
+candidates byte for byte; its self-check permutes and inverts every corpus
+palette.
+
 ---
 
 ## 4. Type 101 — project name — **[device-confirmed]**
@@ -1079,6 +1101,9 @@ carries this fixture's red" without inferring anything from channel order.
   into one of three cases with nothing left over: **1454** whose ranges tile
   `[0, 255]`, **83** unassigned (no `f4`, one *empty* `111` item), and **44**
   carrying an isolated `{f1: 255, f3: 41}` on `110.f4 = 18`.
+- The wire **order** of a channel's ranges is free: the firmware accepted a
+  non-monotonic gobo-wheel list and used it as the pad order (SORT-01,
+  §3.4). Device-written files happen to be DMX-sorted; nothing requires it.
 
 ## 8. Type 155 — the 4 FX sequences — **[device-confirmed]**
 

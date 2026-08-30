@@ -34,7 +34,9 @@ _PAD = {1: ("rouge", "v"), 2: ("vert", "v"), 3: ("bleu", "v"),
         4: ("blanc", "v"), 5: ("ambre", "v"), 6: ("lime", "v"), 7: ("uv", "v")}
 
 # Sous-message FX (commun Beam/Color/Move) — research/preset-format-165.md.
-# f8/f6/f9 (size/fade/phase, attribution permutable) et f3/f5 : clés neutres.
+# f6/f8/f9 = Phase, Size, Fade dans un ordre non mesuré (permutation à trois,
+# FX6-01/02) ; f3 = Fan (mouvement) et f5 = Feature (faisceau), hypothèses.
+# Clés neutres tant que la mesure n'est pas faite : un nom vaut une preuve.
 _FX = {7: ("effet", "v"), 4: ("link_order", "v"), 10: ("speed_source", "v"),
        1: ("bpm_division", "v"), 2: ("vitesse", "v")}
 _PRESET = {

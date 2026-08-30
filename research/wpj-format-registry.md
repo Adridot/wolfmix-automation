@@ -7225,3 +7225,222 @@ Ce que « Double Trouble » ajoutait au format est donc décrit en entier côté
 fichier : deux configurations par moteur, un masque de groupes par moteur qui
 couvre les deux, et un sélecteur par groupe qui dit laquelle est en service —
 indépendant de l'allumage du moteur.
+
+## FX6-01 — le décompte du manuel : « quatre propriétés pour trois champs » était faux — 2026-08-30 — **[observed]**
+
+Le manuel décrit les trois écrans FX un par un. Lus côte à côte, ils ne disent
+pas ce que ce registre leur faisait dire.
+
+| Écran | Propriétés annoncées |
+|---|---|
+| `COLOR FX` | Speed · Phase · Order · Size · Fade — **cinq** |
+| `MOVE FX` | Speed · Phase · Order · Size · Fan · Fade · Flick — **sept** |
+| `BEAM FX` | Speed · Phase · Order · Size · **Feature** · Fade — **six** |
+
+L'écran du faisceau n'avait jamais été lu ici. Il porte une propriété que ni la
+couleur ni le mouvement n'ont : la **Feature**, le canal auquel le Beam FX est
+accroché — dimmer par défaut, changeable vers pan, tilt, iris ou zoom. Elle
+partage le troisième encodeur avec `Size`, une pression bascule de l'une à
+l'autre, exactement comme `Size | Fan` sur le mouvement.
+
+### Le décompte corrigé
+
+Trois erreurs se cumulaient dans la formule « quatre propriétés d'écran, trois
+champs ».
+
+1. **`Order` était compté deux fois.** C'est `f4`, déjà nommé `link_order` dans
+   ce registre depuis F4-03 (0–3 None, 10–13 Group, 20–23 Fixture). Le compter
+   parmi les non attribués gonflait le numérateur d'une unité.
+2. **`Flick` n'est pas une valeur.** Le manuel en fait un **mode** du quatrième
+   encodeur : il pousse le temps de fondu au-delà de 100 % du temps de pas, ce
+   qui annule les fondus en cours. C'est le haut de la course de `Fade`, pas un
+   champ. Corroboré par le corpus : `f6`, `f8` et `f9` restent **dans 0–100 sur
+   les 352 presets distincts**, aucun débordement, sur les trois moteurs — le
+   mode Flick n'a simplement jamais été utilisé ici.
+3. **`Feature` manquait au dénominateur.** Elle explique `f5` côté faisceau, la
+   case que L1 laissait vide.
+
+Décompte réel, une fois `Speed` (`f2` + `f1` + `f10`) et `Order` (`f4`) mis de
+côté :
+
+| Moteur | Propriétés restantes | Champs disponibles |
+|---|---|---|
+| Beam | Phase · Size · Fade · **Feature** | `f6` · `f8` · `f9` · **`f5`** |
+| Colour | Phase · Size · Fade | `f6` · `f8` · `f9` |
+| Move | Phase · Size · Fade · **Fan** | `f6` · `f8` · `f9` · **`f3`** |
+
+**Trois propriétés pour trois champs sur les trois moteurs**, plus une
+quatrième propre à chaque moteur qui tombe sur le champ que ce moteur est le
+seul à porter. Le motif est régulier, et il l'était depuis le début.
+
+### Ce que ça rétracte
+
+> La formule « les écrans du fabricant portent **quatre** propriétés pour trois
+> champs, donc trois champs ne peuvent pas les tenir » est **retirée**. Elle
+> reposait sur un double comptage d'`Order` et sur `Flick` pris pour une valeur.
+
+Cascade, comme la méthodologie l'exige. Ce qui reposait dessus :
+
+- **L9 change de nature, pas de statut.** `f6` et `f9` restent `[observed]` — le
+  décompte ne dit pas *laquelle* des trois propriétés tombe sur quel champ. Mais
+  la question passe de « quatre noms pour trois cases, insoluble sans plus » à
+  **une permutation à trois éléments**, que la section suivante ferme en une
+  sauvegarde.
+- **`wpj_show.py` continue de refuser d'écrire `f6`/`f9`.** Le refus est
+  maintenu, sa justification change : ce n'est plus « la question est mal
+  posée », c'est « la permutation n'est pas encore mesurée ».
+- **`f8` = `Size` et `f3` = `Fan` restent `[hypothesized]`.** Le décompte les
+  rend plus probables, il ne les mesure pas. Un décompte n'est pas une mesure.
+
+### Les défauts d'usine, relevés sur la page 2
+
+Les pages 2 des trois moteurs sont **constantes sur les 352 presets distincts**
+du corpus — personne n'y a jamais touché. Ce sont donc les valeurs de sortie
+d'usine, et elles servent d'ancrage aux prédictions qui suivent.
+
+| | `f3` | `f5` | `f6` | `f8` | `f9` | `vitesse` | `link_order` | `bpm_division` |
+|---|---|---|---|---|---|---|---|---|
+| `beam_fx2` | absent | **absent** | 25 | 100 | 50 | 100 | 10 | 3 |
+| `color_fx2` | absent | `2000` | 20 | **absent** | 50 | 100 | 10 | 3 |
+| `move_fx2` | 50 | `00` | **absent** | 100 | 50 | 100 | 10 | 2 |
+
+Deux anomalies à garder en tête, parce qu'elles sont des prédictions en creux :
+
+- **`beam_fx1.f5` et `beam_fx2.f5` sont absents sur les 352 presets distincts**
+  — 3697 occurrences, pas une seule valeur. Si `f5` est la Feature, `0` =
+  Dimmer est le défaut, omis par proto3, et **personne dans ce corpus n'a jamais
+  changé la Feature d'un Beam FX**. C'est exactement la forme attendue, et c'est
+  ce qui rend FX6-03 binaire.
+- **`color_fx1.f8` est présent sur 10 presets sur 352**, absent — donc à `0` —
+  sur les 342 autres, et absent partout sur `color_fx2`. Si `f8` est `Size`, la
+  taille par défaut d'un effet de couleur est **0**, alors qu'elle est 100 sur
+  le faisceau et le mouvement. Soit `Size` ne se stocke pas en `f8` côté
+  couleur, soit son neutre y est réellement 0. FX6-02 le mesure au passage.
+
+---
+
+## FX6-02 — `Phase` / `Size` / `Fade` du Color FX, prédiction publiée avant la mesure — 2026-08-30
+
+Une permutation à trois éléments se ferme en une capture, à condition que les
+trois valeurs soient **mutuellement distinctes** et **absentes du vocabulaire
+d'usine** : la lecture se lit alors dans la valeur elle-même, sans arbitrage.
+Précédent maison : GOBO-02 avait nommé les cinq features du `STATIC GOBO` en un
+seul différentiel, par le même argument.
+
+**Manipulation.** Écran `COLOR FX`, **page 1**. Deuxième encodeur poussé sur
+`Phase` (et non `Order`) → **37**. Troisième encodeur → `Size` **62**.
+Quatrième encodeur → `Fade` **88**. Rien d'autre. Puis `SHIFT` + tap sur le
+premier pad libre pour capturer, et sauvegarde du projet.
+
+`37 / 62 / 88` : trois valeurs distinctes, aucune dans `{20, 25, 50, 100}`, le
+vocabulaire d'usine des trois champs.
+
+| Lecture | `f6` | `f8` | `f9` | p |
+|---|---|---|---|---|
+| **`f6` = Phase, `f8` = Size, `f9` = Fade** | **37** | **62** | **88** | **0,55** |
+| `f6` = Phase, `f8` = Fade, `f9` = Size | 37 | 88 | 62 | 0,15 |
+| `f6` = Fade, `f8` = Size, `f9` = Phase | 88 | 62 | 37 | 0,12 |
+| une autre des six permutations | — | — | — | 0,08 |
+| hors modèle : un numéro de champ jamais vu apparaît, ou une des trois propriétés ne s'écrit pas | — | — | — | 0,10 |
+
+La favorite tient à trois arguments de neutre, tous tirés du tableau des
+défauts ci-dessus, et aucun n'est décisif seul :
+
+- `f9` vaut **50 sur les six pages des trois moteurs**. Une uniformité parfaite
+  entre moteurs va à une propriété générique — `Fade` — plutôt qu'à une
+  propriété dont le réglage utile dépend de l'effet.
+- `f6` vaut 25 / 20 / **0** selon le moteur. Un neutre qui change par moteur va
+  à `Phase` : un chase de faisceau veut un peu d'étalement, un effet de
+  mouvement n'en veut aucun.
+- `f8` vaut 100 sur le faisceau et le mouvement, ce qui est le neutre de
+  `Size` partout ailleurs dans ce format. Le 0 de la couleur est l'anomalie
+  qu'on mesure.
+
+**Sous-prédiction, indépendante de la permutation** : `color_fx1.f8` doit
+**apparaître** dans l'entrée neuve. Il est absent sur 342 presets sur 352. S'il
+reste absent après avoir tourné l'encodeur `Size`, alors `Size` ne s'écrit pas
+en `f8` côté couleur, et la troisième ligne du tableau monte quoi qu'il arrive
+sur le reste.
+
+**Contrôles, intégrés à la capture** — ce sont eux qui ont porté F7-01, F7-03 et
+F7-04, trois fois de suite :
+
+- `color_fx2` reste **octet pour octet** identique : la page 2 n'a pas été
+  touchée ;
+- `beam_fx1` et `move_fx1` de l'entrée neuve restent aux défauts d'usine ;
+- aucun preset existant ne bouge ;
+- `LIVE EDIT` **désactivé** sur la cue mesurée (`165.f10` bit 4 posé), sans quoi
+  c'est la copie vive qu'on lit et pas le fichier — le cinquième piège du
+  registre, celui qui a coûté GEN-03.
+
+Id attendu : **85**, la première place libre après F7-04.
+
+---
+
+## FX6-03 — L1 : la `Feature` du Beam FX, prédiction publiée avant la mesure — 2026-08-30
+
+`wpj-toolkit` (MIT) publie une énumération `feature` réservée au faisceau —
+`0` Dimmer · `1` Zoom · `2` Iris · `3` Pan · `4` Tilt · `5` Effect — **sans
+emplacement sur le fil**. Le manuel décrit la même propriété sur l'écran `BEAM
+FX`, dimmer par défaut, et cite pan, tilt, iris et zoom comme destinations.
+Le corpus donne le troisième point : `beam_fx1.f5` est **absent sur les 352
+presets distincts**, ce qui est la signature d'un `0` jamais changé.
+
+Trois sources indépendantes désignent la même case. Aucune ne l'a mesurée.
+
+**Manipulation.** Écran `BEAM FX`, **page 1**. Troisième encodeur **poussé**
+pour passer de `Size` à `Feature`, puis tourné jusqu'à **`Zoom`**. Rien
+d'autre — en particulier ne pas toucher `Size`, qui partage l'encodeur. Puis
+`SHIFT` + tap sur le pad libre suivant, et sauvegarde.
+
+| Lecture | `beam_fx1.f5` | p |
+|---|---|---|
+| **`f5` = Feature, énumération du toolkit, `Zoom` = 1** | **`1`** | **0,55** |
+| `f5` = Feature, mais l'ordre de l'énumération diffère | un autre petit entier | 0,20 |
+| la Feature vit dans un champ jamais observé | `f5` absent, un numéro neuf apparaît | 0,10 |
+| état vif, non capturé par un preset | record 165 inchangé | 0,10 |
+| autre chose | — | 0,05 |
+
+La quatrième ligne n'est pas un remplissage : F7-02 a mesuré qu'une
+réassignation de page faite au panneau et sauvegardée laisse les 45054 octets
+identiques au compteur de version près. Tout ce qui vit sur ces écrans n'est pas
+forcément dans le fichier, et la capture est ce qui l'y met — ou pas.
+
+**Contrôles** : `beam_fx2.f5` reste absent ; `color_fx1` et `move_fx1` de
+l'entrée neuve restent aux défauts ; `beam_fx1.f8` (`Size`) reste à 100, ce qui
+prouve que l'encodeur partagé a bien basculé de mode et n'a pas seulement
+tourné.
+
+Id attendu : **86**.
+
+### Le bonus DMX, et il nomme un rôle
+
+Le projet d'expérience est taillé sur *rig-c* : son record 106 porte les quatre
+rôles encore sans nom, **14** (1 canal), **15**, **21** et **22** (6 canaux
+chacun). Si la Feature est bien le canal auquel le moteur s'accroche, alors avec
+le Beam FX allumé l'animation doit **quitter les canaux de rôle 0** (dimmer) et
+atterrir sur l'un de ces quatre groupes.
+
+Ce serait un second résultat gratuit : le rôle qui bouge **est** le zoom, et
+`ROLES_106` dans `tools/wpj_identities.py` gagne un nom sur les quatre qui lui
+manquent. Enveloppe min/max par canal sur 2048, comme d'habitude, jamais une
+trame isolée.
+
+Conditionnel : il faut qu'au moins une fixture du groupe adressé porte
+réellement un canal de zoom. Si l'animation reste sur le rôle 0, ça ne réfute
+pas `f5` = Feature — ça dit que le groupe testé n'a pas la feature demandée, et
+le manuel ne promet pas ce que fait le moteur dans ce cas. La mesure côté
+**fichier** reste la mesure principale ; le DMX est un bonus, pas un juge.
+
+### Pourquoi les deux tirs tiennent dans une seule session
+
+Deux captures successives sur le même projet, une seule sauvegarde, un seul
+téléchargement. Les deux entrées sont des **entrées séparées** du record 165 :
+l'entrée 85 doit montrer `beam_fx1.f5` absent, l'entrée 86 doit montrer
+`color_fx1.f6/f8/f9` aux défauts couleur (20 / absent / 50). Chacune est donc le
+contrôle de l'autre, et aucune des deux ne perd son caractère de différentiel à
+variable unique.
+
+Si les deux tirs tombent, il ne reste dans le sous-message FX que `f3` (`Fan`,
+mouvement) et `f8` (`Size`) au statut `[hypothesized]`, tous deux tenus par le
+même décompte — et le trou sémantique du format de show est fermé.

@@ -7493,3 +7493,68 @@ retélécharger, differ le record 145. Si `f2[7]` passe à 212, la palette est
 éditable au panneau et l'identité `[145].f2 == [111 f3==14].f4` cesse d'être
 vraie sur un fichier édité — elle décrit alors une palette **jamais retouchée**,
 pas une contrainte du format.
+
+### FX6-02 amendé — l'opérateur voit `SIZE` grisé sur Rainbow, et le corpus le dit aussi — 2026-08-30
+
+Deux écarts au protocole, tous deux signalés par l'opérateur au moment de la
+capture, et tous deux **utiles** :
+
+1. l'effet n'est pas resté sur le défaut : `SPARKLE` a été choisi **parce que
+   `RAINBOW` affiche `SIZE` désactivé** ;
+2. `SPEED` laissé à **50 %**, mode `Clock`, au lieu du 100 d'usine.
+
+Les deux tombent sur des champs déjà nommés — `f7` (ACC-04, device-confirmed) et
+`f2`/`f10` — donc la permutation `f6`/`f8`/`f9` reste un différentiel propre. La
+photo de l'écran donne l'état exact avant capture : `FX1 | SPARKLE`,
+`LINK NONE`, `FADE 88 %`, `SIZE 62 %`, `PHASE 37 %`, `SPEED 50 %`.
+
+**La remarque sur Rainbow est une mesure, pas une anecdote.** Croisée avec le
+type d'effet sur les 352 presets distincts, la présence de `f8` côté couleur est
+**exactement** gouvernée par l'effet :
+
+| `color_fx1.effet` | n | `f6` | `f8` | `f9` |
+|---|---|---|---|---|
+| `0` Rainbow 1 | 314 | 293 | **0** | 314 |
+| `2` Chaser 1 | 10 | 10 | 6 | 10 |
+| `3` Light Fever | 12 | 12 | 4 | 12 |
+| `6` Rainbow 3 | 16 | 12 | **0** | 16 |
+
+**330 presets sur un effet Rainbow, pas un seul `f8`.** Les deux seuls effets qui
+en portent jamais sont les deux non-Rainbow. L'anomalie « la taille par défaut
+d'un effet de couleur serait 0 » est **retirée** : `f8` n'est pas à zéro sur
+Rainbow, il est **absent parce que la propriété n'existe pas sur cet effet** —
+ce que l'écran affiche en grisé et ce que l'opérateur a lu avant nous.
+
+### Trois arguments de structure, publiés avant la lecture du téléchargement
+
+Le même croisement sur les trois moteurs sépare les trois champs par leur
+**forme d'absence**, indépendamment de toute valeur :
+
+| Champ | Forme | Ce que ça dit |
+|---|---|---|
+| `f9` | présent **352/352**, sur les trois moteurs et tous les effets | n'est **jamais** à 0 → n'est **pas** `Phase`, dont le neutre 0 serait omis sur la majorité |
+| `f8` | présent partout **sauf** là où l'effet désactive la propriété (Rainbow) | une présence **gatée par l'effet**, ce qui est la signature d'une propriété que l'écran retire — `Size` |
+| `f6` | absent sur 252/352 en mouvement, 25/352 en couleur | souvent à 0 → un neutre à 0 → `Phase` |
+
+Aucun des trois n'est décisif seul. Ensemble ils pointent tous vers la même
+permutation, et c'est la favorite déjà publiée. Je **monte** donc sa probabilité
+avant de lire, plutôt qu'après :
+
+| Lecture | `f6` | `f8` | `f9` | p posée | **p amendée** |
+|---|---|---|---|---|---|
+| **`f6` = Phase, `f8` = Size, `f9` = Fade** | **37** | **62** | **88** | 0,55 | **0,80** |
+| `f6` = Phase, `f8` = Fade, `f9` = Size | 37 | 88 | 62 | 0,15 | 0,05 |
+| `f6` = Fade, `f8` = Size, `f9` = Phase | 88 | 62 | 37 | 0,12 | 0,03 |
+| une autre des six permutations | — | — | — | 0,08 | 0,05 |
+| hors modèle | — | — | — | 0,10 | 0,07 |
+
+Prédictions annexes de la même capture, toutes lisibles d'un coup :
+
+- `color_fx1.f7` = **1** (`Sparkle 1`, énumération couleur) — un type d'effet que
+  le corpus n'a **jamais** porté : les 352 presets distincts n'utilisent que 0,
+  2, 3 et 6. La capture élargit le vocabulaire mesuré de `f7`.
+- `color_fx1.vitesse` = **50**, `speed_source` absent (`Clock`).
+- `color_fx1.f8` **apparaît**. Sur `SPARKLE` l'écran affiche `SIZE 62 %`, donc la
+  propriété est active sur cet effet — et si `f8` est bien `Size`, il ne peut pas
+  rester absent. C'est le point le plus dur du tir : une absence de `f8` ici
+  réfute la favorite à elle seule, sans avoir besoin des deux autres valeurs.

@@ -127,7 +127,7 @@ measure. It costs nothing and it is the only protection against reading a
 confirmation into an ambiguous result after the fact. Several of those
 predictions were wrong, and each was worth more than a vague success.
 
-### Four traps that have already cost time
+### Five traps that have already cost time
 
 - **A field that is uniform across the whole corpus may still be per-group, or
   per-anything.** Uniformity over thousands of samples is evidence about the
@@ -142,6 +142,19 @@ predictions were wrong, and each was worth more than a vague success.
   author of this warning fell into it inside a day.** A correlation with no
   exception over the whole corpus is a fact about the corpus until a fresh write
   tests it; the defence is the write, not more counting.
+- **A field that already carries a name is not a field that was measured.** The
+  most expensive mistake of 2026-08-30, made twice in one session. `f2` of the
+  FX submessage had read "speed %" since ACC-04 at status `correlated`, so a
+  whole campaign was framed as "which of Phase / Size / Fade lands on `f6`,
+  `f8`, `f9`" — and never put `f2` back on the table. `f2` is the **fade**; the
+  speed was `f9`, sitting among the unattributed. The three-way permutation was
+  a four-way. Hours later the same shape repeated one level up: record 155 was
+  `device-confirmed` as "the 4 FX sequences", so the beam sequencer was hunted
+  in an opaque blob (161) while the answer sat in 155 behind `f2`, a field named
+  "sequence flavour" and never opened. **A record marked decoded is not a record
+  closed, and `correlated` is a statement about consistency, not about meaning.**
+  When a reading resists, list the fields you excluded *because they already had
+  names*, and check what measured them.
 - **Creating a preset does not save the project.** Nor does any other UI edit
   until the operator performs the separate project save. Read the `uint64` at
   offsets 40–47 before and after: if it has not incremented, nothing was

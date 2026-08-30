@@ -51,8 +51,15 @@ rig.
 |---|---|---|---|---|
 | 0–24 | `statique` | 120 | — | — |
 | 25–49 | `faisceau` | 180 | Sparkle | 45 % |
-| 50–74 | `mouvement` | 225 | — | 110 % |
-| 75–100 | `mouvement+faisceau` | 255 | Chaser | 170 % |
+| 50–74 | `mouvement` | 225 | — | 70 % |
+| 75–100 | `mouvement+faisceau` | 255 | Chaser | 95 % |
+
+> [!WARNING]
+> Before FX6-02 the two upper rungs read 110 % and 170 %, and the speed key
+> wrote codec field `f2`. `f2` is the **fade**: those shows were lengthening the
+> fade — into the `Flick` range — instead of speeding the effect up. The key now
+> writes `f9`, the real speed, and the rungs are back inside 0–100. Regenerate
+> any show built before 2026-08-30.
 
 \* **The dimmer only acts if the controller says so.** The Settings menu carries
 `store group dimmers in preset`; with it **off**, a cue's dimmers do nothing at

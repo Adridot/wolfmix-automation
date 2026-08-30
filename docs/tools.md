@@ -114,6 +114,7 @@ Checked today — seventeen, plus two before/after pair checks (F30-04, FLASH-09
 | an engine active in `f16` implies its bit in `f4` | reading `f4` as a content mask |
 | byte 50 is the schema version, and `165.f32`–`f35` arrive at 10 | treating the prefix as fully opaque |
 | `110.f5` points at the channel's principal | guessing 16-bit byte order or adjacency |
+| `155.f2` splits move (`1`, positions 0–19) from beam (`2`, 4-bit segment masks 0–15) | reading all four sequences as position indices |
 | no preset name exceeds 19 UTF-8 bytes | a generator that writes a longer one and bricks the open |
 | `165.f16` slice 5 == the mask of groups whose `f17` is non-zero | nothing on today's corpus — `f17` is `[255]×8` everywhere, so the identity is trivially true here. The device's own writer is what broke "slice 5 is always 255" (GEN-03, on one save); this check only guards the new reading on a file where some preset leaves a group dark |
 

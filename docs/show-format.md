@@ -29,9 +29,11 @@ is rule 2 ("read before write") applied to editing.
 Scope is records 101, 165, 150 and 135, at evidence status `correlated` or
 better. `f29` (gobos) stays out of scope although it is device-confirmed,
 because nothing needs it yet. `dimmers` (`165.f17`) used to be the one field
-written below the threshold; GEN-02 moved it to device-confirmed. `size`/`fade`/`phase`
-(`f8`/`f6`/`f9`) are excluded on purpose: their attribution is still
-`hypothesized`, so they are readable via the codec but not writable here.
+written below the threshold; GEN-02 moved it to device-confirmed. `phase`, `size`
+and `fade` (`f6`, `f8`, `f2`) are now **named and validated** (FX6-02/03) but
+stay out of the writer: rule 2 wants a byte-identical round-trip *and*
+acceptance downstream before a field becomes writable, and neither has been done
+on them. They are readable through the codec.
 
 Keys are French, matching the codec's key names.
 
@@ -78,7 +80,7 @@ The same shape for all six slots. Only these keys are accepted:
 | Key | Bounds | Meaning |
 |---|---|---|
 | `effet` | 0–8 | effect type, device-confirmed (ACC-04). The bound is the **Beam** enum; Color defines only `0`–`7` and no enum is published for Move, so the compiler accepts out-of-enum values on those slots — check the right enum yourself (`SPEC.md` §5). |
-| `vitesse` | 0–200 | speed percent |
+| `vitesse` | 0–100 | speed percent — **codec field `f9`**. Until FX6-02 this key wrote `f2` and the bound was 0–200; `f2` is the **fade**, so a show that set `vitesse` above 100 was lengthening the fade, not speeding the effect. The key kept its name and changed field. |
 | `link_order` | 10–13 | link order, **Group family only**. The field's domain is `0–3` None, `10–13` Group, `20–23` Fixture; the compiler accepts only the Group range. |
 | `speed_source` | 0–2 | speed source |
 | `bpm_division` | int | BPM division: `0`→×8 … `7`→1/16, default 3. **The compiler does not enforce 0–7** — any non-negative int passes. |
@@ -134,7 +136,7 @@ view and is device-confirmed on record **140**; record 135 inherits it at
       "id": 33,
       "nom": "Chaser",
       "dimmers": [255, 255, 128, 0, 0, 0, 0, 0],
-      "color_fx1": {"effet": 2, "vitesse": 120}
+      "color_fx1": {"effet": 2, "vitesse": 80}
     }
   ],
   "positions": [

@@ -7779,3 +7779,65 @@ n'a été fait sur ces champs.
 
 Instantané figé : `corpus/experiments/FX6-02/after-two-captures.wpj` (hash
 ci-dessus ; le fichier n'est pas publié, conformément à `LEGAL.md`).
+
+## FX6-04 — `f3` sur le mouvement : le `Fan`, prédiction publiée avant la mesure — 2026-08-30
+
+Dernier champ nommable du sous-message FX. Le créneau est mesuré — FX6-03 a
+montré que `f3` porte le **second mode du troisième encodeur**, et le manuel
+nomme ce second mode `Fan` sur l'écran `MOVE FX`. Trois arguments, zéro mesure :
+
+- le créneau, mesuré sur le faisceau (`Feature`) ;
+- le manuel, qui donne `Size | Fan` à cet encodeur sur le mouvement ;
+- le défaut **50**, qui est le neutre de `FAN` partout ailleurs dans ce format,
+  comme POS-02 l'a mesuré sur le sélecteur de position.
+
+**Un quatrième argument, tiré de la forme d'absence.** `move_fx1.f3` est présent
+**352/352** sur les presets distincts, alors que `beam_fx1.f3` est absent
+352/352. Les deux s'expliquent par le même mécanisme et des neutres différents :
+le neutre du `Fan` est **50** — un fan centré n'est pas un fan nul — donc le
+champ est toujours écrit ; le neutre de la `Feature` est **0** (`Dimmer`), donc
+il est toujours omis. Un même champ, deux moteurs, deux neutres, deux formes
+d'absence opposées, et les deux se déduisent du sens.
+
+**Manipulation.** Écran `MOVE FX`, **page 1**. Troisième encodeur **poussé**
+pour passer de `SIZE` à `FAN`, puis tourné jusqu'à **83**. Rien d'autre.
+`SHIFT` + tap sur le pad libre suivant, puis sauvegarde du projet.
+
+`83` : absent du vocabulaire du champ sur le corpus — `50`×331, `70`×9,
+`100`×4, `55`×4, `60`×4.
+
+| Lecture | `move_fx1.f3` | p |
+|---|---|---|
+| **`f3` = `Fan`, pourcentage direct** | **83** | **0,80** |
+| `f3` = `Fan` mais sur une autre échelle (0–255, bipolaire signé…) | une autre valeur, corrélée à 83 | 0,07 |
+| `f3` est autre chose ; le `Fan` atterrit ailleurs | reste **50**, un numéro neuf apparaît | 0,06 |
+| le `Fan` est de l'état vif, non capturé | record 165 inchangé | 0,04 |
+| autre chose | — | 0,03 |
+
+**Contrôles, gratuits parce que l'état vif est global.** L'entrée neuve doit être
+identique à l'entrée **86** partout sauf `move_fx1.f3` — même colonne couleur
+(37/62/50/88), même colonne faisceau (94/100/75, `f3` = 1). C'est le même
+contrôle à un champ qui a porté FX6-03, et il ne coûte rien : il suffit de ne
+toucher que le `Fan`.
+
+`move_fx1.f8` (`Size`) doit rester à sa valeur actuelle. S'il bouge, l'encodeur
+n'avait pas basculé en mode `Fan` et le tir est contaminé — c'est le contrôle de
+la manipulation elle-même, celui qui avait validé la bascule sur le faisceau.
+
+Id attendu : **87**.
+
+### Capture optionnelle, et elle vaut un piège d'écriture
+
+Si l'opérateur veut un second tap : remettre le `Fan` à **0** et capturer une
+deuxième fois. Sous la lecture favorite, `f3` doit alors **disparaître** de
+l'entrée — un zéro protobuf — et cette disparition dirait quelque chose qu'un
+générateur doit savoir :
+
+> un `f3` **absent** sur le mouvement ne veut pas dire « fan neutre », il veut
+> dire **fan à fond d'un côté**. Le neutre, 50, doit être écrit explicitement.
+
+C'est exactement la forme du piège que GEN-03 avait payé sur `f32`–`f35` —
+« un champ absent n'est pas un champ à zéro » — mais dans l'autre sens : ici
+c'est le zéro qui est un extrême et le neutre qui est une valeur. Un
+`wpj_generate.py` qui omettrait `f3` en croyant laisser le fan au repos
+produirait des mouvements en éventail maximal.

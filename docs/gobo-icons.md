@@ -7,8 +7,8 @@ End-to-end recipe, every step device-confirmed on firmware 2.0.18
 | Layer | What changes | Where it lives | Tool |
 |---|---|---|---|
 | Icons | the 24×24 images themselves | `wolfmixFlash.bin`, global | `gobo_write.py` |
-| Names | the label under each pad | the project, record 145 | `wpj_gobopage.py rename` |
-| Order | which pad is where | the project, record 111 | `wpj_gobopage.py order` |
+| Names | the label under each pad | the project, record 145 | `wpj_show.py`, key `gobo_noms` |
+| Order | which pad is where | the project, record 111 | `wpj_show.py`, key `gobo_ordre` |
 
 ## 1. Photograph the wheel
 
@@ -67,9 +67,17 @@ backup of the original bundle **outside** the WTOOLS folder first.
 
 ## 6. Names and order (optional, per project)
 
+Both are ordinary `wpj_show` edits ([`show-format.md`](show-format.md)),
+with the same auto-verified spec as preset edits:
+
+```json
+{"base": "in.wpj",
+ "gobo_noms": {"342": "Butterfly", "344": "Sun"},
+ "gobo_ordre": [342, 343, 344, 425, 424]}
+```
+
 ```bash
-python3 tools/wpj_gobopage.py rename in.wpj out.wpj 342=Butterfly 344=Sun
-python3 tools/wpj_gobopage.py order in.wpj out.wpj 342,343,...   # full wheel list
+python3 tools/wpj_show.py compile spec.json out.wpj
 ```
 
 Deploy with `wolfmix_experiment.py deploy` (`device.md`), then reload the

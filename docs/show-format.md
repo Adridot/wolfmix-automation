@@ -46,6 +46,8 @@ Keys are French, matching the codec's key names.
 | `presets` | array | preset edits (record 165) |
 | `positions` | array | named pan/tilt positions (record 150, one copy per group A–H) |
 | `palette` | array | Color FX palette pads (record 135) |
+| `gobo_noms` | object | gobo pad names, `{"<gobo id>": "Nom"}` (record 145, group A) |
+| `gobo_ordre` | array | the wheel's complete gobo id list, in the wanted pad order (records 111 + 145) |
 
 Any other key is an error. A spec with only `base` is legal and produces a
 byte-identical copy of the donor — the cheapest possible proof that the
@@ -124,6 +126,23 @@ The remaining four pad channels (`blanc`, `ambre`, `lime`, `uv`) decode fine but
 are not writable here. The seven-channel order was read off the W1's own `RGB+`
 view and is device-confirmed on record **140**; record 135 inherits it at
 `correlated`, and no write to 135 has been checked on a device either.
+
+## `gobo_noms` / `gobo_ordre`
+
+Both device-confirmed (RENAME-01, SORT-01 — `SPEC.md` §3.4), on group A.
+
+`gobo_noms` writes `145.f3`, the operator-assignable pad label, addressed by
+gobo image id: `{"343": "Papillon"}`. Names are capped at 19 UTF-8 bytes —
+the preset-name limit (PRESET-05), unmeasured on this field, so refused
+conservatively.
+
+`gobo_ordre` is the **complete** id list of the wheel in the wanted order;
+anything else is refused. The record-111 wheel ranges (`fonction` 14) are
+permuted — each keeps its DMX bounds, the id-less open range stays first —
+and the record-145 palette is rewritten consistently: names travel with
+their gobos, glyphs are resequenced from `!`. The firmware accepts the
+resulting non-monotonic range list and uses it as the pad order. A wheel
+carried by a second group's palette is refused as unmeasured.
 
 ## Example
 

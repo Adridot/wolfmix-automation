@@ -11,7 +11,7 @@ Three conventions hold everywhere:
   `wpj_identities`, `wpj_show`, `wpj_generate`) prove it over your corpus; the
   other three prove it against frozen inputs in their own source
   (`wpj_inspect`, `wpj_position`) or against the git index (`wpj_privacy`).
-  `make check` runs ten of them;
+  `make check` runs nine of them;
   `wpj_diff.py` self-checks too but is not wired into it.
 - **No corpus, no claim.** No project file ships with this repository
   ([`../LEGAL.md`](../LEGAL.md)). The corpus root is `corpus/`, or `$WPJ_CORPUS`
@@ -73,12 +73,12 @@ Naming: a field whose meaning is proven gets a semantic key (`nom`, `profil`,
 `effet`, …); an unidentified field keeps a neutral `fN` key. An absent field is
 absent from the dict — never a synthesised `0`.
 
-Decoded today: 101, 102, 105, 115, 116, 120, 125, 135, 140, 145, 150, **151**,
-160, 165.
+Decoded today: 101, 102, 105, **111**, 115, 116, 120, 125, 135, 140, 145,
+150, **151**, 160, 165.
 
 Note on 105: the keys are `offset_106` and `nb_entrees_106`, not an address and a
 channel count — see `SPEC.md` §7. The old names were a misreading.
-Passthrough (round-tripped, undecoded): 106, 110, 111, 130, 155, 161 —
+Passthrough (round-tripped, undecoded): 106, 110, 130, 155, 161 —
 several of these have a documented structure in `SPEC.md` without a codec
 schema yet.
 
@@ -187,7 +187,15 @@ verbatim because it gates nothing.
 Preset names are capped at **19 UTF-8 bytes** and the compiler now rejects a
 longer one: past that the *whole project* refuses to open on the device
 (PRESET-05), and the value reads back fine, so nothing downstream would catch
-it.
+it. The same cap guards gobo pad names.
+
+The **gobo page** is edited the same way (`SPEC.md` §3.4, RENAME-01/SORT-01):
+`gobo_noms` writes pad names into `145.f3`, and `gobo_ordre` — the complete
+id list of the wheel — permutes the record-111 wheel ranges and rewrites the
+palette consistently, names travelling with their gobos and glyphs
+resequenced. A wheel shared by a second group is refused as unmeasured. See
+[`show-format.md`](show-format.md) and, for the whole icon pipeline,
+[`gobo-icons.md`](gobo-icons.md).
 
 After writing, it reloads its own output (revalidating the SHA-1), re-decodes
 every edited record, checks each requested value reads back, and confirms that
@@ -338,31 +346,6 @@ RGBA when the shape matters.
 Uploading the result is a separate, device-side act; see
 [`../research/flash-gobo-plan.md`](../research/flash-gobo-plan.md) for the order
 of operations and the way back.
-
-## `wpj_gobopage.py` — renaming and reordering the gobo page
-
-Project-side companion to the flash tools, carried by two device-confirmed
-facts (RENAME-01, SORT-01 — `SPEC.md` §3.4): a pad's name is `145.f3`, and
-the pad order is the wire order of the wheel ranges in record 111.
-
-```bash
-python3 tools/wpj_gobopage.py                                # self-check
-python3 tools/wpj_gobopage.py rename in.wpj out.wpj 342=Papillon 344=Soleil
-python3 tools/wpj_gobopage.py order in.wpj out.wpj 342,343,425,424
-```
-
-`order` takes the complete id list of the wheel (the open range without an id
-stays first, outside the palette) and refuses anything else. Record 111 is
-permuted byte for byte — each range keeps its DMX bounds, nothing outside the
-wheel slice moves — and record 145 is rewritten consistently: ids and names
-travel together, glyphs are reassigned sequentially. Names are capped at 19
-UTF-8 bytes (the preset-name limit, PRESET-05; unmeasured here, so refused
-conservatively).
-
-Self-check: on every corpus palette, the identity permutation is a byte-level
-no-op and a rotation composed with its inverse restores the original record.
-Deploying the result is `wolfmix_experiment.py deploy`, then the manual
-project reload ([`device.md`](device.md)).
 
 ## `wolfmix.py` / `wolfmix_experiment.py`
 

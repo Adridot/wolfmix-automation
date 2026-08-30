@@ -297,9 +297,11 @@ reading from *derived* to *editable*:
   consistently with 111 (ids and names permuted together, glyphs reassigned
   sequentially from `!` — the shape device-written files use).
 
-`tools/wpj_gobopage.py` implements both edits and reproduces the two accepted
-candidates byte for byte; its self-check permutes and inverts every corpus
-palette.
+Both edits ride the standard path: record 111 now has a codec schema
+(byte-exact on the whole corpus, like every schema), and `wpj_show` carries
+them as the `gobo_noms` and `gobo_ordre` spec keys — same auto-verify
+contract as preset edits. The compiled specs reproduce the two accepted
+candidates byte for byte.
 
 ---
 

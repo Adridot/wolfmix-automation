@@ -33,7 +33,8 @@ _FX_NOMS = ("beam_fx1", "beam_fx2", "color_fx1", "color_fx2",
 # phase/size/fade sont nommés mais restent hors de la liste : lus, pas écrits.
 _FX_CLES = {"effet": (0, 8), "vitesse": (0, 100), "link_order": (10, 13),
             "speed_source": (0, 2), "bpm_division": (0, 1 << 31)}
-_SHOW_CLES = ("base", "nom", "presets", "positions", "palette")
+_SHOW_CLES = ("base", "nom", "presets", "positions", "palette",
+              "gobo_noms", "gobo_ordre")
 _PRESET_CLES = ("id", "modele", "nom", "positions", "dimmers",
                 "masque_contenu", "pattern_couleur",
                 "couleur_statique") + _FX_NOMS
@@ -224,6 +225,84 @@ def compiler(spec, sortie):
                        all(d["pads"][i].get(k, 0) == v
                            for k, v in att.items())))
 
+    # --- records 145 + 111 : page gobos du groupe A ---
+    # Device-confirmed (RENAME-01, SORT-01) : le nom d'un pad est `145.f3`,
+    # et l'ordre des pads est l'ordre du fil des plages roue (fonction 14)
+    # du record 111 — plages non monotones acceptées, bornes DMX embarquées.
+    if "gobo_noms" in spec:
+        d145 = rec(145)
+        att_noms = {}
+        for cle, nom in spec["gobo_noms"].items():
+            gid = int(cle)
+            ctx = f"gobo_noms id {gid}"
+            if not isinstance(nom, str) or not nom:
+                raise ValueError(f"{ctx} : nom doit être une chaîne non vide")
+            if len(nom.encode("utf-8")) > NOM_MAX_OCTETS:
+                raise ValueError(f"{ctx} : nom > {NOM_MAX_OCTETS} octets "
+                                 "UTF-8 — limite mesurée sur les presets "
+                                 "(PRESET-05), non mesurée ici, donc refusée")
+            slot = next((s for s in d145.get("gobos", [])
+                         if isinstance(s, dict) and s.get("gobo_id") == gid),
+                        None)
+            if slot is None:
+                raise ValueError(f"{ctx} : absent de la palette du donneur")
+            slot["nom"] = nom
+            att_noms[gid] = nom
+        verifs.append((145, 0, "gobo_noms", lambda d, att=att_noms: all(
+            next((s.get("nom") for s in d["gobos"]
+                  if s.get("gobo_id") == g), None) == n
+            for g, n in att.items())))
+
+    if "gobo_ordre" in spec:
+        ordre = spec["gobo_ordre"]
+        d145 = rec(145)
+        slots = d145.get("gobos", [])
+        pleins = [s for s in slots if isinstance(s, dict) and "gobo_id" in s]
+        if sorted(s["gobo_id"] for s in pleins) != sorted(ordre):
+            raise ValueError("gobo_ordre : la liste doit porter exactement "
+                             "les ids de la palette du donneur")
+        # roue partagée par un autre groupe = non mesuré : refus.
+        for occ in range(1, sum(1 for t, _ in w.records if t == 145)):
+            autres = wpj_codec.decode(145, w.get(145, occ)).get("gobos", [])
+            ids = sorted(s["gobo_id"] for s in autres
+                         if isinstance(s, dict) and "gobo_id" in s)
+            if ids == sorted(ordre):
+                raise ValueError(f"gobo_ordre : le groupe {occ} porte la "
+                                 "même roue — cas non mesuré, refusé")
+        par_id = {s["gobo_id"]: s for s in pleins}
+        nouveaux = [par_id[g] for g in ordre]
+        for k, s in enumerate(nouveaux):
+            s["glyphe"] = chr(0x21 + k)      # séquence, la forme de l'appareil
+        d145["gobos"] = nouveaux + slots[len(pleins):]
+        verifs.append((145, 0, "gobo_ordre palette",
+                       lambda d, o=list(ordre):
+                       [s["gobo_id"] for s in d["gobos"]
+                        if "gobo_id" in s] == o))
+        touchees = 0
+        for occ in range(sum(1 for t, _ in w.records if t == 111)):
+            d111 = rec(111, occ)
+            plages = d111.get("plages", [])
+            roue = [k for k, p in enumerate(plages)
+                    if isinstance(p, dict) and p.get("fonction") == 14]
+            ids = [plages[k]["gobo_id"] for k in roue
+                   if "gobo_id" in plages[k]]
+            if sorted(ids) != sorted(ordre):
+                continue
+            par_id = {plages[k]["gobo_id"]: plages[k] for k in roue
+                      if "gobo_id" in plages[k]}
+            sans_id = [plages[k] for k in roue if "gobo_id" not in plages[k]]
+            for k, p in zip(roue, sans_id + [par_id[g] for g in ordre]):
+                plages[k] = p
+            touchees += 1
+            verifs.append((111, occ, f"gobo_ordre roue occ {occ}",
+                           lambda d, o=list(ordre):
+                           [p["gobo_id"] for p in d["plages"]
+                            if p.get("fonction") == 14 and "gobo_id" in p]
+                           == o))
+        if not touchees:
+            raise ValueError("gobo_ordre : aucune roue du donneur ne porte "
+                             "ces ids dans un record 111 décodable")
+
     # --- réencodage + écriture (nouveau fichier, jamais d'écrasement) ---
     for (typ, occ), d in cache.items():
         w.replace(typ, wpj_codec.encode(typ, d), occ)
@@ -395,6 +474,28 @@ def _demo_sur(base):
         out2 = os.path.join(tmp, "ident.wpj")
         assert compiler({"base": base}, out2) == []
         assert open(out2, "rb").read() == open(base, "rb").read()
+        # page gobos : nom + rotation, valeurs relues
+        pal = wpj_codec.decode(145, wpjlib.Wpj.load(base).get(145))["gobos"]
+        gids = [s["gobo_id"] for s in pal
+                if isinstance(s, dict) and "gobo_id" in s]
+        if len(gids) < 2:
+            raise ValueError("donneur sans palette gobo")
+        rot = gids[1:] + gids[:1]
+        out3 = os.path.join(tmp, "gobo.wpj")
+        compiler({"base": base, "gobo_noms": {str(gids[0]): "DemoGobo"},
+                  "gobo_ordre": rot}, out3)
+        d = wpj_codec.decode(145, wpjlib.Wpj.load(out3).get(145))["gobos"]
+        assert [s["gobo_id"] for s in d if "gobo_id" in s] == rot
+        assert next(s["nom"] for s in d
+                    if s.get("gobo_id") == gids[0]) == "DemoGobo"
+        # rotation puis rotation inverse, sans renommage : donneur intact à
+        # l'octet près (glyphes séquentiels = la forme que l'appareil écrit)
+        if [s.get("glyphe") for s in pal if "gobo_id" in s] == \
+                [chr(0x21 + k) for k in range(len(gids))]:
+            ga, gb = os.path.join(tmp, "ga.wpj"), os.path.join(tmp, "gb.wpj")
+            compiler({"base": base, "gobo_ordre": rot}, ga)
+            compiler({"base": ga, "gobo_ordre": gids}, gb)
+            assert open(gb, "rb").read() == open(base, "rb").read()
         # erreurs attendues : clé inconnue, entrée absente
         for mauvais in [{"base": base, "fondu": 1},
                         {"base": base, "presets": [{"id": 9999, "nom": "x"}]},
@@ -410,7 +511,11 @@ def _demo_sur(base):
                         # pad hors de la grille de 20
                         {"base": base, "presets": [
                             {"id": neuf, "modele": 23,
-                             "couleur_statique": [[21]] + [[]] * 7}]}]:
+                             "couleur_statique": [[21]] + [[]] * 7}]},
+                        # gobo inconnu, ordre incomplet, nom trop long
+                        {"base": base, "gobo_noms": {"999999": "x"}},
+                        {"base": base, "gobo_ordre": gids[:-1]},
+                        {"base": base, "gobo_noms": {str(gids[0]): "a" * 20}}]:
             try:
                 compiler(mauvais, os.path.join(tmp, "err.wpj"))
                 raise AssertionError(f"erreur attendue : {mauvais}")

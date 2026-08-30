@@ -93,8 +93,15 @@ SCHEMAS = {
     125: {5: ("groupes", {8: ("nom", "str")})},
     135: {5: ("pads", _PAD)},
     140: {2: ("page", "v"), 5: ("pads", _PAD)},
+    # 111 : plages de valeurs d'un canal (SPEC §7.6). f1/f2 = première et
+    # dernière valeur DMX, f3 = fonction (14 = roue de gobos), f4 = id d'image
+    # gobo des plages roue (= 145.f2, identité vérifiée). L'ordre du fil est
+    # l'ordre des pads, et il est libre — device-confirmed, SORT-01.
+    111: {5: ("plages", {1: ("debut", "v"), 2: ("fin", "v"),
+                         3: ("fonction", "v"), 4: ("gobo_id", "v")})},
     # 145 : palette gobo. f1 = glyphe police d'icônes (' ' = vide), f2 = id
-    # d'image gobo (= 111[plage].f4), f3 = nom optionnel. Voir le registre.
+    # d'image gobo (= 111[plage].f4), f3 = nom optionnel, opérateur-assignable
+    # et écrit hors appareil — device-confirmed, RENAME-01. Voir le registre.
     145: {5: ("gobos", {1: ("glyphe", "str"), 2: ("gobo_id", "v"),
                         3: ("nom", "str")})},
     150: {5: ("positions", {5: ("nom", "str")})},
@@ -106,7 +113,7 @@ SCHEMAS = {
     160: {5: ("macros", {6: ("nom", "str")})},
     165: {5: ("presets", _PRESET)},
 }
-# passthrough volontaire : 106, 110, 111, 130, 155, 161
+# passthrough volontaire : 106, 110, 130, 155, 161
 
 
 # --- wire protobuf -----------------------------------------------------------

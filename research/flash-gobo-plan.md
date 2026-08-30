@@ -113,8 +113,8 @@ Nicolaudie montre de plus beau ailleurs ne vient pas de ce fichier.
 
 Les cinq phases sont exécutées, le 2026-08-30. La suite — renommer les pads et
 réordonner la page — n'est **pas** dans le flash : c'est une édition de projet
-(records 145 et 111, cas RENAME-01/SORT-01), portée par
-`tools/wpj_gobopage.py` et documentée dans `SPEC.md` §3.4.
+(records 145 et 111, cas RENAME-01/SORT-01), portée par les clés
+`gobo_noms`/`gobo_ordre` de `wpj_show` et documentée dans `SPEC.md` §3.4.
 
 L'ordre 3→4 n'est pas négociable :
 prouver l'annulation sur une icône avant d'en toucher plusieurs. Tant que la

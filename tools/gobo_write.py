@@ -246,8 +246,12 @@ def main(argv):
     except ValueError as err:
         print(f"refus : {err}", file=sys.stderr)
         return 2
-    with open(out, "wb") as handle:
-        handle.write(data)
+    try:
+        with open(out, "xb") as handle:
+            handle.write(data)
+    except FileExistsError:
+        print(f"refus : {out} existe déjà", file=sys.stderr)
+        return 2
     names = ", ".join(f"{i} (« {lib.name(i)} »)" for i in sorted(edits))
     print(f"{out} — {len(data)} octets, {changed} modifiés sur {names}")
     return 0

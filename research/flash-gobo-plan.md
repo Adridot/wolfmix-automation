@@ -1,7 +1,7 @@
 # Remplacer des icônes de gobo dans l'image flash
 
 Lu dans le dump Blutter de WTOOLS 2.0.2 (`blutter-out/asm/wolfmix/`), puis
-**mesuré sur le W1 série 2001998 (firmware 2.0.18) le 2026-08-30**.
+**mesuré sur le W1 du banc (firmware 2.0.18, série retenue) le 2026-08-30**.
 
 ## Fait, et vérifié sur l'appareil
 
@@ -56,13 +56,22 @@ defaults write com.nicolaudiegroup.wtools flutter.wtoolsMode -int 0   # état d'
 WTOOLS doit être fermé, et redémarré ensuite. En mode 2, **`Upload Firmware`
 est le bouton voisin d'`Upload Flash`** : viser juste.
 
-## Ce qu'il reste à écrire
+## L'encodeur existe
 
-Un encodeur, inverse exact de `Library.icon()` : 24×24, 3 octets/pixel
-entrelacés, RGB565 LE puis alpha. 1728 octets, **taille fixe**.
+`tools/gobo_write.py`, inverse exact de `Library.icon()` : 24×24, 3
+octets/pixel entrelacés, RGB565 LE puis alpha. 1728 octets, **taille fixe**.
+Il réduit une image carrée quelconque par moyenne de zone et sait lire une
+silhouette « blanc sur noir » (`mask:`) — le pipeline complet est dans
+[`../docs/gobo-icons.md`](../docs/gobo-icons.md).
 
 Remplacer une icône n'est qu'un `data[ptr-base : ptr-base+1728] = neuf`.
-Table, pointeurs, longueur du fichier : inchangés. Diff attendu = N×1728 octets.
+Table, pointeurs, longueur du fichier : inchangés. Diff attendu ≤ N×1728 octets.
+
+Mesure annexe, en passant : les 705 icônes se suivent à 1728 octets pile,
+**sauf deux** — les ids 227 et 229 (`DS12GB08`/`DS12GB10`) traînent 72 octets
+excédentaires quasi transparents (une ligne de 24 pixels, alpha ≈ 0), un
+déchet d'export du fabricant sans effet. Aucune résolution cachée : ce que
+Nicolaudie montre de plus beau ailleurs ne vient pas de ce fichier.
 
 ## Le piège
 
@@ -100,9 +109,14 @@ Table, pointeurs, longueur du fichier : inchangés. Diff attendu = N×1728 octet
 | 2 | Patch à blanc : 1 icône magenta sur un id libre, sans upload | `cmp -l` donne exactement 1728 octets, tous dans `[ptr-base, +1728[` |
 | 3 | Upload réel du flash patché (WLINK coupé, `wtoolsMode=2`) | ✅ magenta sur le pad 7 après redémarrage |
 | 4 | **Re-upload du flash d'origine** | ✅ « Gobo01 » revenu — retour arrière prouvé |
-| 5 | Les vraies icônes des lyres, par lots | reste à faire |
+| 5 | Les vraies icônes des lyres, par lots | ✅ 11 icônes d'un coup (ids 342–352), silhouettes issues d'images générées, toutes affichées après redémarrage |
 
-Phases 0 à 4 exécutées le 2026-08-30. L'ordre 3→4 n'est pas négociable :
+Les cinq phases sont exécutées, le 2026-08-30. La suite — renommer les pads et
+réordonner la page — n'est **pas** dans le flash : c'est une édition de projet
+(records 145 et 111, cas RENAME-01/SORT-01), portée par
+`tools/wpj_gobopage.py` et documentée dans `SPEC.md` §3.4.
+
+L'ordre 3→4 n'est pas négociable :
 prouver l'annulation sur une icône avant d'en toucher plusieurs. Tant que la
 phase 4 n'a pas tourné, le filet est théorique.
 

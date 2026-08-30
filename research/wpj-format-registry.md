@@ -7558,3 +7558,54 @@ Prédictions annexes de la même capture, toutes lisibles d'un coup :
   propriété est active sur cet effet — et si `f8` est bien `Size`, il ne peut pas
   rester absent. C'est le point le plus dur du tir : une absence de `f8` ici
   réfute la favorite à elle seule, sans avoir besoin des deux autres valeurs.
+
+### FX6-03 amendé — l'opérateur a bougé `PHASE` et `FADE` aussi, et `FADE 0 %` est un test gratuit — 2026-08-30
+
+État de l'écran `BEAM FX` au moment de la capture B, lu sur photo :
+`FX1 | SIN WAVE`, `LINK GROUP`, `FADE 0 %`, `SIZE | FEATURE → ZOOM`,
+`PHASE | ORDER 94 %`, `SPEED 75 %`.
+
+Trois écarts au protocole posé, qui demandait de ne toucher que la `Feature` :
+
+| Écart | Conséquence |
+|---|---|
+| `PHASE` porté à **94 %** | une **seconde** lecture de la permutation, sur un autre moteur, avec une autre valeur |
+| `FADE` porté à **0 %** | voir ci-dessous — c'est le test le plus informatif du tir |
+| `SPEED` à 75 %, `LINK GROUP` | champs déjà nommés (`f2`, `f4` = 10, le défaut) ; sans effet sur la permutation |
+
+**`FADE 0 %` teste directement l'argument publié plus haut.** J'ai écrit que `f9`
+est présent sur les 352 presets distincts, donc jamais à 0, donc pas `Phase`
+dont le neutre est 0. Si `f9` est `Fade`, alors un fondu réglé à **0** doit le
+faire **disparaître** de l'entrée neuve — proto3 omet les zéros. Ce serait la
+première absence de `f9` jamais observée, et elle serait provoquée exprès.
+
+Aucune autre permutation ne prédit la même chose. Prédictions pour l'entrée
+neuve, `beam_fx1` :
+
+| Lecture | `f6` | `f8` | `f9` |
+|---|---|---|---|
+| **favorite** — `f6` Phase, `f8` Size, `f9` Fade | **94** | **100** (inchangé) | **absent** |
+| `f6` Fade, `f8` Size, `f9` Phase | **absent** | 100 | **94** |
+| `f6` Phase, `f8` Fade, `f9` Size | 94 | **absent** | 100 |
+
+Les trois lectures rivales tombent sur des motifs **disjoints** : la valeur 94 et
+l'absence se déplacent ensemble d'un champ à l'autre. Une seule entrée les
+sépare toutes les trois.
+
+Le reste de la prédiction, inchangé sur le fond :
+
+- `beam_fx1.f5` = **1** (`Zoom`, énumération du toolkit) — p **0,55** ;
+- `beam_fx1.f8` reste à **100** : l'encodeur a basculé en mode `Feature`, donc
+  `Size` n'a pas tourné. Si `f8` bouge, c'est que la bascule n'a pas eu lieu et
+  le tir est contaminé — c'est le contrôle de la manipulation elle-même ;
+- `beam_fx1.effet` **absent** (`SIN WAVE` = 0), `vitesse` = **75**,
+  `link_order` = **10**, `speed_source` absent (`Clock`) ;
+- `beam_fx2` **octet pour octet** inchangé ;
+- `color_fx1` de cette entrée aux défauts couleur, et `beam_fx1` de l'entrée
+  précédente aux défauts faisceau — chaque capture contrôle l'autre.
+
+**Une prédiction déjà fausse, avant même la lecture.** J'annonçais les ids
+**85 et 86** ; l'opérateur rapporte **86 et 87**. La place 85 était donc déjà
+prise avant cette session. C'est une erreur sans conséquence sur la permutation,
+mais elle se note : l'état de l'appareil n'était pas celui que je supposais
+depuis F7-04, et je ne l'avais pas vérifié avant de prédire.

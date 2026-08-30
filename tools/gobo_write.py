@@ -10,7 +10,12 @@ L'image flash d'origine n'est jamais touchée ; `patch` écrit un fichier neuf
 et vérifie que le diff tient dans les seules fenêtres visées.
 
   self-test                      round-trip sur les 705 icônes distinctes
-  patch SORTIE id=img.png ...    id=#RRGGBB pour une icône unie
+  patch SORTIE id=img.png ...    id=#RRGGBB pour une icône unie,
+                                 id=mask:img.png pour une silhouette
+
+Une image carrée plus grande que 24x24 est réduite par moyenne de zone.
+`mask:` lit la luminance comme canal alpha et rend la forme en blanc — le
+format que produit « motif blanc sur fond noir » d'un générateur d'images.
 
 Les icônes d'origine sont l'oeuvre du fabricant : rien n'est extrait ici.
 """
@@ -117,13 +122,49 @@ def read_png(path):
     return width, height, pixels
 
 
+def downscale(width, height, pixels, value):
+    """Moyenne de zone d'un carré N×N vers 24×24, une valeur par pixel source.
+
+    `value` extrait ce qui est moyenné : un tuple (canaux) ou un scalaire.
+    Les bornes entières `k*N//24` couvrent chaque pixel source exactement une
+    fois, quelle que soit la divisibilité de N.
+    """
+    if width != height or width < SIDE:
+        raise ValueError(f"image carrée d'au moins {SIDE}x{SIDE} attendue, "
+                         f"reçu {width}x{height}")
+    out = []
+    for ty in range(SIDE):
+        y0, y1 = ty * height // SIDE, (ty + 1) * height // SIDE
+        for tx in range(SIDE):
+            x0, x1 = tx * width // SIDE, (tx + 1) * width // SIDE
+            acc, n = None, (x1 - x0) * (y1 - y0)
+            for sy in range(y0, y1):
+                row = sy * width
+                for sx in range(x0, x1):
+                    v = value(pixels[row + sx])
+                    acc = v if acc is None else tuple(
+                        a + b for a, b in zip(acc, v))
+            out.append(tuple(c // n for c in acc))
+    return out
+
+
 def load_image(path):
     """Un PNG sans canal alpha rend l'icône entièrement opaque : les icônes
     du fabricant sont détourées, donc exporter en RGB écrase leur découpe."""
     width, height, pixels = read_png(path)
-    if (width, height) != (SIDE, SIDE):
-        raise ValueError(f"{path} : {width}x{height}, il faut {SIDE}x{SIDE}")
-    return pixels
+    if (width, height) == (SIDE, SIDE):
+        return pixels
+    return downscale(width, height, pixels, lambda p: p)
+
+
+def load_mask(path):
+    """Silhouette : luminance × alpha du PNG source → canal alpha, forme
+    rendue en blanc. C'est l'inverse d'un aplat « blanc sur fond noir »."""
+    width, height, pixels = read_png(path)
+    lum = downscale(width, height, pixels,
+                    lambda p: ((p[0] * 299 + p[1] * 587 + p[2] * 114)
+                               // 1000 * p[3] // 255,))
+    return [(255, 255, 255, v[0]) for v in lum]
 
 
 def solid(spec):
@@ -199,6 +240,21 @@ def self_test(path):
             tuple(rgb[k:k + 3]) for k in range(0, len(rgb), 3)]
         assert all(p[3] == 255 for p in pixels)
 
+    # Réduction et silhouette : un 48x48 moitié blanc / moitié noir doit
+    # donner 12 colonnes pleines, 12 vides, sans demi-teinte hors frontière.
+    with tempfile.TemporaryDirectory() as tmp:
+        png = os.path.join(tmp, "m.png")
+        rgb = b"".join((b"\xff\xff\xff" if x < 24 else b"\x00\x00\x00")
+                       for _ in range(48) for x in range(48))
+        write_png(png, 48, 48, rgb)
+        icon = load_mask(png)
+        assert all(p == (255, 255, 255, 255) for i, p in enumerate(icon)
+                   if i % SIDE < 12), "gauche : alpha plein attendu"
+        assert all(p[3] == 0 for i, p in enumerate(icon)
+                   if i % SIDE >= 12), "droite : alpha nul attendu"
+        flat = load_image(png)
+        assert flat[0] == (255, 255, 255, 255) and flat[23] == (0, 0, 0, 255)
+
     # Un patch ne doit toucher que sa propre fenêtre.
     target = next(i for i in range(len(lib.ptrs))
                   if collections.Counter(lib.ptrs)[lib.ptrs[i]] == 1)
@@ -240,6 +296,8 @@ def main(argv):
                                  f"reçu « {spec} »")
             gobo_id = int(key)
             edits[gobo_id] = (solid(value) if value.startswith("#")
+                              else load_mask(value[5:])
+                              if value.startswith("mask:")
                               else load_image(value))
         data = patch(lib, edits)
         changed = verify(lib.data, data, lib, list(edits))

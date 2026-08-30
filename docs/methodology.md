@@ -61,6 +61,14 @@ Software-only, no device connected. This is how EXP-01…05 in
 One experiment validates at most one field. An ambiguous result is written down
 as a list of candidates.
 
+**On record 165, overwrite a preset rather than appending one.** A fresh entry
+adds a few hundred bytes and shifts everything after it, so the diff is a wall.
+Re-capturing over an **existing** experiment preset leaves every length intact,
+and a one-byte field then shows up as a single one-byte range in
+`wpj_diff.py` — no protobuf reading required to see it. FX6-04 closed the move
+`Fan` that way: one byte on 46414, `50` → `83`. The cost is the overwritten
+preset, so this is for experiment entries only, never a real show's cues.
+
 ## The device protocol
 
 When the question cannot be answered from files — "does this field do anything

@@ -753,8 +753,8 @@ Where both sources cover a value, they agree.
 | `f6` | **phase %** | defaults 25 beam / 20 colour / absent (0) move | **validated** (FX6-02/03) |
 | `f8` | **size %** | 100 beam and move; **absent whenever the effect has no `SIZE`** — 330/330 colour presets on a Rainbow carry none | **validated** (FX6-02) |
 | `f2` | **fade %** | default 100; **above 100 is `Flick`** on move (200 ×12). Colour's 150/200 unexplained | **validated** (FX6-02/03) |
-| `f3` | the third encoder's **second mode**, engine-dependent: **`Feature`** on beam, `Fan` on move. Colour has no second mode and never carries `f3` | Beam: `1` = `Zoom` measured; absent = `0` = Dimmer. Move: default 50 | **validated** on beam at one value; hypothesized on move |
-| `f5` | Color FX: 16-bit **colour mask** over record 135's pads. Move FX: the **effect's position**. Beam FX: **unattributed** — absent on all 352 distinct presets and on both fresh entries | Color: 2 varints (v1 = pads 1–8, v2 = 9–16). Move: one varint, nine on screen, only 0/1/5/6 seen | correlated (Color and Move) |
+| `f3` | the third encoder's **second mode**, engine-dependent: **`Feature`** on beam, **`Fan`** on move. Colour has no second mode and never carries `f3` — 0 occurrences on 352 distinct presets | Beam: `1` = `Zoom` measured, absent = `0` = Dimmer. Move: direct %, `83` measured, default **50** — the field is present 352/352 because a centred fan is not a null fan | **validated** on both engines (FX6-03, FX6-04) |
+| `f5` | Color FX: 16-bit **colour mask** over record 135's pads. Move FX: the **effect's position**. Beam FX: **unattributed, and with no candidate left** — all six beam screen properties are placed, and `f5` is absent on all 352 distinct presets | Color: 2 varints (v1 = pads 1–8, v2 = 9–16). Move: one varint, nine on screen, only 0/1/5/6 seen | correlated (Color and Move) |
 
 Effect type `f7`, Beam: `0` Sin Wave · `1` Sparkle · `2` Chaser · `3` CanCan ·
 `4` Heartbeat · `5` Wolf Rider · `6–8` FX Seq 1–3.
@@ -779,7 +779,7 @@ beam and **seven** on move, and every one of them now has a field:
 | Order | `f4` | ✓ | ✓ | ✓ |
 | Size | `f8` | ✓ | ✓ | ✓ |
 | Fade | `f2` | ✓ | ✓ | ✓ (`> 100` = `Flick`) |
-| the third encoder's second mode | `f3` | — | `Feature` | `Fan` |
+| the third encoder's second mode | `f3` | — | `Feature` (`Zoom` = 1) | `Fan` (83 % measured) |
 
 Three corrections got the count right. **`Order` was double-counted** — it is
 `f4`, named `link_order` since F4-03. **`Flick` is not a value** but the top of

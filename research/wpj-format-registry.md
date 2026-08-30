@@ -7841,3 +7841,92 @@ C'est exactement la forme du piège que GEN-03 avait payé sur `f32`–`f35` —
 c'est le zéro qui est un extrême et le neutre qui est une valeur. Un
 `wpj_generate.py` qui omettrait `f3` en croyant laisser le fan au repos
 produirait des mouvements en éventail maximal.
+
+### FX6-04 mesuré — un octet sur 46414, et le `Fan` est fermé — 2026-08-30 — **[validated]**
+
+W1 Mk1 firmware 2.0.18, WTOOLS fermé, projet `WMX EXP format-lab`
+(`73d06df4-…`), 46414 octets avant **et** après.
+
+| | |
+|---|---|
+| avant | version 1787841428673, `sha256 4fccab83a5d554535b986b020c480b02f901342716d04fbce4b009947b11c3fb` |
+| après | version 1787841428674, `sha256 e14818ace4203dff5080f3d3f9643f367a34359d1f7f77376037aa50d1581973` |
+
+Sortie de `wpj_diff.py` — trois plages, dont **une seule de charge utile** :
+
+```
+0x000000+20   en-tête SHA-1, recalculé
+0x000028+1    c1 -> c2        octet bas du compteur de version
+0x00af15+1    32 -> 53        50 -> 83
+```
+
+**Un octet.** Décodé : `presets[id 86].move_fx1.f3`, `50` → `83`.
+
+| | Prédit | Mesuré |
+|---|---|---|
+| `move_fx1.f3` | **83** | **83** |
+| `move_fx1.size` (`f8`) | inchangé à 100 | **100** |
+| tout le reste du fichier | inchangé | **octet pour octet** |
+
+> **`165.165.f3` sur le mouvement est le `Fan`, en pourcentage direct** — et
+> avec `Feature` mesuré sur le faisceau (FX6-03), le champ est nommé sur ses
+> deux moteurs. La couleur n'a pas de second mode sur ce troisième encodeur et
+> ne porte jamais `f3` : 352 presets distincts, zéro occurrence.
+
+Les quatre rivales tombent ensemble. L'échelle est directe — pas de 0–255, pas
+de bipolaire signé — parce que 83 est sorti tel quel. Le champ n'est pas autre
+chose, puisque c'est lui qui a bougé. Et le `Fan` n'est pas de l'état vif
+non capturé, puisqu'il a été écrit.
+
+`size` resté à 100 est le contrôle de la manipulation : le troisième encodeur
+avait bien basculé en mode `Fan`, il n'a pas tourné `Size`.
+
+### La capture ratée valait mieux que la réussie
+
+Le premier essai n'a rien écrit : compteur de version **+1**, charge utile
+**identique octet pour octet**, 91 presets avant comme après. Troisième
+occurrence de la signature de F7-02 — *une sauvegarde qui incrémente le compteur
+sans écrire un octet de contenu* — et une confirmation de plus que le compteur
+est un oracle **négatif seulement**. Cause : la sauvegarde du preset elle-même
+n'avait pas pris.
+
+Au second essai l'opérateur a **écrasé un preset existant** au lieu d'en créer
+un neuf, et c'est ce qui a produit le meilleur différentiel du registre :
+
+> **Écraser un preset existant est un différentiel plus net qu'en appendre un.**
+> Une entrée neuve ajoute quelques centaines d'octets et déplace tout ce qui la
+> suit ; une réécriture en place laisse les longueurs intactes, et un champ à un
+> octet ressort comme **une seule plage de un octet** dans `wpj_diff.py`, sans
+> aucune lecture de protobuf.
+
+C'est la méthode à préférer par défaut pour tout tir à variable unique sur le
+record 165. Elle a un prix — le preset écrasé est perdu — donc elle se réserve
+aux entrées d'expérience, jamais aux cues d'un show réel.
+
+### Ce qui reste, et c'est une ligne
+
+Le sous-message FX est **entièrement attribué sauf `f5` côté faisceau** :
+
+| Écran | Champ | Statut |
+|---|---|---|
+| `Speed` · sync · division | `f9` · `f10` · `f1` | **validated** · correlated · correlated |
+| `Phase` | `f6` | **validated** |
+| `Order` | `f4` | correlated |
+| `Size` | `f8` | **validated** |
+| `Fade` (`> 100` = `Flick` en mouvement) | `f2` | **validated** |
+| `Feature` (faisceau) · `Fan` (mouvement) | `f3` | **validated** sur les deux |
+| type d'effet | `f7` | device-confirmed |
+| pads couleur · position du mouvement | `f5` | correlated |
+| **faisceau** | **`f5`** | **non attribué, et sans candidat** |
+
+`beam.f5` n'a plus aucune propriété d'écran à réclamer : les six du `BEAM FX`
+sont toutes placées. Il est absent sur les 352 presets distincts et sur les
+entrées neuves. Piste restante, **[hypothesized]**, à discriminateur pas cher :
+le **séquenceur de faisceau** — l'écran garde jusqu'à 32 segments quand l'effet
+est une `FX Seq` (`f7` = 6, 7, 8), et `f5` porte déjà un masque de pads sur la
+couleur et une position sur le mouvement. Contre : les 8 presets du corpus en
+`f7 = 6` n'ont pas de `f5` non plus. Un tir : sélectionner une `FX Seq`, cocher
+deux segments distinctifs, écraser un preset d'expérience.
+
+Instantanés figés dans `corpus/experiments/FX6-04/` (hashes ci-dessus ; les
+fichiers ne sont pas publiés, cf. `LEGAL.md`).

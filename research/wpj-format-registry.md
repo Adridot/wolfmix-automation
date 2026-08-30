@@ -7444,3 +7444,52 @@ variable unique.
 Si les deux tirs tombent, il ne reste dans le sous-message FX que `f3` (`Fan`,
 mouvement) et `f8` (`Size`) au statut `[hypothesized]`, tous deux tenus par le
 même décompte — et le trou sémantique du format de show est fermé.
+
+## GOBO-01 — la bibliothèque d'icônes gobo, et où elle vit — **[validated]**
+
+Ouverte le 2026-08-30 sans toucher au W1 : tout est dans des fichiers locaux
+que WTOOLS a déjà téléchargés. Elle ferme « `f2` est un id d'image globale …
+qui doit vivre dans la bibliothèque de luminaires » — c'était presque ça, mais
+l'image n'est ni dans le projet ni dans le profil : **elle est dans le flash de
+l'appareil**.
+
+| Maillon | Où | Contenu |
+|---|---|---|
+| profil du luminaire | `~/Library/Application Support/com.nicolaudiegroup.wtools/fixture_profiles.db`, table `CachedFixtureProfile`, colonne `profile_data` = JSON du cloud Nicolaudie | `profileFeatures[].userNum` = l'id d'image, par plage DMX |
+| projet | `.wpj` record 111 `f4`, puis record 145 `f2` | le même id, recopié |
+| image | `wm-fw-bundle-*/wolfmixFlash.bin`, table de **800 entrées de 30 o** en fin de fichier | `ptr u32 LE • 6 o • nom 20 o` ; **705 icônes distinctes**, les autres slots pointent sur `Open` |
+| icône | `ptr − 0x10100000` | **1728 o = 24×24 px, RGB565 LE + alpha 8 bits** |
+
+La base `0x10100000` n'est pas devinée : la zone d'images se termine à l'octet
+près là où la table commence. `tools/gobo_library.py` la recalcule à chaque
+lecture et son self-check l'assert.
+
+Vérification croisée sur *rig-c*, trois sources qui ne se parlent pas : le
+profil `UKing ZQ02244` (17 plages `type 8`, `userNum` 425→420 puis 342→352), le
+record 145 du projet (mêmes 17 valeurs, même ordre), et les noms lus dans le
+flash — `Open7…Open2` puis `Gobo01…Gobo11`. Les six premières sont bien la
+**série de disques gradués** décrite d'après photographie en 2026-08-26, et les
+onze suivantes sont des **icônes génériques numérotées** (un anneau de points
+avec le chiffre au centre) : le profil du fabricant n'a jamais cartographié les
+vrais gobos de cette lyre.
+
+**Le piège** : les icônes numérotées ressemblent à un motif réel sur l'écran.
+Ce n'est pas un rendu approximatif du gobo physique, c'est un remplissage — le
+`userNum` du profil pointe sur un espace réservé.
+
+### Ce qui reste ouvert — ce qu'écrit GOBO EDIT (mode 14)
+
+Le pad 10 de *rig-c* porte `145.f3 = 'points'` alors que son `f2` (345 =
+`Gobo04`) suit toujours le profil. L'écran GOBO EDIT (STATIC GOBO → SHIFT + un
+pad, `mode-map.md`) propose une liste d'icônes nommées sur 4 pages, et
+« Dots » s'y traduit en français par « points ».
+
+Prédiction avant mesure, p = 0,7 : GOBO EDIT écrit **`f3` seul**, le nom, et
+laisse `f2` sur la valeur du profil — sinon `f2` du pad 10 aurait déjà quitté
+345. Rivale : il écrit les deux, et le pad 10 n'a jamais été confirmé par
+`ENTER`. Discriminateur, une seule sauvegarde : ouvrir GOBO EDIT sur le pad 7,
+choisir une icône franchement différente (`Cross`, id 212), sauvegarder,
+retélécharger, differ le record 145. Si `f2[7]` passe à 212, la palette est
+éditable au panneau et l'identité `[145].f2 == [111 f3==14].f4` cesse d'être
+vraie sur un fichier édité — elle décrit alors une palette **jamais retouchée**,
+pas une contrainte du format.

@@ -288,6 +288,23 @@ python3 tools/dump.py project.wpj 165,150     # tree of every record of those ty
 Neither has a self-check; they are exploration tools, and `wpjlib` is the
 implementation that carries the guarantees.
 
+## `gobo_library.py` — the controller's gobo icon library
+
+Reads the flash image WTOOLS downloads with the firmware bundle, never the
+controller. The 800-entry table maps a gobo id to a name and to a 24×24
+RGB565+alpha icon; the id is what `145.f2` and the profile's `userNum` carry
+(registry, GOBO-01).
+
+```bash
+python3 tools/gobo_library.py                       # self-check
+python3 tools/gobo_library.py list                  # id → name, 800 lines
+python3 tools/gobo_library.py palette project.wpj   # each group's pads, named
+python3 tools/gobo_library.py sheet out.png         # contact sheet, id = row*20+col
+```
+
+No flash bundle on the machine → one line and exit 0. **Renders stay out of the
+repository**: the icons are the manufacturer's artwork ([`../LEGAL.md`](../LEGAL.md)).
+
 ## `wolfmix.py` / `wolfmix_experiment.py`
 
 Device-side. Documented separately in [`device.md`](device.md).

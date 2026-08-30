@@ -305,6 +305,32 @@ python3 tools/gobo_library.py sheet out.png         # contact sheet, id = row*20
 No flash bundle on the machine → one line and exit 0. **Renders stay out of the
 repository**: the icons are the manufacturer's artwork ([`../LEGAL.md`](../LEGAL.md)).
 
+## `gobo_write.py` — replacing icons in a copy of the flash
+
+The exact inverse of `gobo_library`'s decoder. An icon is a fixed 1728-byte
+block and the table's pointers are absolute, so an edit is an in-place
+overwrite: same length, same table, same pointers. The original image is never
+touched — `patch` writes a new file and then checks the diff falls entirely
+inside the windows it aimed at.
+
+```bash
+python3 tools/gobo_write.py                              # self-check
+python3 tools/gobo_write.py patch out.bin 342=icon.png   # 24×24 PNG, RGB or RGBA
+python3 tools/gobo_write.py patch out.bin 342='#ff00ff'  # a flat colour, no file
+```
+
+Two refusals, both deliberate. Writing an icon whose pointer is shared is
+blocked: in 2.0.18 `Open` (`0x1029417E`) serves 96 entries, and overwriting it
+would repaint all of them. Writing over the source flash is blocked too.
+
+An RGB PNG carries no alpha, so it lands fully opaque — the manufacturer's
+icons are cut out, and exporting them without alpha flattens that away. Feed
+RGBA when the shape matters.
+
+Uploading the result is a separate, device-side act; see
+[`../research/flash-gobo-plan.md`](../research/flash-gobo-plan.md) for the order
+of operations and the way back.
+
 ## `wolfmix.py` / `wolfmix_experiment.py`
 
 Device-side. Documented separately in [`device.md`](device.md).

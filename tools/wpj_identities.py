@@ -413,6 +413,41 @@ def canal_principal_110(w):
                 f"{p110[off + m].get('f4')}, pas {c.get('f4')}"
 
 
+def flavours_155(w):
+    """155.f2 = le moteur de la séquence, et il détermine le domaine des valeurs.
+
+    Le record tient quatre séquenceurs : l'item 0 est celui du **mouvement**
+    (`f2` = 1), les items 1 à 3 ceux du **faisceau** (`f2` = 2) — les trois
+    `FX Seq` que l'énumération du Beam FX propose. Les deux moteurs ne stockent
+    pas la même chose au même endroit :
+
+    - mouvement : un **index de position** dans la palette 150 du groupe,
+      domaine 0–19, plus 255 = « pas de position à ce pas » ;
+    - faisceau : un **masque de 4 bits** sur les quatre segments du groupe,
+      domaine 0–15. Huit groupes × quatre segments = les 32 sélections que le
+      manuel annonce.
+
+    Mesuré par FX6-05 : segments 1 et 4 cochés sur le groupe A du pas 1 ont
+    écrit 15 → 9, soit 0b1111 → 0b1001, dans l'item 1.
+    """
+    seqs = _items(w, 155)
+    assert len(seqs) == 4, f"155 : {len(seqs)} séquences, 4 attendues"
+    for i, s in enumerate(seqs):
+        fl = s.get("f2")
+        attendu = 1 if i == 0 else 2
+        assert fl == attendu, f"155[{i}] : flavour {fl}, {attendu} attendu"
+        vals = _varints(s["f4"]["hex"]) if isinstance(s.get("f4"), dict) \
+            else s.get("f4", [])
+        assert len(vals) == 128, f"155[{i}] : {len(vals)} valeurs, 128 attendues"
+        haut = 19 if fl == 1 else 15
+        for k, v in enumerate(vals):
+            if fl == 1 and v == 255:
+                continue                 # sentinelle « pas de position »
+            assert v <= haut, \
+                f"155[{i}] : valeur {v} au pas {k // 8} groupe {chr(65 + k % 8)}, " \
+                f"hors du domaine 0–{haut} du flavour {fl}"
+
+
 def _entrees_165(payload):
     """(f1, [entrées brutes]) du record 165, sans interpréter les entrées."""
     i, f1, entrees = 0, None, []
@@ -524,7 +559,8 @@ IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
               plages_111, roles_106,
               ordre_fixtures_115, bornes_106, tranches_151,
               tableaux_par_groupe_165, f4_autorise_les_moteurs,
-              schema_du_prefixe, canal_principal_110, noms_de_preset_bornes)
+              schema_du_prefixe, canal_principal_110, noms_de_preset_bornes,
+              flavours_155)
 
 
 def demo():

@@ -1096,14 +1096,34 @@ files, 133 when five of the values need two bytes. Reading it as raw bytes works
 by accident until one value exceeds 127.
 
 **The layout is step-major: 16 steps × 8 groups**, index = `step × 8 + group`,
-group 0 = A. Reading it the other way round produces ragged nonsense. Each value
-is a **position index into that group's own record-150 palette**, domain 0–19,
-with **255 = no position for that group at that step**.
+group 0 = A. Reading it the other way round produces ragged nonsense.
 
-Confirmed against the device: the operator photographed the SEQUENCER screen at
-every step from 1/16 to 16/16 and the decoded array predicts each screen exactly,
-including the case where one index means a different named position in each
-group — because each group indexes its own palette.
+**`f2` says which engine the sequence belongs to, and that sets the value's
+domain — [validated] (FX6-05).** The record holds *both* sequencers:
+
+| `f2` | Engine | Value | Domain |
+|---|---|---|---|
+| **1** (item 0) | **Move** | position index into that group's own record-150 palette | 0–19, plus **255** = no position at that step |
+| **2** (items 1–3) | **Beam** — the three `FX Seq` of the beam enum | a **4-bit mask** over the group's four segments | **0–15** |
+
+Eight groups × four segments = the manual's "up to 32 beam selections". The
+16 × 8 shape is shared; only the domain differs.
+
+Confirmed against the device twice. For **move**: the operator photographed the
+SEQUENCER screen at every step from 1/16 to 16/16 and the decoded array predicts
+each screen exactly, including the case where one index means a different named
+position in each group — because each group indexes its own palette. For
+**beam** (FX6-05): ticking segments 1 and 4 on group A of step 1 and saving the
+project — **no preset capture** — changed exactly one payload byte in the whole
+file, `15` → `9`, that is `0b1111` → `0b1001`, at item 1 index 0.
+
+An earlier revision read *all four* items as position indices. That
+generalisation was wrong where the original measurement was right: it had only
+ever exercised the move sequencer. `f2` was named "sequence flavour" and never
+opened.
+
+`flavours_155` in `tools/wpj_identities.py` checks the split and both domains on
+every file.
 
 `f3` is the step count: SHIFT + a step pad sets it, and SHIFT + step 1 took it
 from 16 to 1.

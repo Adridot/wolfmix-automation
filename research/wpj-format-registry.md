@@ -8023,3 +8023,91 @@ binaire.
 
 Aucune écriture n'est demandée à l'appareil : lecture, sauvegarde au panneau,
 téléchargement.
+
+### FX6-05 mesuré — le séquenceur de faisceau est dans 155, et `f2` disait le moteur depuis le début — 2026-08-30 — **[validated]**
+
+Écran du séquenceur, photographié avant la sortie : `SEQUENCER`, **`STEP 1/2`**,
+colonnes **A B C**, quatre segments par colonne, et sur la colonne **A** les
+**segments 1 et 4** allumés. Sauvegarde du projet, **aucune capture de preset**.
+
+`sha256` avant `e14818ace4203dff5080f3d3f9643f367a34359d1f7f77376037aa50d1581973`,
+après `b101f1d7e3530134ae5a5f917e7cf01813ac189280c1036b448a11fca50da063`, 46414 octets dans les
+deux cas.
+
+```
+0x000000+20   en-tête SHA-1
+0x000028+1    c2 -> c3        compteur de version
+0x0032b3+1    0f -> 09
+```
+
+**Un octet de charge utile, dans le record 155.** Décodé : séquence **1**,
+valeur d'index **0** — pas 0, groupe A — **15 → 9**, soit `0b1111` → `0b1001`.
+
+| | Écran | Mesuré |
+|---|---|---|
+| segments cochés sur A | 1 et 4 | masque `0b1001` = **9** |
+| avant | les quatre | `0b1111` = 15 |
+| nombre de pas | `STEP 1/2` → **2** | `155[1].f3` = **2** |
+| groupe touché | colonne A | index 0 = pas 0, groupe A |
+
+> **Le record 155 tient les deux séquenceurs, et son `f2` dit lequel.** L'item 0
+> est le séquenceur du **mouvement** (`f2` = 1), les items 1 à 3 ceux du
+> **faisceau** (`f2` = 2) — les trois `FX Seq` de l'énumération du Beam FX.
+
+### La correction à SPEC §8
+
+Le record 155 était `device-confirmed` avec une lecture **trop générale** :
+« chaque valeur est un index de position dans la palette record-150 du groupe,
+domaine 0–19, 255 = pas de position ». C'est vrai de l'item 0 **seulement**.
+
+| `f2` | Moteur | Valeur | Domaine |
+|---|---|---|---|
+| **1** | mouvement | index de position dans la palette 150 du groupe | 0–19, plus **255** = pas de position |
+| **2** | faisceau | **masque de 4 bits** sur les quatre segments du groupe | **0–15** |
+
+La mesure d'origine avait photographié les 16 pas d'un séquenceur et prédit
+chaque écran exactement — sur le **mouvement**. Elle est intacte ; c'est sa
+généralisation aux quatre items qui ne l'était pas. `f2` avait été nommé
+« sequence flavour » et jamais interprété : le mot était juste, le contenu
+manquait.
+
+**Huit groupes × quatre segments = 32**, exactement les « jusqu'à 32 sélections
+de faisceau » du manuel. La forme 16 pas × 8 groupes est la même pour les deux
+moteurs ; seul le domaine des valeurs change.
+
+Identité ajoutée à `tools/wpj_identities.py` (`flavours_155`, **18 identités**
+sur 48 fichiers) : l'item 0 est toujours flavour 1, les items 1–3 toujours
+flavour 2, et **une valeur de flavour 2 ne dépasse jamais 15** — 48 fichiers ×
+3 items × 128 valeurs, sans exception, et le 9 que l'appareil vient d'écrire y
+entre.
+
+### Mon tableau de chasse, et l'erreur qu'il faut nommer
+
+| Prédit | | |
+|---|---|---|
+| Q1 : une sauvegarde seule écrit les segments — **p 0,60** | ✅ | c'est une config globale, pas de l'état vif |
+| Q2 : **161**, les trois blobs — **p 0,40** | ❌ | 161 n'a pas bougé d'un octet |
+| Q2 : 155 — p 0,10 | ✅ | c'est lui |
+
+**J'avais le bon « trois » et le mauvais record.** Trois séquences de faisceau,
+oui — mais elles étaient déjà dans un record décodé, sous un champ nommé
+`flavour` que personne n'avait ouvert. J'ai cherché une structure inconnue dans
+un blob opaque alors que la réponse était dans un record `device-confirmed`,
+derrière une lecture trop large. **Un record marqué décodé n'est pas un record
+fermé** : sa généralisation peut être fausse là où sa mesure était juste.
+
+C'est le pendant exact de la leçon de FX6-02 sur `f2` du sous-message FX. Deux
+fois de suite, ce qui a coûté le tir n'était pas une hypothèse mal pesée, c'était
+une case déjà étiquetée que je n'ai pas remise sur la table.
+
+### `beam.f5` : plus aucun candidat
+
+Le séquenceur ne le concerne pas. Les six propriétés de l'écran `BEAM FX` sont
+toutes placées, la matrice du faisceau est momentanée, et `f5` est absent sur
+les 352 presets distincts, sur les entrées neuves et sur les 8 presets en
+`FX Seq`.
+
+> **[hypothesized]** `beam.f5` est **inerte** : un créneau que le schéma partagé
+> des trois moteurs impose et que le moteur faisceau n'utilise pas. Même statut
+> que `102.f11`, et pour la même raison — plus d'hypothèse à discriminateur pas
+> cher. La recherche s'arrête là, et c'est un résultat, pas un abandon.

@@ -27,8 +27,11 @@ import wpj_codec
 
 _FX_NOMS = ("beam_fx1", "beam_fx2", "color_fx1", "color_fx2",
             "move_fx1", "move_fx2")
-# clé FX → bornes (statuts correlated, research/preset-format-165.md)
-_FX_CLES = {"effet": (0, 8), "vitesse": (0, 200), "link_order": (10, 13),
+# clé FX → bornes (statuts correlated, research/preset-format-165.md).
+# `vitesse` était bornée à 200 quand elle désignait f2 ; f2 est le fondu, et la
+# vitesse est un pourcentage — jamais au-dessus de 100 sur 352 presets (FX6-02).
+# phase/size/fade sont nommés mais restent hors de la liste : lus, pas écrits.
+_FX_CLES = {"effet": (0, 8), "vitesse": (0, 100), "link_order": (10, 13),
             "speed_source": (0, 2), "bpm_division": (0, 1 << 31)}
 _SHOW_CLES = ("base", "nom", "presets", "positions", "palette")
 _PRESET_CLES = ("id", "modele", "nom", "positions", "dimmers",
@@ -347,7 +350,7 @@ def _demo_sur(base):
     neuf = max(ids) + 3                       # création en queue, avec un trou
     spec = {"base": base, "nom": "WMX SHOW DEMO",
             "presets": [{"id": 80, "nom": "demo",
-                         "beam_fx1": {"effet": 1, "vitesse": 120},
+                         "beam_fx1": {"effet": 1, "vitesse": 80},
                          "positions": [4, 1, 1, 1, 1, 1, 1, 1],
                          "dimmers": [200] * 8},
                         {"id": neuf, "modele": 23, "nom": "cree",
@@ -368,7 +371,7 @@ def _demo_sur(base):
         p = next(p for p in wpj_codec.decode(165, w.get(165))["presets"]
                  if p.get("id", 0) == 80)
         assert p["nom"] == "demo" and p["dimmers"] == [200] * 8
-        assert p["beam_fx1"][0]["effet"] == 1 and p["beam_fx1"][0]["vitesse"] == 120
+        assert p["beam_fx1"][0]["effet"] == 1 and p["beam_fx1"][0]["vitesse"] == 80
         e = wpj_codec.decode(150, w.get(150, 0))["positions"][1]
         assert e["nom"] == "DemoPos" and e["f6"] == 12345 and e["f7"] == 54321
         assert e["f3"] == 32768

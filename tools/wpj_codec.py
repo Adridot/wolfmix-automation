@@ -34,11 +34,16 @@ _PAD = {1: ("rouge", "v"), 2: ("vert", "v"), 3: ("bleu", "v"),
         4: ("blanc", "v"), 5: ("ambre", "v"), 6: ("lime", "v"), 7: ("uv", "v")}
 
 # Sous-message FX (commun Beam/Color/Move) — research/preset-format-165.md.
-# f6/f8/f9 = Phase, Size, Fade dans un ordre non mesuré (permutation à trois,
-# FX6-01/02) ; f3 = Fan (mouvement) et f5 = Feature (faisceau), hypothèses.
-# Clés neutres tant que la mesure n'est pas faite : un nom vaut une preuve.
+# FX6-02/03 : f6 = Phase, f8 = Size, f9 = Speed, f2 = Fade. La vitesse était
+# lue sur f2 depuis ACC-04 ; l'écran dit f9, et f2 suit le fondu jusqu'à
+# disparaître quand il vaut 0. « vitesse » reste le nom de la vitesse : il
+# change de champ, pas de sens, et les appelants gardent leur intention.
+# f3 et f5 restent des clés neutres : leur sens dépend du moteur (f3 = Feature
+# sur le faisceau, mesuré ; Fan sur le mouvement, déduit), et un schéma partagé
+# ne peut pas porter deux noms.
 _FX = {7: ("effet", "v"), 4: ("link_order", "v"), 10: ("speed_source", "v"),
-       1: ("bpm_division", "v"), 2: ("vitesse", "v")}
+       1: ("bpm_division", "v"), 2: ("fade", "v"),
+       6: ("phase", "v"), 8: ("size", "v"), 9: ("vitesse", "v")}
 _PRESET = {
     19: ("id", "v"), 25: ("nom", "str"),
     1: ("beam_fx1", _FX), 2: ("beam_fx2", _FX),

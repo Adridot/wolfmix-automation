@@ -55,11 +55,15 @@ FAMILLES = {
 }
 # Paliers d'énergie — RÉGLAGES, pas des mesures : à retoucher sur le rig.
 # (énergie max, famille, dimmer, effet de faisceau, vitesse %)
+# Les vitesses 45/110/170 d'avant FX6-02 partaient sur f2 en croyant régler la
+# vitesse : f2 est le fondu, donc les deux paliers hauts allongeaient le fondu
+# au lieu d'accélérer l'effet — et 110/170 tombaient dans la plage « Flick ».
+# La clé `vitesse` vise maintenant f9, et les paliers rentrent dans 0–100.
 PALIERS = (
     (24, "statique", 120, None, None),
     (49, "faisceau", 180, 1, 45),            # 1 = Sparkle
-    (74, "mouvement", 225, None, 110),
-    (100, "mouvement+faisceau", 255, 2, 170),  # 2 = Chaser
+    (74, "mouvement", 225, None, 70),
+    (100, "mouvement+faisceau", 255, 2, 95),   # 2 = Chaser
 )
 _INTENTION_CLES = ("base", "nom", "page", "ambiances")
 _AMBIANCE_CLES = ("nom", "energie", "couleur", "groupes", "position",

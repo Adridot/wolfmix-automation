@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-label="wolfmix-automation — from proven bytes to intelligent AI-generated presets">
+  <title>wolfmix-automation social preview</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#080d19"/>
+      <stop offset="0.55" stop-color="#111a2c"/>
+      <stop offset="1" stop-color="#0b1120"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4fc3d4"/>
+      <stop offset="0.5" stop-color="#8a97f5"/>
+      <stop offset="1" stop-color="#ef7aa8"/>
+    </linearGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5b6b8c" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#8496bd" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#5b6b8c" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#52617e" stroke-opacity="0.08"/>
+    </pattern>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <rect id="pad" width="50" height="50" rx="12"/>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <rect width="1280" height="640" fill="url(#grid)"/>
+  <rect x="1" y="1" width="1278" height="638" rx="22" fill="none" stroke="#27324c" stroke-width="2"/>
+  <rect x="96" y="1" width="1088" height="2" fill="url(#fade)"/>
+
+  <g font-family="ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace">
+    <text x="88" y="92" font-size="16" font-weight="700" fill="#4fc3d4" letter-spacing="2.5">OPEN-SOURCE RESEARCH</text>
+    <text x="88" y="180" font-size="58" font-weight="700" fill="#eaf0fb" letter-spacing="-2">wolfmix-automation</text>
+  </g>
+
+  <g font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif">
+    <text x="90" y="238" font-size="27" fill="#cbd7ec">Reverse-engineering the Wolfmix <tspan font-family="ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace" fill="#eaf0fb">.wpj</tspan> format, byte by byte.</text>
+    <text x="90" y="298" font-size="27" font-weight="600" fill="#eaf0fb">From proven bytes to intelligent</text>
+    <text x="90" y="336" font-size="27" font-weight="600" fill="url(#accent)">AI-generated lighting presets.</text>
+  </g>
+
+  <g font-family="ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace" font-size="14">
+    <rect x="90" y="382" width="146" height="36" rx="18" fill="#4fc3d4" fill-opacity="0.12" stroke="#4fc3d4" stroke-opacity="0.45"/>
+    <text x="163" y="405" fill="#4fc3d4" text-anchor="middle">evidence-first</text>
+    <rect x="252" y="382" width="132" height="36" rx="18" fill="#8a97f5" fill-opacity="0.12" stroke="#8a97f5" stroke-opacity="0.45"/>
+    <text x="318" y="405" fill="#8a97f5" text-anchor="middle">stdlib-only</text>
+    <rect x="400" y="382" width="157" height="36" rx="18" fill="#ef7aa8" fill-opacity="0.12" stroke="#ef7aa8" stroke-opacity="0.45"/>
+    <text x="478.5" y="405" fill="#ef7aa8" text-anchor="middle">round-trip safe</text>
+  </g>
+
+  <g transform="translate(875 104)">
+    <text x="0" y="0" font-family="ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace" font-size="13" fill="#61708f" letter-spacing="1">20 SLOTS · 4 × 5</text>
+    <g transform="translate(0 28)">
+      <use href="#pad" x="0" y="0" fill="#db604f"/><use href="#pad" x="64" y="0" fill="#84db4f"/><use href="#pad" x="128" y="0" fill="#4fcadb"/><use href="#pad" x="192" y="0" fill="#a64fdb"/>
+      <use href="#pad" x="0" y="64" fill="#db8a4f"/><use href="#pad" x="64" y="64" fill="#5bdb4f"/><use href="#pad" x="128" y="64" fill="#4fa0db"/><use href="#pad" x="192" y="64" fill="#d04fdb"/>
+      <use href="#pad" x="0" y="128" fill="#dbb44f"/><use href="#pad" x="64" y="128" fill="#4fdb6e"/><use href="#pad" x="128" y="128" fill="#4f76db"/><use href="#pad" x="192" y="128" fill="#db4fbc"/>
+      <use href="#pad" x="0" y="192" fill="#d8db4f"/><use href="#pad" x="64" y="192" fill="#4fdb98"/><use href="#pad" x="128" y="192" fill="#524fdb"/><use href="#pad" x="192" y="192" fill="#db4f92"/>
+      <use href="#pad" x="0" y="256" fill="#aedb4f"/><use href="#pad" x="64" y="256" fill="#4fdbc2"/><use href="#pad" x="128" y="256" fill="#7c4fdb"/><use href="#pad" x="192" y="256" fill="#db4f68"/>
+      <g fill="url(#sheen)">
+        <rect width="50" height="25" rx="12"/><rect x="64" width="50" height="25" rx="12"/><rect x="128" width="50" height="25" rx="12"/><rect x="192" width="50" height="25" rx="12"/>
+        <rect y="64" width="50" height="25" rx="12"/><rect x="64" y="64" width="50" height="25" rx="12"/><rect x="128" y="64" width="50" height="25" rx="12"/><rect x="192" y="64" width="50" height="25" rx="12"/>
+        <rect y="128" width="50" height="25" rx="12"/><rect x="64" y="128" width="50" height="25" rx="12"/><rect x="128" y="128" width="50" height="25" rx="12"/><rect x="192" y="128" width="50" height="25" rx="12"/>
+        <rect y="192" width="50" height="25" rx="12"/><rect x="64" y="192" width="50" height="25" rx="12"/><rect x="128" y="192" width="50" height="25" rx="12"/><rect x="192" y="192" width="50" height="25" rx="12"/>
+        <rect y="256" width="50" height="25" rx="12"/><rect x="64" y="256" width="50" height="25" rx="12"/><rect x="128" y="256" width="50" height="25" rx="12"/><rect x="192" y="256" width="50" height="25" rx="12"/>
+      </g>
+    </g>
+  </g>
+
+  <g opacity="0.68" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1128 469C1163 490 1173 514 1186 548" fill="none" stroke="#8a97f5" stroke-width="2" stroke-dasharray="5 7"/>
+    <path d="M1158 451C1190 457 1210 478 1213 510" fill="none" stroke="#ef7aa8" stroke-width="2" stroke-dasharray="5 7"/>
+    <g fill="#8a97f5" filter="url(#glow)"><circle cx="1186" cy="548" r="5"/><circle cx="1213" cy="510" r="5"/></g>
+  </g>
+
+  <g opacity="0.62" fill="url(#accent)">
+    <rect x="90" y="530" width="5" height="22" rx="2"/><rect x="103" y="515" width="5" height="37" rx="2"/><rect x="116" y="522" width="5" height="30" rx="2"/>
+    <rect x="129" y="501" width="5" height="51" rx="2"/><rect x="142" y="509" width="5" height="43" rx="2"/><rect x="155" y="526" width="5" height="26" rx="2"/>
+    <rect x="168" y="492" width="5" height="60" rx="2"/><rect x="181" y="507" width="5" height="45" rx="2"/><rect x="194" y="518" width="5" height="34" rx="2"/>
+    <rect x="207" y="496" width="5" height="56" rx="2"/><rect x="220" y="512" width="5" height="40" rx="2"/><rect x="233" y="524" width="5" height="28" rx="2"/>
+    <rect x="246" y="505" width="5" height="47" rx="2"/><rect x="259" y="486" width="5" height="66" rx="2"/><rect x="272" y="502" width="5" height="50" rx="2"/>
+    <rect x="285" y="519" width="5" height="33" rx="2"/><rect x="298" y="498" width="5" height="54" rx="2"/><rect x="311" y="510" width="5" height="42" rx="2"/>
+    <rect x="324" y="489" width="5" height="63" rx="2"/><rect x="337" y="516" width="5" height="36" rx="2"/><rect x="350" y="526" width="5" height="26" rx="2"/>
+    <rect x="363" y="508" width="5" height="44" rx="2"/><rect x="376" y="493" width="5" height="59" rx="2"/><rect x="389" y="514" width="5" height="38" rx="2"/>
+    <rect x="402" y="523" width="5" height="29" rx="2"/><rect x="415" y="504" width="5" height="48" rx="2"/><rect x="428" y="488" width="5" height="64" rx="2"/>
+    <rect x="441" y="511" width="5" height="41" rx="2"/><rect x="454" y="520" width="5" height="32" rx="2"/><rect x="467" y="500" width="5" height="52" rx="2"/>
+    <rect x="480" y="517" width="5" height="35" rx="2"/><rect x="493" y="495" width="5" height="57" rx="2"/><rect x="506" y="508" width="5" height="44" rx="2"/>
+    <rect x="519" y="526" width="5" height="26" rx="2"/><rect x="532" y="503" width="5" height="49" rx="2"/><rect x="545" y="513" width="5" height="39" rx="2"/>
+    <rect x="558" y="491" width="5" height="61" rx="2"/><rect x="571" y="506" width="5" height="46" rx="2"/><rect x="584" y="521" width="5" height="31" rx="2"/>
+    <rect x="597" y="499" width="5" height="53" rx="2"/><rect x="610" y="516" width="5" height="36" rx="2"/><rect x="623" y="527" width="5" height="25" rx="2"/>
+    <rect x="636" y="507" width="5" height="45" rx="2"/><rect x="649" y="487" width="5" height="65" rx="2"/><rect x="662" y="501" width="5" height="51" rx="2"/>
+    <rect x="675" y="514" width="5" height="38" rx="2"/><rect x="688" y="496" width="5" height="56" rx="2"/><rect x="701" y="523" width="5" height="29" rx="2"/>
+  </g>
+  <g font-family="ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace" font-size="13" fill="#61708f">
+    <text x="90" y="583">DMX 1…512</text>
+    <text x="1190" y="583" text-anchor="end">.WPJ → PRESETS</text>
+  </g>
+  <rect x="90" y="608" width="1100" height="3" rx="1.5" fill="url(#accent)" opacity="0.75"/>
+</svg>

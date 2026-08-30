@@ -31,6 +31,7 @@ import wpj_codec
 MODEL_VERSION = "1"
 # clé codec → clé wpj-toolkit ; les trois dernières sont hypothesized
 _FX_OUT = {"effet": "type", "vitesse": "speedPercent",
+           "fade": "fadePercent", "phase": "phasePercent", "size": "sizePercent",
            "link_order": "linkOrder", "speed_source": "speedSource",
            "bpm_division": "bpmDivision",
            "f8": "sizePercent", "f6": "fadePercent", "f9": "phasePercent"}

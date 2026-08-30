@@ -749,11 +749,12 @@ Where both sources cover a value, they agree.
 | `f4` | link order | `0–3` None/{Fwd,Back,Out,In}, `10–13` Group/{…}, `20–23` Fixture/{…}; default 10 | correlated |
 | `f10` | speed source | `0` Clock (omitted), `1` Microphone, `2` Audio/BPM | correlated |
 | `f1` | BPM division | `0`→×8, `1`→×4, `2`→×2, `3`→×1, `4`→½, `5`→¼, `6`→⅛, `7`→1/16; default 3 | correlated |
-| `f2` | speed % | observed up to 200, above the 0–100 the toolkit documents | correlated |
-| `f6` / `f8` / `f9` | **unattributed** — a **three-way permutation** over Phase, Size and Fade, no longer "four names for three fields" (FX6-01) | `f6` defaults 25 beam / 20 colour / absent move; `f8` 100 beam and move, **absent on colour** (342/352); `f9` **50 on all six pages** | observed |
-| `f8` | *within that permutation*, `Size` is the favourite: 100 is the neutral of `SIZE` across this format | — | hypothesized |
-| `f3` | **move only** — `Fan`, the second mode of the Size encoder | default 50, the neutral of `FAN` everywhere in this format | hypothesized |
-| `f5` | Color FX: 16-bit **colour mask** over record 135's pads. Move FX: the **effect's position**. Beam FX: the **`Feature`**, the channel the engine drives — see lead L1 | Color: 2 varints (v1 = pads 1–8, v2 = 9–16). Move: one varint, nine on screen, only 0/1/5/6 seen. **Beam: absent on all 352 distinct presets** | correlated (Color and Move), hypothesized (Beam) |
+| `f9` | **speed %** | 0–100, never above on any engine over 352 distinct presets; default 50. **Present 352/352** — a speed is never 0 | **validated** (FX6-02/03) |
+| `f6` | **phase %** | defaults 25 beam / 20 colour / absent (0) move | **validated** (FX6-02/03) |
+| `f8` | **size %** | 100 beam and move; **absent whenever the effect has no `SIZE`** — 330/330 colour presets on a Rainbow carry none | **validated** (FX6-02) |
+| `f2` | **fade %** | default 100; **above 100 is `Flick`** on move (200 ×12). Colour's 150/200 unexplained | **validated** (FX6-02/03) |
+| `f3` | the third encoder's **second mode**, engine-dependent: **`Feature`** on beam, `Fan` on move. Colour has no second mode and never carries `f3` | Beam: `1` = `Zoom` measured; absent = `0` = Dimmer. Move: default 50 | **validated** on beam at one value; hypothesized on move |
+| `f5` | Color FX: 16-bit **colour mask** over record 135's pads. Move FX: the **effect's position**. Beam FX: **unattributed** — absent on all 352 distinct presets and on both fresh entries | Color: 2 varints (v1 = pads 1–8, v2 = 9–16). Move: one varint, nine on screen, only 0/1/5/6 seen | correlated (Color and Move) |
 
 Effect type `f7`, Beam: `0` Sin Wave · `1` Sparkle · `2` Chaser · `3` CanCan ·
 `4` Heartbeat · `5` Wolf Rider · `6–8` FX Seq 1–3.
@@ -764,32 +765,40 @@ ACC-04 wrote `f7` 3 → 2 on a Color FX and the operator read **Chaser** on the
 device — matching the Color enumeration at index 2, an independent confirmation
 of both the field and the label set.
 
-**The property count, corrected — [observed] (FX6-01).** An earlier revision of
-this document read `f8`/`f6`/`f9` as size/fade/phase by lining three fields up
-with the toolkit's three names; the revision that replaced it said the screens
-carry **four** properties for three fields, so no assignment could work. Both
-were wrong. Read one by one, the three screens carry **five** properties on
-colour, **six** on beam and **seven** on move, and the arithmetic closes:
+**The property count, corrected — [validated] (FX6-01/02/03).** Two earlier
+revisions of this document got this wrong in opposite directions: one lined
+`f8`/`f6`/`f9` up with the toolkit's three names, the other declared the screens
+carried **four** properties for three fields so no assignment could work. Read
+one by one, the three screens carry **five** properties on colour, **six** on
+beam and **seven** on move, and every one of them now has a field:
 
-| Engine | Screen properties | Already named | Left over | Fields left |
+| Property | Field | Colour | Beam | Move |
 |---|---|---|---|---|
-| Colour | Speed · Phase · Order · Size · Fade | Speed = `f2`/`f1`/`f10`, Order = `f4` | Phase · Size · Fade | `f6` `f8` `f9` |
-| Beam | + **`Feature`** | idem | + `Feature` | + **`f5`** |
-| Move | + **`Fan`** · `Flick` | idem | + `Fan` | + **`f3`** |
+| Speed (+ sync `f10`, division `f1`) | `f9` | ✓ | ✓ | ✓ |
+| Phase | `f6` | ✓ | ✓ | ✓ |
+| Order | `f4` | ✓ | ✓ | ✓ |
+| Size | `f8` | ✓ | ✓ | ✓ |
+| Fade | `f2` | ✓ | ✓ | ✓ (`> 100` = `Flick`) |
+| the third encoder's second mode | `f3` | — | `Feature` | `Fan` |
 
-Three corrections got it there. **`Order` was double-counted** — it is `f4`,
-named `link_order` since F4-03. **`Flick` is not a value** but a mode of the
-Fade encoder, pushing the fade past 100 % of the step time; the corpus agrees,
-`f6`/`f8`/`f9` never leave 0–100 on any of the 352 distinct presets. And the
-**beam screen was never read here**: it carries a sixth property, `Feature`,
-sharing the third encoder with `Size` exactly as move's `Size | Fan` does.
+Three corrections got the count right. **`Order` was double-counted** — it is
+`f4`, named `link_order` since F4-03. **`Flick` is not a value** but the top of
+Fade's range, pushing the fade past 100 % of the step time. And the **beam
+screen had never been read here**: it carries a sixth property, `Feature`,
+sharing the third encoder with `Size` exactly as move's `Size | Fan` does — and
+both second modes land on the same field, `f3`.
 
-So each engine has three shared properties for three shared fields, plus one
-engine-specific property landing on the one field only that engine carries.
-Which of Phase / Size / Fade belongs to `f6`, `f8` and `f9` is still
-**[observed]**, not decided — but it is now a three-way permutation that one
-capture with three distinct values settles (FX6-02, posed). `wpj_show.py` still
-refuses to write `f6`/`f9`, for that reason and no longer for the old one.
+**Then the measurement moved a field nobody had questioned.** FX6-02 and FX6-03
+read nine screen values off two fresh entries and matched all nine: `f6` = Phase,
+`f8` = Size, `f9` = **Speed**, `f2` = **Fade**. `f2` had been read as "speed %"
+since ACC-04 and carried a `correlated` status; it is the fade. The permutation
+this document set out to resolve was a three-way over `f6`/`f8`/`f9`; it was
+really a **four-way**, and the fourth element was hidden behind a name that had
+never been measured. Consistency across files is not attribution.
+
+`wpj_show.py` still refuses to write `phase`, `size` and `fade`: they are read,
+not written, and rule 2 wants a byte-identical round-trip *and* acceptance
+downstream before any of them becomes writable.
 
 ---
 
@@ -1285,21 +1294,23 @@ rejection as a verdict on the file.
 
 ## 11. Open leads
 
-L1 and L2 exist only because our byte-level decoding was cross-referenced with
-the `wpj-toolkit` enumerations; neither source has them alone.
+L1 and L2 existed only because our byte-level decoding was cross-referenced
+with the `wpj-toolkit` enumerations; neither source had them alone. Both are now
+closed — and L1 closed by **refuting the location we had inferred** while
+confirming the toolkit's value. The pairing was worth having; the inference
+drawn from it was not evidence.
 
-- **L1 — Beam FX `feature`.** The toolkit documents a Beam-only `feature` enum
-  (`0` Dimmer · `1` Zoom · `2` Iris · `3` Pan · `4` Tilt · `5` Effect) with no
-  wire location. We have `f5` carrying a pad mask for Color FX and a bare varint
-  0–6 for Move FX, and unmapped for Beam. **[hypothesized]** Beam `f5` is
-  `feature`. Three independent sources now point at that one slot: the toolkit's
-  enum, the vendor's beam screen — which carries a `Feature` property, dimmer by
-  default, retargetable to pan/tilt/iris/zoom — and the corpus, where
-  `beam_fx1.f5` and `beam_fx2.f5` are **absent on all 352 distinct presets**,
-  the signature of a `0` nobody ever changed. **Posed as FX6-03**: one save,
-  Dimmer → Zoom, predicting `f5` = `1`; on a rig-c-shaped patch the DMX side
-  should also move the animation off the dimmer role onto one of the four
-  still-unnamed roles 14/15/21/22, naming it.
+- ~~**L1 — Beam FX `feature`.**~~ **Closed** (§5, FX6-03) — **and the field was
+  wrong.** The `Feature` is `f3`, not `f5`. Two captures differing by one panel
+  gesture — the third encoder pushed to `Feature`, turned from `Dimmer` to
+  `Zoom` — produced two entries differing by **one payload field on thirty**:
+  `beam_fx1.f3` appearing with value **1**. The toolkit's enum (`0` Dimmer ·
+  `1` Zoom · `2` Iris · `3` Pan · `4` Tilt · `5` Effect) is right on the value
+  and had no wire location; this document had guessed the location and guessed
+  wrong. `beam_fx1.f5` stays **absent** on all 352 distinct presets *and* on
+  both fresh entries, and is now unattributed on beam with no candidate. Only
+  one enum value has been exercised.
+
 - ~~**L2 — group-mask asymmetry.**~~ **Closed** (§5.4): `f16` is twelve **9-bit**
   group masks, not complementary pairs. The stride is nine because record 125
   has nine slots. Slice 0 equals `color_fx_actif` and slice 1 `move_fx_actif`
@@ -1328,14 +1339,19 @@ the `wpj-toolkit` enumerations; neither source has them alone.
   Preset Page, Flash, General). So the original premise — a MIDI map in the
   file — **cannot be tested on this hardware**, and what to look for is a
   DMX-mapping record. Still not located; still the gateway to live control.
-- **L9 — the FX submessage's `f6`/`f9`.** Reframed by FX6-01, not closed. The
-  "four properties for three fields" premise is **withdrawn**: `Order` was
-  `f4` counted twice and `Flick` is a mode of the Fade encoder, not a value. The
-  real shape is three properties — Phase, Size, Fade — for three fields, a
-  plain three-way permutation. **Posed as FX6-02**: one capture setting colour
-  Phase / Size / Fade to 37 / 62 / 88, three values absent from the factory
-  vocabulary `{20, 25, 50, 100}`, so the permutation reads straight off the
-  values.
+- ~~**L9 — the FX submessage's `f6`/`f9`.**~~ **Closed** (§5, FX6-02/03), and it
+  took a fourth field down with it. Nine screen readings matched nine fields
+  across two engines: `f6` = Phase, `f8` = Size, `f9` = **Speed**, `f2` =
+  **Fade**. The lead had been posed as a three-way permutation over
+  `f6`/`f8`/`f9`; `f2` was excluded from it because it already carried the name
+  "speed %" — `correlated`, never measured. It is the fade, and `FADE 0 %` made
+  it **vanish** from the entry, which is what a protobuf zero does and what no
+  rival reading predicted. Three corpus anomalies fall out at once: `f2` above
+  100 is move's `Flick`; `f9` present 352/352 because a speed is never 0; `f8`
+  absent on 330 Rainbow presets because those effects grey `SIZE` out. The
+  residual: colour also carries `f2` = 150 and 200, and the manual gives colour
+  no `Flick`.
+
 - ~~**L10 — hands-off preset recall.**~~ **Closed** — and the way it closed is
   the lesson. `SET_PRESET` (41) and `SET_MODE` (39) do **not carry protobuf**:
   the firmware reads **`payload[0]` as the index**. Every payload we had sent

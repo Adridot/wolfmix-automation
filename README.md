@@ -250,7 +250,7 @@ argument-only helpers.
 | Presets — writing new entries | 🟡 append works; names are capped at **19 bytes** or the project refuses to open |
 | Group dimmers in a preset (165 `f17`) | 🟢 **device-confirmed** — a percentage through the channel's travel limits, `DMX = 106.f5 + (f17/255)·(106.f6 − 106.f5)`; where a fixture has colour channels the intensity folds into the colour instead. Gated by a controller setting, `store group dimmers in preset`, that lives **outside** the file |
 | The preset content mask (165 `f10`) | 🟢 six toggles **device-confirmed on reading**, a **set** bit meaning **off**; bit 1 `MOVE` and bit 5 `OTHER` proven by writing one — **validated**, not device-confirmed: bit 5 gates the group dimmers and nothing else a static cue carries, and the cue carried neither `f32`–`f35` nor an active gobo |
-| Presets — FX submessage (165) | 🟡 effect type device-confirmed; `f4` reads as a permission mask; `f6`/`f8`/`f9` unattributed — **a three-way permutation** over Phase, Size and Fade, after the vendor's screens were read one by one and the old "four properties for three fields" premise fell (FX6-01). Beam `f5` is the `Feature`, **absent on all 352 distinct presets** — the signature of a default nobody changed |
+| Presets — FX submessage (165) | 🟢 **fully attributed** — nine screen readings matched nine fields across two engines: `f9` Speed, `f6` Phase, `f4` Order, `f8` Size, `f2` Fade, and `f3` the third encoder's second mode (`Feature` on beam, measured at `Zoom` = 1). The measurement **retracted `f2` = "speed %"**, correlated since ACC-04 and never measured — the fade had been read as the speed all along. Beam `f5` is now unattributed with no candidate |
 | The two FX pages per engine ("Double Trouble") | 🟢 **validated on all three engines** — the record files each as a quadruple, pair / **page selector** / active, so `f3`, `f7` and `f23` select the Beam, Colour and Move page per group, `0` = `FX1` / `1` = `FX2`. One `f16` slice per engine covers **both** pages, and a group keeps its page whether the engine is on or off |
 | UI mode enum (`WM_MODE_*`) | 🟡 **31 values device-confirmed** — 29 driven from the panel, plus 39 and 42 reachable only by a raw index — never read out of a binary; and the reported mode is **not** the screen on display |
 | Hands-off preset recall over USB | 🟢 **device-confirmed** — one raw byte, not protobuf: `payload[0]` is the preset **id**, not the entry position; no second byte is read; the whole panel range 0–199 is reachable; an absent id — above the highest one, or in an interior gap — is a **no-op** |
@@ -429,9 +429,9 @@ are still French.
 | ✅ | Recall reaches the panel's whole range, ids 0–199 — the byte is read as-is, bit 7 included |
 | ✅ | `f10` bit 5 gates the group dimmers, and nothing else a static cue carries |
 | ✅ | Writing a colour-palette pad — the value written is the value rendered |
-| ✅ | The FX property count, corrected from the vendor's three screens — `Order` was `f4` counted twice and `Flick` is a mode, not a value, so it is three properties for three fields, not four for three |
-| 🔜 | `f6`/`f8`/`f9` in the FX submessage — a three-way permutation over Phase, Size and Fade, one capture away (FX6-02, posed) |
-| 🔜 | Beam `f5` — the `Feature`, absent on all 352 distinct presets; one save, Dimmer → Zoom (FX6-03, posed) |
+| ✅ | The FX submessage, attributed field by field — and the measurement retracted `f2` = "speed %": it is the **fade**, and the speed was the unattributed `f9` |
+| ✅ | The Beam `Feature` — `f3`, not the `f5` this repo had inferred; the toolkit's enum was right on the value and never had a location |
+| 🔜 | `f3` on move (`Fan`) and `f5` on beam — one encoder turn each, if `f5` carries anything at all |
 | ✅ | `f3`/`f7`/`f23` of record 165 — the three per-group FX page selectors; `f27` alone stays unattributed and inert |
 | 🔮 | The DMX mapping record — live control on MK1 |
 | 🔮 | Variant B/C writer, fixture profile generation |

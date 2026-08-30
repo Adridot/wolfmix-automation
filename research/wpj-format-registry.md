@@ -7609,3 +7609,173 @@ Le reste de la prédiction, inchangé sur le fond :
 prise avant cette session. C'est une erreur sans conséquence sur la permutation,
 mais elle se note : l'état de l'appareil n'était pas celui que je supposais
 depuis F7-04, et je ne l'avais pas vérifié avant de prédire.
+
+### FX6-02 / FX6-03 mesurés — la permutation était une **quadruple**, et la vitesse n'était pas où on la lisait — 2026-08-30 — **[validated]**
+
+Projet `WMX EXP format-lab` (`73d06df4-…`), version 1787841428672, 46414 octets,
+`sha256 646e11d5cecbeecb0c543ae76efe5fb9717538e730cf7902084ab85efacf182b`,
+W1 Mk1 firmware 2.0.18, WTOOLS fermé. Deux entrées neuves, **ids 85 et 86** —
+la prédiction d'id était juste, c'est ma lecture du rapport de l'opérateur qui
+était fausse : « nom 86 et 87 » désignait les **noms d'écran**, pas les ids.
+
+### Le différentiel le plus propre du registre
+
+Les deux entrées diffèrent par **un seul champ de charge utile**, sur 30 :
+
+```
+id 85  beam_fx1 = {bpm_division 3,          link_order 10, f6 94, f8 100, f9 75}
+id 86  beam_fx1 = {bpm_division 3, f3 1,    link_order 10, f6 94, f8 100, f9 75}
+                                   ^^^^
+```
+
+Entre les deux captures l'opérateur n'a touché qu'une chose : le troisième
+encodeur du `BEAM FX`, poussé en mode `Feature`, tourné de `Dimmer` à `Zoom`.
+Un geste, un champ, une valeur.
+
+### Écran contre fichier, huit valeurs
+
+| Écran (photo) | Valeur | Champ mesuré |
+|---|---|---|
+| `COLOR FX` · `PHASE` | 37 % | `color_fx1.f6` = **37** |
+| `COLOR FX` · `SIZE` | 62 % | `color_fx1.f8` = **62** |
+| `COLOR FX` · `SPEED` | 50 % | `color_fx1.f9` = **50** |
+| `COLOR FX` · `FADE` | 88 % | `color_fx1.f2` = **88** |
+| `BEAM FX` · `PHASE` | 94 % | `beam_fx1.f6` = **94** |
+| `BEAM FX` · `SIZE` | inchangé | `beam_fx1.f8` = **100** |
+| `BEAM FX` · `SPEED` | 75 % | `beam_fx1.f9` = **75** |
+| `BEAM FX` · `FADE` | **0 %** | `beam_fx1.f2` **absent** |
+| `BEAM FX` · `FEATURE` | `ZOOM` | `beam_fx1.f3` = **1** |
+
+Neuf lignes, neuf exactes, deux moteurs, aucune ambiguïté de valeur.
+
+> **`f6` = `Phase`, `f8` = `Size`, `f9` = `Speed`, `f2` = `Fade`.** Et
+> **`f3` porte le second mode du troisième encodeur** : `Feature` sur le
+> faisceau — mesuré ici à `1` = `Zoom` — comme `Fan` sur le mouvement.
+
+Le `FADE 0 %` a fait exactement ce qu'un zéro protobuf doit faire : `f2`
+**disparaît** de `beam_fx1`. C'est la première absence de ce champ provoquée
+exprès, et elle vaut une valeur.
+
+## La rétractation : `f2` n'a jamais été la vitesse
+
+`f2` = « speed % » était **`correlated`** dans SPEC depuis ACC-04, et c'est faux.
+C'est le **fondu**. La vitesse est `f9`, un champ que ce registre comptait parmi
+les **non attribués** et que trois sections ont discuté sans jamais le
+soupçonner.
+
+**La faute de méthode, nommée.** Toute la campagne FX6 a été posée comme « quelle
+propriété tombe sur `f6`, `f8` ou `f9` », en tenant `f2` pour acquis parce qu'il
+portait déjà un nom. Ce nom n'avait jamais été mesuré : il venait d'une
+cohérence de corpus, et **une cohérence n'est pas une attribution**. La
+permutation à trois était une permutation à **quatre**, et le quatrième élément
+se cachait derrière une étiquette. C'est la leçon de RAW-01 sous un autre
+déguisement : là on avait déduit l'encodage des voisins, ici on a déduit le sens
+d'un nom qu'on avait écrit soi-même.
+
+### Cascade — ce qui reposait sur `f2` = vitesse
+
+- **Trois anomalies de corpus s'expliquent d'un coup**, et elles auraient dû
+  alerter plus tôt :
+
+  | Anomalie | Sous « `f2` = vitesse » | Sous « `f2` = fondu » |
+  |---|---|---|
+  | `f2` monte à **200** | une vitesse au-delà des 0–100 du toolkit, jamais expliquée | le manuel donne au `Flick` un fondu **au-delà de 100 %** du temps de pas — c'est le mode, mesuré sans le savoir |
+  | `f9` présent **352/352** | un champ mystérieux jamais nul | une **vitesse n'est jamais 0**, sinon l'effet est figé |
+  | `f8` absent sur 330 presets Rainbow | une taille par défaut à 0 | `SIZE` grisé sur Rainbow — ce que l'opérateur a lu sur l'écran |
+
+  Le `200` reste **partiellement** inexpliqué : il apparaît 12 fois sur le
+  mouvement, où le manuel place le `Flick`, mais aussi 3 fois à 150 et 1 fois à
+  200 sur la **couleur**, à qui le manuel n'en donne pas. Noté, pas résolu.
+
+- **ACC-04, journal du 2026-08-25** : « vitesse affichée 1 quand `f2` est
+  absent ». Sous la nouvelle lecture, `f2` absent = fondu 0, et le « 1 » de
+  l'écran est très probablement la **division BPM** (`bpm_division` = 3 = ×1),
+  pas un pourcentage. **[hypothesized]** — c'est une relecture, pas une mesure,
+  et elle demande une photo pour être tranchée.
+- **ACC-05** avait posé « vitesse 50→200 sur *Insane Colors*, attendu chaser
+  nettement plus rapide ». Cette moitié n'a **jamais été mesurée** — seule la
+  moitié `f5` a été écrite. Sous la nouvelle lecture elle aurait échoué, et
+  l'échec aurait sauvé quatre mois. Une prédiction posée et jamais tirée est une
+  dette, pas une réserve.
+- **`tools/wpj_generate.py` écrivait le fondu en croyant écrire la vitesse.**
+  Les paliers d'énergie posaient `vitesse` = 45 / 110 / 170 sur `f2` : les deux
+  paliers hauts **allongeaient le fondu** au lieu d'accélérer l'effet, et
+  tombaient dans la plage `Flick`. La clé `vitesse` vise maintenant `f9` — elle
+  change de champ, pas de sens, donc aucun appelant ne bouge — et les paliers
+  rentrent dans 0–100 (45 / 70 / 95, toujours des réglages, pas des mesures).
+- **`wpj_show.py`** bornait `vitesse` à 0–200, une borne qui n'avait de sens que
+  pour le fondu. Ramenée à **0–100** : 352 presets distincts, `f9` ne dépasse
+  jamais 100 sur aucun moteur.
+
+## L1 : le champ est réfuté, la valeur est confirmée
+
+> **La `Feature` du Beam FX est `f3`, pas `f5`.** `beam_fx1.f5` reste absent sur
+> les 352 presets distincts **et** sur les deux entrées neuves : il n'a rien à
+> voir avec la Feature, et il reste non attribué côté faisceau.
+
+La valeur, elle, tombe pile : `Zoom` = **1**, l'énumération que `wpj-toolkit`
+publie sans emplacement (`0` Dimmer · `1` Zoom · `2` Iris · `3` Pan · `4` Tilt ·
+`5` Effect). Le toolkit avait raison sur l'enum, ce registre avait tort sur le
+fil. Les autres valeurs restent non mesurées : une seule a été exercée.
+
+**Et `f3` devient régulier.** Le troisième encodeur porte deux modes sur deux
+moteurs — `Size | Fan` en mouvement, `Size | Feature` en faisceau — et les deux
+seconds modes tombent sur **le même champ**. La couleur n'a pas de second mode
+sur cet encodeur, et ne porte **jamais** de `f3` : 352 presets distincts, zéro
+occurrence. Le sens de `f3` dépend donc du moteur, comme `f5` avant lui, et le
+codec le laisse en clé neutre pour cette raison — un schéma partagé ne peut pas
+porter deux noms.
+
+`f3` = `Fan` sur le mouvement reste **[hypothesized]** : le créneau est mesuré,
+le manuel nomme `Fan` comme second mode de cet encodeur, le défaut 50 est le
+neutre de `FAN` partout ailleurs dans ce format — trois arguments, aucune
+mesure. Un tour d'encodeur le fermerait.
+
+## Le tableau de chasse de mes prédictions
+
+| Prédit | Mesuré | |
+|---|---|---|
+| `f6` = Phase | 37 et 94 | ✅ |
+| `f8` = Size | 62, et 100 inchangé | ✅ |
+| `f8` apparaît sur `SPARKLE` | apparaît à 62 | ✅ |
+| `f9` = Fade, absent à `FADE 0` | `f9` = 75, **présent** ; c'est `f2` qui disparaît | ❌ |
+| `beam.f5` = 1 (`Zoom`) | `f5` absent, **`f3` = 1** | ❌ sur le champ, ✅ sur la valeur |
+| `beam_fx2` inchangé, défauts d'usine | inchangé | ✅ |
+| `beam_fx1.f8` reste à 100 | 100 | ✅ |
+| ids 85 et 86 | 85 et 86 | ✅ |
+
+La favorite à **p = 0,80** était **à moitié juste** — et la moitié fausse ne
+venait pas d'une rivale mal pesée, elle venait d'une case que je n'avais pas
+mise sur la table. Aucune des cinq lignes de mon tableau ne contenait la bonne
+réponse. Monter une probabilité à 0,80 sur un espace d'hypothèses incomplet ne
+rend pas la prédiction meilleure, ça rend l'erreur plus difficile à voir.
+
+## Ce que ça ferme
+
+Le sous-message FX est **entièrement attribué**, propriété par propriété :
+
+| Écran | Champ | Statut |
+|---|---|---|
+| `Speed` | `f9` | **validated** (FX6-02/03) |
+| — sync `Clock / BPM / Audio` | `f10` | correlated |
+| — division BPM | `f1` | correlated |
+| `Phase` | `f6` | **validated** |
+| `Order` | `f4` | correlated (F4-03) |
+| `Size` | `f8` | **validated** |
+| `Fade` | `f2` | **validated** — et `> 100` = `Flick` sur le mouvement |
+| `Feature` (faisceau) | `f3` | **validated** à une valeur, `Zoom` = 1 |
+| `Fan` (mouvement) | `f3` | hypothesized |
+| type d'effet | `f7` | device-confirmed (ACC-04) |
+| pads couleur / position du mouvement | `f5` | correlated ; **non attribué sur le faisceau** |
+
+Il ne reste rien d'ouvert dans ce sous-message qu'un tour d'encodeur ne ferme :
+`f3` sur le mouvement, et `f5` sur le faisceau — s'il porte quoi que ce soit.
+
+**Aucune écriture n'est promue.** Tout ceci est mesuré **en lecture** : le
+fichier a été produit par l'appareil, pas par nous. `wpj_show.py` continue de
+refuser `phase`, `size` et `fade` à l'écriture — la règle 2 demande un
+aller-retour octet-identique **et** une acceptation en aval, et aucun des deux
+n'a été fait sur ces champs.
+
+Instantané figé : `corpus/experiments/FX6-02/after-two-captures.wpj` (hash
+ci-dessus ; le fichier n'est pas publié, conformément à `LEGAL.md`).

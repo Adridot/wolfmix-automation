@@ -7930,3 +7930,96 @@ deux segments distinctifs, écraser un preset d'expérience.
 
 Instantanés figés dans `corpus/experiments/FX6-04/` (hashes ci-dessus ; les
 fichiers ne sont pas publiés, cf. `LEGAL.md`).
+
+## FX6-05 — le séquenceur de faisceau : où vivent ses segments — posé 2026-08-30
+
+Dernier champ non attribué du sous-message FX. En posant le tir, la question a
+changé de cible — et c'est le corpus qui l'a déplacée.
+
+### Ce qui affaiblit `beam.f5` avant même de mesurer
+
+`f5` est le **contenu de la matrice** sur les deux autres moteurs : masque de 16
+pads de couleur, position de l'effet en mouvement. Sur le faisceau, le manuel dit
+que les 16 boutons roses des rangées 2–5 **flashent momentanément** une portion
+du groupe. Un geste momentané ne se stocke pas.
+
+Et le compte est sans appel :
+
+| `beam_fx1.effet` | 0 | 1 | 2 | 3 | 4 | 5 | **6 (`FX Seq 1`)** |
+|---|---|---|---|---|---|---|---|
+| presets distincts | 259 | 23 | 12 | 20 | 25 | 16 | **8** |
+| dont `f5` présent | 0 | 0 | 0 | 0 | 0 | 0 | **0** |
+
+**Huit presets utilisent une séquence de faisceau et aucun ne porte `f5`.** Si
+les segments vivaient là, ces huit-là seraient l'endroit où les voir.
+
+### Ce qui ouvre une piste que je n'avais pas
+
+Le record **155** est `device-confirmed` comme « les 4 séquences FX ». En le
+relisant contre le manuel, il est plus précis que ça : ses valeurs sont des
+**index de position dans la palette record-150 de chaque groupe, domaine 0–19**.
+Vingt positions — exactement ce que le manuel donne au séquenceur du
+**mouvement**. **155 est le séquenceur du mouvement**, pas celui du faisceau.
+
+Le séquenceur de faisceau garde autre chose : des **segments**, des sélections de
+faisceaux ouverts, jusqu'à 32. Ce n'est pas la même structure, et elle n'est pas
+dans 155.
+
+> **[hypothesized]** Le record **161** — trois blobs de ~190 octets, `[observed]`,
+> classé « état volatil, pas de contenu de show » — porte les **trois** séquences
+> de faisceau. L'énumération du faisceau offre `FX Seq 1`, `2` et `3`. Trois
+> emplacements, trois blobs.
+
+**Et c'est exactement le genre d'argument qui a déjà menti ici deux fois.**
+« 125 = neuf catégories » parce qu'il y avait neuf entrées ; « `f31` = quatre
+répétitions de deux masques » parce que 160 bits se découpaient comme ça. Un
+compte qui coïncide n'est pas une attribution. Ce qui rend l'hypothèse testable
+n'est pas le 3, c'est que **161 a bougé une fois en sept sauvegardes** — un bit,
+le dernier octet de chaque blob — donc il n'est pas inerte, et personne n'a
+jamais su ce qui le fait bouger.
+
+### Le protocole, en deux temps — et le premier temps tranche tout seul
+
+**Étape 1 — sans capture.** Écran `BEAM FX`, page 1 : choisir un effet
+`FX Seq`, ouvrir le séquenceur (l'icône engrenage de la barre d'outils),
+sélectionner **deux segments distinctifs et éloignés** — par exemple le premier
+et le dernier — puis revenir. **Sauvegarder le projet, sans toucher à aucun
+preset.** Photo de l'écran du séquenceur avant de sortir.
+
+Cette étape seule sépare les deux familles de lectures, parce que F7-02 a établi
+qu'une sauvegarde n'écrit **pas** l'état vif :
+
+| Q1 — une sauvegarde seule écrit-elle les segments ? | Ce que ça dit | p |
+|---|---|---|
+| **oui, un record bouge** | la séquence est une **config globale**, comme 155 ; le record qui bouge est la réponse | **0,60** |
+| non, charge utile identique | la séquence est de l'**état vif**, capturée par un preset — et `f5` revient dans le jeu | 0,40 |
+
+Si Q1 dit oui :
+
+| Q2 — quel record ? | p |
+|---|---|
+| **161** — les trois blobs sont les trois séquences de faisceau | **0,40** |
+| **155** — il tient les deux séquenceurs, et sa lecture « positions » ne couvre qu'une partie | 0,10 |
+| un autre record (135, 160, 102…) | 0,08 |
+| autre chose | 0,02 |
+
+**Étape 2 — seulement si l'étape 1 n'a rien écrit.** Écraser un preset
+d'expérience par-dessus (`SHIFT` + tap sur un preset **existant**, méthode
+FX6-04), sauvegarder, télécharger. Là `beam_fx1.f5` apparaît ou non, et c'est
+binaire.
+
+### Ce que chaque issue vaut
+
+- **161 bouge** : un des six records encore traversés en verbatim se décode, et
+  il quitte le statut « état volatil » qu'on lui donnait faute de mieux. C'est
+  plus gros que `f5`.
+- **Rien ne bouge à l'étape 1, `f5` apparaît à l'étape 2** : le sous-message FX
+  est fermé en entier, et le corpus s'expliquait parce que les huit presets
+  `FX Seq` d'usine utilisent tous une sélection vide.
+- **Rien ne bouge nulle part** : les segments ne sont pas dans le fichier, et
+  `beam.f5` est **inerte** — un créneau que le schéma partagé impose et que le
+  moteur faisceau n'utilise pas. C'est un résultat publiable, du même genre que
+  F11-01, et il ferme le sujet.
+
+Aucune écriture n'est demandée à l'appareil : lecture, sauvegarde au panneau,
+téléchargement.

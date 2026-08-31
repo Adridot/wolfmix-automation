@@ -48,6 +48,7 @@ Keys are French, matching the codec's key names.
 | `palette` | array | Color FX palette pads (record 135) |
 | `gobo_noms` | object | gobo pad names, `{"<gobo id>": "Nom"}` (record 145, group A) |
 | `gobo_ordre` | array | the wheel's complete gobo id list, in the wanted pad order (records 111 + 145) |
+| `mappings` | array | DMX IN mappings — bind an incoming channel to a controller function (record 130) |
 
 Any other key is an error. A spec with only `base` is legal and produces a
 byte-identical copy of the donor — the cheapest possible proof that the
@@ -143,6 +144,60 @@ and the record-145 palette is rewritten consistently: names travel with
 their gobos, glyphs are resequenced from `!`. The firmware accepts the
 resulting non-monotonic range list and uses it as the pad order. A wheel
 carried by a second group's palette is refused as unmeasured.
+
+## `mappings[]`
+
+Each item binds one incoming DMX channel to one function of the controller —
+the `Mappings` screen, mode 43. On a Mk1 only the DMX side exists; MIDI is Mk2
+and higher.
+
+| Key | Type | Meaning |
+|---|---|---|
+| `cible` | string | **required** — the function; see the table below |
+| `groupe` | string | `"A"`–`"H"`, required for `dimmer_groupe` only |
+| `index` | int | the preset index, required for `preset` only |
+| `canal` | int or null | **required** — the DMX IN channel **1–512**, or `null` to remove the mapping |
+
+| `cible` | Function | Instance |
+|---|---|---|
+| `dimmer_groupe` | a group's dimmer | `groupe`, A–H |
+| `main` | the MAIN dimmer | none |
+| `preset` | a preset | `index` |
+| `bpm_tap` | BPM Tap | none |
+| `wolf` | Wolf | none |
+
+**Only these five are writable, and that is on purpose.** The screen offers
+five *categories*, but the file stores the *function*: BPM Tap and Wolf both
+sit under `Flash` and carry different ids. Every function above was written by
+the controller under observation; naming a sixth would mean guessing an id, so
+any other `cible` is refused.
+
+**Removing is an absence, not a value.** `"canal": null` deletes the entry —
+there is no "unmapped" sentinel to write. Removing a mapping that does not
+exist is an error, so a spec cannot silently do nothing.
+
+**An entry is addressed by function and instance, never by position.** The wire
+order of the table shifts on its own between saves, twice observed in eleven,
+with no reading that survives. The compiler edits in place, appends new
+entries at the end, and keeps `f1` equal to the entry count.
+
+**Channels above 256 are not special to you but are to the format.** The
+channel is stored zero-based across two fields, `f5 × 256 + f6`. The compiler
+splits it; you always write the channel as it appears on the screen.
+
+**Duplicates are allowed.** Two functions may share a channel — the firmware
+permits it, and one value then drives both. Nothing here prevents it, so check
+your own map.
+
+```json
+"mappings": [
+  {"cible": "dimmer_groupe", "groupe": "A", "canal": 1},
+  {"cible": "main", "canal": 9},
+  {"cible": "preset", "index": 4, "canal": 40},
+  {"cible": "wolf", "canal": 45},
+  {"cible": "dimmer_groupe", "groupe": "C", "canal": null}
+]
+```
 
 ## Example
 

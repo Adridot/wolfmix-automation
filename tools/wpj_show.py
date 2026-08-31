@@ -34,7 +34,7 @@ _FX_NOMS = ("beam_fx1", "beam_fx2", "color_fx1", "color_fx2",
 _FX_CLES = {"effet": (0, 8), "vitesse": (0, 100), "link_order": (10, 13),
             "speed_source": (0, 2), "bpm_division": (0, 1 << 31)}
 _SHOW_CLES = ("base", "nom", "presets", "positions", "palette",
-              "gobo_noms", "gobo_ordre")
+              "gobo_noms", "gobo_ordre", "mappings")
 _PRESET_CLES = ("id", "modele", "nom", "positions", "dimmers",
                 "masque_contenu", "pattern_couleur",
                 "couleur_statique") + _FX_NOMS
@@ -47,6 +47,17 @@ PADS_PAR_GROUPE = 20         # un masque de 20 bits par groupe dans f31
 _POS_CLES = ("page", "index", "nom", "pan", "tilt", "fan")
 _POS_CHAMPS = {"pan": "f6", "tilt": "f7", "fan": "f3"}
 _PAL_CLES = ("index", "rouge", "vert", "bleu")
+# Record 130 = la carte de mapping DMX IN (SPEC §7.3, MAP-01..07). `f4` est la
+# FONCTION visée, pas la catégorie de l'écran : deux entrées de la catégorie
+# `Flash` portent des `f4` distincts. Seules les cinq fonctions écrites par
+# l'appareil sous nos yeux sont ici — en inventer une autre serait deviner.
+_MAP_FONCTIONS = {"dimmer_groupe": 20, "main": 27, "preset": 70,
+                  "bpm_tap": 17, "wolf": 10}
+# L'instance, quand la fonction n'en a pas : MAIN porte 0 (entrée d'usine),
+# BPM Tap et Wolf portent 255 (entrées créées par l'appareil). Mesuré, pas déduit.
+_MAP_INSTANCE_FIXE = {"main": 0, "bpm_tap": 255, "wolf": 255}
+_MAP_CLES = ("cible", "groupe", "index", "canal")
+CANAL_MAX = 512              # borne de l'encodeur du panneau, mesurée
 
 
 def _cles(d, permises, contexte):
@@ -303,6 +314,78 @@ def compiler(spec, sortie):
             raise ValueError("gobo_ordre : aucune roue du donneur ne porte "
                              "ces ids dans un record 111 décodable")
 
+    # --- record 130 : la carte de mapping DMX IN (device-confirmed, MAP-01..07) ---
+    # Une entrée est identifiée par (fonction, instance), JAMAIS par son rang :
+    # l'ordre du fil bouge sans que le contenu change, deux fois observé en onze
+    # sauvegardes, sans lecture. `canal: null` retire l'entrée — « non mappé »
+    # est l'absence, il n'existe pas de sentinelle.
+    if "mappings" in spec:
+        d130 = rec(130)
+        entrees = d130.setdefault("mappings", [])
+        attendu = {}
+        for me in spec["mappings"]:
+            _cles(me, _MAP_CLES, "mapping")
+            cible = me.get("cible")
+            if cible not in _MAP_FONCTIONS:
+                raise ValueError(
+                    f"mapping : cible {cible!r} hors périmètre ; mesurées : "
+                    f"{sorted(_MAP_FONCTIONS)}")
+            ctx = f"mapping {cible}"
+            fonction = _MAP_FONCTIONS[cible]
+            if cible == "dimmer_groupe":
+                g = me.get("groupe")
+                if g not in list("ABCDEFGH"):
+                    raise ValueError(f"{ctx} : 'groupe' doit être A–H")
+                instance = ord(g) - ord("A")
+            elif cible == "preset":
+                instance = _borne(ctx, "index", me.get("index", -1), 0, 199)
+            else:
+                if "groupe" in me or "index" in me:
+                    raise ValueError(f"{ctx} : cette fonction n'a pas d'instance")
+                instance = _MAP_INSTANCE_FIXE[cible]
+            canal = me.get("canal", "absent")
+            if canal == "absent":
+                raise ValueError(f"{ctx} : clé 'canal' obligatoire "
+                                 "(un entier 1–512, ou null pour retirer)")
+            trouve = next((e for e in entrees
+                           if e.get("fonction") == fonction
+                           and e.get("instance", 0) == instance), None)
+            if canal is None:
+                if trouve is None:
+                    raise ValueError(f"{ctx} : aucune entrée à retirer")
+                entrees.remove(trouve)
+                attendu[(fonction, instance)] = None
+                continue
+            canal = _borne(ctx, "canal", canal, 1, CANAL_MAX)
+            haut, bas = divmod(canal - 1, 256)
+            if trouve is None:
+                # forme d'une entrée créée par l'appareil : f7 = 1, f8 = 1,
+                # observée sur les trois qu'il a créées (preset, BPM Tap, Wolf).
+                trouve = {"instance": instance, "fonction": fonction,
+                          "f7": 1, "f8": 1}
+                entrees.append(trouve)
+            trouve["canal_octet_haut"], trouve["canal_octet_bas"] = haut, bas
+            attendu[(fonction, instance)] = canal
+        d130["f1"] = len(entrees)             # device-confirmed : f1 = le compte
+
+        def _verif_130(d, att=attendu):
+            if d.get("f1") != len(d.get("mappings", [])):
+                return False
+            for (fonction, instance), canal in att.items():
+                e = next((x for x in d["mappings"]
+                          if x.get("fonction") == fonction
+                          and x.get("instance", 0) == instance), None)
+                if canal is None:
+                    if e is not None:
+                        return False
+                    continue
+                if e is None or (e.get("canal_octet_haut", 0) * 256
+                                 + e.get("canal_octet_bas", 0) + 1) != canal:
+                    return False
+            return True
+
+        verifs.append((130, 0, "mappings", _verif_130))
+
     # --- réencodage + écriture (nouveau fichier, jamais d'écrasement) ---
     for (typ, occ), d in cache.items():
         w.replace(typ, wpj_codec.encode(typ, d), occ)
@@ -438,12 +521,19 @@ def _demo_sur(base):
                          "couleur_statique": [[6]] * 2 + [[]] * 6}],
             "positions": [{"page": 1, "index": 1, "nom": "DemoPos",
                            "pan": 12345, "tilt": 54321, "fan": 32768}],
-            "palette": [{"index": 0, "rouge": 10, "vert": 20, "bleu": 30}]}
+            "palette": [{"index": 0, "rouge": 10, "vert": 20, "bleu": 30}],
+            "mappings": [{"cible": "dimmer_groupe", "groupe": "B",
+                          "canal": 300},          # deux octets : f5 = 1
+                         {"cible": "preset", "index": 4, "canal": 40},
+                         {"cible": "wolf", "canal": 45},
+                         {"cible": "dimmer_groupe", "groupe": "C",
+                          "canal": None}]}        # retrait
     with tempfile.TemporaryDirectory() as tmp:
         out = os.path.join(tmp, "demo.wpj")
         diffs = compiler(spec, out)
         assert {(t, o) for t, o, *_ in diffs} == {(101, 0), (165, 0),
-                                                 (150, 0), (135, 0)}, diffs
+                                                 (150, 0), (135, 0),
+                                                 (130, 0)}, diffs
         # relecture indépendante des valeurs demandées
         w = wpjlib.Wpj.load(out)
         assert wpj_codec.decode(101, w.get(101))["nom"] == "WMX SHOW DEMO"
@@ -497,6 +587,19 @@ def _demo_sur(base):
             compiler({"base": ga, "gobo_ordre": gids}, gb)
             assert open(gb, "rb").read() == open(base, "rb").read()
         # erreurs attendues : clé inconnue, entrée absente
+        # --- la carte, relue indépendamment ---
+        d130 = wpj_codec.decode(130, w.get(130))
+        carte = {(e.get("fonction"), e.get("instance", 0)):
+                 e.get("canal_octet_haut", 0) * 256
+                 + e.get("canal_octet_bas", 0) + 1
+                 for e in d130["mappings"]}
+        assert carte[(20, 1)] == 300, carte          # modifiée, sur deux octets
+        assert carte[(70, 4)] == 40, carte           # créée
+        assert carte[(10, 255)] == 45, carte         # créée, instance 255
+        assert (20, 2) not in carte, carte           # retirée
+        assert carte[(20, 0)] == 1 and carte[(27, 0)] == 9, carte  # intactes
+        assert d130["f1"] == len(d130["mappings"]) == 9 - 1 + 2, d130["f1"]
+
         for mauvais in [{"base": base, "fondu": 1},
                         {"base": base, "presets": [{"id": 9999, "nom": "x"}]},
                         {"base": base, "presets": [{"id": 80, "size": 5}]},
@@ -515,7 +618,26 @@ def _demo_sur(base):
                         # gobo inconnu, ordre incomplet, nom trop long
                         {"base": base, "gobo_noms": {"999999": "x"}},
                         {"base": base, "gobo_ordre": gids[:-1]},
-                        {"base": base, "gobo_noms": {str(gids[0]): "a" * 20}}]:
+                        {"base": base, "gobo_noms": {str(gids[0]): "a" * 20}},
+                        # fonction non mesurée : on ne devine pas un f4
+                        {"base": base, "mappings": [{"cible": "preset_page",
+                                                     "canal": 5}]},
+                        # canal hors de l'univers
+                        {"base": base, "mappings": [
+                            {"cible": "dimmer_groupe", "groupe": "A",
+                             "canal": 513}]},
+                        # groupe hors A–H
+                        {"base": base, "mappings": [
+                            {"cible": "dimmer_groupe", "groupe": "I",
+                             "canal": 5}]},
+                        # une fonction sans instance n'en prend pas
+                        {"base": base, "mappings": [{"cible": "wolf",
+                                                     "index": 2, "canal": 5}]},
+                        # 'canal' obligatoire, même pour retirer
+                        {"base": base, "mappings": [{"cible": "wolf"}]},
+                        # retirer une entrée absente
+                        {"base": base, "mappings": [{"cible": "bpm_tap",
+                                                     "canal": None}]}]:
             try:
                 compiler(mauvais, os.path.join(tmp, "err.wpj"))
                 raise AssertionError(f"erreur attendue : {mauvais}")

@@ -64,3 +64,71 @@ Si 7 et 8 passent, la règle mesurée devient « les trois pages FX et le modal
 Open se poussent depuis l'hôte ; PRESET et SETUP non », et elle est **utile** :
 c'est ce qu'on peut piloter sans toucher au panneau. Si l'une des deux échoue,
 « page FX » n'est pas le critère et on redescend à une liste d'index.
+
+## Mesure 9, prédite avant d'être faite
+
+7 et 8 sont passées : les trois pages FX se poussent. Il manque HOME lui-même,
+qui est aussi la remise en état de fin de séance.
+
+| # | Envoi | Prédiction | p |
+|---|---|---|---|
+| 9 | `mode home` (0) depuis BEAM FX | l'écran revient sur HOME — 0 est la page d'accueil, pas un écran de touche | 0.5 |
+
+## Résultat (2026-08-31) — banc, opérateur devant l'écran
+
+Neuf envois, un par mesure, l'opérateur lisant l'écran après chacun. Le mode
+**rapporté** a pris la valeur demandée **9 fois sur 9**. L'écran, lui, partage
+les index en deux :
+
+| Index | Page | Depuis | Écran |
+|---|---|---|---|
+| 5 | PRESET | HOME | inchangé |
+| 16 | SETUP | HOME | inchangé |
+| 26 | Open / PROJECTS | HOME | **suit** |
+| 5 | PRESET | Open | inchangé |
+| 1 | COLOR FX | Open | **suit** — et le modal se ferme |
+| 5 | PRESET | COLOR FX | inchangé |
+| 3 | MOVE FX | COLOR FX | **suit** |
+| 4 | BEAM FX | MOVE FX | **suit** |
+| 0 | HOME | BEAM FX | inchangé |
+
+**Poussables : 1, 3, 4, 26. Inertes : 0, 5, 16.** [device-confirmed]
+
+Trois prédictions fausses, toutes notées telles quelles : la 1 (SETUP suivrait,
+p=0.5), la 5 telle qu'écrite — « seuls les modaux sont poussables » a été
+réfutée par l'index 1 dans la mesure suivante — et la 9 (HOME reviendrait,
+p=0.5). Les mesures 2, 4, 6, 7, 8 sont conformes.
+
+### Ce que ça règle, et ce que ça n'explique pas
+
+SCREEN-01 disait « le panneau ne suit pas toujours ». Ce n'est pas *parfois* :
+c'est une **partition stable de la cible**, indépendante de l'écran de départ —
+la mesure 6 l'a montré en envoyant le même index 5 depuis trois pages
+différentes, sans effet à chaque fois.
+
+Aucun mécanisme n'est nommé. Les trois moteurs FX et le modal Open se poussent ;
+l'accueil, la page PRESET et le menu principal non. Les six ont pourtant une
+touche ou une icône dédiée sur le panneau, donc « écran de touche » n'est pas le
+critère. Candidats non départagés :
+
+- les pages poussables sont celles qui n'ont pas d'état de sélection à
+  restaurer, et les inertes redessinent depuis l'état des touches ;
+- 0/5/16 sont les trois écrans « racine » de la navigation du panneau ;
+- la partition est arbitraire, écrite index par index dans le firmware.
+
+Il en manque : 7/8/9/10 (STATIC), 23, 25, 28-34, 43, 44 n'ont pas été essayés.
+
+### Conséquence pratique
+
+Depuis l'hôte, sans toucher au panneau, on peut mettre le W1 sur **COLOR FX,
+MOVE FX, BEAM FX** et ouvrir la **page Open** — et en sortir par l'index 1. On
+ne peut pas le ramener à l'accueil : après cette séance l'écran est resté sur
+BEAM FX, et c'est une touche du panneau qui l'en sortira.
+
+Côté WTOOLS : son journal
+(`~/Library/Application Support/com.nicolaudiegroup.wtools/logs/`) nomme chaque
+message sortant — `WmMsgType.setWMMode`, `setPreset`, `setBeat`, `setProject`,
+`setFlashDataChunks`, `settingDisableUsbDmx`, `getSettings`, `getProjectList`,
+`getProfileList`. WTOOLS déplace donc l'écran avec **le même message que nous**,
+`setWMMode` : il n'a pas de canal privé. Le journal ne porte pas les payloads,
+et rien ici n'est lu ailleurs que dans ce que l'application écrit en tournant.

@@ -5,8 +5,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Please read [docs/methodology.md](../blob/master/docs/methodology.md) first.
-        **Never attach a `.wpj`, `.wm` or `.wmx` file** — hashes only. See [LEGAL.md](../blob/master/LEGAL.md).
+        Please read [docs/methodology.md](https://github.com/Adridot/wolfmix-automation/blob/master/docs/methodology.md) first.
+        **Never attach a `.wpj`, `.wm` or `.wmx` file** — hashes only. See [LEGAL.md](https://github.com/Adridot/wolfmix-automation/blob/master/LEGAL.md).
   - type: input
     id: claim
     attributes:

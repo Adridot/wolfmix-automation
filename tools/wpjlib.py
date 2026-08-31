@@ -52,6 +52,9 @@ class Wpj:
     @classmethod
     def from_bytes(cls, d, source="<bytes>"):
         """Parse a variant-A project from bytes without creating a file."""
+        if len(d) < BODY_OFF + 6:
+            raise ValueError(f"{source}: too short for a variant-A project "
+                             f"({len(d)} bytes, {BODY_OFF + 6} minimum)")
         if d[:20] != hashlib.sha1(d[20:]).digest():
             raise ValueError(f"{source}: invalid SHA-1 header")
         root_len, root_type = struct.unpack_from("<IH", d, BODY_OFF)
@@ -60,6 +63,8 @@ class Wpj:
                              f"(type={root_type}, length={root_len})")
         records, i, end = [], BODY_OFF + 6, len(d)
         while i < end:
+            if i + 6 > end:
+                raise ValueError(f"{source}: truncated record header at {i}")
             ln, typ = struct.unpack_from("<IH", d, i)
             if i + 6 + ln > end:
                 raise ValueError(f"{source}: truncated record at {i}")
@@ -121,5 +126,28 @@ def demo():
           file=sys.stderr)
 
 
+def _refus_attendus():
+    """Un fichier trop court, mais dont l'en-tête SHA-1 est juste, doit être
+    refusé comme format — pas lever struct.error depuis les entrailles."""
+    for corps in (b"", b"x" * 10, b"x" * (BODY_OFF - 20)):
+        court = hashlib.sha1(corps).digest() + corps
+        try:
+            Wpj.from_bytes(court, "<court>")
+            raise AssertionError(f"accepté : {len(court)} octets")
+        except ValueError as err:
+            assert "short" in str(err) or "root container" in str(err), err
+    # Un en-tête de record qui déborde la fin du corps est un refus nommé.
+    corps = bytearray(b"\x00" * (BODY_OFF - 20))
+    inner = struct.pack("<IH", 3, 101) + b"abc" + b"\x00\x00"
+    corps += struct.pack("<IH", len(inner), ROOT_TYPE) + inner
+    tronque = hashlib.sha1(bytes(corps)).digest() + bytes(corps)
+    try:
+        Wpj.from_bytes(tronque, "<tronqué>")
+        raise AssertionError("un record tronqué est passé")
+    except ValueError as err:
+        assert "truncated" in str(err), err
+
+
 if __name__ == "__main__":
+    _refus_attendus()
     demo()

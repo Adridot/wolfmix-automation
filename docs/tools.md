@@ -7,12 +7,12 @@ relative to the working directory.
 Three conventions hold everywhere:
 
 - **Run with no arguments = self-check.** Each tool proves its own invariant and
-  exits non-zero if it cannot. Six of them (`wpjlib`, `wpj_codec`, `wpj_api`,
-  `wpj_identities`, `wpj_show`, `wpj_generate`) prove it over your corpus; the
-  other four prove it against frozen inputs in their own source
-  (`wpj_inspect`, `wpj_position`), against a tree they build themselves
-  (`gobo_run`), or against the git index (`wpj_privacy`). `make check` runs
-  ten of them;
+  exits non-zero if it cannot. Some prove it over your corpus (`wpjlib`,
+  `wpj_codec`, `wpj_bc`, `wpj_api`, `wpj_identities`, `wpj_show`,
+  `wpj_generate`); the others prove it against frozen inputs in their own
+  source (`wpj_inspect`, `wpj_position`), against a tree they build themselves
+  (`gobo_run`), or against the git index (`wpj_privacy`). **The canonical list
+  is the `Makefile`** — read `make check` rather than a count written here.
   `wpj_diff.py` self-checks too but is not wired into it.
 - **No corpus, no claim.** No project file ships with this repository
   ([`../LEGAL.md`](../LEGAL.md)). The corpus root is `corpus/`, or `$WPJ_CORPUS`
@@ -74,14 +74,14 @@ Naming: a field whose meaning is proven gets a semantic key (`nom`, `profil`,
 `effet`, …); an unidentified field keeps a neutral `fN` key. An absent field is
 absent from the dict — never a synthesised `0`.
 
-Decoded today: 101, 102, 105, **111**, 115, 116, 120, 125, 135, 140, 145,
-150, **151**, 160, 165.
+Decoded today: 101, 102, 105, **111**, 115, 116, 120, 125, **130**, 135, 140,
+145, 150, **151**, 160, 165 — sixteen. `python3 tools/wpj_codec.py` prints the
+split, and is the source of truth for it.
 
 Note on 105: the keys are `offset_106` and `nb_entrees_106`, not an address and a
 channel count — see `SPEC.md` §7. The old names were a misreading.
-Passthrough (round-tripped, undecoded): 106, 110, 130, 155, 161 —
-several of these have a documented structure in `SPEC.md` without a codec
-schema yet.
+Passthrough (round-tripped, undecoded): 106, 110, 155, 161 — several of these
+have a documented structure in `SPEC.md` without a codec schema yet.
 
 The self-check reads only the corpus you supply. It does **not** scan your
 WTOOLS installation; copy what you want tested into the corpus root instead.
@@ -176,10 +176,11 @@ Two additive differences, both deliberate:
   upstream schema reports `unsupported`;
 - `x_records` carries the full codec decode, so nothing is lost.
 
-Attributions still at `hypothesized` status (`sizePercent`, `fadePercent`,
-`phasePercent`) *are* emitted, but always alongside an
-`unconfirmed_field_attribution` issue in `validation.issues`. Treat them as
-leads, not values.
+`speedPercent`, `phasePercent`, `sizePercent` and `fadePercent` are emitted
+without reservation: the four were measured field by field against the panel
+(FX6-02/03, `SPEC.md` §5). The `unconfirmed_field_attribution` issue that used
+to accompany them is gone, along with the `fN` fallbacks that carried the
+retracted reading.
 
 Variant B/C files produce an `unsupported_variant` issue rather than an error.
 
@@ -357,9 +358,14 @@ An RGB PNG carries no alpha, so it lands fully opaque — the manufacturer's
 icons are cut out, and exporting them without alpha flattens that away. Feed
 RGBA when the shape matters.
 
-Uploading the result is a separate, device-side act; see
-[`../research/flash-gobo-plan.md`](../research/flash-gobo-plan.md) for the order
-of operations and the way back.
+`patch` also writes `SORTIE.json`, the manifest that ties the copy to the
+installed bundle: source SHA-256 and size, result SHA-256 and size, bundle
+version, patched ids, allowed byte windows, and the number of bytes that
+actually differ. `gobo_run.py` verifies that chain before naming the upload.
+
+Uploading the result is a separate, device-side act performed by WTOOLS; see
+[`gobo-icons.md`](gobo-icons.md) §5 for the order of operations and the way
+back.
 
 ## `gobo_run.py` — the gates between the gobo steps
 

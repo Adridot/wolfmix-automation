@@ -67,8 +67,12 @@ def _walk_top(body):
                 raise ValueError("longueur")
             v = body[i:i + ln]; i += ln
         elif wt == 5:
+            if i + 4 > len(body):
+                raise ValueError("f32 tronqué")
             v = body[i:i + 4]; i += 4
         elif wt == 1:
+            if i + 8 > len(body):
+                raise ValueError("f64 tronqué")
             v = body[i:i + 8]; i += 8
         else:
             raise ValueError(f"wire type {wt}")
@@ -169,11 +173,14 @@ def projet_vers_dict(path):
             gobos.append({"nom": d.get(2), "glyphe": d.get(3),
                           "valeur_par_profil": {i: x for i, x in enumerate(vals) if x != 65535}})
     groupes = [{"nom": _msg(b).get(1)} for b in blobs(10)]
+    noms = blobs(2)
+    if not noms:
+        raise ValueError(f"{path} : champ 2 (nom du projet) absent")
     autres = sorted(f for f in top if f not in
                     (1, 2, 3, 6, 7, 9, 10, 12, 13, 31))
     return {
         "fichier": path, "variante": var, "version_format": uns(1),
-        "nom": blobs(2)[0].decode("utf-8", "replace"),
+        "nom": noms[0].decode("utf-8", "replace"),
         "profils": profils, "patch": patch, "groupes": groupes,
         "presets": presets, "positions": positions, "edits": edits, "gobos": gobos,
         "nb_canaux_patches": uns(23),
@@ -189,14 +196,20 @@ def _identites(body):
         top.setdefault(f, []).append((wt, v))
     n = lambda f: sum(1 for wt, _ in top.get(f, []) if wt == 2)
     uns = lambda f: next((v for wt, v in top.get(f, []) if wt == 0), None)
-    blob = lambda f: next(v for wt, v in top.get(f, []) if wt == 2)
-    prof_ch = [_msg(b).get(5, 0) for b in (v for wt, v in top[13] if wt == 2)]
+    def blob(f):
+        trouve = next((v for wt, v in top.get(f, []) if wt == 2), None)
+        if trouve is None:
+            raise ValueError(f"champ {f} absent : fichier B/C incomplet")
+        return trouve
+
+    prof_ch = [_msg(b).get(5, 0)
+               for b in (v for wt, v in top.get(13, []) if wt == 2)]
     occupe = set()
     for b in (v for wt, v in top.get(12, []) if wt == 2):
         d = _msg(b)
         p, adr = d.get(2, 0), d.get(3, 0)
         occupe.update(range(adr, adr + (prof_ch[p] if p < len(prof_ch) else 0)))
-    f15 = [v for wt, v in top[15] if wt == 2]
+    f15 = [v for wt, v in top.get(15, []) if wt == 2]
     assert uns(1) in (6, 7, 8), "champ 1 hors 6/7/8"
     assert n(3) == 100 and uns(33) == 100, "presets ≠ 100"
     assert len(f15) == 2048, "f15 ≠ 2048"
@@ -211,7 +224,52 @@ def _identites(body):
     assert sum(1 for o in blob(27) if o) == n(14), "f27 ≠ nb entrées f14"
 
 
+def _refus():
+    """Les refus qui ne dépendent d'aucun corpus — et qui tiennent sous -O.
+
+    `tlv.py` validait par assertions : `python3 -O` les efface, et c'est une
+    entrée externe qu'on lit. Ces cas sont ici parce que `wpj_bc` est déjà
+    dans `make check` et importe `tlv`.
+    """
+    for tronque in (b"\x0d\x01\x02", b"\x09\x01\x02\x03"):
+        try:
+            _walk_top(tronque)
+            raise AssertionError(f"bloc fixe tronqué accepté : {tronque!r}")
+        except ValueError:
+            pass
+    entete = hashlib.sha1(b"").digest()
+    for corps, motif in (
+        (b"", "trop court"),
+        (b"\x00" * 0x40 + b"\x00\x00\x00\x00\x63\x00", "type"),
+    ):
+        try:
+            tlv.parse_tlv(entete + corps)
+            raise AssertionError(f"accepté : {motif}")
+        except ValueError:
+            pass
+    # Un record dont la longueur déborde la racine est nommé, pas tronqué.
+    inner = (3).to_bytes(4, "little") + (101).to_bytes(2, "little") + b"abc"
+    racine = (len(inner) + 4).to_bytes(4, "little") + (100).to_bytes(2, "little")
+    try:
+        tlv.parse_tlv(b"\x00" * 0x40 + racine + inner)
+        raise AssertionError("record débordant accepté")
+    except ValueError:
+        pass
+    # Un blob obligatoire absent se nomme, au lieu de lever un IndexError.
+    import tempfile
+    with tempfile.TemporaryDirectory() as dossier:
+        chemin = os.path.join(dossier, "sans-nom.wpj")
+        with open(chemin, "xb") as flux:
+            flux.write(b"\x08\x06")          # champ 1 = 6, et rien d'autre
+        try:
+            projet_vers_dict(chemin)
+            raise AssertionError("projet sans nom accepté")
+        except ValueError as err:
+            assert "champ 2" in str(err), err
+
+
 def demo():
+    _refus()
     files = wpjlib.corpus_files()
     if not files:
         return wpjlib.pas_de_corpus("wpj_bc")

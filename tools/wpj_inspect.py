@@ -87,7 +87,8 @@ def walk(buf, depth, max_depth):
 def inspect(path, max_depth=MAX_DEPTH_DEFAULT):
     data = open(path, "rb").read()
     # variante C : protobuf dès 0 ; variante B : SHA-1 (20 o) puis protobuf
-    for off in (0, 20):
+    entete = len(data) > 20 and data[:20] == hashlib.sha1(data[20:]).digest()
+    for off in ((20, 0) if entete else (0, 20)):
         try:
             tree = walk(data[off:], 0, max_depth)
             break

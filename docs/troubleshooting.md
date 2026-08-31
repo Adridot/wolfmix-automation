@@ -34,7 +34,8 @@ dumps) do this. The tool refuses to guess rather than emit a plausible tree.
 **A record decodes to `{"raw": "<hex>"}`**
 No schema for that type, or its protobuf did not match the schema. That is the
 designed fallback, not a failure: the bytes still round-trip exactly. Types
-106, 110, 111, 130, 155 and 161 are passthrough today.
+106, 110, 155 and 161 are passthrough today — `python3 tools/wpj_codec.py`
+prints the current list.
 
 **`<path> existe déjà — écrasement refusé`**
 Every writer opens output with mode `x`. Choose a new path; nothing is ever

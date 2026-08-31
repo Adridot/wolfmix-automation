@@ -1,9 +1,11 @@
 # Your fixture's real gobos on the W1 screen
 
-End-to-end recipe, every step device-confirmed on firmware 2.0.18
-([`../research/flash-gobo-plan.md`](../research/flash-gobo-plan.md) for the
-measurements, RENAME-01/SORT-01 in `SPEC.md` §3.4 for the page edits). Three
-independent layers:
+End-to-end recipe, every step device-confirmed on firmware 2.0.18 on
+2026-08-30 (RENAME-01/SORT-01 in `SPEC.md` §3.4 for the page edits). A
+**resource flash** carries the interface's graphics and is not executable
+firmware — [`../LEGAL.md`](../LEGAL.md) states that boundary, and this
+repository never writes the controller's flash itself: it prepares a copy and
+verifies it, WTOOLS uploads it. Three independent layers:
 
 | Layer | What changes | Where it lives | Tool |
 |---|---|---|---|
@@ -66,8 +68,12 @@ python3 tools/gobo_write.py patch $G/flash-custom.bin \
 ```
 
 `mask:` turns white-on-black into a cut-out silhouette; the 1024×1024 files
-are reduced by area averaging. The tool itself checks the diff stays inside
-the targeted windows and the length is unchanged. To preview the real 24×24
+are reduced by area averaging. The tool checks the diff stays inside the
+targeted windows and the length is unchanged, and writes
+`flash-custom.bin.json` beside the output: the manifest carrying the source
+bundle's SHA-256, the result's, the patched ids and the byte windows. That
+manifest is what `gobo_run.py` verifies before it will name the upload step —
+without it, any file of the right length would pass. To preview the real 24×24
 result before uploading, render a sheet **from the patched file** and look at
 it — rendering it from the sources proves nothing, and `gobo_run.py` fails the
 gate when the sheet is older than the flash it claims to show:
@@ -79,13 +85,65 @@ WOLFMIX_FLASH=$G/flash-custom.bin python3 tools/gobo_library.py \
 
 ## 5. Upload
 
-[`../research/flash-gobo-plan.md`](../research/flash-gobo-plan.md) is the
-authority — preconditions (complete `profiles` read, WLINK off, machine on
-mains, saved project), the WTOOLS Full Debug mode that reveals `Upload Flash`,
-the screen frozen at 99% that is **not** a crash, and the four-step safety net
-back to stock. Keep a verified backup of the original bundle **outside** the
-WTOOLS folder first — copy it to `$G/backup`, and `gobo_run.py` re-checks its
-SHA-256 against the live bundle on every run.
+The controller's flash is written by WTOOLS, from the copy you just verified.
+Before anything: **a verified backup of the original bundle, outside the WTOOLS
+folder** — copy it to `$G/backup`; WTOOLS rewrites `wm-fw-bundle-2.0.18/` on
+every update, and `gobo_run.py` re-checks the four SHA-256 against the live
+bundle on every run.
+
+Preconditions, all four:
+
+```bash
+python3 tools/wolfmix.py profiles | tail -3   # complete read; if truncated, restart the W1
+python3 tools/wolfmix.py settings             # wlinkActivated must be false
+```
+
+- **`profiles` must answer completely** — the line count equals
+  `fixtureProfileCount`. A truncated read happened once (2026-08-30) and was
+  repaired by a restart; never write on a partial read.
+- **WLINK off.** It is read-only and fails the write at 17% or 99%
+  ([forum t=718](https://forum.wolfmix.com/viewtopic.php?t=718)).
+- **The host machine on mains.** A write cut by a shutdown is the one scenario
+  with no net.
+- **The loaded project saved.** WTOOLS refuses otherwise: *Failed to update
+  firmware — Save project before updating.*
+
+Then reveal the control. `Upload Flash` only exists in WTOOLS' Full Debug mode,
+which the SHIFT+CMD+D menu does not offer; the application accepts the mode as
+a preference:
+
+```bash
+defaults write com.nicolaudiegroup.wtools flutter.wtoolsMode -int 2   # reveals the button
+defaults write com.nicolaudiegroup.wtools flutter.wtoolsMode -int 0   # back to stock
+```
+
+WTOOLS must be closed for either, and restarted after. In mode 2,
+**`Upload Firmware` sits right next to `Upload Flash`** — read the label out
+loud before clicking. Select `$G/flash-custom.bin`.
+
+**The W1 screen then sticks at "updating firmware 1/2 writing data 99%". This
+is not a crash** — reproduced 2 times out of 2. The normal path pushes two
+files where `Upload Flash` sends one, so the screen's state machine never
+closes; the device keeps answering the protocol throughout (`getSettings` and
+`getProjectList` come back complete, which a chip mid-erase would not do).
+Check the `setFlashDataChunks` have stopped in the WTOOLS log, then restart the
+W1 normally: the overlay lifts and the new flash loads.
+
+Afterwards, put `wtoolsMode` back to 0, and re-read `settings` and `profiles`:
+`firmwareVer`, `fixtureProfileCount` and `projectCount` must be what they were.
+
+### The net, by severity
+
+1. Re-upload the original `wolfmixFlash.bin` you backed up — the normal way
+   back, and it is **proven**: a magenta test icon was written and then undone,
+   stock names restored (2026-08-30).
+2. WTOOLS *Settings > Factory Reset* — reinstalls the last firmware **and** its
+   flash (W1 manual v2.0 p.70).
+3. WOLF+SPEED at power-on → bootloader → WTOOLS, if the W1 no longer boots.
+4. WOLF+SMOKE → the factory firmware embedded in the device, without a PC.
+
+No public bricking case is attributable to a flash modification; the reported
+ones come from failed firmware updates or USB faults.
 
 ## 6. Names and order (optional, per project)
 
@@ -117,3 +175,7 @@ projecting its own motif.
   slot is a copy) — check you are opening the one you deployed to.
 - Your generated images and patched flash are **your fixture's data**: keep
   them outside the repository, like every render (`LEGAL.md`).
+- An icon whose size is not 1728 bytes shifts everything: the table's pointers
+  are absolute, not relative. The tool refuses it; do not work around it.
+- Two icons out of 705 (ids 227 and 229) carry 72 near-transparent surplus
+  bytes — a vendor export leftover, harmless.

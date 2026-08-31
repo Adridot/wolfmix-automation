@@ -101,17 +101,19 @@ make check
 ```
 
 ```text
-self-check ok : round-trip octet-identique sur 45 fichiers
-fidélité octet vérifiée sur 45 fichiers variante A
-17 identités vérifiées sur 45 fichiers variante A (+ paires F30-04 / FLASH-09)
+self-check ok : round-trip octet-identique sur N fichiers
+fidélité octet vérifiée sur N fichiers variante A
+… identités vérifiées sur N fichiers variante A (+ paires F30-04 / FLASH-09)
 self-check ok : 12/12 tilt, 11/12 pan, offsets et clamp
-wpj_privacy : 14 motifs, aucune occurrence dans 60 fichiers suivis
+wpj_privacy : … motifs, aucune occurrence dans les fichiers suivis
 ```
 
-Ten self-checks: byte-identical round-trip, codec fidelity per record type,
-wire parsing, the show compiler, the show generator, the inspect API, the
+The counts are your corpus's, not ours. What runs: byte-identical round-trip,
+codec fidelity per record type, wire parsing, the B/C reader's identity
+lattice, the show compiler, the show generator, the inspect API, the
 structural identities, the position model against four DMX captures, the
-anonymisation guard, and the gobo pipeline's gates.
+anonymisation guard, and the gobo pipeline's gates. **The `Makefile` is the
+list** — it changes, this sentence should not have to.
 
 > [!IMPORTANT]
 > With no project files present, the self-checks **abstain** — one line each,
@@ -239,14 +241,14 @@ argument-only helpers.
 | Area | State |
 |---|---|
 | Variant-A container, SHA-1 header, project name | 🟢 **device-confirmed** — our files are accepted and stored byte-identically |
-| Record inventory — 20 types | 🟢 14 decoded, 6 round-tripped verbatim |
-| Patch model (105/106/110/111/115/116/120/125) | 🟢 locked by arithmetic — **17 identities** re-checked on every file; the DMX address is `115.f2`, confirmed on live DMX |
+| Record inventory — 20 types | 🟢 16 decoded, 4 round-tripped verbatim (106, 110, 155, 161) — `python3 tools/wpj_codec.py` prints the current split |
+| Patch model (105/106/110/111/115/116/120/125) | 🟢 locked by arithmetic — **18 identities** re-checked on every file; the DMX address is `115.f2`, confirmed on live DMX |
 | Static palettes — colour, gobo, position (140/145/150) | 🟢 **device-confirmed**, one record per group A–H — and record 140 is **device-confirmed in writing** too: one pad component changed, and the DMX followed the formula exactly |
 | Positions, end to end (150/151/106) | 🟢 **device-confirmed** — fan, per-fixture offsets, clamping and travel limits; the emitted DMX is computable from the file alone |
 | FX sequences (155) | 🟢 **device-confirmed in both engines** — 16 steps × 8 groups, step-major, packed varints, and `f2` says which sequencer: `1` = move (position indices), `2` = the three beam `FX Seq` (4-bit segment masks). Ticking two beam segments moved **one byte in 46414** |
 | Flash keys in a preset (165 `f16`) | 🟢 **device-confirmed both ways** — five slices captured from the panel and written back |
 | Flash FX settings (102) | 🟢 ten of eleven fields **device-confirmed**; `f11` alone stays unattributed and inert, and the search is stopped |
-| Presets — the per-group arrays (165) | 🟢 thirteen fields proven per-group; **nine named** — `f17` dimmer, `f28` positions, `f29` gobos, `f30` colour pattern, and `f14`/`f32`–`f35`, the five `STATIC GOBO` features — leaving `f3`/`f7`/`f23`/`f27` unattributed |
+| Presets — the per-group arrays (165) | 🟢 thirteen fields proven per-group; **nine named** — `f17` dimmer, `f28` positions, `f29` gobos, `f30` colour pattern, and `f14`/`f32`–`f35`, the five `STATIC GOBO` features. `f3`/`f7`/`f23` turned out to be the per-group FX page selectors (next row but one); `f27` alone stays unattributed |
 | Presets — writing new entries | 🟡 append works; names are capped at **19 bytes** or the project refuses to open |
 | Group dimmers in a preset (165 `f17`) | 🟢 **device-confirmed** — a percentage through the channel's travel limits, `DMX = 106.f5 + (f17/255)·(106.f6 − 106.f5)`; where a fixture has colour channels the intensity folds into the colour instead. Gated by a controller setting, `store group dimmers in preset`, that lives **outside** the file |
 | The preset content mask (165 `f10`) | 🟢 six toggles **device-confirmed on reading**, a **set** bit meaning **off**; bit 1 `MOVE` and bit 5 `OTHER` proven by writing one — **validated**, not device-confirmed: bit 5 gates the group dimmers and nothing else a static cue carries, and the cue carried neither `f32`–`f35` nor an active gobo |
@@ -435,7 +437,7 @@ are still French.
 | ✅ | The beam sequencer — it lives in record **155** alongside the move one, and `155.f2` says which engine: `1` = move (position indices 0–19), `2` = the three beam `FX Seq` (4-bit segment masks 0–15) |
 | ⏹️ | Beam `f5` — **inert**: every beam screen property is placed, and the field is absent on all 352 distinct presets. Search stopped, like `102.f11` |
 | ✅ | `f3`/`f7`/`f23` of record 165 — the three per-group FX page selectors; `f27` alone stays unattributed and inert |
-| 🔮 | The DMX mapping record — live control on MK1 |
+| ✅ | The DMX mapping record — record 130, read and written; a file-authored mapping is displayed by the controller |
 | 🔮 | Variant B/C writer, fixture profile generation |
 
 ## Documentation

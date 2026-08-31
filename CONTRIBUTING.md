@@ -10,8 +10,9 @@ the whole method.
 
 ## Before you open anything
 
-- Run `make check` from the repository root. Nine self-checks; they need a
-  corpus of your own ([`docs/corpus.md`](docs/corpus.md)).
+- Run `make check` from the repository root — it runs every hardware-free
+  self-check, and the `Makefile` is the canonical list. They need a corpus of
+  your own ([`docs/corpus.md`](docs/corpus.md)).
 - If they abstain (`ignoré, aucun corpus`), nothing was verified. That is not a
   pass.
 

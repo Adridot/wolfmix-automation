@@ -13,7 +13,7 @@ read and write it, plus a client for the W1 controller's USB protocol. Python
 ## The one command
 
 ```bash
-make check          # from the repository root — ten self-checks
+make check          # from the repository root — every hardware-free self-check
 ```
 
 Green means the structural claims hold on the corpus present — **file-format
@@ -37,7 +37,8 @@ this repository (see below). Do not read an abstention as a pass, and do not
 | **Unknown bytes pass through verbatim.** | A record with no schema round-trips exactly. `wpj_codec.decode` returns `{"raw": hex}` rather than a partial decode. |
 | **Writes never overwrite.** Output opens with mode `x`. | An overwritten project is an unrecoverable show. |
 | **Nothing leaves the machine.** No upload, no third-party API, no telemetry. | Rule 4, and the evidence chain depends on it. |
-| **No firmware operations, ever.** | The outgoing event allowlist in `tools/wolfmix.py` is exhaustive by design. |
+| **No executable-firmware operations, ever.** The outgoing event allowlist in `tools/wolfmix.py` is exhaustive by design, and no code path uploads firmware. | A bricked controller is not recoverable from here. |
+| **A resource flash is not firmware.** `wolfmixFlash.bin` carries the interface's graphics. It is read, patched into a **copy** and verified here — backed up first, hash-anchored by a manifest, and uploaded by WTOOLS itself, never by this repository. | The distinction is what makes the gobo pipeline legitimate; see [`LEGAL.md`](LEGAL.md). |
 | **Do not write to a connected device** except through `wolfmix_experiment.py`, which uses its own derived UUIDs. | Ordinary projects must never be touched. |
 | **Never invent a name for an unconfirmed value.** | Ambiguity is recorded as a list of candidates. An absent field is *absent*, never `0` or `off`. |
 
@@ -85,7 +86,7 @@ itself worth recording rather than silently resolving.
 - **Codec keys:** a proven field gets a semantic key (`nom`, `profil`,
   `effet`); an unidentified one keeps a neutral `fN` key. Renaming `fN` → a
   guess is exactly the failure mode this repository exists to avoid.
-- **Self-check idiom:** the ten tools in `make check`, plus `wpj_diff.py`,
+- **Self-check idiom:** the tools listed in `make check`, plus `wpj_diff.py`,
   run their own check with no arguments. `wolfmix.py` and
   `wolfmix_experiment.py` use a `self-test` subcommand; `tlv.py` and `dump.py`
   are argument-only helpers. New non-trivial logic follows the idiom — one

@@ -34,7 +34,7 @@ screen split into four categories.
 
 Sources: [alia.com.au hands-on](https://alia.com.au/wolfmix-beta-2-0-double-trouble-hands-on-preview-available-now/),
 [Bekafun news](https://www.bekafun.com/en/news/n/880/WOLFMIX-W1-Firmware-2-0),
-[Prolight+Sound exhibitor entry](https://pls.messefrankfurt.com/frankfurt/en/exhibitor-search.detail.html/lightingsoft-ag/mf_1_0015052945_4383493_10000005202501.html),
+[Prolight+Sound exhibitor entry (Nicolaudie Group)](https://pls.messefrankfurt.com/frankfurt/en/exhibitor-search.detail.html/lightingsoft-ag/mf_1_0015052945_4383493_10000005202501.html),
 [reference manual 2.0](https://storage.googleapis.com/nicolaudie-us-litterature/Release/wolfmix_w1_reference_manual_en.pdf).
 
 ## Feature table

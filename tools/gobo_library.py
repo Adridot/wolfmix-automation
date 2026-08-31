@@ -29,14 +29,33 @@ FLASH_GLOBS = (
 )
 
 
-def find_flash(path=None):
+def version_tuple(chemin):
+    """`wm-fw-bundle-2.0.18` → (2, 0, 18) ; sans numéro, (-1,) — jamais choisi
+    devant une version lisible. Le tri lexical mettait 2.0.9 après 2.0.18."""
+    nom = os.path.basename(os.path.dirname(chemin))
+    _, _, version = nom.partition("wm-fw-bundle-")
+    morceaux = [m for m in version.split(".") if m.isdigit()]
+    return tuple(int(m) for m in morceaux) if morceaux else (-1,)
+
+
+def flash_bundles():
+    """Toutes les images flash installées, la plus récente en tête."""
+    trouves = []
+    for pattern in FLASH_GLOBS:
+        trouves += glob.glob(os.path.expanduser(pattern))
+    return sorted(set(trouves), key=version_tuple, reverse=True)
+
+
+def find_flash(path=None, version=None):
+    """L'image flash à lire : celle qu'on nomme, celle d'une version demandée,
+    ou la plus récente installée."""
     if path:
         return path
-    for pattern in FLASH_GLOBS:
-        hits = sorted(glob.glob(os.path.expanduser(pattern)))
-        if hits:
-            return hits[-1]
-    return None
+    bundles = flash_bundles()
+    if version:
+        vise = tuple(int(m) for m in version.split(".") if m.isdigit())
+        bundles = [b for b in bundles if version_tuple(b) == vise]
+    return bundles[0] if bundles else None
 
 
 class Library:
@@ -57,12 +76,24 @@ class Library:
     def _ptr(self, off):
         return struct.unpack_from("<I", self.data, off)[0] if off >= 0 else 0
 
+    def check_id(self, gobo_id):
+        """Python indexerait -1 sur la dernière entrée et lèverait au-delà de
+        800 : les deux sont des refus, avec la plage en clair."""
+        if not isinstance(gobo_id, int) or isinstance(gobo_id, bool):
+            raise ValueError(f"id gobo entier attendu, reçu {gobo_id!r}")
+        if not 0 <= gobo_id < TABLE_LEN:
+            raise ValueError(
+                f"id gobo {gobo_id} hors table : la plage est 0-{TABLE_LEN - 1}")
+        return gobo_id
+
     def name(self, gobo_id):
+        self.check_id(gobo_id)
         off = self.table + gobo_id * ENTRY + 10
         return self.data[off:off + 20].split(b"\x00")[0].decode("latin1")
 
     def icon(self, gobo_id):
         """Rend l'icône en RGB 24x24 aplati sur fond noir."""
+        self.check_id(gobo_id)
         raw = self.data[self.ptrs[gobo_id] - self.base:][:ICON]
         out = bytearray()
         for i in range(0, ICON, 3):
@@ -83,7 +114,7 @@ def write_png(path, width, height, rgb):
         return (struct.pack(">I", len(payload)) + body
                 + struct.pack(">I", zlib.crc32(body)))
 
-    with open(path, "wb") as out:
+    with open(path, "xb") as out:            # outputs are never overwritten
         out.write(b"\x89PNG\r\n\x1a\n"
                   + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height,
                                                8, 2, 0, 0, 0))
@@ -142,12 +173,39 @@ def self_test(path):
         assert lib.name(gobo_id) == expected, (gobo_id, lib.name(gobo_id))
     assert len(lib.icon(425)) == SIDE * SIDE * 3
     assert len(set(lib.ptrs)) == 705, len(set(lib.ptrs))
+
+    # Le tri par version, pas par ordre lexical : 2.0.9 est avant 2.0.18.
+    assert version_tuple("/x/wm-fw-bundle-2.0.18/wolfmixFlash.bin") == (2, 0, 18)
+    assert (version_tuple("/x/wm-fw-bundle-2.0.9/f.bin")
+            < version_tuple("/x/wm-fw-bundle-2.0.18/f.bin"))
+    assert version_tuple("/x/wm-fw-bundle/f.bin") == (-1,)
+
+    # Un id hors table est refusé aux deux bouts, sans repli silencieux.
+    for refuse in (-1, TABLE_LEN, TABLE_LEN + 10, True, "342"):
+        try:
+            lib.check_id(refuse)
+            raise AssertionError(f"id accepté : {refuse!r}")
+        except ValueError:
+            pass
+    assert lib.check_id(0) == 0 and lib.check_id(TABLE_LEN - 1) == TABLE_LEN - 1
+
     print(f"ok — {TABLE_LEN} entrées, {len(set(lib.ptrs))} icônes distinctes")
+
+
+def annonce_bundle(path):
+    """Dire laquelle a été retenue : plusieurs bundles peuvent coexister."""
+    autres = [b for b in flash_bundles() if b != path]
+    if autres and not os.environ.get("WOLFMIX_FLASH"):
+        print(f"bundle retenu : {os.path.basename(os.path.dirname(path))} "
+              f"({len(autres)} autre(s) installé(s))", file=sys.stderr)
+    return path
 
 
 def main(argv):
     command = argv[1] if len(argv) > 1 else "self-test"
     path = find_flash(os.environ.get("WOLFMIX_FLASH"))
+    if path:
+        annonce_bundle(path)
     if not path:
         print("aucune image flash locale (WTOOLS n'a jamais téléchargé le "
               "firmware) — rien à faire", file=sys.stderr)
@@ -165,7 +223,11 @@ def main(argv):
         # (ligne, colonne) vaut donc l'id `ligne * 20 + colonne`.
         ids = ([int(x) for x in argv[3].split(",")] if len(argv) > 3
                else list(range(TABLE_LEN)))
-        sheet(lib, ids, out)
+        try:
+            sheet(lib, ids, out)
+        except FileExistsError:
+            print(f"refus : {out} existe déjà", file=sys.stderr)
+            return 2
         print(f"{len(ids)} icônes → {out}")
     elif command == "palette":
         for group, pads in palette(lib, argv[2]):

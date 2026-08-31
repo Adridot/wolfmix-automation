@@ -22,7 +22,6 @@ p39['nom'] = 'ACC05 Vite'
 w.replace(165, C.encode(165, d))
 w.replace(101, C.encode(101, {'nom': 'WMX TEST ACC-05'}))
 out = 'corpus/experiments/ACC-05/acc05.wpj'
-if os.path.exists(out): os.remove(out)
 w.save(out)
 # relecture de contrôle
 ps = C.decode(165, Wpj.load(out).get(165))['presets']

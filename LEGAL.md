@@ -68,8 +68,29 @@ and the manufacturer's icon work — they are never committed here, and
 
 The format was mapped by reading files we own, by changing one parameter at a
 time in the vendor's own editor and comparing the result, and by watching what
-our own controller does over its USB link and on its DMX output. No vendor
-binary was disassembled or decompiled to produce anything published here.
+our own controller does over its USB link and on its DMX output. Nothing
+published here reproduces vendor source code, and no decompiler output is
+quoted: what this repository states about the editor comes from running it —
+its strings, its preferences, its observable behaviour — and every claim is
+backed by a measurement on our own device.
+
+### Resource flash, and why it is not firmware
+
+`wolfmixFlash.bin` is the interface's graphics: the icons the screen draws. A
+resource-flash operation is not an executable-firmware update, and the two are
+kept apart on purpose:
+
+- reading the installed image, extracting icons locally, patching a **copy**,
+  verifying the patch and previewing it are supported here;
+- the copy is uploaded by WTOOLS, by the operator, with a verified backup of
+  the original taken first — this repository never writes it;
+- **executable firmware updates stay out of scope**, in every direction;
+- no vendor image, extracted resource or patched copy is ever distributed, and
+  `.gitignore` plus `tools/wpj_privacy.py` refuse them.
+
+Revealing the editor's own `Upload Flash` control by setting a documented
+application preference is use of software we hold a licence for, on our own
+machine, to interoperate with our own device.
 
 Where the work touches vendor software, it stays on the interface: the
 `WM_MODE_*` names in [`research/mode-map.md`](research/mode-map.md) are

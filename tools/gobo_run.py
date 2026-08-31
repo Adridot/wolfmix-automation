@@ -16,8 +16,10 @@ Quatre gardes, celles qu'aucun outil ne tenait :
   0 sauvegarde    le bundle flash copié HORS du dossier WTOOLS — que WTOOLS
                   réécrit à chaque mise à jour — sha256 identiques au vivant
   1 silhouettes   au moins un `gobo*.png` dans le dossier
-  2 flash patché  présent et de la longueur de l'original : les pointeurs de
-                  la table sont absolus, une longueur qui bouge décale tout
+  2 flash patché  présent, de la longueur de l'original — les pointeurs de la
+                  table sont absolus — et rattaché par son manifeste au bundle
+                  installé : la longueur seule laissait passer n'importe quel
+                  fichier de même taille
   3 planche       rendue APRÈS le flash patché, donc relue depuis lui et non
                   depuis les sources — c'est la seule preuve avant l'upload
 
@@ -32,6 +34,7 @@ l'arborescence du dépôt est refusé.
 """
 import glob
 import hashlib
+import json
 import os
 import sys
 
@@ -76,6 +79,41 @@ def garde_sauvegarde(sauve, bundle):
     return True, f"{len(vivant)} fichiers, {len(vivant)} sha256 identiques"
 
 
+def garde_patche(patche, flash):
+    """La chaîne bundle installé → manifeste → fichier qui part dans l'appareil.
+
+    La longueur ne prouve rien : un fichier arbitraire de même taille passait
+    cette garde. Le manifeste écrit par `gobo_write.py patch` porte les deux
+    empreintes qui la ferment.
+    """
+    if not os.path.isfile(patche):
+        return False, f"{PATCHE} absent"
+    chemin = patche + ".json"
+    if not os.path.isfile(chemin):
+        return False, (f"{os.path.basename(chemin)} absent : refaire le patch, "
+                       "qui l'écrit avec le fichier")
+    try:
+        with open(chemin, encoding="utf-8") as flux:
+            releve = json.load(flux)
+        source, resultat = releve["source"], releve["result"]
+        attendus = source["sha256"], resultat["sha256"]
+    except (ValueError, KeyError, OSError) as err:
+        return False, f"manifeste illisible ({err})"
+    if os.path.getsize(patche) != os.path.getsize(flash):
+        return False, (f"{os.path.getsize(patche)} octets contre "
+                       f"{os.path.getsize(flash)} à l'original : les pointeurs "
+                       "sont absolus, la longueur ne doit pas bouger")
+    if sha256(patche) != attendus[1]:
+        return False, ("le fichier patché ne correspond pas à son manifeste : "
+                       "même longueur ne veut pas dire même contenu")
+    if sha256(flash) != attendus[0]:
+        return False, (f"le bundle installé n'est plus celui du patch "
+                       f"({source.get('bundle')}) : repatcher depuis le bundle "
+                       "courant")
+    return True, (f"{os.path.getsize(patche)} octets, "
+                  f"{len(releve.get('ids', []))} icône(s), chaîne vérifiée")
+
+
 def gardes(travail, flash):
     """[(étiquette, vert, détail)] dans l'ordre des étapes de la recette."""
     bundle = os.path.dirname(flash)
@@ -90,16 +128,7 @@ def gardes(travail, flash):
                   f"{len(silhouettes)} fichier(s) gobo*.png"
                   if silhouettes else "aucun gobo*.png dans le dossier"))
 
-    if not os.path.isfile(patche):
-        etats.append(("2 flash patché", False, f"{PATCHE} absent"))
-    elif os.path.getsize(patche) != os.path.getsize(flash):
-        etats.append(("2 flash patché", False,
-                      f"{os.path.getsize(patche)} octets contre "
-                      f"{os.path.getsize(flash)} à l'original : les pointeurs "
-                      "sont absolus, la longueur ne doit pas bouger"))
-    else:
-        etats.append(("2 flash patché", True,
-                      f"{os.path.getsize(patche)} octets, longueur inchangée"))
+    etats.append(("2 flash patché",) + garde_patche(patche, flash))
 
     if not os.path.isfile(planche):
         etats.append(("3 planche", False, f"{PLANCHE} absente"))
@@ -126,8 +155,8 @@ def suite(etats, travail, flash):
                 "# lecture complète, sinon redémarrer le W1\n"
                 "  python3 tools/wolfmix.py settings             "
                 "# wlinkActivated doit être false\n"
-                "  # puis research/flash-gobo-plan.md : secteur, projet "
-                "enregistré, wtoolsMode=2\n"
+                "  # puis docs/gobo-icons.md : secteur, projet enregistré, "
+                "wtoolsMode=2, et le filet de restauration\n"
                 "  # noms et ordre ensuite, si besoin : docs/gobo-icons.md §6")
     etape = rouge[0][0]
     if etape == "0":
@@ -208,9 +237,34 @@ def self_test():
 
         assert etat("2 flash patché") is False
         patche = os.path.join(travail, PATCHE)
+
+        def manifeste(source_sha, resultat_sha):
+            with open(patche + ".json", "w", encoding="utf-8") as flux:
+                json.dump({"source": {"sha256": source_sha,
+                                      "bundle": "wm-fw-bundle-2.0.18"},
+                           "result": {"sha256": resultat_sha},
+                           "ids": [342]}, flux)
+
         open(patche, "wb").write(b"\x01" * 4095)
+        assert etat("2 flash patché") is False, "manifeste absent = rouge"
+        manifeste(sha256(flash), sha256(patche))
         assert etat("2 flash patché") is False, "longueur différente = rouge"
         open(patche, "wb").write(b"\x01" * 4096)
+        manifeste(sha256(flash), sha256(patche))
+        assert etat("2 flash patché") is True
+
+        # Même longueur, contenu étranger : la garde des longueurs le laissait
+        # passer, la chaîne d'empreintes non.
+        etranger = os.path.join(travail, "autre.bin")
+        open(etranger, "wb").write(b"\x09" * 4096)
+        manifeste(sha256(flash), sha256(etranger))
+        assert etat("2 flash patché") is False, "sha du patch ignoré"
+
+        # Le bundle réécrit par WTOOLS depuis le patch : rouge aussi.
+        manifeste(sha256(etranger), sha256(patche))
+        assert etat("2 flash patché") is False, "bundle source ignoré"
+        os.remove(etranger)
+        manifeste(sha256(flash), sha256(patche))
         assert etat("2 flash patché") is True
 
         # La planche doit être postérieure au flash patché, sinon elle montre
@@ -224,7 +278,8 @@ def self_test():
 
         texte, vert = rapport(travail, flash)
         assert vert and "wlinkActivated" in texte and "profiles" in texte
-    print("ok — 4 gardes, chacune rouge puis verte, refus en tête de rapport")
+    print("ok — 4 gardes, chacune rouge puis verte, chaîne d'empreintes "
+          "du flash patché vérifiée, refus en tête de rapport")
 
 
 def main(argv):

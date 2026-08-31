@@ -25,7 +25,6 @@ by_id[35]['nom'] = 'ACC06 PadX'
 w.replace(165, C.encode(165, d))
 w.replace(101, C.encode(101, {'nom': 'WMX TEST ACC-06'}))
 out = 'corpus/experiments/ACC-06/acc06.wpj'
-if os.path.exists(out): os.remove(out)
 w.save(out)
 ps = C.decode(165, Wpj.load(out).get(165))['presets']
 for p in ps:

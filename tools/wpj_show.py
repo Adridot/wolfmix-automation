@@ -8,8 +8,9 @@ préservé octet pour octet par wpjlib. Une position et une entrée de palette
 en queue** en clonant un preset du donneur (clé `modele`) — l'ajout d'une
 entrée `165.f5` avec l'id suivant est device-confirmed, `165.f1` reste
 verbatim (registre, PRESET-01).
-Périmètre v1 = champs à statut ≥ correlated uniquement (records 101, 165,
-150, 135) ; size/fade/phase (f8/f6/f9, attribution hypothesized) exclus.
+Périmètre = champs à statut ≥ correlated (records 101, 111, 130, 135, 145,
+150, 165). Phase, Size et Fade sont mesurées (FX6-02/03) mais restent hors des
+clés écrites : lues, pas écrites — la liste des clés est `_FX_CLES`.
 
 Usage :
   wpj_show.py compile show.json sortie.wpj   compile + auto-verify

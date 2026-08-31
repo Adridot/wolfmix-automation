@@ -11,9 +11,8 @@ Deux différences assumées, toutes deux additives :
   schéma d'origine annonce "unsupported" ;
 - `x_records` porte le décodage complet du codec, pour ne rien perdre.
 
-Les attributions encore `hypothesized` (size/fade/phase) sont émises MAIS
-signalées par une issue `unconfirmed_field_attribution` — jamais de valeur
-présentée comme sûre. Champ absent = absent, jamais 0.
+Phase, Size, Fade et Speed sont mesurées (FX6-02/03, `SPEC.md` §5) : elles
+sortent sous leur nom, sans réserve. Champ absent = absent, jamais 0.
 
 Usage :
   wpj_api.py fichier.wpj    inspect JSON sur stdout
@@ -29,13 +28,12 @@ import wpjlib
 import wpj_codec
 
 MODEL_VERSION = "1"
-# clé codec → clé wpj-toolkit ; les trois dernières sont hypothesized
+# clé codec → clé wpj-toolkit. Les replis `fN` ont disparu avec FX6-02/03 :
+# ils portaient l'ancienne lecture (f6 = fade, f9 = phase), qui est fausse.
 _FX_OUT = {"effet": "type", "vitesse": "speedPercent",
            "fade": "fadePercent", "phase": "phasePercent", "size": "sizePercent",
            "link_order": "linkOrder", "speed_source": "speedSource",
-           "bpm_division": "bpmDivision",
-           "f8": "sizePercent", "f6": "fadePercent", "f9": "phasePercent"}
-_FX_HYPO = {"f8", "f6", "f9"}
+           "bpm_division": "bpmDivision"}
 _FX_SLOTS = {"beam_fx1": "beamFx1", "beam_fx2": "beamFx2",
              "color_fx1": "colorFx1", "color_fx2": "colorFx2",
              "move_fx1": "moveFx1", "move_fx2": "moveFx2"}
@@ -47,18 +45,12 @@ def _issue(issues, severity, code, message):
     issues.append({"severity": severity, "code": code, "message": message})
 
 
-def _fx(sub, hypo):
-    """Sous-message FX → dict wpj-toolkit. Signale les clés hypothesized."""
-    out = {}
-    for src, dst in _FX_OUT.items():
-        if src in sub:
-            out[dst] = sub[src]
-            if src in _FX_HYPO:
-                hypo.add(dst)
-    return out
+def _fx(sub):
+    """Sous-message FX → dict wpj-toolkit."""
+    return {dst: sub[src] for src, dst in _FX_OUT.items() if src in sub}
 
 
-def _preset(p, hypo):
+def _preset(p):
     pid = p.get("id", 0)
     out = {"id": pid, "page": pid // 20 + 1, "slot": pid % 20 + 1,
            "rawPreserved": True}
@@ -68,7 +60,7 @@ def _preset(p, hypo):
     for src, dst in _FX_SLOTS.items():
         sub = p.get(src)
         if isinstance(sub, list) and sub and isinstance(sub[0], dict):
-            fx = _fx(sub[0], hypo)
+            fx = _fx(sub[0])
             if fx:
                 known[dst] = fx
     for src, dst in (("positions", "positionIndexPerGroup"),
@@ -99,7 +91,6 @@ def inspect(path):
 
     dec = [(t, wpj_codec.decode(t, p), len(p)) for t, p in w.records]
     by_type = {t: d for t, d, _ in dec}
-    hypo = set()
 
     project = {"warnings": warnings}
     if "nom" in by_type.get(101, {}):
@@ -111,14 +102,11 @@ def inspect(path):
                                 if k in _PAD_OUT}}
             for i, pad in enumerate(pads) if isinstance(pad, dict)]}}
 
-    presets = [_preset(p, hypo) for p in by_type.get(165, {}).get("presets", [])
+    presets = [_preset(p) for p in by_type.get(165, {}).get("presets", [])
                if isinstance(p, dict)]
     ids = [p["id"] for p in presets]
     for dup in sorted({i for i in ids if ids.count(i) > 1}):
         _issue(issues, "warning", "duplicate_preset_id", f"preset id {dup} appears twice")
-    if hypo:
-        _issue(issues, "warning", "unconfirmed_field_attribution",
-               "field attribution still hypothesized: " + ", ".join(sorted(hypo)))
 
     items = [e for e in by_type.get(105, {}).get("patch", []) if isinstance(e, dict)]
     fixtures = {"status": "partial" if items else "unsupported", "items": items}

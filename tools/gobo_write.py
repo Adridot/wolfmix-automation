@@ -12,6 +12,7 @@ et vérifie que le diff tient dans les seules fenêtres visées.
   self-test                      round-trip sur les 705 icônes distinctes
   patch SORTIE id=img.png ...    id=#RRGGBB pour une icône unie,
                                  id=mask:img.png pour une silhouette
+                                 (écrit aussi SORTIE.json, le manifeste)
 
 Une image carrée plus grande que 24x24 est réduite par moyenne de zone.
 `mask:` lit la luminance comme canal alpha et rend la forme en blanc — le
@@ -20,9 +21,13 @@ format que produit « motif blanc sur fond noir » d'un générateur d'images.
 Les icônes d'origine sont l'oeuvre du fabricant : rien n'est extrait ici.
 """
 import collections
+import datetime
+import hashlib
+import json
 import os
 import struct
 import sys
+import tempfile
 import zlib
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -71,27 +76,47 @@ def read_png(path):
     if data[:8] != b"\x89PNG\r\n\x1a\n":
         raise ValueError(f"{path} n'est pas un PNG")
     width = height = mode = None
-    idat, off = bytearray(), 8
-    while off + 8 <= len(data):
+    idat, off, fin = bytearray(), 8, False
+    while off + 12 <= len(data):
         size, tag = struct.unpack_from(">I4s", data, off)
+        if off + 12 + size > len(data):
+            raise ValueError(f"{path} : chunk {tag.decode('latin1')} tronqué")
         body = data[off + 8:off + 8 + size]
+        crc, = struct.unpack_from(">I", data, off + 8 + size)
+        if zlib.crc32(tag + body) != crc:
+            raise ValueError(
+                f"{path} : CRC invalide sur le chunk {tag.decode('latin1')}")
         if tag == b"IHDR":
+            if size != 13:
+                raise ValueError(f"{path} : IHDR de {size} octets")
             width, height, depth, mode, _, _, interlace = struct.unpack(
                 ">IIBBBBB", body)
             if depth != 8 or mode not in (2, 6) or interlace:
                 raise ValueError(
                     f"{path} : PNG attendu en 8 bits, RGB ou RGBA, "
                     "non entrelacé")
+            if not width or not height:
+                raise ValueError(f"{path} : image {width}x{height}")
         elif tag == b"IDAT":
             idat += body
         elif tag == b"IEND":
+            fin = True
             break
         off += 12 + size
     if width is None:
         raise ValueError(f"{path} : IHDR absent")
+    if not fin:
+        raise ValueError(f"{path} : IEND absent, fichier tronqué")
     step = 3 if mode == 2 else 4
     stride = width * step
-    raw = zlib.decompress(bytes(idat))
+    try:
+        raw = zlib.decompress(bytes(idat))
+    except zlib.error as err:
+        raise ValueError(f"{path} : données IDAT illisibles ({err})") from None
+    if len(raw) != height * (1 + stride):
+        raise ValueError(
+            f"{path} : {len(raw)} octets décompressés, "
+            f"{height * (1 + stride)} attendus pour {width}x{height}")
     out, prev, pos = bytearray(), bytearray(stride), 0
     for _ in range(height):
         kind, pos = raw[pos], pos + 1
@@ -185,6 +210,7 @@ def patch(lib, edits):
     uses = collections.Counter(lib.ptrs)
     data = bytearray(lib.data)
     for gobo_id, pixels in edits.items():
+        lib.check_id(gobo_id)
         ptr = lib.ptrs[gobo_id]
         if uses[ptr] > 1:
             others = [i for i, p in enumerate(lib.ptrs) if p == ptr]
@@ -200,17 +226,55 @@ def patch(lib, edits):
 def verify(before, after, lib, ids):
     """Le diff doit tenir exactement dans les fenêtres des icônes visées."""
     if len(before) != len(after):
-        raise AssertionError("la longueur de l'image flash a changé")
+        raise ValueError("la longueur de l'image flash a changé")
     windows = [(lib.ptrs[i] - lib.base, lib.ptrs[i] - lib.base + ICON)
                for i in ids]
     scratch = bytearray(after)
     for lo, hi in windows:
         scratch[lo:hi] = before[lo:hi]
     if bytes(scratch) != before:
-        raise AssertionError("des octets ont changé hors des icônes visées")
+        raise ValueError("des octets ont changé hors des icônes visées")
     return sum(x != y
                for lo, hi in windows
                for x, y in zip(before[lo:hi], after[lo:hi]))
+
+
+def sha256(donnees):
+    return hashlib.sha256(donnees).hexdigest()
+
+
+def manifeste(source, lib, sortie, data, edits, changed):
+    """Ce qu'il faut pour prouver plus tard que cette copie vient de ce bundle.
+
+    La longueur seule ne prouve rien : n'importe quel fichier de même taille
+    passait la garde d'upload. Les deux empreintes, elles, ferment la chaîne
+    bundle installé → manifeste → fichier qui part dans l'appareil.
+    """
+    dossier = os.path.basename(os.path.dirname(os.path.abspath(source)))
+    return {
+        "source": {"path": os.path.abspath(source), "bundle": dossier,
+                   "sha256": sha256(lib.data), "size": len(lib.data)},
+        "result": {"file": os.path.basename(sortie),
+                   "sha256": sha256(data), "size": len(data)},
+        "ids": sorted(edits),
+        "windows": [[lib.ptrs[i] - lib.base, lib.ptrs[i] - lib.base + ICON]
+                    for i in sorted(edits)],
+        "bytesChanged": changed,
+        "writtenAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    }
+
+
+def ecrire(sortie, data, contenu):
+    """Le fichier patché puis son manifeste ; l'un sans l'autre ne sert à rien."""
+    with open(sortie, "xb") as handle:
+        handle.write(data)
+    try:
+        with open(sortie + ".json", "x", encoding="utf-8") as handle:
+            json.dump(contenu, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+    except OSError:
+        os.remove(sortie)                # jamais de patch sans son manifeste
+        raise
 
 
 def self_test(path):
@@ -229,7 +293,6 @@ def self_test(path):
     assert len(distinct) == 705, len(distinct)
 
     # Un PNG écrit par le dépôt doit se relire à l'identique.
-    import tempfile
     with tempfile.TemporaryDirectory() as tmp:
         png = os.path.join(tmp, "t.png")
         rgb = bytes(range(256)) * ((SIDE * SIDE * 3 + 255) // 256)
@@ -263,8 +326,78 @@ def self_test(path):
     assert changed > 0, "le patch n'a rien écrit"
     assert len(after) == len(lib.data)
 
+    # Un octet changé hors des fenêtres visées est un refus, pas une trace.
+    hors = bytearray(after)
+    debut = lib.ptrs[target] - lib.base
+    libre = 0 if debut > 0 else debut + ICON
+    hors[libre] ^= 0xFF
+    try:
+        verify(lib.data, bytes(hors), lib, [target])
+        raise AssertionError("un octet hors fenêtre est passé")
+    except ValueError:
+        pass
+
+    # Le manifeste compte les octets réellement différents, et le patch et
+    # son manifeste vivent ou meurent ensemble.
+    with tempfile.TemporaryDirectory() as tmp:
+        sortie = os.path.join(tmp, "flash-custom.bin")
+        contenu = manifeste(path, lib, sortie, after, {target: None}, changed)
+        ecrire(sortie, after, contenu)
+        releve = json.load(open(sortie + ".json", encoding="utf-8"))
+        assert releve["bytesChanged"] == sum(
+            x != y for x, y in zip(lib.data, after)), releve["bytesChanged"]
+        assert releve["result"]["sha256"] == sha256(open(sortie, "rb").read())
+        assert releve["source"]["sha256"] == sha256(lib.data)
+        assert releve["result"]["size"] == releve["source"]["size"]
+        try:
+            ecrire(sortie, after, contenu)
+            raise AssertionError("une sortie existante a été écrasée")
+        except FileExistsError:
+            pass
+
+    # Un PNG « presque valide » est refusé, classe par classe.
+    with tempfile.TemporaryDirectory() as tmp:
+        bon = os.path.join(tmp, "bon.png")
+        write_png(bon, SIDE, SIDE, bytes(SIDE * SIDE * 3))
+        octets = open(bon, "rb").read()
+        casses = {
+            "CRC": octets[:-5] + bytes([octets[-5] ^ 0xFF]) + octets[-4:],
+            "IEND": octets[:-12],
+            "tronqué": octets[:len(octets) - 20],
+        }
+        for nom, corps in casses.items():
+            chemin = os.path.join(tmp, f"{nom}.png")
+            open(chemin, "wb").write(corps)
+            try:
+                read_png(chemin)
+                raise AssertionError(f"PNG accepté malgré : {nom}")
+            except ValueError:
+                pass
+        # Un IDAT valide mais trop court pour la hauteur annoncée.
+        court = bytearray(octets)
+        entete = court.index(b"IHDR")
+        struct.pack_into(">I", court, entete + 8, SIDE * 2)      # height x2
+        struct.pack_into(">I", court, entete + 12 + 13,
+                         zlib.crc32(bytes(court[entete:entete + 4 + 13])))
+        chemin = os.path.join(tmp, "court.png")
+        open(chemin, "wb").write(bytes(court))
+        try:
+            read_png(chemin)
+            raise AssertionError("PNG accepté avec une hauteur incohérente")
+        except ValueError:
+            pass
+
+    # Un id hors table ne patche rien.
+    for refuse in (-1, 800):
+        try:
+            patch(lib, {refuse: solid("#000000")})
+            raise AssertionError(f"id accepté : {refuse}")
+        except ValueError:
+            pass
+
     print(f"ok — {len(distinct)} icônes ré-encodées à l'octet près, "
-          f"patch confiné ({changed} octets sur l'icône {target})")
+          f"patch confiné ({changed} octets sur l'icône {target}), "
+          "manifeste et PNG vérifiés")
 
 
 def main(argv):
@@ -301,17 +434,19 @@ def main(argv):
                               else load_image(value))
         data = patch(lib, edits)
         changed = verify(lib.data, data, lib, list(edits))
-    except ValueError as err:
+        contenu = manifeste(path, lib, out, data, edits, changed)
+    except (ValueError, struct.error, zlib.error, OSError) as err:
         print(f"refus : {err}", file=sys.stderr)
         return 2
     try:
-        with open(out, "xb") as handle:
-            handle.write(data)
-    except FileExistsError:
-        print(f"refus : {out} existe déjà", file=sys.stderr)
+        ecrire(out, data, contenu)
+    except FileExistsError as err:
+        print(f"refus : {err.filename} existe déjà", file=sys.stderr)
         return 2
     names = ", ".join(f"{i} (« {lib.name(i)} »)" for i in sorted(edits))
-    print(f"{out} — {len(data)} octets, {changed} modifiés sur {names}")
+    print(f"{out} — {len(data)} octets, {changed} modifiés sur {names}\n"
+          f"{out}.json — manifeste : {contenu['source']['bundle']}, "
+          f"{len(contenu['ids'])} icône(s), {changed} octets modifiés")
     return 0
 
 

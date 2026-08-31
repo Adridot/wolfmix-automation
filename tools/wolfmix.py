@@ -12,6 +12,8 @@ Usage:
   python3 tools/wolfmix.py profiles
   python3 tools/wolfmix.py dmx
   python3 tools/wolfmix.py dmx --seconds 10
+  python3 tools/wolfmix.py preset 12
+  python3 tools/wolfmix.py mode presets
   python3 tools/wolfmix.py watch-mode
   python3 tools/wolfmix.py dmx-envelope before.json --seconds 12
   python3 tools/wolfmix.py self-test
@@ -79,6 +81,68 @@ ALLOWED_OUTGOING_EVENTS = {
     SKIP_PRESET,
     RESTART,
 }
+
+# Events that change what the controller holds, shows or outputs. Reads stay
+# unconditional; these are refused on a firmware nobody here has measured.
+MUTATING_EVENTS = {
+    DISABLE_ENGINE,
+    ENABLE_ENGINE,
+    DISABLE_USB_DMX,
+    ENABLE_USB_DMX,
+    DELETE_PROJECT,
+    SET_PROJECT,
+    SET_MODE,
+    SET_PRESET,
+    SKIP_PRESET,
+    RESTART,
+}
+
+TESTED_FIRMWARE = ("2.0.18",)
+
+# The panel's own range. 200-255 has only ever produced the no-op an absent id
+# produces, which a byte masked at the far end would produce too (RECALL-06):
+# unprobed either way, so it is not sent.
+PRESET_ID_MAX = 199
+
+# Modes reached from the panel and measured (research/mode-map.md). Entering
+# one changes the screen, not the show — BLACKOUT excepted, and the operator
+# asks for that one by name.
+NAMED_MODES = {
+    "home": 0,
+    "color": 1,
+    "move": 3,
+    "beam": 4,
+    "presets": 5,
+    "static_color": 7,
+    "gobo": 8,
+    "static_position": 9,
+    "live_edit": 10,
+    "static_position_picker": 12,
+    "gobo_edit": 14,
+    "live_edit_edit": 15,
+    "setup": 16,
+    "fixture_setup": 17,
+    "fixture_selection": 19,
+    "move_seq": 21,
+    "dmx_levels": 23,
+    "settings": 25,
+    "wolf": 28,
+    "strobe": 29,
+    "speed": 30,
+    "blinder": 32,
+    "blackout": 33,
+    "intelligent_preset": 34,
+    "beam_editor": 36,
+    "live_edit_macro_edit": 41,
+    "mapping": 43,
+    "bpm": 44,
+}
+
+# Left out of NAMED_MODES on purpose, reachable only with --experimental:
+# 26 is modal and is not left by 0/5/16; 40 redirects to 42, which attempts a
+# USB read on entry; 39 lights the pads with the screen stuck on HOME and its
+# name is a guess. Every other index is simply unmeasured.
+ACTING_MODES = {26, 39, 40, 42}
 
 EVENT_NAMES = {
     GET_PROFILE_LIST: "GET_PROFILE_LIST",
@@ -303,7 +367,9 @@ def decode_dmx_packet(data):
 
 def build_frame(message_id, event, payload=b""):
     if event not in ALLOWED_OUTGOING_EVENTS:
-        raise ProtocolError(f"Outgoing event {event} is not allowlisted")
+        raise ProtocolError(
+            f"Outgoing event {EVENT_NAMES.get(event, event)} is not allowlisted"
+        )
     size = HEADER_SIZE + len(payload)
     return struct.pack(">BIHH", VERSION, size, message_id, event) + payload
 
@@ -339,12 +405,14 @@ def port_holders(path):
 
 
 class WolfmixConnection:
-    def __init__(self, path, timeout=5.0):
+    def __init__(self, path, timeout=5.0, allow_untested_firmware=False):
         self.path = path
         self.timeout = timeout
         self.fd = None
         self.buffer = bytearray()
         self.next_message_id = 1
+        self.allow_untested_firmware = allow_untested_firmware
+        self.firmware = None
 
     def __enter__(self):
         holders = port_holders(self.path)
@@ -451,8 +519,29 @@ class WolfmixConnection:
                 )
             return payload
 
+    def check_firmware(self):
+        """Refuse a state change on a firmware nobody here has measured.
+
+        Read once, cached, and checked in ``send`` rather than in each caller:
+        a gate a caller can forget is not a gate. Reads are unaffected — only
+        the events in ``MUTATING_EVENTS`` pass through here.
+        """
+        if self.firmware is None:
+            self.firmware = decode_settings(
+                self.request(GET_SETTINGS)
+            ).get("firmwareVer")
+        if self.allow_untested_firmware or self.firmware in TESTED_FIRMWARE:
+            return self.firmware
+        raise WolfmixError(
+            f"Controller firmware is {self.firmware!r}; this repository has "
+            f"measured {', '.join(TESTED_FIRMWARE)}. Reads are allowed, state "
+            "changes are refused — pass --allow-untested-firmware to proceed"
+        )
+
     def send(self, event, payload=b""):
         """Write one complete request without waiting for its response."""
+        if event in MUTATING_EVENTS:
+            self.check_firmware()
         message_id = self.next_message_id
         self.next_message_id = 1 if message_id == 65535 else message_id + 1
         self.write_all(build_frame(message_id, event, payload))
@@ -720,6 +809,37 @@ def index_payload(value):
     return bytes([value])
 
 
+def preset_payload(value):
+    """Recall id, bounded to the panel's own range."""
+    if not 0 <= value <= PRESET_ID_MAX:
+        raise WolfmixError(
+            f"Preset id must be 0-{PRESET_ID_MAX}, the panel's own range; "
+            "200-255 is unprobed and is not sent"
+        )
+    return index_payload(value)
+
+
+def resolve_mode(value, experimental=False):
+    """A measured mode by name, or a raw index behind --experimental."""
+    key = str(value).strip().lower().replace("-", " ").replace(" ", "_")
+    if key in NAMED_MODES:
+        return NAMED_MODES[key]
+    if not experimental:
+        known = ", ".join(sorted(NAMED_MODES))
+        raise WolfmixError(
+            f"Unknown mode {value!r}. Raw and unmeasured indexes — including "
+            f"{sorted(ACTING_MODES)}, which act on entry or are modal — need "
+            f"--experimental. Measured modes: {known}"
+        )
+    try:
+        index = int(str(value), 0)
+    except ValueError:
+        raise WolfmixError(f"Not a mode name and not an index: {value!r}") from None
+    if not 0 <= index <= 255:
+        raise WolfmixError("Mode index must be between 0 and 255")
+    return index
+
+
 def require_success(payload, operation):
     status = decode_status(payload)
     if not status["success"]:
@@ -838,6 +958,12 @@ def self_test():
         raise AssertionError("The outgoing event allowlist was bypassed")
     except ProtocolError:
         pass
+    # An event we can name but never send is refused by that name.
+    try:
+        build_frame(1, DMX_PACKET)
+        raise AssertionError("An incoming-only event was framed")
+    except ProtocolError as error:
+        assert "DMX_PACKET" in str(error), error
     # RAW-01: one raw byte, no protobuf tag. 23 must go on the wire as 0x17.
     assert index_payload(23) == b"\x17" and index_payload(114) == b"\x72"
     assert build_frame(1, SET_PRESET, index_payload(23)) == (
@@ -849,6 +975,55 @@ def self_test():
             raise AssertionError("index_payload accepted an out-of-range index")
         except WolfmixError:
             pass
+    # The recall domain stops at the panel's own range.
+    assert preset_payload(PRESET_ID_MAX) == bytes([PRESET_ID_MAX])
+    for refused in (-1, PRESET_ID_MAX + 1, 255):
+        try:
+            preset_payload(refused)
+            raise AssertionError(f"preset_payload accepted {refused}")
+        except WolfmixError:
+            pass
+    # A measured mode by name; a raw or acting index only with --experimental.
+    assert resolve_mode("presets") == 5 and resolve_mode("Static-Color") == 7
+    for refused in ("42", "26", "99", "not-a-mode"):
+        try:
+            resolve_mode(refused)
+            raise AssertionError(f"resolve_mode accepted {refused!r} bare")
+        except WolfmixError:
+            pass
+    assert resolve_mode("42", experimental=True) == 42
+    assert not ACTING_MODES & set(NAMED_MODES.values())
+    # No firmware operation is reachable: the allowlist is the only way out.
+    assert MUTATING_EVENTS <= ALLOWED_OUTGOING_EVENTS
+
+    class FakeGate(WolfmixConnection):
+        """The firmware gate without a port: reads answer, writes must not happen."""
+
+        def __init__(self, version, allow=False):
+            super().__init__("fake", allow_untested_firmware=allow)
+            self.version = version
+            self.wrote = False
+
+        def request(self, event, payload=b""):
+            assert event == GET_SETTINGS, "the gate read something else"
+            return encode_protobuf_field(14, 2, self.version.encode())
+
+        def write_all(self, data):
+            self.wrote = True
+
+    tested = FakeGate(TESTED_FIRMWARE[0])
+    tested.send(SET_PRESET, b"\x01")
+    assert tested.wrote, "a tested firmware refused a mutation"
+    untested = FakeGate("9.9.9")
+    try:
+        untested.send(SET_PRESET, b"\x01")
+        raise AssertionError("an untested firmware accepted a mutation")
+    except WolfmixError as error:
+        assert "9.9.9" in str(error) and TESTED_FIRMWARE[0] in str(error), error
+    assert not untested.wrote, "the refused mutation still reached the wire"
+    overridden = FakeGate("9.9.9", allow=True)
+    overridden.send(SET_PRESET, b"\x01")
+    assert overridden.wrote, "--allow-untested-firmware did not let it through"
 
     class FakeConnection:
         """Replays a scripted list of project payloads, one per request."""
@@ -884,6 +1059,10 @@ def build_parser():
     parser.add_argument("--port", help="USB serial port; auto-detected by default")
     parser.add_argument("--timeout", type=float, default=5.0,
                         help="request timeout in seconds (default: 5)")
+    parser.add_argument("--allow-untested-firmware", action="store_true",
+                        help="allow state changes on a firmware this "
+                             "repository has never measured; reads never "
+                             "need it")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("settings", help="read controller settings and state")
     commands.add_parser("projects", help="list projects stored on the controller")
@@ -914,16 +1093,18 @@ def build_parser():
         "preset", help="recall a preset by its id (id = (page-1)*20 + slot-1)"
     )
     preset.add_argument("id", type=int,
-                        help="preset id; an id above the highest one present "
-                             "does nothing, interior gaps and ids above 127 "
-                             "are untested")
+                        help=f"preset id, 0-{PRESET_ID_MAX}; an id above the "
+                             "highest one present does nothing, and interior "
+                             "gaps are a no-op")
     mode = commands.add_parser(
         "mode", help="set the reported mode; the panel does not always follow"
     )
-    mode.add_argument("index", type=int,
-                      help="mode index (research/mode-map.md); raw indexes reach "
-                           "screens the panel menu does not expose, and some act "
-                           "on entry — see MODE-40/42")
+    mode.add_argument("mode",
+                      help="mode name: " + ", ".join(sorted(NAMED_MODES)))
+    mode.add_argument("--experimental", action="store_true",
+                      help="accept a raw index instead of a name; raw indexes "
+                           "reach screens the panel menu does not expose and "
+                           "some act on entry — see MODE-40/42")
     commands.add_parser("self-test", help="run protocol checks without hardware")
     return parser
 
@@ -947,7 +1128,10 @@ def main(argv=None):
         raise WolfmixError("--interval must be greater than zero")
 
     port = args.port or discover_port()
-    with WolfmixConnection(port, timeout=args.timeout) as connection:
+    with WolfmixConnection(
+        port, timeout=args.timeout,
+        allow_untested_firmware=args.allow_untested_firmware,
+    ) as connection:
         if args.command == "settings":
             print_json(decode_settings(connection.request(GET_SETTINGS)))
         elif args.command == "projects":
@@ -980,21 +1164,26 @@ def main(argv=None):
                 ) from error
             print_json({k: v for k, v in result.items() if k not in ("min", "max")})
         elif args.command == "preset":
+            payload = preset_payload(args.id)
             require_success(
-                connection.request(SET_PRESET, index_payload(args.id)),
+                connection.request(SET_PRESET, payload),
                 f"Recalling preset {args.id}",
             )
             # The id sent is not necessarily the entry reached, and nothing
             # in GET_SETTINGS names it — so report what was requested.
-            print_json({"requested": args.id})
+            print_json({"requested": args.id,
+                        "untestedFirmware": args.allow_untested_firmware})
         elif args.command == "mode":
+            index = resolve_mode(args.mode, args.experimental)
             require_success(
-                connection.request(SET_MODE, index_payload(args.index)),
-                f"Switching to mode {args.index}",
+                connection.request(SET_MODE, index_payload(index)),
+                f"Switching to mode {index}",
             )
             settings = decode_settings(connection.request(GET_SETTINGS))
             # The index is not always the mode reached: 40 lands on 42.
-            print_json({"requested": args.index,
+            print_json({"requested": index,
+                        "measured": index not in ACTING_MODES
+                                    and index in NAMED_MODES.values(),
                         "wolfmixMode": settings["wolfmixMode"]})
         elif args.command == "watch-mode":
             watch_mode(connection, args.interval, args.seconds)

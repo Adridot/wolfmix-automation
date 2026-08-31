@@ -14,8 +14,9 @@ Un motif préfixé `cs:` est comparé en respectant la casse — indispensable q
 le nom propre interdit s'écrit comme un mot courant du code (« Marche », le
 lieu, contre « marche », le verbe).
 
-Sans liste, le contrôle s'abstient (exit 0) et le dit — comme les self-checks
-sans corpus.
+Sans liste, le contrôle des NOMS s'abstient (exit 0) et le dit — comme les
+self-checks sans corpus. Le contrôle des fichiers interdits, lui, tourne
+toujours : `.gitignore` ne protège pas de `git add -f`, celui-ci si.
 
 Usage :
   wpj_privacy.py            contrôle les fichiers suivis par git
@@ -28,6 +29,13 @@ import sys
 
 LISTE = ".wpj-private-names"
 ENV = "WPJ_PRIVATE_NAMES"
+
+# Ce qu'un fichier suivi ne peut pas être, quelle que soit la liste de noms :
+# projets et sidecars du fabricant, captures DMX, extractions, images flash.
+EXTENSIONS_INTERDITES = (".wpj", ".wm", ".wmx", ".pdf")
+MOTIFS_CHEMIN = ("research/vendor/", ".wolfmix-state/", "/dmx/",
+                 "wm-fw-bundle", "wolfmixFlash", "wolfmixFirmware",
+                 "flash-custom.bin", ".wpj-private-names")
 
 
 def motifs(chemin=None):
@@ -53,6 +61,13 @@ def fichiers_suivis():
     sortie = subprocess.run(["git", "ls-files"], capture_output=True, text=True,
                             check=True).stdout
     return [f for f in sortie.splitlines() if f]
+
+
+def fichiers_interdits(chemins):
+    """Fichiers suivis qui n'auraient jamais dû l'être — extension ou chemin."""
+    return [c for c in chemins
+            if c.lower().endswith(EXTENSIONS_INTERDITES)
+            or any(m in c for m in MOTIFS_CHEMIN)]
 
 
 def controle(chemins, regles):
@@ -93,17 +108,34 @@ def demo():
         open(sale2, "w").write("les projets Marche\n")
         assert len(controle([sale2], [cs])) == 1
         assert insensible.flags & __import__("re").I
-    print("self-check ok : détection, casse ignorée, absence de liste tolérée",
-          file=sys.stderr)
+    # Un fichier interdit est refusé sur son extension ou son chemin, même
+    # sans liste de noms — c'est ce que `git add -f` contournait.
+    assert fichiers_interdits(["docs/tools.md", "README.md"]) == []
+    for interdit in ("corpus/x.wpj", "a/b.WMX", "research/vendor/blob.txt",
+                     "corpus/EXP/dmx/capture.bin", "manual.pdf",
+                     "x/wm-fw-bundle-2.0.18/wolfmixFlash.bin",
+                     "flash-custom.bin", ".wpj-private-names"):
+        assert fichiers_interdits([interdit]) == [interdit], interdit
+    print("self-check ok : détection, casse ignorée, absence de liste tolérée, "
+          "extensions et chemins interdits refusés", file=sys.stderr)
 
 
 def main(argv):
+    chemins = argv or fichiers_suivis()
+    interdits = fichiers_interdits(chemins)
+    if interdits:
+        print(f"wpj_privacy : {len(interdits)} fichier(s) suivis qui ne "
+              "devraient jamais l'être (LEGAL.md) :", file=sys.stderr)
+        for chemin in interdits:
+            print(f"  {chemin}", file=sys.stderr)
+        return 1
     regles = motifs()
     if not regles:
-        print(f"wpj_privacy : ignoré, pas de {LISTE} (voir LEGAL.md)",
+        print(f"wpj_privacy : {len(chemins)} fichiers suivis, aucune extension "
+              f"ni chemin interdit — mais ABSTENTION sur les noms, pas de "
+              f"{LISTE} (voir LEGAL.md) : aucun nom n'a été vérifié",
               file=sys.stderr)
         return 0
-    chemins = argv or fichiers_suivis()
     trouves = controle(chemins, regles)
     if trouves:
         print(f"wpj_privacy : {len(trouves)} occurrence(s) de nom réel dans des "
@@ -112,7 +144,8 @@ def main(argv):
             print(f"  {chemin}:{numero}  (motif /{motif}/)", file=sys.stderr)
         return 1
     print(f"wpj_privacy : {len(regles)} motifs, aucune occurrence dans "
-          f"{len(chemins)} fichiers suivis", file=sys.stderr)
+          f"{len(chemins)} fichiers suivis, aucun fichier interdit",
+          file=sys.stderr)
     return 0
 
 

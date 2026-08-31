@@ -146,6 +146,12 @@ def _rvarint(buf, i):
 
 
 def _wvarint(v):
+    # -1 ne terminerait pas (le décalage arithmétique reste à -1) et True
+    # s'encoderait en 1 sans que personne l'ait demandé.
+    if isinstance(v, bool) or not isinstance(v, int):
+        raise ValueError(f"varint : entier attendu, reçu {v!r}")
+    if v < 0:
+        raise ValueError(f"varint : valeur négative {v}")
     out = bytearray()
     while True:
         b = v & 0x7F; v >>= 7

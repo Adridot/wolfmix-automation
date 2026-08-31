@@ -38,23 +38,36 @@ def walk(buf, depth=0, max_depth=6):
     return out
 
 def parse_tlv(data):
-    """Retourne liste de (idx, type, abs_offset_payload, payload) des records enfants du root 100."""
+    """Retourne liste de (idx, type, abs_offset_payload, payload) des records enfants du root 100.
+
+    Les refus sont des ValueError, jamais des assertions : `python3 -O` les
+    ferait disparaître, et c'est une entrée externe qu'on valide ici.
+    """
+    if len(data) < 0x46:
+        raise ValueError(f"fichier trop court : {len(data)} octets, 0x46 minimum")
     ln = int.from_bytes(data[0x40:0x44], "little")
     typ = int.from_bytes(data[0x44:0x46], "little")
-    assert typ == 100, typ
+    if typ != 100:
+        raise ValueError(f"conteneur racine de type {typ}, 100 attendu")
+    if 0x46 + ln > len(data):
+        raise ValueError(f"racine de {ln} octets, {len(data) - 0x46} disponibles")
     body = data[0x46:0x46+ln]
     recs, i, idx = [], 0, 0
     while i < len(body):
+        if i + 6 > len(body):
+            raise ValueError(f"en-tête de record tronqué à {i}")
         rl = int.from_bytes(body[i:i+4], "little")
         rt = int.from_bytes(body[i+4:i+6], "little")
+        if i + 6 + rl > len(body):
+            raise ValueError(f"record de type {rt} tronqué à {i}")
         recs.append((idx, rt, 0x46 + i + 6, body[i+6:i+6+rl]))
         i += 6 + rl; idx += 1
-    assert i == len(body), (i, len(body))
     return recs
 
 def load(path):
     data = open(path, "rb").read()
-    assert data[:20] == hashlib.sha1(data[20:]).digest()
+    if len(data) < 20 or data[:20] != hashlib.sha1(data[20:]).digest():
+        raise ValueError(f"{path} : en-tête SHA-1 invalide")
     return data, parse_tlv(data)
 
 def fmt_tree(fields, indent=0, maxlen=64):

@@ -176,38 +176,102 @@ def snapshot_all(connection, destination, settings):
     return manifest
 
 
+def archive_manifest(item, data, filename):
+    return {**item, "sha256": sha256(data), "file": filename,
+            "archivedAt": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+
+
+def publish_archive(target, manifest_path, item, data):
+    """Write the project, read it back, then publish its manifest.
+
+    The manifest is the commit marker of the pair: a run killed before it is
+    written leaves a project with no manifest, and the next run repairs that
+    instead of treating the version as already archived — which is what the
+    old existence check did, silently and forever.
+    """
+    temporary = target.with_suffix(target.suffix + ".part")
+    with temporary.open("wb") as stream:      # our own scratch; a retry reuses it
+        stream.write(data)
+        stream.flush()
+        os.fsync(stream.fileno())
+    if sha256(temporary.read_bytes()) != sha256(data):
+        temporary.unlink()
+        raise wolfmix.WolfmixError(
+            f"Archived project did not read back identical: {target}"
+        )
+    os.replace(temporary, target)
+    atomic_json(manifest_path, archive_manifest(item, data, target.name))
+
+
 def archive_projects(connection, root):
-    """Archive tout projet du contrôleur qu'on n'a pas déjà, clé (uuid, version).
+    """Archive every controller project we do not already hold, keyed (uuid, version).
 
-    L'instantané d'`init` ne suffit pas : il est pris une fois, et un projet
-    créé après lui puis perdu avant le prochain `init` ne serait récupérable
-    nulle part. Le 2026-08-31, quatre projets ont disparu du contrôleur sans
-    commande de suppression et hors de toute exécution du harnais
-    (`research/perte-projets-2026-08-31.md`) ; seul l'instantané du 25 août a
-    permis d'en rendre un.
+    The snapshot taken by ``init`` is not enough: it happens once, and a project
+    created after it and lost before the next ``init`` would be recoverable
+    nowhere. On 2026-08-31 four projects vanished from the controller with no
+    delete command and outside any run of this harness
+    (``research/perte-projets-2026-08-31.md``); only the 25 August snapshot gave
+    one of them back.
 
-    Incrémental parce que le lien est lent et faillible : la liste est bon
-    marché, et on ne retélécharge que ce dont on n'a pas déjà la version. Un
-    échec d'archivage ne fait pas échouer le déploiement — mieux vaut une
-    archive incomplète qu'un déploiement bloqué.
+    Incremental because the link is slow and unreliable: the list is cheap, and
+    only a version we do not already hold is downloaded. A failure here is
+    **fatal** to the deploy that called it — an unarchived project is exactly
+    what we cannot get back.
     """
     archive = Path(root) / "archive"
     archive.mkdir(parents=True, exist_ok=True)
-    ajoutes = []
+    added = []
     for item in project_list(connection):
         base = f"{item['uuid']}-{item.get('version', 0)}"
-        cible = archive / f"{base}.wpj"
-        if cible.exists():
+        target, manifest_path = archive / f"{base}.wpj", archive / f"{base}.json"
+        if target.exists():
+            data = target.read_bytes()
+            if manifest_path.exists():
+                if read_json(manifest_path).get("sha256") != sha256(data):
+                    raise wolfmix.WolfmixError(
+                        f"Archived project does not match its manifest: {target}"
+                    )
+                continue
+            atomic_json(manifest_path, archive_manifest(item, data, target.name))
+            added.append(target.name)
             continue
-        data = download_project(connection, item["uuid"])["data"]
-        with cible.open("xb") as stream:
-            stream.write(data)
-        atomic_json(archive / f"{base}.json",
-                    {**item, "sha256": sha256(data), "file": cible.name,
-                     "archivedAt": datetime.datetime.now(
-                         datetime.timezone.utc).isoformat()})
-        ajoutes.append(cible.name)
-    return ajoutes
+        publish_archive(target, manifest_path, item,
+                        download_project(connection, item["uuid"])["data"])
+        added.append(target.name)
+    return added
+
+
+def check_identity(settings, expected, moment):
+    """Refuse a controller that is not the one this run started on."""
+    for key in ("serialNumber", "firmwareVer"):
+        wanted = expected.get(key)
+        if wanted is not None and settings.get(key) != wanted:
+            raise wolfmix.WolfmixError(
+                f"Controller identity changed {moment}: {key} was {wanted!r}, "
+                f"is now {settings.get(key)!r}"
+            )
+    return settings
+
+
+def mark_rollback_failed(state_dir, label, error, restore):
+    """A failed restore is a state, not a log line: no further deploy runs."""
+    _, state_file = state_paths(state_dir, label)
+    try:
+        state = read_json(state_file)
+    except (OSError, ValueError):
+        state = {"label": label}
+    state["rollbackFailed"] = {
+        "at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "error": str(error),
+        "restore": str(restore),
+    }
+    atomic_json(state_file, state)
+    print(
+        f"CRITICAL: rollback failed: {error}\n"
+        f"CRITICAL: restore {restore} on the controller, then run "
+        f"clear-rollback --label {label!r}",
+        file=sys.stderr,
+    )
 
 
 def capture_dmx(connection):
@@ -279,12 +343,18 @@ def wait_for_controller(port, timeout=20.0, disconnected_identity=None):
     )
 
 
-def restore_previous(port, label, previous, disconnected_identity=None):
+def restore_previous(port, label, previous, disconnected_identity=None,
+                     expected_identity=None):
     connection = wait_for_controller(
         port, disconnected_identity=disconnected_identity
     )
     restart_identity = None
     try:
+        if expected_identity:
+            check_identity(
+                wolfmix.decode_settings(connection.request(wolfmix.GET_SETTINGS)),
+                expected_identity, "before the rollback",
+            )
         if previous is None:
             wolfmix.remove_experiment_project(connection, label)
         else:
@@ -302,6 +372,11 @@ def restore_previous(port, label, previous, disconnected_identity=None):
         port, disconnected_identity=restart_identity
     )
     try:
+        if expected_identity:
+            check_identity(
+                wolfmix.decode_settings(connection.request(wolfmix.GET_SETTINGS)),
+                expected_identity, "after the rollback restart",
+            )
         if previous is None:
             if any(
                 item.get("uuid") == wolfmix.experiment_identity(label)[0]
@@ -396,8 +471,11 @@ def watch(args):
                 data = download_project(connection, state["uuid"])["data"]
                 current = wpjlib.Wpj.from_bytes(data, "downloaded project")
                 snapshot = destination / f"{item['version']}.wpj"
-                if not snapshot.exists():
-                    snapshot.write_bytes(data)
+                try:
+                    with snapshot.open("xb") as stream:
+                        stream.write(data)
+                except FileExistsError:
+                    pass                      # this version is already captured
                 if previous is None:
                     print(f"baseline version {item['version']} ({len(data)} bytes)")
                 else:
@@ -463,7 +541,11 @@ def initialize(args):
             try:
                 restore_previous(port, args.label, previous)
             except Exception as rollback_error:
-                print(f"CRITICAL: rollback failed: {rollback_error}", file=sys.stderr)
+                mark_rollback_failed(
+                    args.state_dir, args.label, rollback_error,
+                    "the project that held this UUID before init"
+                    if previous else "nothing — delete the experiment project",
+                )
         raise
 
 
@@ -497,6 +579,13 @@ def deploy_one(args, candidate_path, case_id):
     root, _, state = load_state(args.state_dir, args.label)
     if not state.get("armed"):
         raise wolfmix.WolfmixError("Experiment is not armed; run arm first")
+    pending = state.get("rollbackFailed")
+    if pending:
+        raise wolfmix.WolfmixError(
+            f"A rollback failed on {args.label!r} at {pending.get('at')}: "
+            f"{pending.get('error')}. Restore {pending.get('restore')} on the "
+            f"controller, then run clear-rollback --label {args.label!r}"
+        )
     path, data = validate_project(candidate_path, state["name"])
     warn_about_dimmers(data)
     run_dir = root / "runs" / f"{utc_id()}-{case_id}"
@@ -507,15 +596,14 @@ def deploy_one(args, candidate_path, case_id):
     try:
         with connect(port, args.timeout) as connection:
             before_settings = preflight(connection)
-            if before_settings["serialNumber"] != state["controllerSerial"]:
-                raise wolfmix.WolfmixError("Refusing a different Wolfmix controller")
-            try:
-                ajoutes = archive_projects(connection, root)
-                if ajoutes:
-                    print(f"archive : {len(ajoutes)} projet(s) sauvegardes",
-                          file=sys.stderr)
-            except Exception as error:            # jamais bloquant
-                print(f"warning: archivage impossible ({error})", file=sys.stderr)
+            identity = {"serialNumber": state["controllerSerial"],
+                        "firmwareVer": state.get("firmware")}
+            check_identity(before_settings, identity, "since init")
+            # Fail-closed: an unarchived project is what we cannot get back,
+            # so a failure here stops the run before anything is uploaded.
+            archived = archive_projects(connection, root)
+            if archived:
+                print(f"archive: {len(archived)} project(s) saved", file=sys.stderr)
             previous = download_project(connection, state["uuid"])
             previous_data = previous["data"]
             with (run_dir / "before.wpj").open("xb") as stream:
@@ -528,7 +616,9 @@ def deploy_one(args, candidate_path, case_id):
             port, args.restart_timeout, restart_identity
         )
         try:
-            after_settings = preflight(connection)
+            after_settings = check_identity(
+                preflight(connection), identity, "after the restart"
+            )
             after = verify_project(connection, state["uuid"], data)
             dmx = capture_dmx(connection)
         finally:
@@ -563,10 +653,12 @@ def deploy_one(args, candidate_path, case_id):
         if previous is not None:
             try:
                 restore_previous(
-                    port, args.label, previous, restart_identity
+                    port, args.label, previous, restart_identity,
+                    expected_identity=identity,
                 )
             except Exception as rollback_error:
-                print(f"CRITICAL: rollback failed: {rollback_error}", file=sys.stderr)
+                mark_rollback_failed(args.state_dir, args.label, rollback_error,
+                                     run_dir / "before.wpj")
         raise
 
 
@@ -587,6 +679,17 @@ def campaign(args):
         deploy_one(args, project, case["id"])
 
 
+def clear_rollback(args):
+    _, state_file, state = load_state(args.state_dir, args.label)
+    pending = state.pop("rollbackFailed", None)
+    if pending is None:
+        raise wolfmix.WolfmixError(f"No failed rollback on {args.label!r}")
+    state["rollbackClearedAt"] = datetime.datetime.now(
+        datetime.timezone.utc).isoformat()
+    atomic_json(state_file, state)
+    wolfmix.print_json({"cleared": pending})
+
+
 def status(args):
     root, state_file, state = load_state(args.state_dir, args.label)
     with connect(args.port, args.timeout) as connection:
@@ -598,6 +701,7 @@ def status(args):
     wolfmix.print_json({
         "state": str(state_file),
         "armed": state.get("armed", False),
+        "rollbackFailed": state.get("rollbackFailed"),
         "controllerSettings": settings,
         "experimentProject": item,
         "baseline": str(root / state["baseline"]),
@@ -628,32 +732,71 @@ def self_test(_args):
             value = {"sha256": sha256(data), "size": len(data)}
             atomic_json(target, value)
             assert read_json(target) == value
-    # archive_projects : incrémental, et un échec de téléchargement n'avale pas
-    # les projets déjà archivés.
-    class FauxLien:
-        def __init__(self): self.telecharges = 0
-    faux = FauxLien()
-    vrai_liste, vrai_dl = globals()["project_list"], globals()["download_project"]
+    # archive_projects: incremental, transactional, and fail-closed.
+    downloads = [0]
+    real_list, real_download = globals()["project_list"], globals()["download_project"]
     globals()["project_list"] = lambda _c: [
         {"uuid": "a" * 8, "version": 1}, {"uuid": "b" * 8, "version": 2}]
-    def _dl(_c, uuid):
-        faux.telecharges += 1
-        return {"data": b"charge-" + uuid.encode()}
-    globals()["download_project"] = _dl
+
+    def _download(_c, uuid):
+        downloads[0] += 1
+        return {"data": b"payload-" + uuid.encode()}
+
+    globals()["download_project"] = _download
     try:
         with tempfile.TemporaryDirectory() as directory:
-            premier = archive_projects(None, directory)
-            assert len(premier) == 2 and faux.telecharges == 2, premier
-            second = archive_projects(None, directory)
-            assert second == [] and faux.telecharges == 2, second
-            # une version neuve du même projet est archivée à part
+            archive = Path(directory) / "archive"
+            first = archive_projects(None, directory)
+            assert len(first) == 2 and downloads[0] == 2, first
+            assert all((archive / name).with_suffix(".json").exists()
+                       for name in first), "a project was archived with no manifest"
+            assert archive_projects(None, directory) == [] and downloads[0] == 2
+            # A run killed before its manifest: repaired, not skipped forever.
+            orphan = archive / f"{'a' * 8}-1.json"
+            orphan.unlink()
+            repaired = archive_projects(None, directory)
+            assert repaired == [f"{'a' * 8}-1.wpj"], repaired
+            assert downloads[0] == 2, "the repair re-downloaded the project"
+            assert read_json(orphan)["sha256"] == sha256(b"payload-" + b"a" * 8)
+            # An archive that no longer matches its manifest stops the run.
+            (archive / f"{'a' * 8}-1.wpj").write_bytes(b"tampered")
+            try:
+                archive_projects(None, directory)
+                raise AssertionError("a corrupted archive passed")
+            except wolfmix.WolfmixError as error:
+                assert "manifest" in str(error), error
+            (archive / f"{'a' * 8}-1.wpj").write_bytes(b"payload-" + b"a" * 8)
+            # A fresh version of the same project is archived beside the old one.
             globals()["project_list"] = lambda _c: [{"uuid": "a" * 8, "version": 9}]
-            troisieme = archive_projects(None, directory)
-            assert troisieme == [f"{'a' * 8}-9.wpj"], troisieme
-            garde = Path(directory) / "archive" / f"{'a' * 8}-1.wpj"
-            assert garde.exists(), "l'archive precedente a ete perdue"
+            assert archive_projects(None, directory) == [f"{'a' * 8}-9.wpj"]
+            assert (archive / f"{'a' * 8}-1.wpj").exists(), "an archive was lost"
     finally:
-        globals()["project_list"], globals()["download_project"] = vrai_liste, vrai_dl
+        globals()["project_list"], globals()["download_project"] = real_list, real_download
+
+    # The identity check refuses another controller, and says which field moved.
+    reference = {"serialNumber": 1234, "firmwareVer": "2.0.18"}
+    assert check_identity(dict(reference), reference, "now") == reference
+    for moved in ({"serialNumber": 9, "firmwareVer": "2.0.18"},
+                  {"serialNumber": 1234, "firmwareVer": "9.9.9"}):
+        try:
+            check_identity(moved, reference, "after the restart")
+            raise AssertionError(f"identity change accepted: {moved}")
+        except wolfmix.WolfmixError as error:
+            assert "after the restart" in str(error), error
+
+    # A failed rollback survives the process and blocks the next deploy.
+    with tempfile.TemporaryDirectory() as directory:
+        _, state_file = state_paths(directory, "self-test")
+        atomic_json(state_file, dict(zip(("label", "uuid", "name", "armed"), (
+            "self-test", *wolfmix.experiment_identity("self-test"), True))))
+        errors = io.StringIO()
+        stderr, sys.stderr = sys.stderr, errors
+        try:
+            mark_rollback_failed(directory, "self-test", "link died", "before.wpj")
+        finally:
+            sys.stderr = stderr
+        assert "clear-rollback" in errors.getvalue(), errors.getvalue()
+        assert read_json(state_file)["rollbackFailed"]["restore"] == "before.wpj"
 
     changes = describe_change(102, bytes.fromhex("2802"), bytes.fromhex("2803"))
     assert changes == ["  type 102 field 5: 2 -> 3"], changes
@@ -701,6 +844,13 @@ def parser():
     watch_parser.add_argument("--interval", type=float, default=1.0,
                               help="project-list polling period in seconds")
     watch_parser.set_defaults(handler=watch)
+
+    clear_parser = commands.add_parser(
+        "clear-rollback",
+        help="clear a failed-rollback state once the project is restored",
+    )
+    clear_parser.add_argument("--label", required=True)
+    clear_parser.set_defaults(handler=clear_rollback)
 
     status_parser = commands.add_parser("status")
     status_parser.add_argument("--label", required=True)

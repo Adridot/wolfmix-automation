@@ -16,7 +16,6 @@ def variant(out, mutate):
     mutate(p)
     w.replace(165, C.encode(165, d))
     w.replace(101, C.encode(101, {'nom': f'WMX TEST {os.path.basename(out)[:7].upper()}'}))
-    if os.path.exists(out): os.remove(out)
     w.save(out)
     # contrôle : relecture
     p2 = next(q for q in (C.decode(165, Wpj.load(out).get(165)).get('presets') or []) if q.get('id') == 78)

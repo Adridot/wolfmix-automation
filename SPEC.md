@@ -1483,12 +1483,14 @@ drawn from it was not evidence.
   entry as `105[e].f6`. It had been decoded all along under the name
   *category*. Record 125 is the eight groups plus a ninth slot, not nine
   categories.
-- **L5 — the mapping record**, reframed. The `Mappings` screen (mode 43) exists
-  on this hardware, but the vendor manual scopes **MIDI to MK2 and higher**: on
-  a MK1 only the **DMX** side is mappable (categories Group Dimmer, Preset,
-  Preset Page, Flash, General). So the original premise — a MIDI map in the
-  file — **cannot be tested on this hardware**, and what to look for is a
-  DMX-mapping record. Still not located; still the gateway to live control.
+- ~~**L5 — the mapping record.**~~ **Closed** (§7.3, MAP-02→MAP-11) — and the
+  premise was reframed on the way. The `Mappings` screen (mode 43) exists on
+  this hardware, but the vendor manual scopes **MIDI to MK2 and higher**: on a
+  MK1 only the **DMX** side is mappable, so what to look for was never a MIDI
+  map. It is **record 130**, read and written, **device-confirmed**: `f4` is
+  the function, `f2` the instance (255 when there is none), and the channel is
+  two bytes, `f5 × 256 + f6`. It read as inert in 51 corpus files because the
+  factory table is the identity map and nobody had ever changed one.
 - ~~**L9 — the FX submessage's `f6`/`f9`.**~~ **Closed** (§5, FX6-02/03), and it
   took a fourth field down with it. Nine screen readings matched nine fields
   across two engines: `f6` = Phase, `f8` = Size, `f9` = **Speed**, `f2` =

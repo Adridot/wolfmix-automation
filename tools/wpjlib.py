@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Cœur lecture/écriture des .wpj variante A (SHA-1 + conteneur TLV).
+"""The read/write core of variant-A .wpj files (SHA-1 + TLV container).
 
-Principe de sûreté (règle « lecture avant écriture ») :
-- load() découpe le fichier en enregistrements TLV bruts, sans interpréter.
-- save() réassemble : longueurs recalculées, en-tête SHA-1 recalculé,
-  octets 20–63 (préfixe opaque) préservés verbatim.
-- Un enregistrement non modifié est réémis octet pour octet ; round-trip
-  sans édition = fichier octet-identique, garanti par construction et
-  vérifié par self-check sur tout le corpus.
-- Écriture toujours vers un NOUVEAU fichier, jamais d'écrasement.
+The safety principle — "read before write":
+- load() cuts the file into raw TLV records, interpreting nothing.
+- save() reassembles: lengths recomputed, SHA-1 header recomputed, bytes
+  20-63 (the opaque prefix) preserved verbatim.
+- An untouched record is re-emitted byte for byte; a round trip with no edit
+  gives a byte-identical file, by construction, and the self-check proves it
+  over the whole corpus.
+- Writing always goes to a NEW file, never over an existing one.
 """
 import glob
 import hashlib
@@ -20,29 +20,29 @@ CORPUS_ENV = "WPJ_CORPUS"
 CORPUS_DEFAUT = "corpus"
 
 ROOT_TYPE = 100
-BODY_OFF = 0x40  # conteneur racine ; préfixe opaque = octets 20..0x40
+BODY_OFF = 0x40  # root container; the opaque prefix is bytes 20..0x40
 
 
 def corpus_files(motif="**/*.wpj"):
     """Fichiers de corpus locaux. Racine : $WPJ_CORPUS, sinon ./corpus.
 
-    Aucun fichier .wpj n'est distribué avec ce dépôt (voir docs/corpus.md) :
-    les self-checks tournent sur le corpus que l'utilisateur fournit, et
-    s'abstiennent proprement s'il n'y en a pas.
+    No .wpj file ships with this repository (see docs/corpus.md): the
+    self-checks run on the corpus you supply, and abstain cleanly when there
+    is none.
     """
     racine = os.environ.get(CORPUS_ENV) or CORPUS_DEFAUT
     return sorted(glob.glob(os.path.join(racine, motif), recursive=True))
 
 
 def pas_de_corpus(outil):
-    print(f"{outil} : ignoré, aucun corpus dans "
+    print(f"{outil}: skipped, no corpus in "
           f"{os.environ.get(CORPUS_ENV) or CORPUS_DEFAUT}/ "
           f"(voir docs/corpus.md)", file=sys.stderr)
 
 
 class Wpj:
     def __init__(self, prefix, records):
-        self.prefix = prefix          # octets 20..0x46 (préfixe + en-tête TLV racine, brut)
+        self.prefix = prefix          # bytes 20..0x46 (prefix + root TLV header, raw)
         self.records = records        # list[(type:int, payload:bytes)]
 
     @classmethod
@@ -81,12 +81,12 @@ class Wpj:
     def save(self, path):
         body = self.body()
         data = hashlib.sha1(body).digest() + body
-        with open(path, "xb") as f:  # 'x' : refuse d'écraser
+        with open(path, "xb") as f:  # 'x': refuses to overwrite
             f.write(data)
         return hashlib.sha256(data).hexdigest()
 
     def replace(self, typ, new_payload, occurrence=0):
-        """Remplace le payload de la n-ième occurrence d'un type."""
+        """Replace the payload of the n-th occurrence of a type."""
         n = 0
         for idx, (t, _) in enumerate(self.records):
             if t == typ:
@@ -115,35 +115,35 @@ def demo():
         try:
             w = Wpj.load(path)
         except ValueError:
-            continue  # variantes B/C : hors périmètre de cette lib
+            continue  # variants B/C: out of scope for this library
         orig = open(path, "rb").read()
         rebuilt = hashlib.sha1(w.body()).digest() + w.body()
         assert rebuilt == orig, f"round-trip NON identique : {path}"
         tested += 1
     if not tested:
         return pas_de_corpus("wpjlib")
-    print(f"self-check ok : round-trip octet-identique sur {tested} fichiers",
+    print(f"self-check ok: byte-identical round trip on {tested} files",
           file=sys.stderr)
 
 
 def _refus_attendus():
-    """Un fichier trop court, mais dont l'en-tête SHA-1 est juste, doit être
-    refusé comme format — pas lever struct.error depuis les entrailles."""
+    """A file too short but with a valid SHA-1 header must be refused as a
+    format error — not raise struct.error from somewhere inside."""
     for corps in (b"", b"x" * 10, b"x" * (BODY_OFF - 20)):
         court = hashlib.sha1(corps).digest() + corps
         try:
             Wpj.from_bytes(court, "<court>")
-            raise AssertionError(f"accepté : {len(court)} octets")
+            raise AssertionError(f"accepted: {len(court)} bytes")
         except ValueError as err:
             assert "short" in str(err) or "root container" in str(err), err
-    # Un en-tête de record qui déborde la fin du corps est un refus nommé.
+    # A record header running past the end of the body is a named refusal.
     corps = bytearray(b"\x00" * (BODY_OFF - 20))
     inner = struct.pack("<IH", 3, 101) + b"abc" + b"\x00\x00"
     corps += struct.pack("<IH", len(inner), ROOT_TYPE) + inner
     tronque = hashlib.sha1(bytes(corps)).digest() + bytes(corps)
     try:
-        Wpj.from_bytes(tronque, "<tronqué>")
-        raise AssertionError("un record tronqué est passé")
+        Wpj.from_bytes(tronque, "<truncated>")
+        raise AssertionError("a truncated record got through")
     except ValueError as err:
         assert "truncated" in str(err), err
 

@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
-"""L'ecriture persistante sur le W1, et ce qui la rend reversible.
+"""Persistent writing to the W1, and what makes it reversible.
 
-Une seule route mene aux projets du controleur, et elle passe par ici :
+One route leads to the controller's projects, and it goes through here:
 
-    identite verifiee
-      -> archivage transactionnel de ce qui est en place
-      -> upload sous un UUID **derive**, jamais un projet ordinaire
-      -> relecture et comparaison record par record
-      -> rollback, et si le rollback echoue, un etat qui bloque la suite
+    identity verified
+      -> transactional archive of whatever is in place
+      -> upload under a **derived** UUID, never an ordinary project
+      -> download again and compare record by record
+      -> rollback, and if the rollback fails, a state that blocks what follows
 
-Le runner d'experience et le deploiement de production appellent tous les deux
-ce module : la garde « on n'ecrit jamais un projet ordinaire » existe une fois,
-pas deux.
+The experiment runner and the production deployment both call this module: the
+"we never write an ordinary project" guard exists once, not twice.
 
-Fail-closed : une sauvegarde qui rate arrete le deploiement. Un projet non
-archive est exactement ce qu'on ne sait pas recuperer.
+Fail-closed: a backup that fails stops the deployment. An unarchived project is
+exactly what we cannot get back.
 
-Sans argument, ce fichier joue son self-check — il ne touche aucun appareil.
+With no argument this file runs its self-check — it touches no device.
 """
 import datetime
 import hashlib
@@ -36,10 +35,10 @@ import wpjlib
 
 
 def require_managed_uuid(project_uuid, label, kind="exp"):
-    """Refuse tout UUID que ce depot n'a pas derive lui-meme.
+    """Refuse any UUID this repository did not derive itself.
 
-    C'est l'invariant du depot, et il est verifie **avant** d'ouvrir le port :
-    un projet ordinaire n'est jamais ecrit, avec ou sans drapeau.
+    This is the repository's invariant, and it is checked **before** the port
+    is opened: an ordinary project is never written, with or without a flag.
     """
     attendu, nom = protocol.managed_identity(label, kind)
     if project_uuid != attendu:
@@ -352,7 +351,7 @@ def restore_previous(port, label, previous, disconnected_identity=None,
         connection.close()
 
 def self_check():
-    """Aucun appareil : un faux lien, des dossiers temporaires, et des refus."""
+    """No device: a fake link, temporary directories, and refusals."""
     # archive_projects: incremental, transactional, and fail-closed.
     downloads = [0]
     real_list, real_download = globals()["project_list"], globals()["download_project"]
@@ -419,7 +418,7 @@ def self_check():
         assert "clear-rollback" in errors.getvalue(), errors.getvalue()
         assert read_json(state_file)["rollbackFailed"]["restore"] == "before.wpj"
 
-    # La garde d'UUID derive : elle refuse avant meme qu'un port soit ouvert.
+    # The derived-UUID guard: it refuses before a port is even opened.
     derive, nom = protocol.managed_identity("self-test", "exp")
     assert require_managed_uuid(derive, "self-test", "exp") == (derive, nom)
     auto, nom_auto = protocol.managed_identity("self-test", "auto")

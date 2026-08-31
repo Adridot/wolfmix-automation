@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
-"""Inspect JSON compatible avec le schéma wpj-toolkit (MIT), en local.
+"""Inspect JSON matching the wpj-toolkit schema (MIT), computed locally.
 
-But : émettre la même forme de réponse que `POST /api/v1/inspect` de
+Goal: emit the same response shape as WPJ Studio's `POST /api/v1/inspect`
 WPJ Studio (`modelVersion`, `project`, `presets[]`, `fixtures`, `validation`,
-`unknown_tlvs`) pour que les outils écrits contre ce schéma fonctionnent ici —
-sans upload, hors ligne. Voir PROVENANCE.md.
+`unknown_tlvs`) so that tooling written against that schema works here — no
+upload, offline. See PROVENANCE.md.
 
-Deux différences assumées, toutes deux additives :
-- `fixtures.status` peut valoir "partial" (types 105/116 décodés) là où le
-  schéma d'origine annonce "unsupported" ;
-- `x_records` porte le décodage complet du codec, pour ne rien perdre.
+Two deliberate differences, both additive:
+- `fixtures.status` may read "partial" (types 105/116 are decoded) where the
+  original schema reports "unsupported";
+- `x_records` carries the codec's full decode, so nothing is lost.
 
-Phase, Size, Fade et Speed sont mesurées (FX6-02/03, `SPEC.md` §5) : elles
-sortent sous leur nom, sans réserve. Champ absent = absent, jamais 0.
+Phase, Size, Fade and Speed are measured (FX6-02/03, `SPEC.md` §5): they are
+emitted under their own names, without reservation. An absent field is absent,
+never 0.
 
 Usage :
-  wpj_api.py fichier.wpj    inspect JSON sur stdout
-  wpj_api.py                self-check sur le corpus
+  wpj_api.py project.wpj    inspect JSON on stdout
+  wpj_api.py                self-check over the corpus
 """
 import hashlib
 import json
@@ -28,8 +29,8 @@ import wpjlib
 import wpj_codec
 
 MODEL_VERSION = "1"
-# clé codec → clé wpj-toolkit. Les replis `fN` ont disparu avec FX6-02/03 :
-# ils portaient l'ancienne lecture (f6 = fade, f9 = phase), qui est fausse.
+# codec key → wpj-toolkit key. The `fN` fallbacks went with FX6-02/03: they
+# carried the retracted reading (f6 = fade, f9 = phase), which is wrong.
 _FX_OUT = {"effect": "type", "speed": "speedPercent",
            "fade": "fadePercent", "phase": "phasePercent", "size": "sizePercent",
            "link_order": "linkOrder", "speed_source": "speedSource",
@@ -130,25 +131,27 @@ def demo():
         r = inspect(path)
         assert r["modelVersion"] == MODEL_VERSION
         assert isinstance(r["validation"]["checksumOk"], bool)
-        json.dumps(r)                                  # sérialisable
+        json.dumps(r)                                  # serialisable
         if any(i["code"] == "unsupported_variant" for i in r["validation"]["issues"]):
-            continue                                   # variantes B/C : hors périmètre
+            continue                                   # variants B/C: out of scope
         assert r["validation"]["checksumOk"], f"{path} : SHA-1 invalide"
-        assert r["presets"], f"{path} : aucun preset décodé"
+        assert r["presets"], f"{path}: no preset decoded"
         for p in r["presets"]:
             assert p["id"] == (p["page"] - 1) * 20 + (p["slot"] - 1)
         assert all(u["type"] not in wpj_codec.SCHEMAS for u in r["unknown_tlvs"]), \
-            f"{path} : un type schématisé est retombé en unknown_tlv"
+            f"{path}: a schema-backed type fell back to unknown_tlv"
         ok += 1
     if not ok:
         return wpjlib.pas_de_corpus("wpj_api")
-    print(f"self-check ok : inspect JSON valide sur {ok} fichiers variante A")
+    print(f"self-check ok: valid inspect JSON on {ok} variant-A files")
 
 
 def _cli(argv=None):
     import argparse
     parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parseur.add_argument("projet", nargs="?", help="emet le JSON d'inspection wpj-toolkit ; sans argument, self-check")
+    parseur.add_argument("projet", nargs="?",
+                         help="emit the wpj-toolkit inspect JSON; "
+                              "with no argument, self-check")
     args = parseur.parse_args(argv)
     if args.projet is None:
         demo()

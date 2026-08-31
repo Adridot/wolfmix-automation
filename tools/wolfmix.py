@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-"""Le client de production du W1 : lire, piloter l'etat vif, telecharger.
+"""The production client for the W1: read it, drive its live state, download.
 
-Ce fichier est la **ligne de commande**. Ce qu'elle appelle vit ailleurs :
+This file is the **command line**. What it calls lives elsewhere:
 
-  wolfmix_protocol.py     trames, evenements, protobuf, decodage, domaines
-  wolfmix_device.py       port serie et operations de haut niveau
-  wolfmix_transaction.py  sauvegarde, archive, upload verifie, rollback
-  wolfmix_experiment.py   campagnes et experiences
+  wolfmix_protocol.py     frames, events, protobuf, decoding, domains
+  wolfmix_device.py       the serial port and the operations built on it
+  wolfmix_transaction.py  backup, archive, verified upload, rollback
+  wolfmix_experiment.py   campaigns and experiments
 
-Les ecritures persistantes ne visent jamais un projet ordinaire : elles passent
-par un UUID derive. Aucune operation de firmware executable n'est exposee, dans
-aucun de ces fichiers.
+A persistent write never targets an ordinary project: it goes to a derived
+UUID. No executable-firmware operation is exposed, in any of these files.
 
 Usage :
   python3 tools/wolfmix.py settings
@@ -26,7 +25,7 @@ Usage :
   python3 tools/wolfmix.py dmx-envelope before.json --seconds 12
   python3 tools/wolfmix.py self-test
 
-WTOOLS doit etre ferme : le port serie est exclusif.
+WTOOLS must be closed: the serial port is exclusive.
 """
 import argparse
 import hashlib
@@ -149,7 +148,7 @@ def self_test():
             pass
     assert resolve_mode("42", experimental=True) == 42
     assert not ACTING_MODES & set(NAMED_MODES.values())
-    # SCREEN-02 : mesuré des deux côtés, et muet sur ce qui n'a pas été essayé.
+    # SCREEN-02: measured on both sides, and silent about what was never tried.
     assert not MODES_MOVING_SCREEN & MODES_SCREEN_INERT
     assert screen_follows(4) is True and screen_follows(26) is True
     assert screen_follows(0) is False and screen_follows(5) is False

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Le protocole du W1 : trames, événements, protobuf, décodage.
+"""The W1's protocol: frames, events, protobuf, decoding.
 
-Rien ici ne touche un port ni un fichier — que des octets et des dicts. C'est
-ce qui rend ce module lisible seul, et testable sans appareil.
+Nothing here touches a port or a file — only bytes and dicts. That is what
+makes this module readable on its own, and testable with no device.
 
-Les domaines qui bornent ce qu'on a le droit d'envoyer vivent ici aussi :
-l'allowlist des événements sortants, les mutations soumises à la garde
-firmware, la plage de rappel du panneau, les modes nommés.
+The domains that bound what may be sent live here too: the outgoing event
+allowlist, the mutations subject to the firmware gate, the panel's own recall
+range, and the named modes.
 """
 import json
 import os
@@ -63,9 +63,9 @@ EXPERIMENT_NAMESPACE = uuid.UUID("d7ad3c90-367d-5eef-a8bb-f523c6f96d9a")
 
 EXPERIMENT_NAME_PREFIX = "WMX EXP "
 
-# Les deux seuls espaces de noms que ce depot ecrit. « exp » derive du label nu
-# — c'est l'historique, et les etats deja poses sur disque en dependent ;
-# « auto » derive d'un label prefixe, donc jamais le meme UUID.
+# The only two namespaces this repository writes. "exp" derives from the bare
+# label — that is the historical scheme, and the states already on disk depend
+# on it; "auto" derives from a prefixed label, so never the same UUID.
 MANAGED_PREFIXES = {"exp": EXPERIMENT_NAME_PREFIX, "auto": "WMX AUTO "}
 
 PROJECT_NAME_MAX = 19
@@ -150,15 +150,15 @@ NAMED_MODES = {
 # name is a guess. Every other index is simply unmeasured.
 ACTING_MODES = {26, 39, 40, 42}
 
-# SCREEN-02 : le mode rapporté prend toujours la valeur demandée, l'écran non.
-# Partition mesurée sur l'appareil, stable et indépendante de l'écran de départ.
-# Ce qui n'est dans aucun des deux ensembles n'a pas été essayé.
+# SCREEN-02: the reported mode always takes the value asked for; the screen
+# does not. Measured on the device, stable, and independent of the screen the
+# panel starts from. An index in neither set was never tried.
 MODES_MOVING_SCREEN = {1, 3, 4, 26}
 
 MODES_SCREEN_INERT = {0, 5, 16}
 
 def screen_follows(index):
-    """True / False / None (jamais mesuré) — SCREEN-02."""
+    """True / False / None (never measured) — SCREEN-02."""
     if index in MODES_MOVING_SCREEN:
         return True
     if index in MODES_SCREEN_INERT:
@@ -251,10 +251,10 @@ def decode_settings(data):
     for number, wire_type, value in protobuf_fields(data):
         field = SETTINGS_FIELDS.get(number)
         if not field:
-            # Le firmware porte des réglages que nous ne savons pas nommer —
-            # « store group dimmers in preset » (GEN-02) en est peut-être un.
-            # Les rendre visibles permet de trancher par un simple diff avant
-            # et après une bascule au panneau, sans jamais leur donner de nom.
+            # The firmware carries settings we cannot name — "store group
+            # dimmers in preset" (GEN-02) may well be one of them. Surfacing
+            # them lets a plain before/after diff settle it when the operator
+            # flips a switch, without ever inventing a name for them.
             inconnus[number] = value.hex() if isinstance(value, bytes) else value
             continue
         name, kind = field
@@ -387,10 +387,10 @@ def encode_request_uuid(value):
     return encode_protobuf_field(1, 2, raw_uuid)
 
 def managed_identity(label, kind="exp"):
-    """(UUID derive, nom) d'un projet gere. Deterministe, jamais aleatoire.
+    """(derived UUID, name) of a managed project. Deterministic, never random.
 
-    C'est ce qui fait qu'aucun projet ordinaire n'est ecrit : la cible n'est
-    pas choisie, elle est calculee a partir du label.
+    This is what keeps an ordinary project from ever being written: the target
+    is not chosen, it is computed from the label.
     """
     if kind not in MANAGED_PREFIXES:
         raise WolfmixError(
@@ -410,7 +410,7 @@ def is_managed_name(name):
 
 
 def experiment_identity(label):
-    """L'espace de noms des experiences — le cas historique."""
+    """The experiment namespace — the historical case."""
     return managed_identity(label, "exp")
 
 def encode_project(project_uuid, version, name, data):

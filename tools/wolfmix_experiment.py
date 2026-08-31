@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Campagnes et experiences sur un W1, sans WTOOLS.
+"""Campaigns and experiments on a W1, without WTOOLS.
 
-Ce runner ne fait qu'une chose que le client de production ne fait pas : des
-campagnes reproductibles — un cas, un deploiement, une capture DMX, un journal.
-Tout ce qui touche a l'ecriture persistante (identite, archive, upload verifie,
-rollback) vit dans `wolfmix_transaction.py` et est partage.
+This runner does one thing the production client does not: reproducible
+campaigns — one case, one deployment, one DMX capture, one journal entry.
+Everything about persistent writing (identity, archive, verified upload,
+rollback) lives in `wolfmix_transaction.py` and is shared.
 
-Un bootstrap manuel reste necessaire : le firmware 2.0.18 n'expose aucune
-commande USB pour selectionner un projet. Lancer `init`, ouvrir une fois le
-projet `WMX EXP ...` sur le W1, puis `arm`. Ensuite tout est automatique.
+One manual bootstrap remains: firmware 2.0.18 exposes no USB command for
+selecting a project. Run `init`, open the resulting `WMX EXP ...` project once
+on the W1, then run `arm`. Everything after that is automatic.
 """
 import argparse
 import datetime
@@ -166,7 +166,7 @@ def watch(args):
 
 def initialize(args):
     project_uuid, name = protocol.managed_identity(args.label, args.namespace)
-    # Avant d'ouvrir le port : la cible est-elle bien un UUID que nous derivons ?
+    # Before the port is opened: is the target a UUID we derive ourselves?
     tx.require_managed_uuid(project_uuid, args.label, args.namespace)
     project_path, data = validate_project(args.project, name)
     root, state_file = state_paths(args.state_dir, args.label, args.namespace)
@@ -268,7 +268,7 @@ def deploy_one(args, candidate_path, case_id):
             f"{pending.get('error')}. Restore {pending.get('restore')} on the "
             f"controller, then run clear-rollback --label {args.label!r}"
         )
-    # Avant tout port : la cible est-elle un UUID que nous derivons ?
+    # Before any port: is the target a UUID we derive ourselves?
     tx.require_managed_uuid(state["uuid"], args.label,
                             state.get("namespace", args.namespace))
     path, data = validate_project(candidate_path, state["name"])
@@ -433,9 +433,9 @@ def parser():
     result.add_argument("--state-dir", default=DEFAULT_STATE_ROOT)
     result.add_argument("--namespace", choices=sorted(protocol.MANAGED_PREFIXES),
                         default="exp",
-                        help="espace de noms gere : « exp » pour une campagne, "
-                             "« auto » pour un deploiement de production "
-                             "sauvegarde et transactionnel (defaut : exp)")
+                        help="managed namespace: 'exp' for a campaign, "
+                             "'auto' for a backed-up, transactional production "
+                             "deployment (default: exp)")
     commands = result.add_subparsers(dest="command", required=True)
 
     initialize_parser = commands.add_parser("init")

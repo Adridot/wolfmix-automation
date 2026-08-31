@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Le lien série avec le W1, et les opérations de haut niveau qui s'y appuient.
+"""The serial link to the W1, and the operations built on top of it.
 
-La garde firmware vit dans `WolfmixConnection.send` : un appelant ne peut pas
-l'oublier. Le port est exclusif — WTOOLS ouvert, rien ne passe — et
-`port_holders` le dit avec le nom du processus fautif plutôt qu'un errno.
+The firmware gate lives in `WolfmixConnection.send`: a caller cannot forget it.
+The port is exclusive — with WTOOLS open nothing gets through — and
+`port_holders` says so with the offending process's name rather than an errno.
 """
 import datetime
 import fcntl
@@ -433,7 +433,7 @@ def remove_managed_project(connection, label, project_list=None, kind="exp"):
     )
 
 
-# Anciens noms, gardes le temps d'une version : le seul changement est que la
-# cible peut desormais etre l'espace « auto ».
+# Former names, kept for one version: the only change is that the target may
+# now be the "auto" namespace.
 store_experiment_project = store_managed_project
 remove_experiment_project = remove_managed_project

@@ -29,7 +29,8 @@ Measurement base: W1 Mk1 (serial withheld), firmware **2.0.18**, macOS. WTOOLS
 **2.0.2** build 248 — a **beta**, installed over the stable — which is what the
 later protocol work was read against.
 
-Corpus hashes in `corpus/SHA256SUMS` — 57 files, regenerated 2026-08-27.
+Corpus hashes in `corpus/SHA256SUMS` — 57 files, regenerated 2026-08-27; the
+files themselves are not distributed ([`LEGAL.md`](LEGAL.md)).
 
 ### Evidence cutoff — 2026-08-31
 
@@ -51,14 +52,25 @@ message.
 | GOBO-01 (2026-08-30) | Where the gobo icon library lives — 800 entries at the tail of the resource flash, the entry index being the id in `145.f2`. §3.4 describes the palette without it. |
 | GUARD-01 (2026-08-31) | The nine bench measures of the write-path guards. They constrain the tools, not the format, so this may end up belonging in `docs/` rather than here — that decision is itself pending. |
 
-**On file counts.** The measurement corpus holds **45 variant-A files**, but only
-**4 are independent rigs** (*rig-a* 10 fixtures, *rig-b* 15, *rig-c* 20,
-*rig-c-bug* 22 = a re-patched *rig-c*). The rest are derived: files written
-by our own writer from *rig-a*, and controller saves of one copy of
-*rig-c*. An identity holding on all of them is strong enough to **kill** a
+**On file counts.** A figure like "45/45" below is **historical**: it names the
+corpus that was present when the claim was measured, not a corpus you have. It
+is never updated — updating it would erase what was actually checked — and the
+live number comes from a command instead:
+
+```bash
+python3 tools/wpj_identities.py     # N identities verified on M variant-A files
+python3 tools/wpj_counts.py --print # the current corpus size, and every drifting figure
+```
+
+`make check` re-runs every one of those counts on whatever corpus is present,
+which is the only number that means anything on your machine.
+
+And the size was never the strength. The measurement corpus held 45 variant-A
+files, of which only **4 are independent rigs** (*rig-a* 10 fixtures, *rig-b*
+15, *rig-c* 20, *rig-c-bug* 22 = a re-patched *rig-c*). The rest are derived:
+files written by our own writer from *rig-a*, and controller saves of one copy
+of *rig-c*. An identity holding on all of them is strong enough to **kill** a
 hypothesis; it is not by itself enough to call anything device-confirmed.
-Counts written "45/45" below are re-checked by `make check` on whatever corpus
-is present.
 
 ---
 

@@ -1,0 +1,365 @@
+# Evidence registry
+
+Every finding this repository has published, one line each: the date, what was
+done, what came out, and the status it ended at. `SPEC.md` is the consolidated
+read of these; this is the ledger it was built from, and when the two disagree
+this file is the one that was written next to the measurement.
+
+**Reading a line.** The date is the day of the *measurement*, not of the
+write-up. Status uses the vocabulary in [`AGENTS.md`](../AGENTS.md) —
+`observed → hypothesized → correlated → validated → device-confirmed` — and an
+arrow marks a status that **moved**, in either direction. Unless a line says
+otherwise the controller ran firmware **2.0.18** and the editor was WTOOLS
+1.6.3 (until 2026-08-30) or 2.0.2 beta (after); a line that depended on a
+version says so. `snapshot` names a directory under `corpus/experiments/`: the
+project files themselves are not in this repository, their SHA-256 are, in
+[`corpus/SHA256SUMS`](../corpus/SHA256SUMS).
+
+**Refutations come first, and in full.** They are the entries that cost the
+most and the ones a summary is most tempted to lose. A status that went **down**
+is written out below with what it dragged with it; the table then carries every
+entry, refuted ones included.
+
+## Refutations, withdrawals and status downgrades
+
+### RECALL-01 — `device-confirmed` → **withdrawn** (2026-08-27)
+
+Read: "the varint value of `SET_PRESET` is ignored — the event addresses
+nothing." Measured from two DMX envelopes captured separately.
+
+**Why it was wrong.** Two separately captured envelopes cannot separate
+"nothing moved" from "the same thing was repainted". Preset recalls do act, and
+they always act the same way, which the separate captures rendered
+indistinguishable from inaction. One continuous capture with timestamped
+transitions settled in minutes what they had got backwards.
+
+**What it dragged down.** Four negatives rested on the same discriminator and
+went with it; the repair is in RELOAD-02, and RECALL-03 is the reading that
+replaced it — the payload is not protobuf at all, and the device had been
+reading our tag byte as the index (RAW-01).
+
+### GEN-02 — `device-confirmed` → `hypothesized` → `validated` (2026-08-27)
+
+Read: "`165.f10` bit 5 (`OTHER`) is what silences the dimmers."
+
+**Why it went down.** The dimmer silence it was thought to explain turned out
+to be a **controller setting** that had been off the whole time. One cause is
+enough, and the field had never been isolated. It climbed back to `validated`
+the same week, but only because FW-03 wrote that bit **and nothing else**: a
+status goes back up by measurement, not by the passage of time.
+
+### F4-01 — `device-confirmed` → **retracted** (2026-08-26), superseded by F4-02
+
+Read: "`COLOR` = `f4` bit 3, `MOVE` = bit 2, `BEAM` = bit 4", from six
+photographed `PRESET EDIT` screens.
+
+**Why it was wrong.** Wrong field. The content mask is **`f10`**. `f4` and
+`f10` are *both* constant per factory page, so six screens could not tell them
+apart — the four `f4` values happened to be in one-to-one correspondence with
+the four `f10` values across the four pages. It took a write that moved one
+without the other.
+
+This is the corpus-uniformity trap in a new dress: not one field uniform
+everywhere, but **two fields co-varying everywhere**, which is just as
+indistinguishable and just as easy to mistake for a proof.
+
+**What survives.** The mask *shape* — `Searchlight` lighting three toggles at
+once still refutes an enumeration — and the retraction of ACC-03's "closed
+vocabulary" reading. `f4` itself became unknown again, and F4-03 later read it
+as a **permission mask** over the three engines.
+
+### FX2-01 — an identity refuted the day it was added (2026-08-27)
+
+`wpj_identities.py` gained "an FX engine that is on stores two *different* page
+configurations" that morning: 3697 occurrences, zero exceptions. One preset
+composed at the panel refuted it the same evening.
+
+A correlation with no exception over the whole corpus is a fact **about the
+corpus** until a fresh write tests it. The defence is the write, not more
+counting — and the author of that warning fell into it inside a day.
+
+### FLASH-01 — the published prediction was refuted, and took an identity with it
+
+Predicted: the latched flash state lands in `165.f12` or `f20`, the two holes in
+the field numbering. Measured: neither appeared; **`f16` slice 6** moved
+instead, to 511 — all **nine** slots, the eight groups plus the one holding the
+fogger and the spark.
+
+It also refuted one of our own identities: `moteurs_f16` asserted that no slice
+ever sets the ninth bit — true on 2778 presets, false the moment a flash key is
+latched. **It lasted four hours.** The identity now checks that for slices 0–5
+only, and the comment says why.
+
+### F11-03 — refuted, and the experiment could not have tested what it claimed
+
+`Button brightness` set to 14 %. Predicted `102.f11` = 14. Measured: one save,
+43688 bytes both times, **not one record changed** — the setting is not project
+data, which is a clean result.
+
+**But the experiment was mis-posed, and the fault is the author's.** The
+prediction rested on "`f11` = 100 in every corpus file". That had stopped being
+true twenty-eight snapshots earlier: F11-01 wrote `f11 = 0` into that very
+project, and every save since re-emits the field absent. The comparison was 0
+against 0.
+
+> Read the current state of the field you are about to test, not the state the
+> registry describes.
+
+### F11-01's side finding — "loading a project resets the flash release modes" — **retracted**
+
+`102.f4` came back as `01 00 00 00 00 00` because **the operator reset those
+modes by hand**, not because loading a project clears them. The SMOKE reversion
+noted in FX-07 remains a single unexplained observation rather than the general
+behaviour that entry claimed.
+
+### EXP-06 — a prediction refuted in the middle of an otherwise exact result
+
+Predicted, as the discriminator for the DMX address base: `f12.f3 = 115.f2 − 1`
+(base 0 against base 1). Measured: **exact equality — both are base 0.**
+
+The rest of the Rosetta pair held: profiles field for field, preset names, and
+the FX tuples — though not as predicted either. The four 81-byte tables are
+**banks per effect** (row *e* = the parameters of effect *e*), not tuples per
+group; 21/21 engine×preset. The effect id is the **row index**, and it stayed
+invisible because it was being looked for as a value.
+
+### F30-02 — element 7 refuted the share rule that six derived rows had assumed
+
+Predicted for `inward hard`: Amber 1,2,9,10 · Cyan 3–8. Measured: **Amber
+1,2,3,8,9,10 · Cyan 4–7** — direction right, shares wrong. Seven of the eight
+captures were exact; this one corrected the distribution rule, which F30-03 then
+closed at three colours in both geometries.
+
+`FLASH` also turned out to make a group's pads **momentary**, not a spatial
+layout.
+
+### F7-03 and F7-04 — two predictions the author got wrong, kept as written
+
+- **F7-03**: predicted `f16` slice 1 (Move) = 0, reading "engine stopped" off a
+  photograph of the `MOVE FX` tiles. Measured **4 = C**: the engine was on. The
+  screen reading was wrong, or the operator lit it while setting the page, and
+  nothing in the photographs can tell which.
+- **F7-04**: the same box was left **empty** on purpose after that miss.
+  Measured 3 = A+B. The abstention cost the shot nothing.
+
+Both entries also carry a method note against themselves: the probabilities were
+published **before reading** the file, but the operator had already measured. The
+protection against retrospective confirmation holds — nothing had been read —
+but "published before the measurement" does not apply, and the commit date alone
+would have suggested otherwise.
+
+### SCREEN-02 — one of six measures refuted its prediction (2026-08-31)
+
+Predicted that `mode presets` would move the panel to the preset screen. It
+reports `wolfmixMode: 5` and the panel **stays on HOME**. Recorded as false
+rather than rewritten; the measured partition is in the table.
+
+### GUARD-01 — one of nine measures refuted its prediction (2026-08-31)
+
+The pre-deploy archive failure surfaced a bare `PermissionError` instead of the
+named refusal the prediction claimed. Fixed in the same session — the message
+now reads "Pre-deploy archive failed, nothing was uploaded: …" — and re-measured.
+
+### The unnumbered ones, for completeness
+
+- **ACC-03's "closed vocabulary"** reading of `f4`: retracted by F4-01, which is
+  itself retracted by F4-02. The display bug ACC-03 hit still has no cause.
+- **`f30` read as a scalar** replicated eight times: refuted by one photograph
+  of the device, then by F30-04's `[4, 3, 8, 0…]` — the first non-uniform `f30`
+  ever observed, after 2033 corpus presets carrying the same value on all eight
+  groups.
+- **`165.f16` slice 5 "always 255"**: `correlated` over 2446 presets, refuted
+  when the device's own writer put the mask of the groups each preset addresses
+  there (GEN-03).
+- **`f2` of the FX sub-message read as "speed %"** since ACC-04: it is the
+  **fade**. The speed is `f9`, and a whole campaign was framed as a three-way
+  permutation that was really a four-way, because `f2` already carried a name
+  and was never put back on the table (FX6-02).
+- **Record 155 "the 4 FX sequences"**, `device-confirmed`: the beam sequencer
+  was hunted in an opaque blob (161) while the answer sat in 155 behind `f2`, a
+  field named "sequence flavour" and never opened (FX6-05).
+
+## Three ids mean two things each
+
+Found while building this file, and worth more than the entries around it: three
+ids were reused for **different experiments**. A citation that gives only the id
+is ambiguous for these three, and every citation in the tree has been checked
+against the intended one.
+
+| id | first use | second use |
+|---|---|---|
+| `SCREEN-02` | 2026-08-27 — how to leave a modal screen | 2026-08-31 — which modes actually move the panel |
+| `EXP-07` | 2026-08-25 (planned) — change a Beam FX type | 2026-08-31 — single-variable differentials on a variant-B project |
+| `GOBO-01` | 2026-08-26 — the five static gobo features (**refuted**) | 2026-08-30 — where the gobo icon library lives |
+
+They are **not renumbered**: a published id is a citation target, and rewriting
+one to tidy the ledger is the same move as rewriting a refuted prediction. The
+ambiguity is recorded instead, which is what this repository does with
+ambiguity everywhere else.
+
+## The register
+
+`SPEC §` is filled where the source states it; a dash means the link has not
+been made, not that there is none.
+
+### Acceptance of files we wrote — the write chain
+
+| id | date | manipulation → result | status | SPEC § |
+|---|---|---|---|---|
+| EXP-01, EXP-02, EXP-03, EXP-04 | 2026-08-25 | **planned only**: rename a project, rename a preset, one FX parameter, a null round trip. Superseded by ACC-01…04 and by the corpus round trip. | planned | — |
+| ACC-01 | 2026-08-25 | A copy of `rig-a` with record 101 rewritten, imported into WTOOLS 1.6.3 and synced to the W1 → accepted, **stored byte for byte identical**, opened on the device. The variant-A container, the SHA-1 header and the 101 encoding all land at once. | device-confirmed | §2 |
+| ACC-02 | 2026-08-25 | The same chain with a Color FX and dimmers added → the preset **name** applied, the FX and dimmers **ignored**. First sign that a mask gates what the W1 reads. | device-confirmed (name) | §5 |
+| ACC-03 | 2026-08-25 | Two masks tried (`f4` = 25, then 255 + flag) → 25 produced a **UI bug** on the device, 255 was accepted and still ignored. Read as "`f4` is a closed vocabulary" — retracted by F4-01, whose own reading was then retracted by F4-02. The display bug still has no cause. | refuted | — |
+| ACC-04 | 2026-08-25 | In-place edit of factory preset `Carnival`, `f7` 3 → 2 → the device shows a colour chaser. The preset-edit chain works end to end. Its by-product — reading `f2` as "speed %" — cost a whole campaign four days later (FX6-02). | device-confirmed | §5.2 |
+| ACC-05 | 2026-08-25 | Planned discriminator for `f5` (the 16-bit pad mask) and the pads↔UI relation. Closed from the corpus instead, without generating a file. | planned, closed on corpus | §5.2 |
+| ACC-06 | 2026-08-25 | Built (`corpus/experiments/ACC-06/build.py`): separate speed `f2` from `f9`, and read the second varint of the pad mask. The speed half was **answered the other way round** four days later — `f9` is the speed (FX6-02). | superseded | §5.2 |
+| EXP-05 | 2026-08-31 | Duplicate the variant-**C** project under WTOOLS 2.0.2 → **refuses to open**: "the project comes from too old a version". The 6→8 migration path is closed on this machine. Rival 3 of 3 won. | observed | §2.3 |
+| EXP-05bis | 2026-08-31 | Fallback, duplicate a **v7** project → WTOOLS 2.0.2 offers no duplication at all; done on the W1, and the store failed with `invalid wire_type` on both sides. Nothing was written. | observed | §2.3 |
+| EXP-06 | 2026-08-31 | The **Rosetta pair**: the same show in both serialisations. Profiles, patch and preset names align field for field; the base-0/base-1 discriminator is **refuted** (both base 0); the FX tables are **banks per effect**, and the effect id is the row index. | device-confirmed | §2.3, §5.2 |
+| EXP-07 | 2026-08-31 | Three single-variable edits on a variant-B duplicate. (c) gobo rename → `145[A][0].f3`, the RENAME-01 field, written by the device this time. (b) Color FX speed 50 → 83 → `f9`, but the save **recaptures** the whole preset. (a) DMX address 17 → 18 → exactly three records: `115.f2`, the eight `106` entries of that fixture, and `120`'s derived header. | device-confirmed / validated | §7 |
+| EXP-08, EXP-09 | 2026-08-25 | **Planned only**: isolate `f28` (position) and `f31` (static colour) with single-pad edits. Both fields were later measured by other routes (POS-07, GEN-01/03). | planned, superseded | §5.3 |
+
+### Record 102 — the flash FX settings
+
+| id | date | manipulation → result | status | SPEC § |
+|---|---|---|---|---|
+| FX-01 | 2026-08-25 | `STROBE` moved FLASH → TOGGLE and saved → **exactly one byte** of `102.f4` changed, at index 1. The operator's independent report that `WOLF` was already TOGGLE matched index 0. | device-confirmed | §4 |
+| FX-02 | 2026-08-25 | Five release modes set at once, prediction `01 00 01 02 03 04` published first → **exact match, five bytes**. The whole enumeration (FLASH / TOGGLE / 1 s / 5 s / 10 s) is settled. | device-confirmed | §4 |
+| FX-03 | 2026-08-25 | A save in which the operator opened the MOVE FX sequence editor → record **155** moved for the only time in five controller saves. Recorded as save noise, and it later mattered: 155 is the sequencer (FX6-05). | observed | §4 |
+| FX-04 | 2026-08-25 | Four consecutive saves (strobe 100 %, speed 8×, group A excluded, speed 2×) → `f9` = STROBE speed 1–100, `f7` = SPEED multiplier, `f8` = excluded-group bitmask. Record 102 was the only record that changed. | device-confirmed / correlated | §4 |
+| FX-05 | 2026-08-25 | SPEED 2× → 4× → `f7` = 4, which rules out a plain list index (it would have written 3). | correlated | §4 |
+| FX-06 | 2026-08-25 | SPEED → 0.5× → `f7` = **1**. A literal multiplier cannot store 0.5, so `f7` is an enumeration that coincides with the multiplier on the integer steps and reserves 1 for the half. | device-confirmed | §4 |
+| FX-07 | 2026-08-25 | Seven settings in one save → `f5` = SMOKE fan, `f6` = SMOKE intensity, both by unique value. One pair could not be separated by this save, and FX-08 separated it. SMOKE's release mode reverted on its own, unexplained and never reproduced. | device-confirmed | §4 |
+| FX-08 | 2026-08-25 | BLINDER fade-out 2 s → 1 s and SPEED FREEZE → 2× → the FX-07 collision resolves: `f2` = BLINDER fade-out. Record 102 readable end to end. | device-confirmed | §4 |
+| FX-09 | 2026-08-25 | BLACKOUT excludes D, STROBE excludes A **and** B → `f8` 1 → 3: the exclusion field is a genuine bitmask. Master brightness 80 % **wrote nothing** — the first setting shown not to be project data. | device-confirmed | §4 |
+| FX-10 | 2026-08-25 | WOLF excludes group F → `f10` = 32. Record 102 is closed except `f11`, which F11-01 then measured as inert. | device-confirmed | §4 |
+| F11-01 | 2026-08-26 | `102.f11` written ourselves, 100 → 0, uploaded and compared → **no visible change, and 2048 DMX channels identical** over two 12-second envelopes; then two more with the **blinder active**, 0 channels differing while the blinder itself plainly moves 48. The BLINDER hypothesis is refuted; the field is unattributed and inert. | correlated | §4 |
+| F11-03 | 2026-08-26 | `Button brightness` 100 % → 14 % → **not one record changed**. The setting is controller-global. The prediction it was meant to test could not have been tested — see the refutations above. | observed (refuted) | §4 |
+
+### Record 165 — the preset, and its masks
+
+| id | date | manipulation → result | status | SPEC § |
+|---|---|---|---|---|
+| F4-01 | 2026-08-26 | Six `PRESET EDIT` screens photographed, no write → `f4` is a **bitmask**, not an enumeration (`Searchlight` lights three toggles at once). The bit assignments it published are **retracted** by F4-02. | shape device-confirmed, bits retracted | §5.1 |
+| F4-02 | 2026-08-26 | Two toggles switched off on two presets, one save → **`f10`** moved, `f4` did not. `f10` is the six toggles in screen reading order, a set bit meaning **OFF**; six photographs re-read without a contradiction. Then confirmed in reverse, byte for byte: toggling off, on and off again returns the project to identical bytes. | device-confirmed | §5.1 |
+| F4-03 | 2026-08-26 | Corpus cross of `f4` against the `f16` engine masks → `f4` is a **permission mask** over the three engines, one-directional; slice 2 of `f16` is the Beam FX; slice 7 is the strobe (two presets in 2446); slice 5 is the static layer, hypothesized. | correlated | §5.1, §5.4 |
+| F7-01 | 2026-08-26 / 08-27 | First shot, a negative: recalling `Get Moving` moves 110 channels, so `f7` cannot be isolated from an envelope. Second shot on the panel: `f7` is the **Color FX page selector** per group — and both the earlier correlation and its attribution were refuted on the way. | device-confirmed | §5.6 |
+| F7-02 | 2026-08-27 | Group C set to `MOVE FX2` and saved → **nothing moved in record 165**. The rival at p = 0.25 won: a project save does not write the live page; only a `SHIFT` + pad capture does. The version counter incremented while **all 45054 payload bytes stayed identical** — an increment proves nothing about content. | validated → device-confirmed | §5.6 |
+| F7-03 | 2026-08-27 | The same state **captured** into a preset → `f23` = `[0,0,1,0,…]`, exactly as predicted, and `f7` rigorously unchanged. `165.f23` is the Move FX page selector; the record lays its engines out in regular quadruplets. The prediction about `f16` slice 1 was **wrong** (see refutations). | validated | §5.6 |
+| F7-04 | 2026-08-27 | Group A to `BEAM FX2`, captured → `f3` = `[1,0,0,…]`, and the two earlier selectors did not move by a byte. The quadruplet holds on all three engines. The operator's unplanned control — setting B to `BEAM FX1` explicitly — showed that a hand-set page 1 is **indistinguishable** from a page never set. | validated | §5.6 |
+| F11-02 | 2026-08-26 | Four `f11` values against six photographed screens → `f11` is **FADE in milliseconds**, every value as predicted. Negative in the same shot: the screen's `COLOR` line does not read `f31`, and where it reads from is open. | device-confirmed | §5.1 |
+| FLASH-01 | 2026-08-26 | `WOLF` latched, preset overwritten, one save → the prediction (`f12`/`f20`) is **refuted**; `f16` slice 6 rises to **511** — all nine slots. Took one of our own identities with it. | device-confirmed | §5.4 |
+| FLASH-02 | 2026-08-26 | `BLINDER` latched → slice **9**, and slice 6 falls back to 0 in the same capture. The positional inference from FLASH-01 is **retracted**: two points were consistent with the order and with other arrangements. | device-confirmed | §5.4 |
+| FLASH-03 | 2026-08-26 | `BLACKOUT` latched → slice **8**, while slice 9 stays up because the key was still down. Two flash engines at once: the slices are independent, not a one-of-N selector. Three points, and still no order. | device-confirmed | §5.4 |
+| FLASH-04 | 2026-08-26 | `SMOKE` latched → **no slice rose**. Closed by FLASH-05's capture, where `SMOKE` was demonstrably held alongside `STROBE` and wrote nothing. | correlated → device-confirmed | §5.4 |
+| FLASH-05 | 2026-08-26 | `STROBE` latched → slice **7**, value **511**, not the 255 that `Fire!` and `Strobe` carry: the flash key and a preset's own strobe engine are different authors. | device-confirmed | §5.4 |
+| FLASH-06 | 2026-08-26 | `SPEED` latched → slice **10**. **Retracts** "SPEED has no slice, by symmetry", and with it the rule that "has an exclusion mask in 102" ⇔ "has a slice in `f16`" — exact on the five measured at the time, false on the sixth. | device-confirmed | §5.4 |
+| FLASH-07 | 2026-08-26 | `SMOKE` alone latched, everything else released → nothing rose. The cleanest form the experiment can take: one key active, the only candidate left, not a bit written. Slice 11 did not move either. | device-confirmed | §5.4 |
+| FLASH-08 | 2026-08-26 | The reverse direction: three presets written with one flash slice each, deployed, recalled → all three fired their predicted key. **But only after a manual reopen** — a deployed project is stored, not live, and `RESTART` does not substitute. | device-confirmed | §5.4, §10 |
+| FLASH-09 | 2026-08-26 | Two preset entries duplicated into a file, deployed → the controller returned 83, not 85. Read as "the device deletes entries it did not create". **Retracted** by PRESET-01: the pre-flight download showed the state had been misattributed. The drop happens at reopen, not at store. | retracted | §5.5 |
+| FLASH-10 | 2026-08-26 | Slices 9 and 10 written into a file and recalled → both fire. The five flash slices are confirmed in **both directions**. Presets 83 and 84 exist, which is what re-opened the FLASH-09 question. | device-confirmed | §5.4 |
+| PRESET-01 | 2026-08-26 | Pre-flight download before the planned experiment → 85 presets, ids up to 84: the previous day's headline **collapses before the experiment runs**. All three predictions then held on the deploy, and `f16` slices 9/10 became device-confirmed in the write direction. | device-confirmed | §5.5 |
+| PRESET-02 | 2026-08-26 | Planned discriminating deploy with `f1` bumped to 83. Overtaken by PRESET-01's result. | planned, superseded | §5.5 |
+| PRESET-03 | 2026-08-26 | A named preset written at page 5 slot 20 (id 99), hands off → the pad does not appear before a manual reopen, and on reopen the panel **rejects the project outright** — the first rejection ever measured. Refuted in an unforeseen direction. | observed | §5.5 |
+| PRESET-04 | 2026-08-26 | The same, with the id gap filled → **dense ids still refuse to load**. The gap was not the variable. | observed | §5.5 |
+| PRESET-05 | 2026-08-26 | One entry, a 23-byte name → the loader refuses. The **19-byte name limit** is the loader's, and exceeding it bricks the project open. | device-confirmed | §5.5 |
+| PRESET-06 | 2026-08-26 | The same with a 16-byte name → it loads. The A/B pins the failure on name length and clears the rest. | device-confirmed | §5.5 |
+| PRESET-07 | 2026-08-26 | A sparse layout, matching what the device's own save writes → loads. `SET_PRESET.f2` re-read as the entry **position**, 0-based and clamped — itself later refuted by RECALL-01/RAW-01. | device-confirmed, then refuted | §5.5, §10 |
+
+### Static layers — colour, gobo, position
+
+| id | date | manipulation → result | status | SPEC § |
+|---|---|---|---|---|
+| F29-01 | 2026-08-26 | Three read-only DMX envelopes, nothing written → the static gobo index is **0-based**, 255 = none. All three matched the published 0-based prediction; the 1-based alternative predicted different values. Closing envelope 2048/2048 against baseline. | device-confirmed | §5.3 |
+| F30-01 | 2026-08-26 | Four read-only captures → five stored `PATTERN` values read off factory presets, and the eleven-entry icon list read off the encoder. **Retracts** "one scalar replicated eight times" — the screen shows three groups on different values at once. | device-confirmed | §5.3 |
+| F30-02 | 2026-08-26 | The whole list walked live on group B, eight captures, each predicted in writing first, **nothing written** → seven exact; element 7 corrected the share rule. `FLASH` makes a group's pads **momentary**, not a spatial layout. | device-confirmed | §5.3 |
+| F30-03 | 2026-08-26 | Two more captures at three colours in both geometries → the distribution rule, complete: deal in ascending pad order over the run, split as evenly as possible, remainder to the earliest colours. Enough to generate a static look for any rig. | device-confirmed | §5.3 |
+| F30-04 | 2026-08-26 | One save, three groups on three patterns with three colour selections → `f30 = [4, 3, 8, 0…]` and three different masks, **every value exact**. The first non-uniform `f30` ever observed, after 2033 corpus presets carrying one value on all eight groups. | device-confirmed | §5.3 |
+| GOBO-01 | 2026-08-26 | Five `STATIC GOBO` features set on group A, downloaded → **refuted on the published branch**: the features are live state and a save does not write them. It refutes the experiment, not the five-arrays reading. | refuted | §5.3 |
+| GOBO-01 | 2026-08-30 | Where the gobo icon library lives: a table of 800 30-byte entries at the tail of the resource flash, each pointing at a 24×24 RGB565+alpha icon; the entry index **is** the gobo id read from `145.f2`. | validated | §3.4 |
+| GOBO-02 | 2026-08-26 | The corrected experiment — features set, then `SHIFT` + tap to capture, then save → the five gobo features named. **Retracts** GOBO-01's guess at which fields they were. | device-confirmed | §5.3 |
+| PAL-01 | 2026-08-27 | A palette colour (record 140) written by us and recalled → the written pad comes out at the channel, exactly. The last approximation on the intention → DMX path closes. | device-confirmed | §3.3 |
+| RENAME-01 | 2026-08-30 | Eleven gobo names written outside the device and deployed → all eleven appear on their pads after a reload. Names cap at **19 UTF-8 bytes** (unmeasured here, taken from PRESET-05, so the tool refuses longer). | device-confirmed | §3.4 |
+| SORT-01 | 2026-08-30 | The `f3 = 14` ranges of record 111 permuted, each keeping its DMX bounds → the page reorders exactly, and the firmware accepts a **non-monotonic** range list without re-sorting. The wire order **is** the pad order. | device-confirmed | §3.4 |
+
+### Positions — records 150, 151 and 106
+
+| id | date | manipulation → result | status | SPEC § |
+|---|---|---|---|---|
+| POS-01 | 2026-08-26 | One read-only capture, `Crowd` recalled on group A, 301 frames → tilt exact six for six; `106.f5`/`f6` are the **travel limits**. Pan missed by rounding and decoded `FAN` by the miss. | device-confirmed (limits), correlated (FAN) | §6 |
+| POS-02 | 2026-08-26 | The discriminator: `Ceiling` stores `FAN = 50 %`, so the ramp must collapse → both halves held, every fixture at 50 % of its own band. | device-confirmed | §6 |
+| POS-03 | 2026-08-26 | A moving head **detached** for independent control, one save → exactly two records moved; record **151** is the detached-fixture positions, and `150.f1`/`f2` are a slice of it. Its own prediction was built on the wrong model and was withdrawn before it was ever measured. | device-confirmed | §6 |
+| POS-04 | 2026-08-26 | Two photographs of the `POSITION` editor → record 151 decoded end to end, with no measurement at all. | device-confirmed | §6 |
+| POS-05 | 2026-08-26 | `Ceiling` recalled after the detach → **four channels changed in 2048**, and the 16-bit model turns an approximation into a measured value. | device-confirmed | §6 |
+| POS-06 | 2026-08-26 | A second detach with a large `TILT OFFSET` → `151.f1` is the **fixture index**, and it had been there all along. Retracts a line written earlier the same day. | device-confirmed | §6 |
+| POS-07 | 2026-08-26 | `Crowd` recalled after the second detach → **two channels changed in 2048**, exactly the pair `151[5].f1` names. Every term measured, none fitted, across four captures and 24 predicted values. | device-confirmed | §6 |
+
+### The patch, and the DMX mapping table
+
+| id | date | manipulation → result | status | SPEC § |
+|---|---|---|---|---|
+| MAP-01 | 2026-08-31 | Where the DMX mapping table lives → record **130**, in the project file. Closes lead L5, and the trap it cost is written into `AGENTS.md`: a record that already carries a name is not a record that was measured. | device-confirmed | §7.8 |
+| MAP-02 | 2026-08-31 | Two sub-steps, two saves, one trip to the panel → the table reads in full. | device-confirmed | §7.8 |
+| MAP-03 | 2026-08-31 | A channel moved away and back, then saved → **nothing is written**: a genuine write and its return leave no trace. "Touching an entry moves it" is refuted, second counter-example. | observed | §7.8 |
+| MAP-04, MAP-05, MAP-06 | 2026-08-31 | Eleven saves, one variable each, a download between every one → the table is closed, and MAP-06 verifies the **write** on the device. | device-confirmed | §7.8 |
+| MAP-07 | 2026-08-31 | Our encoder reproduces the factory table byte for byte, with no device at all. | validated | §7.8 |
+| MAP-08 | 2026-08-31 | A file we wrote deployed onto a device holding 13 entries **in a different order** → read back unchanged: the device renormalises nothing. Deleting and ordering are ours to do. | device-confirmed | §7.8 |
+| MAP-09 | 2026-08-31 | The ten remaining functions in one save → the table is complete, and the writer covers all of it. | device-confirmed | §7.8 |
+| MAP-10 | 2026-08-31 | Ten entries **created** by our encoder, deployed → accepted **at the byte**, not merely "a file that loads". Deliberately using values the factory never writes, so a wrong field would be visible and refutable. | device-confirmed | §7.8 |
+| MAP-11 | 2026-08-31 | The return to factory, produced by the show compiler from the device's own state → record 130 identical byte for byte to the factory table. | device-confirmed | §7.8 |
+
+### The USB protocol
+
+| id | date | manipulation → result | status | SPEC § |
+|---|---|---|---|---|
+| MODE-01 | 2026-08-25 | `watch-mode` polling `GET_SETTINGS` while the operator walked the front panel, **zero writes** → 19 modes named in firmware 2.0.18, 14 device-confirmed. `SMOKE` and a single `BPM TAP` change no mode. | device-confirmed | §10.2 |
+| SETP-01 | 2026-08-26 | `SET_PRESET` payload discovery, one encoding at a time → recall by id works, missing ids are silent no-ops. The reading of *what the payload is* was wrong and is repaired by RAW-01. | device-confirmed | §10.3 |
+| SETP-02 | 2026-08-26 | Four candidate reload events → **no protocol event replaces the live copy**. Judged on a discriminator later refuted (RECALL-01); re-proved by RELOAD-03 on a repaired one. | device-confirmed, via RELOAD-03 | §10.4 |
+| RELOAD-01 | 2026-08-26 | Static read of WTOOLS 2.0.2, then an attempted USB capture → **the capture is not available on this machine** (`XHC20` refuses to come up). The static read gave names only, `[observed]`. | observed | §10.4 |
+| RELOAD-02 | 2026-08-27 | A WTOOLS push, judged on the repaired discriminator — counting distinct appearances over 10 `SKIP_PRESET` → a push **does not** make the pushed project live. | device-confirmed | §10.4 |
+| RELOAD-03 | 2026-08-27 | The four SETP-02 negatives replayed on the repaired discriminator, under the same UUID → they hold. The original result was not an artefact. | device-confirmed | §10.4 |
+| RELOAD-04 | 2026-08-27 | Verdict for the session: **no reachable event reloads the live copy**. Only a manual open on the panel does — and that screen (mode 26) *is* reachable remotely, which is the consolation prize. | device-confirmed | §10.4 |
+| RELOAD-05 | 2026-08-27 | The instrument calibrated on **both** arms: the discriminator had never been seen to fire, so the 6-entry file was opened by hand and the series replayed. | device-confirmed | §10.4 |
+| RECALL-02 | 2026-08-27 | One continuous DMX stream with timestamped transitions, on the very project SETP-01 was measured on → what event 41 actually does. Kills "f1 = 22 → Deep Green" outright rather than merely contesting it. | device-confirmed | §10.3 |
+| RECALL-03 | 2026-08-27 | Bytes recalled one at a time against a live copy whose ids and positions diverge only at the tail → the byte is the **id**, not the position. The position reading is refuted twice over. | device-confirmed | §10.3 |
+| RECALL-04 | 2026-08-27 | A live copy of 6 entries, ids 0…5, so every id ≥ 6 is absent → **an absent id does nothing**, and the two rival readings predicted opposite frames. | device-confirmed | §10.3 |
+| RECALL-05 | 2026-08-27 | The **interior** hole, which RECALL-04 could not reach: every absent byte it fired was above the highest present id → an interior hole does nothing either. A single-variable differential in the same shot showed a recall does not touch the position layer. | device-confirmed | §10.3 |
+| RECALL-06 | 2026-08-27 | Ids ≥ 128, the last unprobed range of the byte → recall is exact beyond 127. Refutes, a second time, the idea that something masks the high bit. | device-confirmed | §10.3 |
+| RAW-01 | 2026-08-27 | Found by sweeping `SET_MODE`'s field numbers → **the payload is not protobuf**: `payload[0]` is the index, and the device had been reading our *tag* byte all along. Re-reads the RECALL-01/02 retractions: the addressing existed, our encoding hid it. | device-confirmed | §10.1 |
+| RAW-02 | 2026-08-27 | Five payloads per event, mode re-read each time → the **second byte is not read**. | device-confirmed | §10.1 |
+| MODE-39/40 | 2026-08-27 | Raw indexes 39 and 40 sent from HOME, with a COLOR FX escape after each → 39 reports 39 and leaves the screen alone; 40 lands the device on mode **42**. The behaviour is device-confirmed; the *names* are hypothesized by elimination. | device-confirmed (behaviour) | §10.2 |
+| MODE-40/42 | 2026-08-27 | Index 40 → the **USB STICK** screen, with project, fixture and full-backup import/export. Reachable only by raw index. | device-confirmed | §10.2 |
+| PROJECTS-01 | 2026-08-27 | Index 26 → *main menu → Open*, with the list of six stored projects on screen. This is the screen that reloads, and it is reachable remotely. | device-confirmed | §10.2 |
+| SCREEN-01 | 2026-08-27 | A sequence of indexes at 5-second intervals, operator watching → **the reported mode is not the displayed screen**. One clause of the entry was retracted the same day. | device-confirmed | §10.2 |
+| SCREEN-02 | 2026-08-27 | How to leave a modal screen, and what that says about the menu. | device-confirmed | §10.2 |
+| SCREEN-02 | 2026-08-31 | Which indexes actually move the panel → **pushable {1, 3, 4, 26}, inert {0, 5, 16}**. The *target* decides, not the screen you start from; "only modals are pushable" was refuted by indexes 4 and 5, and one of the six measures refuted its own prediction. WTOOLS uses the same `setWMMode`, so there is no private channel. | device-confirmed | §10.2 |
+| SCREEN-03 | 2026-08-27 | The three indexes that would not move the screen, replayed on **another live copy** → the panel yields to keys, not to `SET_MODE`. Two distinct paths, and nothing has yet measured which one the panel follows. | device-confirmed | §10.2 |
+| LINK-01 | 2026-08-27 | Seen five times in one day, always identically: after a pause, or after another process held the port, the **first** request times out and the next succeeds. | observed | §10.1 |
+
+### Firmware provenance
+
+| id | date | manipulation → result | status | SPEC § |
+|---|---|---|---|---|
+| FW-01 | 2026-08-27 | The vendor's own changelog, read on this machine → `165.f10` bit 5 was called **`DIMMER`** until 2.0.15 and `OTHER` since. The measuring firmware (2.0.18) is later than the rename. | observed | §5.1 |
+| FW-02 | 2026-08-27 | Same source → `f32`–`f35` are dated to firmware 2.0.5, which dates schema 10. Three corroborations in one line, on a reading already device-confirmed. | observed | §5.1 |
+| FW-03 | 2026-08-27 | The discriminator FW-01 left planned: write bit 5 **and nothing else** → `OTHER` gates the dimmer of a static cue and nothing more, on this scope. It is what lifts GEN-02's bit back from `hypothesized`. | validated | §5.1 |
+
+### The FX sub-message
+
+| id | date | manipulation → result | status | SPEC § |
+|---|---|---|---|---|
+| FX2-01 | 2026-08-27 | "Double Trouble": firmware 2.0 doubles the FX engines, and the registry is asked whether it can see it → an engine that is on stores two page configurations, `correlated 45/45` — **refuted the same evening** by one preset composed at the panel. | refuted | §5.6 |
+| FX6-01 | 2026-08-30 | The three FX screens of the manual read side by side → the registry's "four properties for three fields" count was **wrong**. What it retracts is a count, not a status. | observed | §5.2 |
+| FX6-02 | 2026-08-30 | `Phase` / `Size` / `Fade` set to mutually distinct values absent from the factory vocabulary, `LIVE EDIT` off → the three-way permutation was a **four-way**: `f2` is the fade and the speed is `f9`, after ACC-04 had left `f2` named "speed %" and unexamined for four days. | validated | §5.2 |
+| FX6-03 | 2026-08-30 | The Beam FX `Feature`, three independent sources pointing at one slot and none having measured it → measured. | validated | §5.2 |
+| FX6-04 | 2026-08-30 | `f3` on the movement engine → the **`Fan`**, one byte out of 46414. | validated | §5.2 |
+| FX6-05 | 2026-08-30 | The beam sequencer, hunted in the opaque record 161 → it is in record **155**, behind `f2`, a field that already carried the name "sequence flavour" and had never been opened. 155 was `device-confirmed` with a reading that was too general. | validated | §5.7 |
+
+### The show generator, and the guards
+
+| id | date | manipulation → result | status | SPEC § |
+|---|---|---|---|---|
+| GEN-01 | 2026-08-27 | Intention → `.wpj` → deploy → recall, with the rig read from the donor rather than described → `f31` written comes out exactly as it reads; the **dimmers do not**. | device-confirmed | §8 |
+| GEN-02 | 2026-08-27 | The operator settles the three open readings, and none wins: the faders are all at 100 % → the missing dimmer was a **controller setting**, off the whole time. `f17` is a percentage and reaches DMX through `106.f5`/`f6`. Downgrades the `OTHER` attribution — see the refutations. | device-confirmed | §8 |
+| GEN-03 | 2026-08-27 | Five cues identical but for `f31`, to discriminate the record-102 anomaly → the anomaly is that **the live copy is not the file**: with `LIVE EDIT` on, one gesture at the panel rewrites a cue's live copy while the file stays as uploaded. Refutes "`f16` slice 5 is always 255" (`correlated` over 2446 presets), and the fixture index is sequential with 0 omitted. | device-confirmed | §5.4, §8 |
+| GUARD-01 | 2026-08-31 | The phase-1 refusals, on the device: nine measures checking that each guard refuses **before** anything reaches the link and that none breaks a path that worked → eight conforming, one refuted and fixed in the session. | device-confirmed | §10 |

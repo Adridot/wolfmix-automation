@@ -72,6 +72,11 @@ takes to be writable at all.
 ## Where truth lives
 
 ```text
+research/evidence.md   the ledger: every finding, one line each — date, what
+                 was done, what came out, the status it ended at. Refutations
+                 and status downgrades are written out in full at the top.
+                 Every id cited anywhere in the tree must resolve to an entry;
+                 `make check` fails when one does not.
 research/        the lab notebook. ALWAYS the most current. Mostly English
                  since its type-102 entry; the oldest and newest sections
                  are French.

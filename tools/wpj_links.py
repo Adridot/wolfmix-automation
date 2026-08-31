@@ -28,6 +28,9 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from wpj_privacy import fichiers_suivis
 
+REGISTRE = "research/evidence.md"
+IDENTIFIANT = re.compile(r"\b([A-Z][A-Z0-9]{1,9}-[0-9]{2})\b")
+
 LIEN = re.compile(r"\[[^\]]*\]\(\s*<?([^)>\s]+)>?[^)]*\)")
 DEFINITION = re.compile(r"^\s{0,3}\[[^\]]+\]:\s*<?([^>\s]+)>?")
 EXTERNES = ("http://", "https://", "mailto:", "ftp://", "//")
@@ -88,6 +91,39 @@ def casses(documents, suivis):
     return trouves
 
 
+def identifiants(chemin=REGISTRE):
+    """The finding ids the evidence registry defines."""
+    try:
+        with open(chemin, encoding="utf-8") as flux:
+            return set(IDENTIFIANT.findall(flux.read()))
+    except OSError:
+        return set()
+
+
+def orphelins(suivis, connus):
+    """(file, line, id) for every finding id with no entry in the registry.
+
+    A citation that resolves to nothing is the same failure as a dead link, and
+    it is the one this repository would notice last: an id outlives the section
+    that defined it, and the reader is sent to a page that no longer says
+    anything.
+    """
+    trouves = []
+    for chemin in suivis:
+        if chemin == REGISTRE:
+            continue
+        try:
+            with open(chemin, encoding="utf-8") as flux:
+                texte = flux.read()
+        except (OSError, UnicodeDecodeError):
+            continue
+        for numero, ligne in enumerate(texte.splitlines(), 1):
+            for trouve in sorted(set(IDENTIFIANT.findall(ligne))):
+                if trouve not in connus:
+                    trouves.append((chemin, numero, trouve))
+    return trouves
+
+
 def demo():
     import tempfile
     texte = (
@@ -128,8 +164,24 @@ def demo():
             assert casses(["doc.md"], suivis) == []
         finally:
             os.chdir(avant)
+    # An id with no entry in the registry is caught, and only that one. The
+    # fixture id is assembled here rather than written out: a literal would be
+    # a citation, and this check reads its own source like any other file.
+    absent = "FX" + "-99"
+    with tempfile.TemporaryDirectory() as tmp:
+        document = os.path.join(tmp, "doc.md")
+        with open(document, "w", encoding="utf-8") as flux:
+            flux.write(f"see {absent} and ACC-01\n")
+        avant = os.getcwd()
+        os.chdir(tmp)
+        try:
+            trouves = orphelins(["doc.md"], {"ACC-01"})
+        finally:
+            os.chdir(avant)
+    assert trouves == [("doc.md", 1, absent)], trouves
     print("self-check ok: inline and reference links, fenced blocks ignored, "
-          "anchors and external links out of scope", file=sys.stderr)
+          "anchors and external links out of scope, orphan finding ids caught",
+          file=sys.stderr)
 
 
 def main(argv):
@@ -142,7 +194,21 @@ def main(argv):
         for document, numero, cible in trouves:
             print(f"  {document}:{numero}  -> {cible}", file=sys.stderr)
         return 1
-    print(f"wpj_links: {len(documents)} documents, every local link resolves",
+    connus = identifiants()
+    if not connus:
+        print(f"wpj_links: {len(documents)} documents, every local link "
+              f"resolves — but {REGISTRE} is unreadable, so no finding id was "
+              "checked", file=sys.stderr)
+        return 1
+    perdus = orphelins(argv or suivis, connus)
+    if perdus:
+        print(f"wpj_links: {len(perdus)} citation(s) of a finding id with no "
+              f"entry in {REGISTRE}:", file=sys.stderr)
+        for chemin, numero, trouve in perdus:
+            print(f"  {chemin}:{numero}  {trouve}", file=sys.stderr)
+        return 1
+    print(f"wpj_links: {len(documents)} documents, every local link resolves; "
+          f"{len(connus)} finding ids in the registry, every citation resolves",
           file=sys.stderr)
     return 0
 

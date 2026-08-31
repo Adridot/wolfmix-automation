@@ -21,7 +21,9 @@ Three conventions hold everywhere:
   job.
 - **`wpj_links.py` checks the cross-references.** Every Markdown link in a
   tracked document must land on a tracked path; a renamed file that leaves a
-  document pointing at nothing fails `make check`.
+  document pointing at nothing fails `make check`. It also checks **finding
+  ids**: every `ACC-01`-shaped citation anywhere in the tree must resolve to an
+  entry in [`research/evidence.md`](../research/evidence.md).
 - **`wpj_counts.py` checks the figures.** Counts that move as the work moves
   — decoded and passthrough records, identities, checks — are computed from
   the code. A document that states one marks it with `<!--count:name-->` or

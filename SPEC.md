@@ -1500,7 +1500,8 @@ on the panel does. The screen that performs it — mode 26, *main menu → Open*
 Measured by polling `GET_SETTINGS` while the operator walked the front panel,
 returning to HOME between steps so the capture self-synchronises on mode 0
 (MODE-01). **Zero writes.** Names are the vendor's own `WM_MODE_*` identifiers;
-where firmware 2.0's editor renamed one, both are given.
+where firmware 2.0's editor renamed one, both are given. The raw capture is
+[`research/raw/mode-01-session.jsonl`](research/raw/mode-01-session.jsonl).
 
 | Value | Reached by | Name |
 |---|---|---|

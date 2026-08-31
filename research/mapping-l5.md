@@ -30,6 +30,11 @@ aucune mesure appareil dans cette passe. Prédictions écrites avant MAP-01.
 | 0–7 | index (0 omis) | **20** | index | 1 | 1 |
 | 8 | absent | **27** | 8 | absent | 1 |
 
+> **Rétracté le 2026-08-31 par MAP-01.** `f6` n'est pas un index de slot :
+> c'est le **canal DMX IN** de la mapping, en base zéro. Il coïncidait avec le
+> rang parce que la carte d'usine est l'identité. Voir
+> `research/mapping-dmx-plan.md`, « MAP-01 mesuré ».
+
 Les 9 slots de 125 (8 groupes + hors-groupe), une config par slot jamais
 touchée par l'opérateur. Compatible « carte vide par défaut » comme avec
 n'importe quelle config par-groupe par défaut. Le corpus ne peut pas trancher.

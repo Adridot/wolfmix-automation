@@ -158,3 +158,95 @@ cette fois, un preset quelconque, DMX IN = **9**, sauvegarder, télécharger.
 Si le `9` atterrit **aussi** dans 130, les cinq catégories partagent un record
 et 130 est *la* carte ; s'il atterrit ailleurs, la carte est éclatée par
 catégorie et B vient de trouver le second morceau.
+
+---
+
+# MAP-01 mesuré — 2026-08-31 — la carte est dans le fichier, record 130
+
+## Les trois états
+
+| Fichier | version | État au panneau | 130 |
+|---|---|---|---|
+| `pre.wpj` | …390 | aucune mapping touchée | 102 o, l'ordre d'usine |
+| `before.wpj` | …391 | groupe A → **CH1** (posé par accident en vérifiant l'encodeur) | 102 o, **items permutés d'un cran**, contenu inchangé |
+| `after.wpj` | …392 | groupe A → **CH7** | **104 o**, `f6` du dernier item : absent → **6** |
+
+`before` → `after` est un différentiel à variable unique : même groupe, seul le
+canal change. **Record 130 est le seul record dont la charge utile diffère** ;
+tout le reste du fichier est identique, y compris 115, 155 et 161.
+
+## Ce que l'appareil a écrit
+
+Le dernier item passe de 6 à 8 octets par insertion de deux octets, `30 06` —
+tag du champ 6 en varint, valeur 6 :
+
+```
+before  2a 06  2014        3801 4001     f4=20,         f7=1, f8=1
+after   2a 08  2014 3006   3801 4001     f4=20, f6=6,   f7=1, f8=1
+```
+
+> **`130.f6` est le canal DMX IN de la mapping, en base zéro.**
+> CH1 → `f6` absent (= 0), CH7 → `f6` = 6. **[device-confirmed]**
+
+## Ce que ça explique rétroactivement
+
+L'ordre d'usine de 130 est la **carte identité** : l'item de rang *i* porte
+`f6 = i`, c'est-à-dire le canal *i+1*. C'est pour ça que 130 était octet pour
+octet identique sur 51 fichiers — aucun opérateur n'avait jamais changé une
+mapping, donc tous portaient la même carte par défaut.
+
+Et c'est pour ça que poser **CH1 sur le groupe A n'a rien écrit** : le groupe A
+était déjà sur CH1. Le modèle prédit les trois états, y compris celui qui n'avait
+pas de sens quand on l'a mesuré.
+
+## Rétractation — `f6` n'est pas un index de slot
+
+`research/mapping-l5.md` lisait les 9 items comme « les 9 slots de groupe », avec
+`f6 = index`. **Faux.** `f6` est le canal, et il **coïncidait** avec le rang
+parce que la carte par défaut est l'identité. La coïncidence « 9 slots » que la
+note signalait comme suspecte l'était bien — mais elle était fausse d'une façon
+qu'on n'avait pas prévue : ce n'était pas le *compte* qui mentait, c'était le
+*champ*.
+
+Le piège n° 9 du dépôt, une fois de plus : `f6` portait déjà un nom, « index »,
+posé par lecture et jamais par mesure.
+
+## Ce qui n'est toujours pas mesuré
+
+`f2`, `f4`, `f7`, `f8` n'ont **pas** bougé et n'ont donc **pas** de nom. Les
+lectures qui tiennent, non nommées et non écrites :
+
+| Champ | Domaine observé | Lecture candidate, **non mesurée** |
+|---|---|---|
+| `f2` | 0–7, absent sur l'item `f4=27` | l'instance visée dans la catégorie |
+| `f4` | **20** sur 8 items, **27** sur 1 | la catégorie / la cible de la mapping |
+| `f7` | 1, absent sur `f4=27` | — |
+| `f8` | 1 partout | — |
+
+## Un second [observed] sans lecture
+
+Toucher une mapping **déplace son item en fin de liste** : le `pre` → `before`
+est une rotation pure, multiset identique, ordre des records du fichier
+inchangé. Mécanisme non nommé.
+
+## MAP-02 — la prédiction, écrite avant la mesure
+
+Deux sous-étapes, deux sauvegardes, un seul aller au panneau. Chaque diff reste
+à variable unique.
+
+**A · `Group Dimmer` → groupe B → CH20.**
+
+| Issue | p |
+|---|---|
+| l'item qui porte `f2 = 1` prend `f6 = 19` | **0,75** |
+| un autre item prend `f6 = 19` — alors `f2` n'est pas la clé | 0,20 |
+| autre chose | 0,05 |
+| *et*, indépendamment : l'item touché part en fin de liste | 0,60 |
+
+**B · catégorie `Preset` → un preset → CH30.**
+
+| Issue | p |
+|---|---|
+| un item de **130** prend `f6 = 29` — les catégories partagent le record | **0,50** |
+| un **autre record** bouge — la carte est éclatée par catégorie | 0,40 |
+| rien ne bouge — la catégorie `Preset` n'est pas stockée | 0,10 |

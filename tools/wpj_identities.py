@@ -183,8 +183,14 @@ def plages_111(w):
     Trichotomie exhaustive sur le corpus : un canal de 110 est soit
     **non attribué** (pas de `f4`, une unique plage vide), soit le motif
     isolé `f4 = 18` (une unique plage `{f1: 255, f3: 41}`), soit ses plages
-    **pavent [0, 255]** — `f1` du premier à 0, `f1` de chacune suivant le
-    `f2` de la précédente, `f2` de la dernière à 255.
+    **pavent [0, 255]** — une fois triées par `f1` : la première à 0, chacune
+    suivant le `f2` de la précédente, la dernière finissant à 255.
+
+    Le tri n'est pas cosmétique. L'ordre de stockage n'est **pas** croissant en
+    général : réordonner la page gobos permute ces entrées (SORT-01,
+    device-confirmed) sans toucher au pavage. La version antérieure marchait par
+    accident sur un corpus dont aucune page n'avait jamais été réordonnée, et
+    tombe sur le premier projet qui l'a été.
     """
     c110, c111 = _items(w, 110), _items(w, 111)
     pos = 0
@@ -196,7 +202,7 @@ def plages_111(w):
                 f"110[{i}] : plage vide mais le canal porte f4 = {c['f4']}"
             continue
         att = 0
-        for r in tr:
+        for r in sorted(tr, key=lambda r: r.get("f1", 0)):
             if r.get("f1", 0) != att:
                 break
             att = r.get("f2", 0) + 1

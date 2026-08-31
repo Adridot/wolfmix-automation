@@ -110,15 +110,22 @@ SCHEMAS = {
     # device-confirmed sur l'écran POSITION. Voir le registre, « POS-04 ».
     151: {5: ("detachees", {1: ("fixture", "v"), 2: ("focus_offset", "v"),
                             3: ("pan_offset", "v"), 4: ("tilt_offset", "v")})},
-    # 130 : la carte de mapping DMX IN (MAP-01/MAP-02, registre). f4 = la cible
-    # — 20 = dimmer de groupe, 70 = preset, device-confirmed ; 27 = MAIN,
-    # correlated par l'écran. f2 = l'instance dans la cible, l'index de groupe
-    # pour f4 = 20. f6 = le canal DMX IN **en base zéro** : CH1 laisse le champ
-    # absent, CH30 écrit 29. La clé d'une entrée est (f4, f2), jamais son rang :
-    # l'ordre du fil bouge sans que le contenu change. f1 = le nombre d'entrées,
-    # f7 et f8 n'ont jamais bougé et restent sans nom.
-    130: {5: ("mappings", {2: ("instance", "v"), 4: ("cible", "v"),
-                           6: ("canal_dmx_in_base0", "v")})},
+    # 130 : la carte de mapping DMX IN (MAP-01..05, registre). f4 = la fonction
+    # visée — 20 = dimmer de groupe, 27 = MAIN, 70 = preset, 17 = BPM Tap,
+    # 10 = Wolf : ce n'est PAS la catégorie de l'écran, deux entrées de la même
+    # catégorie portent des f4 différents. f2 = l'index de l'instance quand la
+    # fonction est instanciée (groupe 0-7, preset 0-n), et **255** quand elle ne
+    # l'est pas. Le canal DMX IN est sur **16 bits répartis sur deux champs** :
+    # `canal_base0 = f5 * 256 + f6`, le canal affiché valant canal_base0 + 1.
+    # f5 est resté invisible jusqu'à CH300 parce que tout le corpus tenait sous
+    # 256 — mesuré à CH300 (f5=1, f6=43) et CH512 (f5=1, f6=255).
+    # Une fonction non mappée n'a **pas d'entrée** : absence, pas de sentinelle.
+    # La clé d'une entrée est (f4, f2), jamais son rang : l'ordre du fil bouge
+    # sans que le contenu change. f1 = le nombre d'entrées. f7 et f8 valent 1
+    # partout, n'ont jamais bougé, et restent sans nom.
+    130: {5: ("mappings", {2: ("instance", "v"), 4: ("fonction", "v"),
+                           5: ("canal_octet_haut", "v"),
+                           6: ("canal_octet_bas", "v")})},
     160: {5: ("macros", {6: ("nom", "str")})},
     165: {5: ("presets", _PRESET)},
 }

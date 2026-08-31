@@ -563,32 +563,32 @@ def ajout_de_preset():
 def carte_dmx_130(w):
     """130 = la carte de mapping DMX IN, et `f1` en compte les entrées.
 
-    Mesuré sur l'appareil (MAP-01 / MAP-02, registre) : `f6` est le canal
-    DMX IN de l'entrée, **en base zéro** — CH1 laisse `f6` absent, CH7 écrit
-    6, CH20 écrit 19, CH30 écrit 29. `f4` est la cible : **20** = dimmer de
-    groupe, **70** = preset. `f2` est l'instance dans la cible, l'index de
-    groupe pour `f4 = 20` : c'est l'entrée `f2 = 1` qui a pris le canal 20
-    quand l'opérateur a mappé le groupe B, alors qu'elle était en position 0
-    — donc la clé est `f2`, pas le rang.
+    Mesuré sur l'appareil (MAP-01..05, registre). `f4` est la **fonction**
+    visée, pas la catégorie de l'écran : 20 = dimmer de groupe, 27 = MAIN,
+    70 = preset, 17 = BPM Tap, 10 = Wolf — et BPM Tap et Wolf sont deux
+    entrées de la **même** catégorie `Flash` avec des `f4` distincts. `f2` est
+    l'index de l'instance quand la fonction est instanciée, **255** sinon.
 
-    La table est **appendable** : mapper un preset a ajouté une 10e entrée à
-    une table qui en portait 9 depuis toujours, et `f1` a suivi de 9 à 10.
-    Les 9 d'usine sont la carte identité — A–H sur les canaux 1 à 8, MAIN sur
-    9 — ce qui explique que 130 ait été octet pour octet identique sur les
-    51 premiers fichiers : personne n'y avait jamais touché.
+    Le canal DMX IN est sur **16 bits répartis** : `f5 * 256 + f6`, en base
+    zéro. `f5` est resté invisible sur tout le corpus et sur six écritures
+    parce que tout tenait sous le canal 256 ; il apparaît à CH300 (1, 43) et
+    à CH512 (1, 255), les deux exacts. L'encodeur du panneau s'arrête à 512.
 
-    `f7` et `f8` n'ont jamais bougé et n'ont pas de nom.
+    Une fonction non mappée n'a pas d'entrée du tout — retirer une mapping
+    supprime la ligne et décrémente `f1`, il n'y a pas de sentinelle.
+
+    `f7` et `f8` valent 1 partout, n'ont jamais bougé, et n'ont pas de nom.
     """
-    for occurrence, (typ, _) in enumerate(
-            [(t, p) for t, p in w.records if t == 130]):
+    for occurrence, _ in enumerate([t for t, _ in w.records if t == 130]):
         items = _items(w, 130, occurrence)
         annonce = wpj_codec._decode_msg(
             w.get(130, occurrence), {1: ("f1", "uint")}).get("f1", 0)
         assert annonce == len(items), \
             f"130.f1 = {annonce} mais la table porte {len(items)} entrées"
         for i, e in enumerate(items):
-            assert e.get("f6", 0) < 512, \
-                f"130[{i}] : canal DMX IN {e.get('f6', 0)} hors d'un univers"
+            canal = e.get("f5", 0) * 256 + e.get("f6", 0)
+            assert canal < 512, \
+                f"130[{i}] : canal DMX IN {canal + 1} au-delà de l'univers"
 
 
 IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,

@@ -48,3 +48,19 @@ Reste deux lectures rivales :
 | # | Envoi, depuis COLOR FX | Si « la cible décide » | Si « le départ décide » | p |
 |---|---|---|---|---|
 | 6 | `mode presets` (5) | l'écran reste sur COLOR FX | l'écran passe sur PRESET | 0.5 / 0.5 |
+
+## Mesures 7 et 8, prédites avant d'être faites
+
+Mesure 6 : depuis COLOR FX, l'index 5 ne bouge rien. **C'est la cible qui
+décide.** Poussables jusqu'ici : 1 (COLOR FX), 26 (Open). Inertes : 5 (PRESET),
+16 (SETUP). Le seul motif visible est que 1 est une page **FX**.
+
+| # | Envoi | Prédiction | p |
+|---|---|---|---|
+| 7 | `mode move` (3) | l'écran passe sur MOVE FX — les trois pages FX sont poussables | 0.7 |
+| 8 | `mode beam` (4) | l'écran passe sur BEAM FX, même raison | 0.7 |
+
+Si 7 et 8 passent, la règle mesurée devient « les trois pages FX et le modal
+Open se poussent depuis l'hôte ; PRESET et SETUP non », et elle est **utile** :
+c'est ce qu'on peut piloter sans toucher au panneau. Si l'une des deux échoue,
+« page FX » n'est pas le critère et on redescend à une liste d'index.

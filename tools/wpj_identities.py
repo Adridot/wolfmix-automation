@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
-"""Identités structurelles du .wpj variante A, vérifiées sur tout le corpus.
+"""Structural identities of the variant-A .wpj, checked over the whole corpus.
 
-Chaque identité est une contrainte arithmétique entre deux records. Elle est
-soit vraie partout, soit fausse — donc une lecture qui la casse est réfutée
-sans passer par le matériel. Preuve : demo() sur le corpus.
+Each identity is an arithmetic constraint between two records. It is either
+true everywhere or false — so a reading that breaks one is refuted without
+touching hardware. Proof: demo() over the corpus.
 
-Usage : python3 tools/wpj_identities.py   (depuis la racine du dépôt)
+Usage: python3 tools/wpj_identities.py   (from the repository root)
 """
 import sys
 
 import wpj_codec
 import wpjlib
 
-GOBO_FN = 14          # 111.f3 = fonction « gobo » (registre, type 145)
+GOBO_FN = 14          # 111.f3 = the "gobo" function (registry, type 145)
 _ITEMS = {5: ("items", {})}
 
 
 def _varints(hexa):
-    """Octets d'un champ « packed varint » : la liste des valeurs décodées."""
+    """The bytes of a packed-varint field: the list of decoded values."""
     out, v, sh = [], 0, 0
     for c in bytes.fromhex(hexa):
         v |= (c & 0x7f) << sh
@@ -29,29 +29,29 @@ def _varints(hexa):
 
 
 def _items(w, typ, occurrence=0):
-    # une table vide (0 entrée) est légitime — vue sur 130 d'un projet importé
+    # an empty table (0 entries) is legitimate — seen on 130 of an import
     return wpj_codec._decode_msg(w.get(typ, occurrence), _ITEMS).get("items", [])
 
 
 def ranges_par_canal(w):
-    """110[c].f2 == taille de la tranche de 111 qui appartient au canal c."""
+    """110[c].f2 == the size of the slice of 111 that belongs to channel c."""
     c110, c111 = _items(w, 110), _items(w, 111)
     debuts = [c.get("f3", 0) for c in c110] + [len(c111)]
     for i, c in enumerate(c110):
         assert c.get("f2", 0) == debuts[i + 1] - debuts[i], \
-            f"110[{i}].f2 = {c.get('f2', 0)} mais la tranche fait " \
+            f"110[{i}].f2 = {c.get('f2', 0)} but the slice is " \
             f"{debuts[i + 1] - debuts[i]}"
 
 
 def palette_gobo(w):
-    """Chaque f2 du type 145 est un f4 des plages gobo de 111.
+    """Every f2 of type 145 is an f4 of the gobo ranges of 111.
 
-    L'égalité ordonnée (« la palette est dérivée du patch ») a tenu sur tous
-    les projets nés sur l'appareil — et a été RÉFUTÉE le 2026-08-31 par un
-    projet importé de WTOOLS (EXP-06) : sa palette est la sélection de 10
-    slots du côté B (f9 + f31), doublons compris. L'invariant qui survit est
-    l'appartenance : un id de palette qui n'est pas sur la roue reste
-    impossible. Registre, « EXP-06 — the Rosetta pair, measured »."""
+    The ordered equality ("the palette is derived from the patch") held on
+    every project born on the device — and was REFUTED on 2026-08-31 by a
+    project imported from WTOOLS (EXP-06): its palette is the 10-slot selection
+    of the B side (f9 + f31), duplicates included. The invariant that survives
+    is membership: a palette id that is not on the wheel stays impossible.
+    Registry, "EXP-06 — the Rosetta pair, measured"."""
     ids = {e["f4"] for e in _items(w, 111)
            if e.get("f3") == GOBO_FN and "f4" in e}
     palette = [it["f2"]
@@ -59,24 +59,24 @@ def palette_gobo(w):
                for it in wpj_codec._decode_msg(payload, _ITEMS)["items"]
                if "f2" in it]
     hors = [g for g in palette if g not in ids]
-    assert not hors, f"palette hors roue : {hors} (roue {sorted(ids)})"
+    assert not hors, f"palette off the wheel: {hors} (wheel {sorted(ids)})"
 
 
 def tranches_106(w):
-    """105.f4/f7 = tranche du record 106, pas une adresse DMX.
+    """105.f4/f7 = a slice of record 106, not a DMX address.
 
-    Les intervalles [f4, f4+f7) pavent exactement [0, count(106)), et chaque
-    entrée de 106 tombe dans la fenêtre DMX de sa fixture. Une lecture de f4
-    comme adresse DMX de départ casse les deux (registre, « record 105 »).
+    The intervals [f4, f4+f7) tile [0, count(106)) exactly, and every entry of
+    106 falls inside its fixture's DMX window. Reading f4 as a starting DMX
+    address breaks both (registry, "record 105").
     """
     p105, p106 = _items(w, 105), _items(w, 106)
     p115, p116 = _items(w, 115), _items(w, 116)
     pos = 0
     for e in sorted(p105, key=lambda e: (e.get("f4", 0), e.get("f7", 0))):
         assert e.get("f4", 0) == pos, \
-            f"105 : tranche à {e.get('f4', 0)} mais {pos} entrées de 106 consommées"
+            f"105: slice at {e.get('f4', 0)} but {pos} entries of 106 consumed"
         pos += e.get("f7", 0)
-    assert pos == len(p106), f"105 : Σf7 = {pos} != count(106) = {len(p106)}"
+    assert pos == len(p106), f"105: Σf7 = {pos} != count(106) = {len(p106)}"
     for e in p105:
         f = p115[e.get("f5", 0)]
         base = f.get("f2", 0)
@@ -84,33 +84,33 @@ def tranches_106(w):
         for k in range(e.get("f4", 0), e.get("f4", 0) + e.get("f7", 0)):
             canal = p106[k].get("f2", 0)
             assert base <= canal < base + span, \
-                f"106[{k}].f2 = {canal} hors de la fenêtre DMX " \
-                f"[{base}, {base + span}) de la fixture {e.get('f5', 0)}"
+                f"106[{k}].f2 = {canal} outside the DMX window " \
+                f"[{base}, {base + span}) of fixture {e.get('f5', 0)}"
 
 
 def patch_disjoint(w):
-    """115.f2 = adresse DMX de départ : les fenêtres ne se recouvrent pas."""
+    """115.f2 = the starting DMX address: the windows never overlap."""
     p115, p116 = _items(w, 115), _items(w, 116)
     fen = sorted((f.get("f2", 0), p116[f.get("f3", 0)].get("f2", 0)) for f in p115)
     for (a, n), (b, _) in zip(fen, fen[1:]):
-        assert a + n <= b, f"fenêtres DMX qui se recouvrent : {a}+{n} > {b}"
+        assert a + n <= b, f"overlapping DMX windows: {a}+{n} > {b}"
 
 
 def groupe_fixture(w):
-    """115.f4 == 105.f6 == l'index de groupe de la fixture, et 125 en découle.
+    """115.f4 == 105.f6 == the fixture's group index, and 125 follows from it.
 
-    Deux records portent l'affectation, redondants : 115[r].f4 par fixture et
-    105[e].f6 par entrée de patch. Le masque 125[i].f4 (6 octets, LE) est le OU
-    des 1 << 115[r].f3 des fixtures du slot i — donc un slot qui mélange deux
-    profils y allume deux bits. Neuf slots : A–H plus un 9e (index 8).
+    Two records carry the assignment, redundantly: 115[r].f4 per fixture and
+    105[e].f6 per patch entry. The 125[i].f4 mask (6 bytes, LE) is the OR of
+    the 1 << 115[r].f3 of the fixtures in slot i — so a slot mixing two profiles
+    lights two bits there. Nine slots: A–H plus a ninth (index 8).
     """
     p105, p115 = _items(w, 105), _items(w, 115)
     p125 = _items(w, 125)
-    assert len(p125) == 9, f"125 : {len(p125)} slots au lieu de 9"
+    assert len(p125) == 9, f"125: {len(p125)} slots instead of 9"
     for e in p105:
         r = e.get("f5", 0)
         assert e.get("f6", 0) == p115[r].get("f4", 0), \
-            f"105 : fixture {r} en groupe {e.get('f6', 0)} mais 115.f4 = " \
+            f"105: fixture {r} in group {e.get('f6', 0)} but 115.f4 = " \
             f"{p115[r].get('f4', 0)}"
     for i, slot in enumerate(p125):
         attendu = 0
@@ -119,18 +119,18 @@ def groupe_fixture(w):
                 attendu |= 1 << f.get("f3", 0)
         masque = int.from_bytes(bytes.fromhex(slot["f4"]["hex"])[:6], "little")
         assert masque == attendu, \
-            f"125[{i}] : masque {masque:#x} != profils du groupe {attendu:#x}"
+            f"125[{i}]: mask {masque:#x} != the group's profiles {attendu:#x}"
 
 
 def moteurs_f16(w):
-    """165.f16 = douze masques de groupes de 9 bits, un par « moteur ».
+    """165.f16 = twelve 9-bit group masks, one per "engine".
 
-    Les varints packés sont les octets d'un champ de bits little-endian
-    découpé en tranches de **9** bits — 9 et non 8, parce que le record 125
-    a neuf slots : les groupes A–H plus celui des effets. L'alignement se
-    teste tout seul : à 9 bits le moteur 1 vaut exactement `move_fx_active`
-    sur tout le corpus, à 8 bits il vaudrait 254 là où `move_fx_active` vaut
-    255. Voir le registre, « f16 » et « FLASH-01 ».
+    The packed varints are the bytes of a little-endian bit field cut into
+    **9**-bit slices — 9 and not 8, because record 125 has nine slots: groups
+    A–H plus the effects one. The alignment tests itself: at 9 bits, engine 1
+    equals `move_fx_active` exactly across the whole corpus; at 8 bits it would
+    read 254 where `move_fx_active` reads 255. See the registry, "f16" and
+    "FLASH-01".
     """
     for pre in _items(w, 165):
         h = pre.get("f16")
@@ -138,40 +138,39 @@ def moteurs_f16(w):
             continue
         oct_ = _varints(h["hex"])
         assert all(o < 256 for o in oct_), \
-            f"165.f16 : varint hors d'un octet dans {h['hex']}"
+            f"165.f16: a varint larger than a byte in {h['hex']}"
         gros = int.from_bytes(bytes(oct_), "little")
-        # Le 9e bit — le slot des effets — n'est allumé que par les moteurs
-        # flash, à partir de la tranche 6 : WOLF frappe tout, fumigène compris.
-        # Voir le registre, « FLASH-01 ».
+        # The 9th bit — the effects slot — is only lit by the flash engines,
+        # from slice 6 onwards: WOLF hits everything, smoke included. See the
+        # registry, "FLASH-01".
         for m in range(6):
             assert not (gros >> (9 * m)) & 0x100, \
-                f"165.f16 : moteur {m} allume le 9e slot dans {h['hex']}"
+                f"165.f16: engine {m} lights the 9th slot in {h['hex']}"
         actif = _varints(pre.get("f24", {}).get("hex", ""))
         assert (gros >> 9) & 0x1FF == (actif[0] if actif else 0), \
-            f"165.f16 : moteur 1 = {(gros >> 9) & 0x1FF} != move_fx_active " \
-            f"{actif} dans {h['hex']}"
+            f"165.f16: engine 1 = {(gros >> 9) & 0x1FF} != move_fx_active " \
+            f"{actif} in {h['hex']}"
 
 
 def tranche5_f16(w):
-    """165.f16 tranche 5 == le masque des groupes dont le dimmer f17 est non nul.
+    """165.f16 slice 5 == the mask of the groups whose f17 dimmer is non-zero.
 
-    Le registre lisait « tranche 5 = 255 toujours » sur 2446 presets. C'était
-    le piège de l'uniformité : dans tout le corpus, `f17` vaut [255]×8, donc le
-    masque vaut 255 et rien ne pouvait varier. Le graveur de l'appareil l'a
-    cassé en récrivant un fichier que nous avions écrit (registre, « GEN-03
-    retiré ») : sur des cues qui n'allument qu'un groupe, il a mis la tranche 5
-    à 2 = B, et à 7 = A+B+C sur celles qui en allument trois.
+    The registry read "slice 5 = always 255" over 2446 presets. That was the
+    uniformity trap: across the whole corpus `f17` is [255]×8, so the mask is
+    255 and nothing could vary. The device's own writer broke it by rewriting a
+    file we had written (registry, "GEN-03 withdrawn"): on cues that light only
+    one group it put slice 5 at 2 = B, and at 7 = A+B+C on those lighting three.
 
-    Contestation levée le 2026-08-27 (registre, « FX2-01 mesuré ») : sur un
-    preset que L'APPAREIL a créé de zéro — pas un clone du nôtre — la tranche 5
-    vaut 2 = B, exactement le seul groupe dont `f17` est non nul, alors que le
-    moteur faisceau est ÉTEINT. La lecture rivale « tranche 5 = masque de
-    Beam FX 2 » ne survit pas à ça.
+    The objection was lifted on 2026-08-27 (registry, "FX2-01 measured"): on a
+    preset THE DEVICE created from scratch — not a clone of ours — slice 5 reads
+    2 = B, exactly the only group whose `f17` is non-zero, while the beam engine
+    is OFF. The rival reading "slice 5 = the Beam FX 2 mask" does not survive
+    that.
 
-    L'identité est donc trivialement vraie sur le corpus et discriminante sur
-    tout fichier où un preset n'allume pas tous les groupes — le nôtre, ou
-    n'importe quel projet où l'opérateur a éteint un groupe dans un preset.
-    Déposez-en un dans `corpus/` et cette assertion le vérifiera.
+    The identity is therefore trivially true on the corpus and discriminating on
+    any file where a preset does not light every group — ours, or any project
+    where the operator turned a group off in a preset. Drop one into `corpus/`
+    and this assertion will check it.
     """
     for pre in _items(w, 165):
         h, d = pre.get("f16"), pre.get("f17")
@@ -182,24 +181,24 @@ def tranche5_f16(w):
         dimmers = _varints(d["hex"])
         attendu = sum(1 << i for i, v in enumerate(dimmers[:8]) if v)
         assert tranche == attendu, \
-            f"165.f16 : tranche 5 = {tranche} mais les dimmers non nuls " \
-            f"donnent {attendu} ({dimmers})"
+            f"165.f16: slice 5 = {tranche} but the non-zero dimmers give " \
+            f"{attendu} ({dimmers})"
 
 
 def plages_111(w):
-    """111.f1/f2 = bornes DMX d'une plage, et tout canal tombe dans un cas.
+    """111.f1/f2 = the DMX bounds of a range, and every channel falls in a case.
 
-    Trichotomie exhaustive sur le corpus : un canal de 110 est soit
-    **non attribué** (pas de `f4`, une unique plage vide), soit le motif
-    isolé `f4 = 18` (une unique plage `{f1: 255, f3: 41}`), soit ses plages
-    **pavent [0, 255]** — une fois triées par `f1` : la première à 0, chacune
-    suivant le `f2` de la précédente, la dernière finissant à 255.
+    An exhaustive trichotomy over the corpus: a channel of 110 is either
+    **unattributed** (no `f4`, a single empty range), or the isolated pattern
+    `f4 = 18` (a single range `{f1: 255, f3: 41}`), or its ranges **tile
+    [0, 255]** — once sorted by `f1`: the first at 0, each following the
+    previous one's `f2`, the last ending at 255.
 
-    Le tri n'est pas cosmétique. L'ordre de stockage n'est **pas** croissant en
-    général : réordonner la page gobos permute ces entrées (SORT-01,
-    device-confirmed) sans toucher au pavage. La version antérieure marchait par
-    accident sur un corpus dont aucune page n'avait jamais été réordonnée, et
-    tombe sur le premier projet qui l'a été.
+    The sort is not cosmetic. The storage order is **not** increasing in
+    general: reordering the gobo page permutes these entries (SORT-01,
+    device-confirmed) without touching the tiling. The earlier version worked by
+    accident on a corpus where no page had ever been reordered, and falls over
+    on the first project where one was.
     """
     c110, c111 = _items(w, 110), _items(w, 111)
     pos = 0
@@ -208,7 +207,7 @@ def plages_111(w):
         tr, pos = c111[pos:pos + n], pos + n
         if n == 1 and not tr[0]:
             assert "f4" not in c, \
-                f"110[{i}] : plage vide mais le canal porte f4 = {c['f4']}"
+                f"110[{i}]: an empty range but the channel carries f4 = {c['f4']}"
             continue
         att = 0
         for r in sorted(tr, key=lambda r: r.get("f1", 0)):
@@ -217,25 +216,25 @@ def plages_111(w):
             att = r.get("f2", 0) + 1
         else:
             if att == 256:
-                continue                       # le cas courant : les plages pavent
+                continue                       # the common case: the ranges tile
         assert c.get("f4") == 18 and n == 1 and tr[0] == {"f1": 255, "f3": 41}, \
-            f"110[{i}] : plages ni pavantes ni du motif f4 = 18 : {tr}"
+            f"110[{i}]: ranges neither tiling nor of the f4 = 18 pattern: {tr}"
 
 
-# 106.f4 = rôle du canal dans le moteur du W1, en bijection avec la
-# « feature » 110.f4 du profil. Table observée sur tout le corpus ; un rôle
-# inconnu doit faire échouer l'identité plutôt que passer inaperçu.
+# 106.f4 = the channel's role in the W1's engine, in bijection with the
+# profile's "feature" 110.f4. A table observed across the whole corpus; an
+# unknown role must fail the identity rather than slip by unnoticed.
 ROLES_106 = {0: 7, 1: 1, 2: 2, 3: 25, 4: 26, 5: 27, 6: 31, 7: 32, 8: 33,
              9: 15, 10: 15, 11: 5, 12: 8, 14: 22, 15: 16, 21: 20, 22: 19}
 
 
 def roles_106(w):
-    """106.f4 = rôle moteur du canal ; il détermine la feature 110.f4.
+    """106.f4 = the channel's engine role; it determines the feature 110.f4.
 
-    Chaque entrée de 106 vise un canal du profil de sa fixture, via
-    `106.f2 - 115.f2` ajouté à l'offset `116.f3`. Le rôle et la feature de ce
-    canal se correspondent alors terme à terme sur tout le corpus — c'est ce
-    qui rend lisible « quel canal DMX porte le rouge de cette fixture ».
+    Every entry of 106 targets a channel of its fixture's profile, through
+    `106.f2 - 115.f2` added to the `116.f3` offset. That channel's role and
+    feature then match term for term across the whole corpus — which is what
+    makes "which DMX channel carries this fixture's red" readable.
     """
     p105, p106 = _items(w, 105), _items(w, 106)
     p110, p115, p116 = _items(w, 110), _items(w, 115), _items(w, 116)
@@ -247,19 +246,19 @@ def roles_106(w):
             ent = p106[k]
             role = ent.get("f4", 0)
             feat = p110[off + ent.get("f2", 0) - base].get("f4")
-            assert role in ROLES_106, f"106 : rôle inconnu {role}"
+            assert role in ROLES_106, f"106: unknown role {role}"
             assert ROLES_106[role] == feat, \
-                f"106 : rôle {role} sur la feature {feat}, " \
-                f"attendu {ROLES_106[role]}"
+                f"106: role {role} on feature {feat}, " \
+                f"expected {ROLES_106[role]}"
 
 
 def ordre_fixtures_115(w):
-    """115.f6 = une permutation complète des index de fixtures.
+    """115.f6 = a complete permutation of the fixture indexes.
 
-    Un octet par fixture, chaque index exactement une fois. Ce n'est ni le
-    tri par groupe ni le tri par profil — les deux marchent sur une partie du
-    corpus seulement, et sur des parties complémentaires. C'est un ordre
-    d'affichage propre au projet. Voir le registre, « record 115 ».
+    One byte per fixture, each index exactly once. It is neither the sort by
+    group nor the sort by profile — each works on part of the corpus only, and
+    on complementary parts. It is a display order specific to the project. See
+    the registry, "record 115".
     """
     d = wpj_codec._decode_msg(w.get(115), {5: ("items", {}), 6: ("ordre", "hex")})
     if "ordre" not in d:
@@ -267,24 +266,24 @@ def ordre_fixtures_115(w):
     o = d["ordre"]
     liste = list(bytes.fromhex(o if isinstance(o, str) else o["hex"]))
     assert sorted(liste) == list(range(len(d["items"]))), \
-        f"115.f6 : {liste} n'est pas une permutation de 0..{len(d['items']) - 1}"
+        f"115.f6: {liste} is not a permutation of 0..{len(d['items']) - 1}"
 
 
-# Fonction 111.f3 de la plage que chaque rôle 106 utilise, quand il en vise
-# une seule. Les roues (11, 12) n'en visent aucune et les rôles 1/2/10/21/22
-# débordent ou portent une constante — voir le registre, « record 106 f1/f3 ».
+# The 111.f3 function of the range each 106 role uses, when it targets a
+# single one. The wheels (11, 12) target none, and roles 1/2/10/21/22 overflow
+# or carry a constant — see the registry, "record 106 f1/f3".
 PLAGE_DU_ROLE = {0: 12, 3: 50, 4: 51, 5: 52, 6: 56, 7: 57, 8: 58,
                  9: 34, 14: 48, 15: 38}
 
 
 def bornes_106(w):
-    """106.f1/f3 = les bornes DMX de la plage que le rôle pilote.
+    """106.f1/f3 = the DMX bounds of the range the role drives.
 
-    Quand `[f1, f3]` coïncide avec une plage de 111 du canal — 2643 entrées du
-    corpus sur 3775 — la fonction de cette plage est celle qu'impose le rôle :
-    le rôle « rouge » tombe sur la plage `f3 = 50`, « dimmer » sur `12`, et
-    ainsi de suite. L'identité ne contraint que ce cas ; les autres motifs sont
-    décrits au registre et volontairement laissés libres.
+    When `[f1, f3]` coincides with a range of the channel's 111 — 2643 corpus
+    entries out of 3775 — that range's function is the one the role imposes:
+    the "red" role lands on range `f3 = 50`, "dimmer" on `12`, and so on. The
+    identity constrains only that case; the other patterns are described in the
+    registry and deliberately left free.
     """
     p105, p106 = _items(w, 105), _items(w, 106)
     p110, p111 = _items(w, 110), _items(w, 111)
@@ -305,18 +304,17 @@ def bornes_106(w):
                 role = ent.get("f4", 0)
                 if role in PLAGE_DU_ROLE:
                     assert r.get("f3") == PLAGE_DU_ROLE[role], \
-                        f"106 : rôle {role} sur la plage {r.get('f3')}, " \
-                        f"attendu {PLAGE_DU_ROLE[role]}"
+                        f"106: role {role} on range {r.get('f3')}, " \
+                        f"expected {PLAGE_DU_ROLE[role]}"
                 break
 
 
 def tranches_151(w):
-    """150[slot].f2/f1 = tranche du record 151, et les tranches le pavent.
+    """150[slot].f2/f1 = a slice of record 151, and the slices tile it.
 
-    Même construction que `105.f4/f7` dans 106 et `116.f3/f2` dans 110 : un
-    couple (offset, longueur) qui découpe une liste plate. Les slots de
-    position qui n'en utilisent pas ne portent ni `f1` ni `f2`. Voir le
-    registre, « record 151 ».
+    The same construction as `105.f4/f7` inside 106 and `116.f3/f2` inside 110:
+    an (offset, length) pair cutting a flat list. Position slots that use none
+    of it carry neither `f1` nor `f2`. See the registry, "record 151".
     """
     n151 = len(_items(w, 151)) if w.get(151) else 0
     vus = []
@@ -328,32 +326,32 @@ def tranches_151(w):
     pos = 0
     for debut, n, g, i in sorted(vus):
         assert debut == pos, \
-            f"150[{'ABCDEFGH'[g]}][{i + 1}] : tranche à {debut} mais " \
-            f"{pos} entrées de 151 consommées"
+            f"150[{'ABCDEFGH'[g]}][{i + 1}]: slice at {debut} but " \
+            f"{pos} entries of 151 consumed"
         pos += n
-    assert pos == n151, f"151 : {pos} entrées référencées, {n151} présentes"
+    assert pos == n151, f"151: {pos} entries referenced, {n151} present"
     nfx = len(_items(w, 115))
     for k, e in enumerate(_items(w, 151) if w.get(151) else []):
         assert e.get("f1", 0) < nfx, \
-            f"151[{k}].f1 = {e.get('f1', 0)} hors des {nfx} fixtures"
+            f"151[{k}].f1 = {e.get('f1', 0)} outside the {nfx} fixtures"
 
 
-# Les treize champs du preset qui portent une valeur par groupe A–H. Tous
-# font exactement 8 varints packés, sans exception dans le corpus — voir le
-# registre, « les tableaux par groupe ».
+# The thirteen preset fields that carry one value per group A–H. All are
+# exactly 8 packed varints, with no exception in the corpus — see the registry,
+# "the per-group arrays".
 TABLEAUX_PAR_GROUPE = (3, 7, 14, 17, 23, 27, 28, 29, 30, 32, 33, 34, 35)
 
 
 def tableaux_par_groupe_165(w):
-    """Les champs par groupe du preset font exactement 8 varints.
+    """The preset's per-group fields are exactly 8 varints.
 
-    Contrainte non triviale : un découpage varint erroné, ou un champ pris
-    pour un scalaire, change immédiatement le compte. C'est ce qui a rangé
-    `f3`, `f7`, `f14`, `f23` et `f27` — alors tous nuls dans le corpus — parmi
-    les valeurs par groupe plutôt que parmi les inconnues sans forme. Le pari a
-    payé sur trois des quatre : `f3`, `f7` et `f23` sont les sélecteurs de page
-    du faisceau, de la couleur et du mouvement (registre, F7-01/03/04), et ce
-    sont bien des tableaux de huit. `f27` reste nul et non attribué.
+    A non-trivial constraint: a wrong varint split, or a field taken for a
+    scalar, changes the count immediately. That is what filed `f3`, `f7`,
+    `f14`, `f23` and `f27` — all zero in the corpus at the time — among the
+    per-group values rather than among the shapeless unknowns. The bet paid off
+    on three of the four: `f3`, `f7` and `f23` are the page selectors of beam,
+    colour and move (registry, F7-01/03/04), and they are indeed arrays of
+    eight. `f27` stays zero and unattributed.
     """
     for pre in _items(w, 165):
         for n in TABLEAUX_PAR_GROUPE:
@@ -362,47 +360,47 @@ def tableaux_par_groupe_165(w):
                 continue
             vals = _varints(champ["hex"] if isinstance(champ, dict) else champ)
             assert len(vals) == 8, \
-                f"165.f{n} : {len(vals)} varints au lieu de 8"
+                f"165.f{n}: {len(vals)} varints instead of 8"
 
 
-# Moteur de f16 -> bit de 165.f4 qui doit être mis pour qu'il puisse agir.
-# 0 = Color FX, 1 = Move FX, 2 = Beam FX ; voir le registre, « F4-03 ».
+# f16 engine -> the bit of 165.f4 that must be set for it to be able to act.
+# 0 = Color FX, 1 = Move FX, 2 = Beam FX; see the registry, "F4-03".
 MOTEUR_VERS_F4 = {0: 3, 1: 2, 2: 4}
 
 
-# f4_autorise_les_moteurs (« un moteur actif dans f16 implique son bit dans
-# 165.f4 ») a été RETIRÉE le 2026-08-31 : l'implication était une corrélation
-# des sauvegardes nées sur l'appareil, réfutée par un projet importé de WTOOLS
-# (EXP-06 : moteur 2 actif, f4 = 12 sans le bit 4) que le W1 ouvre sans
-# broncher. Son acquis — identifier la tranche 2 de f16 comme le Beam FX —
-# reste au registre, avec la réfutation.
+# f4_autorise_les_moteurs ("an engine active in f16 implies its bit in
+# 165.f4") was WITHDRAWN on 2026-08-31: the implication was a correlation of
+# saves born on the device, refuted by a project imported from WTOOLS (EXP-06:
+# engine 2 active, f4 = 12 without bit 4) that the W1 opens without complaint.
+# What it earned — identifying slice 2 of f16 as the Beam FX — stays in the
+# registry, together with the refutation.
 
 
 def schema_du_prefixe(w):
-    """L'octet 50 est la version de schéma, et 165.f32–f35 arrivent à 10.
+    """Byte 50 is the schema version, and 165.f32–f35 arrive at 10.
 
-    Le préfixe est constant sauf l'UUID (20–35), le compteur de version
-    (40–47) et cet octet. La corrélation est totale sur le corpus : schéma 8
-    sans `f32`, schémas 10 et 11 avec. Voir le registre, « le préfixe ».
+    The prefix is constant except for the UUID (20–35), the version counter
+    (40–47) and this byte. The correlation is total across the corpus: schema 8
+    without `f32`, schemas 10 and 11 with it. See the registry, "the prefix".
     """
     schema = w.prefix[30]
-    assert w.prefix[16:20].hex() == "152b10c0", "préfixe : constante 36-39 changée"
-    assert w.prefix[28:30].hex() == "01f9", "préfixe : constante 48-49 changée"
-    assert w.prefix[31] == 0, "préfixe : octet 51 non nul"
+    assert w.prefix[16:20].hex() == "152b10c0", "prefix: constant 36-39 changed"
+    assert w.prefix[28:30].hex() == "01f9", "prefix: constant 48-49 changed"
+    assert w.prefix[31] == 0, "prefix: byte 51 is not zero"
     assert w.prefix[32:].hex() == "02bee81ca26ccb546dc7b6ec", \
-        "préfixe : constante 52-63 changée"
+        "prefix: constant 52-63 changed"
     a32 = any("f32" in pre for pre in _items(w, 165))
     assert a32 == (schema >= 10), \
-        f"préfixe : schéma {schema} mais f32 {'présent' if a32 else 'absent'}"
+        f"prefix: schema {schema} but f32 {'present' if a32 else 'absent'}"
 
 
 def canal_principal_110(w):
-    """110.f5 = l'index, dans le profil, du canal principal de ce canal.
+    """110.f5 = the profile index of this channel's principal channel.
 
-    Un canal principal se désigne lui-même ; un canal **fin** désigne son
-    canal grossier. Le canal pointé porte toujours la même `f4`, ce qui rend
-    le couple 16 bits lisible sans deviner l'ordre des octets. Vérifié sans
-    exception sur les 1100 canaux du corpus.
+    A principal channel points at itself; a **fine** channel points at its
+    coarse one. The channel pointed to always carries the same `f4`, which makes
+    the 16-bit pair readable without guessing the byte order. Verified with no
+    exception across the corpus's 1100 channels.
     """
     p110, p116 = _items(w, 110), _items(w, 116)
     for pr in p116:
@@ -410,70 +408,68 @@ def canal_principal_110(w):
         for j in range(n):
             c = p110[off + j]
             m = c.get("f5", 0)
-            assert m <= j, f"110[{off + j}] : f5 = {m} pointe en avant"
+            assert m <= j, f"110[{off + j}]: f5 = {m} points forward"
             assert p110[off + m].get("f4") == c.get("f4"), \
-                f"110[{off + j}] : f5 pointe un canal de feature " \
-                f"{p110[off + m].get('f4')}, pas {c.get('f4')}"
+                f"110[{off + j}]: f5 points at a channel of feature " \
+                f"{p110[off + m].get('f4')}, not {c.get('f4')}"
 
 
 def flavours_155(w):
-    """155.f2 = le moteur de la séquence, et il détermine le domaine des valeurs.
+    """155.f2 = the sequence's engine, and it determines the value domain.
 
-    Le record tient quatre séquenceurs : l'item 0 est celui du **mouvement**
-    (`f2` = 1), les items 1 à 3 ceux du **faisceau** (`f2` = 2) — les trois
-    `FX Seq` que l'énumération du Beam FX propose. Les deux moteurs ne stockent
-    pas la même chose au même endroit :
+    The record holds four sequencers: item 0 is the **move** one (`f2` = 1),
+    items 1 to 3 the **beam** ones (`f2` = 2) — the three `FX Seq` the Beam FX
+    enumeration offers. The two engines do not store the same thing in the same
+    place:
 
-    - mouvement : un **index de position** dans la palette 150 du groupe,
-      domaine 0–19, plus 255 = « pas de position à ce pas » ;
-    - faisceau : un **masque de 4 bits** sur les quatre segments du groupe,
-      domaine 0–15. Huit groupes × quatre segments = les 32 sélections que le
-      manuel annonce.
+    - move: a **position index** into the group's palette 150, domain 0–19,
+      plus 255 = "no position at this step";
+    - beam: a **4-bit mask** over the group's four segments, domain 0–15. Eight
+      groups × four segments = the 32 selections the manual advertises.
 
-    Mesuré par FX6-05 : segments 1 et 4 cochés sur le groupe A du pas 1 ont
-    écrit 15 → 9, soit 0b1111 → 0b1001, dans l'item 1.
+    Measured by FX6-05: segments 1 and 4 ticked on group A of step 1 wrote
+    15 → 9, that is 0b1111 → 0b1001, into item 1.
     """
     seqs = _items(w, 155)
-    assert len(seqs) == 4, f"155 : {len(seqs)} séquences, 4 attendues"
+    assert len(seqs) == 4, f"155: {len(seqs)} sequences, 4 expected"
     for i, s in enumerate(seqs):
         fl = s.get("f2")
         attendu = 1 if i == 0 else 2
-        assert fl == attendu, f"155[{i}] : flavour {fl}, {attendu} attendu"
+        assert fl == attendu, f"155[{i}]: flavour {fl}, {attendu} expected"
         vals = _varints(s["f4"]["hex"]) if isinstance(s.get("f4"), dict) \
             else s.get("f4", [])
-        assert len(vals) == 128, f"155[{i}] : {len(vals)} valeurs, 128 attendues"
+        assert len(vals) == 128, f"155[{i}]: {len(vals)} values, 128 expected"
         haut = 19 if fl == 1 else 15
         for k, v in enumerate(vals):
             if fl == 1 and v == 255:
-                continue                 # sentinelle « pas de position »
+                continue                 # the "no position" sentinel
             assert v <= haut, \
-                f"155[{i}] : valeur {v} au pas {k // 8} groupe {chr(65 + k % 8)}, " \
-                f"hors du domaine 0–{haut} du flavour {fl}"
+                f"155[{i}]: value {v} at step {k // 8} group {chr(65 + k % 8)}, " \
+                f"outside the 0–{haut} domain of flavour {fl}"
 
 
 def _entrees_165(payload):
-    """(f1, [entrées brutes]) du record 165, sans interpréter les entrées."""
+    """(f1, [raw entries]) of record 165, without interpreting the entries."""
     i, f1, entrees = 0, None, []
     while i < len(payload):
         tag, i = wpj_codec._rvarint(payload, i)
         if tag == 0x08:                      # f1 varint
             f1, i = wpj_codec._rvarint(payload, i)
-        elif tag == 0x2A:                    # f5 : une entrée preset
+        elif tag == 0x2A:                    # f5: one preset entry
             ln, i = wpj_codec._rvarint(payload, i)
             entrees.append(payload[i:i + ln]); i += ln
         else:
-            raise AssertionError(f"165 : tag inattendu {tag:#x}")
+            raise AssertionError(f"165: unexpected tag {tag:#x}")
     return f1, entrees
 
 
 def noms_de_preset_bornes(w):
-    """Aucun nom de preset ne dépasse 19 octets UTF-8.
+    """No preset name exceeds 19 UTF-8 bytes.
 
-    Limite device-confirmed (PRESET-05, 2026-08-26) : l'UI de renommage du
-    W1 plafonne à 19 caractères et le chargeur fait respecter la même borne
-    sur un nom écrit par fichier — au-delà, le projet entier refuse de
-    s'ouvrir (« Error opening project »), bruyamment. Un générateur doit
-    donc valider les noms AVANT d'écrire.
+    A device-confirmed limit (PRESET-05, 2026-08-26): the W1's rename UI caps
+    at 19 characters and the loader enforces the same bound on a name written
+    from a file — past it, the whole project refuses to open ("Error opening
+    project"), loudly. A generator must therefore validate names BEFORE writing.
     """
     for pre in _items(w, 165):
         nom = pre.get("f25")
@@ -482,31 +478,29 @@ def noms_de_preset_bornes(w):
         octets = (bytes.fromhex(nom["hex"]) if isinstance(nom, dict)
                   else nom.encode("utf-8"))
         assert len(octets) <= 19, \
-            f"165 : nom de {len(octets)} octets : {octets!r}"
+            f"165: a {len(octets)}-byte name: {octets!r}"
 
 
 def ajout_de_preset():
-    """L'ajout d'un preset : ce que l'appareil écrit, ce qu'il jette.
+    """Adding a preset: what the device writes, and what it discards.
 
-    Deux paires d'expériences (registre, « F30-04 » et « FLASH-09 ») :
+    Two pairs of experiments (registry, "F30-04" and "FLASH-09"):
 
-    - F30-04, l'appareil ajoute lui-même un preset : hors 165 ne changent
-      que les records d'état vif {115, 125, 155, 161}. Le fichier ne porte
-      donc AUCUN compte externe de presets. Et 165.f1 passe de 82 à 81
-      pendant que le compte passe de 82 à 83, avec 81 nommés des deux
-      côtés : « nombre de presets » est réfuté par l'après, « nombre de
-      presets nommés » par l'avant.
+    - F30-04, the device adds a preset itself: outside 165, only the live-state
+      records {115, 125, 155, 161} change. The file therefore carries NO
+      external count of presets. And 165.f1 goes from 82 to 81 while the count
+      goes from 82 to 83, with 81 named on both sides: "number of presets" is
+      refuted by the after, "number of named presets" by the before.
 
-    - FLASH-09 / PRESET-01, deux entrées ajoutées par fichier (copies de
-      l'entrée 82, id et tranche f16 changés) : l'ajout est
-      **device-confirmed** — stocké, rendu octet pour octet, affiché et
-      rappelable après réouverture à froid (registre, « PRESET-01 »). La
-      « suppression » initialement rapportée par FLASH-09 est rétractée :
-      les nombres du téléchargement « rendu » étaient ceux de l'état
-      pré-deploy. L'arithmétique de l'édit reste vérifiable :
-      len(candidat.165) - len(avant.165) == 2 × (3 + len(entrée 82)).
+    - FLASH-09 / PRESET-01, two entries added from a file (copies of entry 82,
+      id and f16 slice changed): the addition is **device-confirmed** — stored,
+      returned byte for byte, displayed and recallable after a cold reopen
+      (registry, "PRESET-01"). The "deletion" first reported by FLASH-09 is
+      retracted: the numbers of the "returned" download were those of the
+      pre-deploy state. The edit's arithmetic stays checkable:
+      len(candidate.165) - len(before.165) == 2 × (3 + len(entry 82)).
 
-    Paire absente du corpus = vérification sautée, pas réussie.
+    A pair absent from the corpus = a check skipped, not a check passed.
     """
     import os
     rac = os.path.join(os.environ.get(wpjlib.CORPUS_ENV)
@@ -523,7 +517,7 @@ def ajout_de_preset():
         bouges = {t for (t, p1), (_, p2) in zip(av.records, ap.records)
                   if p1 != p2}
         assert bouges == {115, 125, 155, 161, 165}, \
-            f"F30-04 : records changés {sorted(bouges)}"
+            f"F30-04: records changed {sorted(bouges)}"
         f1a, ea = _entrees_165(av.get(165))
         f1b, eb = _entrees_165(ap.get(165))
         noms_a = sum(1 for p in wpj_codec.decode(165, av.get(165))["presets"]
@@ -533,59 +527,59 @@ def ajout_de_preset():
         assert (len(ea), noms_a, f1a) == (82, 81, 82), \
             f"F30-04 avant : {(len(ea), noms_a, f1a)}"
         assert (len(eb), noms_b, f1b) == (83, 81, 81), \
-            f"F30-04 après : {(len(eb), noms_b, f1b)}"
+            f"F30-04 after: {(len(eb), noms_b, f1b)}"
 
     av, ca = charge("FLASH-09", "before.wpj"), \
         charge("FLASH-09", "candidate.wpj")
     if av and ca:
-        assert av.prefix == ca.prefix, "FLASH-09 : préfixe touché par l'édit"
+        assert av.prefix == ca.prefix, "FLASH-09: the edit touched the prefix"
         bouges = {t for (t, p1), (_, p2) in zip(av.records, ca.records)
                   if p1 != p2}
-        assert bouges == {165}, f"FLASH-09 : records changés {sorted(bouges)}"
+        assert bouges == {165}, f"FLASH-09: records changed {sorted(bouges)}"
         f1a, ea = _entrees_165(av.get(165))
         f1c, ec = _entrees_165(ca.get(165))
-        assert f1a == f1c == 81, f"FLASH-09 : f1 {f1a} / {f1c}"
+        assert f1a == f1c == 81, f"FLASH-09: f1 {f1a} / {f1c}"
         assert len(ec) == 85 and ec[:83] == ea, \
-            "FLASH-09 : le candidat n'est pas avant + 2 entrées en queue"
+            "FLASH-09: the candidate is not before + 2 entries at the tail"
         for e in ec[83:]:
-            assert len(e) == len(ea[82]), "FLASH-09 : entrée d'autre taille"
+            assert len(e) == len(ea[82]), "FLASH-09: an entry of another size"
             diffs = sum(x != y for x, y in zip(ea[82], e))
             assert 0 < diffs <= 6, \
-                f"FLASH-09 : {diffs} octets d'écart avec l'entrée 82"
+                f"FLASH-09: {diffs} bytes apart from entry 82"
         entete = 1 + len(wpj_codec._wvarint(len(ea[82])))
         assert len(ca.get(165)) - len(av.get(165)) == 2 * (entete + len(ea[82])), \
-            "FLASH-09 : l'écart de taille n'est pas « les deux ajouts, exactement »"
+            "FLASH-09: the size difference is not \"the two additions, exactly\""
 
 
 def carte_dmx_130(w):
-    """130 = la carte de mapping DMX IN, et `f1` en compte les entrées.
+    """130 = the DMX IN mapping table, and `f1` counts its entries.
 
-    Mesuré sur l'appareil (MAP-01..05, registre). `f4` est la **fonction**
-    visée, pas la catégorie de l'écran : 20 = dimmer de groupe, 27 = MAIN,
-    70 = preset, 17 = BPM Tap, 10 = Wolf — et BPM Tap et Wolf sont deux
-    entrées de la **même** catégorie `Flash` avec des `f4` distincts. `f2` est
-    l'index de l'instance quand la fonction est instanciée, **255** sinon.
+    Measured on the device (MAP-01..05, registry). `f4` is the **function**
+    targeted, not the screen's category: 20 = group dimmer, 27 = MAIN,
+    70 = preset, 17 = BPM Tap, 10 = Wolf — and BPM Tap and Wolf are two entries
+    of the **same** `Flash` category with distinct `f4`. `f2` is the instance
+    index when the function is instanced, **255** otherwise.
 
-    Le canal DMX IN est sur **16 bits répartis** : `f5 * 256 + f6`, en base
-    zéro. `f5` est resté invisible sur tout le corpus et sur six écritures
-    parce que tout tenait sous le canal 256 ; il apparaît à CH300 (1, 43) et
-    à CH512 (1, 255), les deux exacts. L'encodeur du panneau s'arrête à 512.
+    The DMX IN channel is **16 bits, spread**: `f5 * 256 + f6`, zero-based.
+    `f5` stayed invisible across the whole corpus and six writes because
+    everything fit below channel 256; it appears at CH300 (1, 43) and at CH512
+    (1, 255), both exact. The panel's encoder stops at 512.
 
-    Une fonction non mappée n'a pas d'entrée du tout — retirer une mapping
-    supprime la ligne et décrémente `f1`, il n'y a pas de sentinelle.
+    An unmapped function has no entry at all — removing a mapping deletes the
+    row and decrements `f1`; there is no sentinel.
 
-    `f7` et `f8` valent 1 partout, n'ont jamais bougé, et n'ont pas de nom.
+    `f7` and `f8` are 1 everywhere, have never moved, and have no name.
     """
     for occurrence, _ in enumerate([t for t, _ in w.records if t == 130]):
         items = _items(w, 130, occurrence)
         annonce = wpj_codec._decode_msg(
             w.get(130, occurrence), {1: ("f1", "uint")}).get("f1", 0)
         assert annonce == len(items), \
-            f"130.f1 = {annonce} mais la table porte {len(items)} entrées"
+            f"130.f1 = {annonce} but the table carries {len(items)} entries"
         for i, e in enumerate(items):
             canal = e.get("f5", 0) * 256 + e.get("f6", 0)
             assert canal < 512, \
-                f"130[{i}] : canal DMX IN {canal + 1} au-delà de l'univers"
+                f"130[{i}]: DMX IN channel {canal + 1} past the universe"
 
 
 IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
@@ -606,18 +600,18 @@ def demo():
         try:
             w = wpjlib.Wpj.load(path)
         except (ValueError, OSError):
-            continue                      # variantes B/C : hors périmètre
+            continue                      # variants B/C: out of scope
         n += 1
         for verif in IDENTITES:
             try:
                 verif(w)
             except AssertionError as e:
-                raise AssertionError(f"{path} : {verif.__name__} : {e}") from None
+                raise AssertionError(f"{path}: {verif.__name__}: {e}") from None
     if not n:
         return wpjlib.pas_de_corpus("wpj_identities")
     ajout_de_preset()
-    print(f"{len(IDENTITES)} identités vérifiées sur {n} fichiers variante A"
-          " (+ paires F30-04 / FLASH-09)", file=sys.stderr)
+    print(f"{len(IDENTITES)} identities verified on {n} variant-A files"
+          " (+ the F30-04 / FLASH-09 pairs)", file=sys.stderr)
 
 
 if __name__ == "__main__":

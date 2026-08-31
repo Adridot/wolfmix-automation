@@ -144,7 +144,7 @@ def sheet(lib, ids, path, scale=4, cols=20):
 def palette(lib, wpj):
     """Palettes gobo (record 145) d'un projet, id → nom d'icône."""
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from tlv import load, walk
+    from wpj_wire import load, walk
     _, records = load(wpj)
     for _, record_type, _, payload in records:
         if record_type != 145:

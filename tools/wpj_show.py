@@ -663,9 +663,9 @@ def _demo_sur(base):
         # L'appareil écrit ses champs dans l'ordre numérique et n'émet jamais
         # un champ nul. Une divergence ici est invisible au décodage et rendrait
         # tout diff futur illisible contre un fichier que l'appareil a récrit.
-        import tlv
-        brut = [x for x in tlv.load(out)[1] if x[1] == 130][0][3]
-        for e in tlv.walk(brut):
+        import wpj_wire
+        brut = [x for x in wpj_wire.load(out)[1] if x[1] == 130][0][3]
+        for e in wpj_wire.walk(brut):
             if e[0] != 5:
                 continue
             octets = e[2]

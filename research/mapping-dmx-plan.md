@@ -11,7 +11,7 @@ sidecar » — le manuel a tranché.
 | Le projet contient les mappings | manuel §Projects : *« Group names and mappings »* | **correlated** |
 | Les réglages du panneau ne sont **pas** dans le projet | même liste, dernière puce | correlated |
 | L'écran existe sur ce MK1, mode 43 | opérateur, 16 ↔ 43 alternent proprement | device-confirmed |
-| Record 130 : `f1=9` puis 9 items `f5` — 8 × `f4=20` (`f6` = 0–7) + 1 × `f4=27` (`f6`=8) | `tools/dump.py`, 50/50 fichiers | observed |
+| Record 130 : `f1=9` puis 9 items `f5` — 8 × `f4=20` (`f6` = 0–7) + 1 × `f4=27` (`f6`=8) | `tools/wpj_wire.py`, 50/50 fichiers | observed |
 | 130 est **octet pour octet identique** sur 50/50, 4 rigs | idem | observed |
 | 130 ne suit pas le rig : `rig-c-bug` a un groupe D et garde `8×20 + 1×27` | idem | observed |
 
@@ -114,7 +114,7 @@ python3 tools/wolfmix.py project <UUID> corpus/experiments/MAP-01/after.wpj
 
 ```bash
 python3 tools/wpj_diff.py corpus/experiments/MAP-01/{before,after}.wpj
-python3 tools/dump.py corpus/experiments/MAP-01/after.wpj 130
+python3 tools/wpj_wire.py corpus/experiments/MAP-01/after.wpj 130
 ```
 
 ## Photos

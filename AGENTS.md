@@ -88,9 +88,15 @@ itself worth recording rather than silently resolving.
   guess is exactly the failure mode this repository exists to avoid.
 - **Self-check idiom:** the tools listed in `make check`, plus `wpj_diff.py`,
   run their own check with no arguments. `wolfmix.py` and
-  `wolfmix_experiment.py` use a `self-test` subcommand; `tlv.py` and `dump.py`
-  are argument-only helpers. New non-trivial logic follows the idiom — one
-  runnable assertion, no test framework.
+  `wolfmix_experiment.py` use a `self-test` subcommand. New non-trivial logic
+  follows the idiom — one runnable assertion, no test framework.
+- **One wire reader, and one oracle.** `tools/wpj_wire.py` is the production
+  reader: varints, protobuf fields, the TLV container, shared by the codec, the
+  B/C reader, the USB protocol and the gobo palette. `tools/wpj_inspect.py`
+  keeps its **own** independent walk on purpose — this is the one documented
+  exception to "no repetition", because an oracle that shares code with what it
+  verifies proves only that the shared code agrees with itself. A third walker
+  is a bug.
 - **Working directory:** the corpus root is `corpus/`, or `$WPJ_CORPUS`. Run
   tools from the repository root unless that variable is absolute.
 

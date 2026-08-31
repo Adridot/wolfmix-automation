@@ -297,20 +297,26 @@ When the sizes differ it falls back to a common prefix/suffix scan and reports
 the approximate changed window. This is the first command of every differential
 experiment.
 
-## `tlv.py` / `dump.py` — analysis helpers
-
-Standalone variant-A TLV extractor plus a protobuf tree walker, used for
-exploration rather than production decoding.
+## `wpj_wire.py` — the production wire reader
 
 ```bash
-python3 tools/dump.py project.wpj 165,150     # tree of every record of those types
+python3 tools/wpj_wire.py project.wpj            # record inventory
+python3 tools/wpj_wire.py project.wpj 165,150    # protobuf tree of those types
+python3 tools/wpj_wire.py                        # self-check
 ```
 
-`tlv.py` asserts the SHA-1 header on load and returns
-`(data, [(index, type, absolute_offset, payload), …])`.
+Varints, protobuf fields, the TLV container and a readable tree — one
+implementation, shared by the codec, the B/C reader, the USB protocol and the
+gobo palette. It replaces the former `tlv.py` and `dump.py`.
 
-Neither has a self-check; they are exploration tools, and `wpjlib` is the
-implementation that carries the guarantees.
+Every refusal is a `WireError` (a `ValueError`) naming what did not have the
+shape it claimed: truncated varint, field number 0, a length past the end of
+the buffer, a record overflowing its container. No assertion validates input
+here — `python3 -O` erases those.
+
+**The one duplication this repository keeps** is [`wpj_inspect.py`](#wpj_inspectpy--variant-bc-wire-walk):
+a second, independent walk over the same bytes. An oracle that shares its code
+with what it verifies only proves that code is consistent with itself.
 
 ## `gobo_library.py` — the controller's gobo icon library
 

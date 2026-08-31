@@ -16,6 +16,7 @@ Représentation :
 import json
 import sys
 
+import wpj_wire
 import wpjlib
 
 # Schémas : champ → (nom, genre). genre : "v" varint, "str" UTF-8,
@@ -134,15 +135,9 @@ SCHEMAS = {
 
 # --- wire protobuf -----------------------------------------------------------
 
-def _rvarint(buf, i):
-    v = shift = 0
-    while True:
-        if i >= len(buf) or shift > 70:
-            raise ValueError("varint")
-        b = buf[i]; i += 1
-        v |= (b & 0x7F) << shift; shift += 7
-        if not b & 0x80:
-            return v, i
+_rvarint = wpj_wire.read_varint          # un seul lecteur de varint (WireError
+                                         # est une ValueError : les `except`
+                                         # existants continuent de l'attraper)
 
 
 def _wvarint(v):

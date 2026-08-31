@@ -233,8 +233,7 @@ Three properties hold at every stage:
 
 Run any of them with **no arguments** to execute its self-check — except
 `wolfmix.py` and `wolfmix_experiment.py`, which take it as a subcommand
-(`python3 tools/wolfmix.py self-test`), and `tlv.py` / `dump.py`, which are
-argument-only helpers.
+(`python3 tools/wolfmix.py self-test`).
 
 ## Where the format stands
 

@@ -37,6 +37,9 @@ import termios
 import time
 import uuid
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import wpj_wire
+
 
 VERSION = 1
 HEADER_SIZE = 9
@@ -213,47 +216,23 @@ class ProtocolError(WolfmixError):
 
 
 def read_varint(data, offset=0):
-    value = 0
-    for shift in range(0, 70, 7):
-        if offset >= len(data):
-            raise ProtocolError("Truncated protobuf varint")
-        byte = data[offset]
-        offset += 1
-        value |= (byte & 0x7F) << shift
-        if not byte & 0x80:
-            return value, offset
-    raise ProtocolError("Protobuf varint exceeds 64 bits")
+    """The shared production reader, with this module's error type."""
+    try:
+        return wpj_wire.read_varint(data, offset)
+    except wpj_wire.WireError as error:
+        raise ProtocolError(str(error)) from None
 
 
 def protobuf_fields(data):
-    """Yield ``(field_number, wire_type, value)`` tuples."""
-    offset = 0
-    while offset < len(data):
-        tag, offset = read_varint(data, offset)
-        field_number, wire_type = tag >> 3, tag & 7
-        if field_number == 0:
-            raise ProtocolError("Invalid protobuf field number 0")
-        if wire_type == 0:
-            value, offset = read_varint(data, offset)
-        elif wire_type == 1:
-            if offset + 8 > len(data):
-                raise ProtocolError("Truncated protobuf 64-bit field")
-            value = data[offset : offset + 8]
-            offset += 8
-        elif wire_type == 2:
-            size, offset = read_varint(data, offset)
-            if offset + size > len(data):
-                raise ProtocolError("Truncated protobuf length-delimited field")
-            value = data[offset : offset + size]
-            offset += size
-        elif wire_type == 5:
-            if offset + 4 > len(data):
-                raise ProtocolError("Truncated protobuf 32-bit field")
-            value = data[offset : offset + 4]
-            offset += 4
-        else:
-            raise ProtocolError(f"Unsupported protobuf wire type {wire_type}")
-        yield field_number, wire_type, value
+    """Yield ``(field_number, wire_type, value)`` tuples.
+
+    One wire reader for the whole repository (``wpj_wire``); only the error
+    type is this module's, because callers catch ``ProtocolError``.
+    """
+    try:
+        yield from wpj_wire.fields(data)
+    except wpj_wire.WireError as error:
+        raise ProtocolError(str(error)) from None
 
 
 def decode_packed_varints(data):

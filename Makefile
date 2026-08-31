@@ -2,6 +2,7 @@
 .PHONY: check
 check:
 	python3 tools/wpjlib.py
+	python3 tools/wpj_wire.py
 	python3 tools/wpj_codec.py
 	python3 tools/wpj_inspect.py
 	python3 tools/wpj_bc.py

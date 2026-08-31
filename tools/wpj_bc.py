@@ -23,7 +23,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import tlv
+import wpj_wire
 import wpjlib
 
 
@@ -52,32 +52,11 @@ def charger(path):
 
 
 def _walk_top(body):
-    """[(champ, wt, valeur|octets)] au niveau 0, sans descendre."""
-    i, out = 0, []
-    while i < len(body):
-        tag, i = tlv.read_varint(body, i)
-        f, wt = tag >> 3, tag & 7
-        if f == 0:
-            raise ValueError("champ 0")
-        if wt == 0:
-            v, i = tlv.read_varint(body, i)
-        elif wt == 2:
-            ln, i = tlv.read_varint(body, i)
-            if i + ln > len(body):
-                raise ValueError("longueur")
-            v = body[i:i + ln]; i += ln
-        elif wt == 5:
-            if i + 4 > len(body):
-                raise ValueError("f32 tronqué")
-            v = body[i:i + 4]; i += 4
-        elif wt == 1:
-            if i + 8 > len(body):
-                raise ValueError("f64 tronqué")
-            v = body[i:i + 8]; i += 8
-        else:
-            raise ValueError(f"wire type {wt}")
-        out.append((f, wt, v))
-    return out
+    """[(champ, wt, valeur|octets)] au niveau 0, sans descendre.
+
+    Le lecteur de production fait exactement ça, et ses refus sont nommés.
+    """
+    return list(wpj_wire.fields(body))
 
 
 def _msg(chunk):
@@ -102,7 +81,7 @@ def _msg(chunk):
 def _packed(chunk):
     out, i = [], 0
     while i < len(chunk):
-        v, i = tlv.read_varint(chunk, i)
+        v, i = wpj_wire.read_varint(chunk, i)
         out.append(v)
     return out
 
@@ -227,9 +206,9 @@ def _identites(body):
 def _refus():
     """Les refus qui ne dépendent d'aucun corpus — et qui tiennent sous -O.
 
-    `tlv.py` validait par assertions : `python3 -O` les efface, et c'est une
-    entrée externe qu'on lit. Ces cas sont ici parce que `wpj_bc` est déjà
-    dans `make check` et importe `tlv`.
+    Ces cas vivent ici parce que `wpj_bc` est déjà dans `make check` et lit le
+    wire de bout en bout ; le conteneur lui-même est couvert par le self-check
+    de `wpj_wire`.
     """
     for tronque in (b"\x0d\x01\x02", b"\x09\x01\x02\x03"):
         try:
@@ -238,22 +217,12 @@ def _refus():
         except ValueError:
             pass
     entete = hashlib.sha1(b"").digest()
-    for corps, motif in (
-        (b"", "trop court"),
-        (b"\x00" * 0x40 + b"\x00\x00\x00\x00\x63\x00", "type"),
-    ):
-        try:
-            tlv.parse_tlv(entete + corps)
-            raise AssertionError(f"accepté : {motif}")
-        except ValueError:
-            pass
-    # Un record dont la longueur déborde la racine est nommé, pas tronqué.
-    inner = (3).to_bytes(4, "little") + (101).to_bytes(2, "little") + b"abc"
-    racine = (len(inner) + 4).to_bytes(4, "little") + (100).to_bytes(2, "little")
+    # Le conteneur lui-même est couvert par le self-check de wpj_wire ; ici on
+    # vérifie seulement que wpj_bc passe bien par lui.
     try:
-        tlv.parse_tlv(b"\x00" * 0x40 + racine + inner)
-        raise AssertionError("record débordant accepté")
-    except ValueError:
+        wpj_wire.parse_container(entete)
+        raise AssertionError("conteneur trop court accepté")
+    except wpj_wire.WireError:
         pass
     # Un blob obligatoire absent se nomme, au lieu de lever un IndexError.
     import tempfile

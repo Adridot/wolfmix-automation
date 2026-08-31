@@ -75,7 +75,7 @@ deux révisions.
 | 151, 155, 161 | inconnus | observed |
 | 165 | conteneur presets (83 éléments) | correlated (wpj-toolkit) |
 
-Scripts : tools/tlv.py, tools/dump.py.
+Scripts : tools/wpj_wire.py (qui a remplacé tlv.py et dump.py).
 
 ## Voie de réparation (non exécutée — attend les prérequis)
 

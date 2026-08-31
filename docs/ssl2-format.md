@@ -14,11 +14,14 @@ refuses both.
 python3 tools/ssl2.py dump fixture.ssl2 | xmllint --format -   # look
 python3 tools/ssl2.py gen my-par.json my-par.ssl2              # build
 python3 tools/ssl2.py verify                                   # prove the codec
+SSL2_LIBRARY=/Applications/EasyViewConnect/ScanLibrary python3 tools/ssl2.py verify
 python3 tools/ssl2.py enums                                    # rebuild the tables
 python3 tools/ssl2.py diff mine.ssl2 theirs.ssl2               # bisect a rejection
 ```
 
-Everything below was measured on a local Easy View library of 25 610 profiles.
+The counts below are the Easy View 3 library's, 25 610 profiles. A second
+library disagrees with it in ways that matter, and the next section is that
+story — read it before trusting any figure here as a fact about the *format*.
 `verify` re-derives the codec claims on demand; `enums` re-derives the tables.
 
 ## The cipher, and its one trap
@@ -60,22 +63,46 @@ Thirteen elements, one nesting, no text content anywhere:
 | `SSLCHANNELDMXRANGES` | `SSLCHANNEL` | 412 | `SSLCHANNELNBRANGE` |
 | `SSLCHANNELDMXRANGE` | `SSLCHANNELDMXRANGES` | 1 003 | one sub-range |
 
-### Why the writer needs no options
+### What varies between libraries, and what does not
 
-The emission is uniform across all 25 610 files, and that is what makes a
-byte-exact round trip possible at all:
+This is the correction that cost the most here, so it goes before the tables.
+
+Two Nicolaudie libraries sit on this machine, and they do not agree:
+
+| | Easy View 3 | EasyViewConnect |
+|---|---:|---:|
+| profiles | 25 610 | 17 210 |
+| `VERSION="3"`, byte-exact round trip | **25 610** | **7 764** of 7 924 |
+| `VERSION="2"` (`TYPE="SSLLIBRARY2008"`, no prolog at all) | 0 | 9 286 |
+| unreadable with `DasCryptKey` | 0 | 160 |
+
+The Easy View 3 library is a **normalised export**: one prolog, ` />` on every
+empty element, and not one byte between two tags in 25 610 files. Read that as
+a property of the *format* — which is exactly what the first version of this
+tool did — and the parser refuses a third of the older library. The one shipped
+with EasyViewConnect indents with newlines (5 668 files), writes `/>` with no
+space before it, has three files whose prolog carries no `encoding`, and one
+with a UTF-8 BOM.
+
+So the codec **records** all of it and re-emits it verbatim: the prolog, the
+gap before every tag, the gap before every `</`, and the space before each
+`>` / `/>`. Same rule as everywhere else in this tree — unknown bytes pass
+through untouched. What every library does agree on is narrower than it looked:
 
 | | |
 |---|---|
-| Prolog | `<?xml version="1.0" encoding="UTF-8"?>`, always, with nothing after it |
-| Between tags | nothing — no newline, no indentation, no text, no comment, no CDATA |
-| Attributes | always `NAME="value"`, always separated by exactly one space |
-| Open tag | ends `>`; empty element ends ` />`, with the space |
-| Element names | uppercase `[A-Z0-9]+`, and so are attribute names |
+| Content | no text, no comment, no CDATA — only whitespace between tags |
+| Attributes | always `NAME="value"`, double-quoted, one space apart |
+| Names | uppercase `[A-Z0-9]+`, elements and attributes alike |
+| Empty elements | `<X …/>` or `<X …></X>`, both occur — the codec records which |
 
-`<SSLPRESETS SSLNBPRESET="0" />` and `<SSLPRESETS …></SSLPRESETS>` both occur,
-so the codec records **how each element was written** rather than deriving it
-from whether it has children. Re-emitting one as the other is not a round trip.
+The generator emits the normalised form: one space before `/>`, no indentation.
+
+**The 160 unreadable ones.** 157 of them share the same first eight *ciphertext*
+bytes, so they are one family with one header, and `DasCryptKey` is not their
+key; one is zero bytes long. Nothing here tries to find that key — that is the
+first of the four conditions in [`LEGAL.md`](../LEGAL.md), and it is not
+negotiable for a nicer number in a table.
 
 ### Counters and indexes
 
@@ -299,8 +326,8 @@ Drop the result into `ScanLibrary/<Brand>/` and the software picks it up.
 
 | | |
 |---|---|
-| `VERSION="2"` | refused, loudly. The online store serves some, and the local library has none — nothing here has ever seen one, so nothing here claims to read one. |
-| Malformed XML | refused. OFL issue #99 reports "fake XML" in the store; the parser raises rather than guessing. |
+| `VERSION="2"` | refused, **as a version we do not decode, not as a broken file** — 9 286 of them sit in the EasyViewConnect library. They decrypt cleanly with the same key, carry `TYPE="SSLLIBRARY2008"` and have no `<?xml` prolog at all. `verify` counts them apart, and `charge_xml` raises `VersionNonPriseEnCharge`. Calling them corrupt would be a lie about someone else's file. |
+| A wrong key | refused, and told apart from the above: the marker is `<DLMFILE` in the decrypted head, not the prolog — the prolog cannot carry it, since V2 has none. |
 | `SSLBEAMS`, `SSLGCHANNELS` | read and round-tripped, **not generated**. Multi-beam bars and matrices survive a read/write cycle; they cannot be described yet. |
 | 16-bit channels | same: read, not generated. A fine channel needs `SSLCHANNELMSB`/`LSB` and `SSLCHANNEL16BITSINDEX` wired both ways, and that has not been measured against the software. |
 | `SSLPRESETTARGET`, `SSLPRESETPRISMTYPE`, `SSLPRESETSHOWDIMMER` | observed, not understood. The generator writes the library's majority value and offers no option: an unmeasured knob is worse than no knob. |
@@ -324,13 +351,33 @@ one.
 3. A restart, or an explicit library rescan, is needed before a new file shows
    up — **0.5**.
 
-**Outcome: not yet measured.** Two profiles — a three-channel RGB and the
-seven-channel example above — are generated and sitting in
-`ScanLibrary/wolfmix-automation/`. Easy View's fixture list lives behind its
-**Builder** tab, and driving that tab from here failed for a reason that has
-nothing to do with the format: on this machine every synthetic click lands in
-the menu bar row whatever y it asks for, so the menus can be opened and the
-in-window controls cannot. The prediction above stands as published, and the
-writer stays **schema-conforming, not software-confirmed**, until someone
-opens the Builder and looks. Until then, do not read the byte-exact round trip
-as acceptance — it is not the same claim.
+**Outcome: accepted** (Easy View, 2026-08-31, this machine). Both generated
+profiles imported, appear in the room, and patch — the fixture panel reads
+`Mode 1 (7 Channels)` for the seven-channel description above, and 7000 K,
+which is our `SSLLAMPTEMP`. Prediction 1 holds. Prediction 2 holds with it:
+`SSLLCOWNERUID` was a UUID we invented and the profile loaded anyway, so an
+owner outside the vendor's cloud account is ignored rather than refused.
+Prediction 3 was not tested — the app was started after the files were in
+place, so nothing says whether a running instance would have needed a rescan.
+
+The writer is **software-confirmed** for what that test covers: the file is
+read, the fixture exists, the channel count is ours. It does **not** yet cover
+the channel *order* or the presets as displayed — nothing has looked at that
+list. Do not stretch the claim past the measurement.
+
+Two defaults are worth overriding, both inherited from the generic panel and
+both visible in that panel:
+
+| `properties` key | Default | Why you may want another |
+|---|---|---|
+| `SSLLAMPLUX`, `SSLLAMPPOWER` | `0` | the panel then reports 1 lm, and the fixture throws almost no light in the 3D view. The library's usual value is `-1` (unspecified) |
+| `SSLBEAMOPENING` | `1` | a 1° beam — right for a flat panel, wrong for anything with a lens |
+
+## Not the Wolfmix
+
+Loading a profile into Easy View is not the same as having a Wolfmix drive the
+fixture. WTOOLS does not read `ScanLibrary/` at all: its fixture library is
+`wmProfiles.wmx` in its own application-support directory, one of the opaque
+sidecars this repository does not touch ([`LEGAL.md`](../LEGAL.md)). A profile
+generated here reaches a W1 the way any other does — through WTOOLS's own
+import — and nothing in `tools/ssl2.py` shortens that path.

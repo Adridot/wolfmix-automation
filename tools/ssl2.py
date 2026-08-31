@@ -113,13 +113,39 @@ dechiffre = transforme
 chiffre = transforme  # same operation; named twice because callers mean two things
 
 
+class VersionNonPriseEnCharge(ValueError):
+    """A real .ssl2 of a version this codec does not decode. Not a failure of
+    the file, and not the same thing as "this is not an .ssl2" — an older
+    library is full of these, and calling them corrupt would be a lie."""
+
+
+def classe(clair):
+    """What a decrypted payload is: "v3", "v2", or None if it is not SSL2.
+
+    The prolog cannot carry this: `VERSION="2"` files have no `<?xml` at all,
+    and three V3 files write one with no encoding. `<DLMFILE` is the marker.
+    """
+    tete = clair[:400]
+    if b"<DLMFILE" not in tete:
+        return None
+    version = re.search(rb'<DLMFILE[^>]*VERSION="(\d+)"', tete)
+    return f"v{version.group(1).decode()}" if version else "v?"
+
+
 def charge_xml(chemin, key=CLE_DEFAUT):
-    """Decrypt a file and refuse anything whose payload is not XML."""
+    """Decrypt a file, and say precisely what it is when we cannot read it."""
     with open(chemin, "rb") as flux:
         clair = dechiffre(flux.read(), key)
-    if not clair.lstrip()[:5].startswith(b"<?xml"):
-        raise ValueError(f"{chemin} : le contenu déchiffré ne commence pas par "
-                         f"<?xml — ce n'est pas un .ssl2 (ou la clé est fausse)")
+    quoi = classe(clair)
+    if quoi is None:
+        raise ValueError(f"{chemin} : le contenu déchiffré ne contient pas "
+                         f"<DLMFILE — ce n'est pas un .ssl2 (ou la clé est "
+                         f"fausse) ; il commence par {clair[:24]!r}")
+    if quoi != "v3":
+        raise VersionNonPriseEnCharge(
+            f"{chemin} : SSL2 {quoi} (TYPE=SSLLIBRARY2008 sur cette version), "
+            f"non décodé ici — seul VERSION=\"3\" l'est. Le fichier est "
+            f"valide, c'est le codec qui s'arrête")
     return clair
 
 
@@ -143,14 +169,25 @@ def pas_de_biblio():
 
 
 # --- XML codec -------------------------------------------------------------
-# Measured over the 25 610 files of a local library, and the reason the writer
-# needs no options: the emission is uniform. One prolog, no text content, no
-# comment, no CDATA, no gap between tags; attributes always separated by one
-# space and always double-quoted; an open tag ends `>`, an empty one ` />`.
-# Deviating from any of that would break the round trip, and `verify` is what
-# says so.
-PROLOG = '<?xml version="1.0" encoding="UTF-8"?>'
-_BALISE = re.compile(r'<(/?)([A-Z0-9]+)((?:\s+[A-Z0-9]+="[^"]*")*)\s*(/?)>')
+# What every library agrees on: no text content, no comment, no CDATA;
+# attributes always double-quoted and separated by one space; an open tag ends
+# `>`, an empty one ` />`.
+#
+# What they do NOT agree on, and the correction that cost the most here: the
+# Easy View 3 library is a *normalised export* — one prolog, and not one byte
+# between two tags in 25 610 files. Read that as a property of the format and
+# you write a parser that refuses a third of an older library: the one shipped
+# with EasyViewConnect indents its XML with newlines (5 668 files) and writes
+# `<?xml version="1.0"?>` with no encoding (3 files). Uniformity over thousands
+# of samples is evidence about the corpus, not the format — AGENTS.md, trap 1.
+#
+# So the prolog and every gap between tags are *recorded* and re-emitted
+# verbatim, exactly as the unknown-bytes rule requires elsewhere in this tree.
+PROLOG = '<?xml version="1.0" encoding="UTF-8"?>'   # what the generator emits
+# The optional BOM is one file in 33 000 — kept because dropping it would be a
+# silent edit, and this codec does not make those.
+_PROLOG = re.compile(r"(?:\xef\xbb\xbf)?<\?xml[^>]*\?>")
+_BALISE = re.compile(r'<(/?)([A-Z0-9]+)((?:\s+[A-Z0-9]+="[^"]*")*)(\s*)(/?)>')
 _ATTR = re.compile(r'\s+([A-Z0-9]+)="([^"]*)"')
 
 # Bytes travel as latin-1 text: every byte round-trips, and a name the vendor
@@ -167,16 +204,27 @@ def vers_utf8(s):
 class Element:
     """One XML element, faithful to the stream: attribute order included."""
 
-    __slots__ = ("tag", "attrs", "enfants", "vide")
+    __slots__ = ("tag", "attrs", "enfants", "vide", "avant", "fin", "blancfin",
+                 "prologue", "queue")
 
     def __init__(self, tag, attrs=None, enfants=None, vide=None):
         self.tag = tag
+        # Whitespace as it was found: `avant` precedes this element's `<`,
+        # `fin` precedes its `</`. On the root, `prologue` and `queue` hold the
+        # declaration and whatever trails the document. All empty by default,
+        # so a generated tree emits the normalised form.
+        self.avant = self.fin = self.queue = ""
+        self.prologue = PROLOG
         self.attrs = dict(attrs or {})      # insertion order = stream order
         self.enfants = list(enfants or [])
         # `vide` is how it was written, not whether it has children: the corpus
         # has both `<SSLPRESETS ... />` and `<SSLPRESETS ...></SSLPRESETS>`,
         # and re-emitting one as the other is not a byte-identical round trip.
         self.vide = not self.enfants if vide is None else vide
+        # The space before `>` / `/>`. Easy View 3 always writes ` />` and
+        # never ` >`; the older library writes `/>` with no space at all. It is
+        # one byte and it is the difference between a round trip and a diff.
+        self.blancfin = " " if self.vide else ""
 
     def __getitem__(self, nom):
         return self.attrs[nom]
@@ -199,22 +247,26 @@ def parse(xml, source="<xml>"):
     """XML bytes → Element tree. Raises rather than reading a file partly."""
     if isinstance(xml, bytes):
         xml = xml.decode("latin-1")
-    if not xml.startswith(PROLOG):
+    tete = _PROLOG.match(xml)
+    if not tete:
         raise ValueError(f"{source} : prologue inattendu {xml[:40]!r}")
-    pos, pile, racine = len(PROLOG), [], None
+    prologue = tete.group(0)
+    pos, pile, racine = tete.end(), [], None
     for m in _BALISE.finditer(xml, pos):
-        if m.start() != pos:
+        blanc = xml[pos:m.start()]
+        if blanc.strip():
             raise ValueError(f"{source} : contenu hors balise à l'offset "
-                             f"{pos} : {xml[pos:m.start()][:40]!r}")
+                             f"{pos} : {blanc[:40]!r}")
         pos = m.end()
-        ferme, tag, corps, vide = m.groups()
+        ferme, tag, corps, blancfin, vide = m.groups()
         if ferme:
             if not pile or pile[-1].tag != tag:
                 raise ValueError(f"{source} : </{tag}> ferme "
                                  f"{pile[-1].tag if pile else 'rien'}")
-            pile.pop()
+            pile.pop().fin = blanc
             continue
         e = Element(tag, _ATTR.findall(corps), vide=bool(vide))
+        e.avant, e.blancfin = blanc, blancfin
         if len(e.attrs) != len(_ATTR.findall(corps)):
             raise ValueError(f"{source} : attribut répété dans <{tag}>")
         if pile:
@@ -225,34 +277,36 @@ def parse(xml, source="<xml>"):
             raise ValueError(f"{source} : deuxième racine <{tag}>")
         if not vide:
             pile.append(e)
-    if pos != len(xml):
+    if xml[pos:].strip():
         raise ValueError(f"{source} : queue non balisée {xml[pos:][:40]!r}")
     if pile:
         raise ValueError(f"{source} : <{pile[-1].tag}> jamais fermée")
     if racine is None:
         raise ValueError(f"{source} : document vide")
+    racine.prologue, racine.queue = prologue, xml[pos:]
     return racine
 
 
 def write(racine):
     """Element tree → XML bytes. Deterministic: no option, no choice."""
-    morceaux = [PROLOG]
+    morceaux = [racine.prologue]
 
     def emets(e):
-        morceaux.append(f"<{e.tag}")
+        morceaux.append(e.avant + f"<{e.tag}")
         for nom, valeur in e.attrs.items():
             morceaux.append(f' {nom}="{valeur}"')
         if e.vide:
-            morceaux.append(" />")
+            morceaux.append(e.blancfin + "/>")
             if e.enfants:
                 raise ValueError(f"<{e.tag}> marquée vide mais a des enfants")
             return
-        morceaux.append(">")
+        morceaux.append(e.blancfin + ">")
         for enfant in e.enfants:
             emets(enfant)
-        morceaux.append(f"</{e.tag}>")
+        morceaux.append(f"{e.fin}</{e.tag}>")
 
     emets(racine)
+    morceaux.append(racine.queue)
     return "".join(morceaux).encode("latin-1")
 
 
@@ -486,6 +540,10 @@ def _auto_test_crypto():
     assert dechiffre(chiffre(clair)) == clair
     # A NUL does not survive — which is why the codec works on XML only.
     assert dechiffre(chiffre(b"\x00")) != b"\x00"
+    # A V2 payload is a refusal with its own type, not "this is not an .ssl2".
+    assert classe(b'<DLMFILE TYPE="SSLLIBRARY2008" VERSION="2">') == "v2"
+    assert classe(b'<?xml version="1.0"?><DLMFILE VERSION="3">') == "v3"
+    assert classe(b"nawak") is None
     # Every stream starts at offset 0: a two-byte block is not two one-byte
     # blocks, and the keystream cache must not have quietly made it so.
     assert transforme(b"ab") != transforme(b"a") + transforme(b"b")
@@ -847,14 +905,18 @@ def verifie(fichiers, bavard=False):
     Both round trips at once, on real files, because they fail differently: a
     crypto bug moves every byte, a codec bug moves one attribute.
     """
-    ok = echecs = 0
+    ok = echecs = hors = 0
     for chemin in fichiers:
         try:
             with open(chemin, "rb") as flux:
                 brut = flux.read()
             clair = dechiffre(brut)
-            if not clair.lstrip()[:5].startswith(b"<?xml"):
-                raise ValueError("déchiffré non-XML")
+            quoi = classe(clair)
+            if quoi is None:
+                raise ValueError(f"déchiffré non-SSL2 ({clair[:16]!r})")
+            if quoi != "v3":
+                hors += 1
+                continue
             racine = parse(clair, chemin)
             verifie_racine(racine, chemin)
             if write(racine) != clair:
@@ -868,7 +930,7 @@ def verifie(fichiers, bavard=False):
             ok += 1
             if bavard:
                 print(f"ok {chemin}")
-    return ok, echecs
+    return ok, echecs, hors
 
 
 def _auto_test_generateur():
@@ -974,7 +1036,7 @@ def _auto_test(echantillon=400):
     if not fichiers:
         print("ssl2: crypto et générateur ok (hors fichiers)", file=sys.stderr)
         return pas_de_biblio()
-    ok, echecs = verifie(fichiers[:echantillon])
+    ok, echecs, hors = verifie(fichiers[:echantillon])
     if echecs:
         raise SystemExit(f"ssl2: {echecs} échec(s) sur {ok + echecs}")
     print(f"self-check ok: générateur, puis aller-retour octet-près sur {ok} fichiers "
@@ -1025,8 +1087,10 @@ def main(argv=None):
         if not fichiers:
             pas_de_biblio()
             return 3
-        ok, echecs = verifie(fichiers, args.bavard)
-        print(f"{ok}/{ok + echecs} aller-retours octet-près", file=sys.stderr)
+        ok, echecs, hors = verifie(fichiers, args.bavard)
+        print(f"{ok}/{ok + echecs} aller-retours octet-près"
+              + (f", {hors} hors périmètre (SSL2 v2)" if hors else ""),
+              file=sys.stderr)
         return 1 if echecs else 0
     if args.commande == "gen":
         with open(args.description, encoding="utf-8") as flux:

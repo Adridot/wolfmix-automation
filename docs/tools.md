@@ -443,6 +443,34 @@ flash and sheet are your fixture's data ([`../LEGAL.md`](../LEGAL.md)). Icon
 `Open`, names over 19 bytes and a wheel carried by a second group stay refused
 by the tools that own them — `gobo_write.py` and `wpj_show.py`.
 
+## `ssl2.py` — Nicolaudie fixture profiles
+
+The odd one out: it reads a **different vendor's file format**, `.ssl2`, the
+fixture profiles Easy View and its siblings load from `ScanLibrary/`. XML under
+a stream cipher. [`LEGAL.md`](../LEGAL.md) states the four conditions that keep
+reading it in scope, and [`docs/ssl2-format.md`](ssl2-format.md) is the format
+itself, with both enum tables.
+
+```bash
+python3 tools/ssl2.py                      # self-check
+python3 tools/ssl2.py dump f.ssl2          # the XML on stdout
+python3 tools/ssl2.py gen fixture.json     # a description → a .ssl2
+python3 tools/ssl2.py verify               # the whole local library
+python3 tools/ssl2.py enums                # rebuild both tables and diff them
+python3 tools/ssl2.py diff a.ssl2 b.ssl2   # structural, for bisecting
+```
+
+The library it reads is `/Applications/Easy View/ScanLibrary`, or `$SSL2_LIBRARY`.
+None of it ships here, and the self-check abstains when it is absent — the
+crypto and generator halves still run, since they need no files. `verify`
+takes about ninety seconds over 25 610 profiles; the self-check does the first
+400 and says so.
+
+**Read `docs/ssl2-format.md` before writing a fixture**, in particular the last
+section: the round trip is byte-exact over the whole library, and that proves
+the codec, not that the software accepts what we generate. Those are two
+claims and only the first one is paid for.
+
 ## `wolfmix.py` / `wolfmix_experiment.py`
 
 Device-side. Documented separately in [`device.md`](device.md).

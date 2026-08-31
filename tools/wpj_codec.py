@@ -26,13 +26,13 @@ import wpjlib
 # PAS une adresse DMX (l'adresse est 115.f2). Voir le registre, « record 105 ».
 # f6 = index de groupe (0-7 = A-H, 8 = le slot des effets), redondant avec
 # 115.f4 — voir le registre, « l'affectation luminaire → groupe ».
-_PATCH = {1: ("profil", "v"), 4: ("offset_106", "v"), 5: ("fixture", "v"),
-          6: ("groupe", "v"), 7: ("nb_entrees_106", "v")}
-_PROFIL = {2: ("nb_canaux", "v"), 8: ("nom", "str"), 9: ("hash", "hex"),
+_PATCH = {1: ("profile", "v"), 4: ("offset_106", "v"), 5: ("fixture", "v"),
+          6: ("group", "v"), 7: ("entry_count_106", "v")}
+_PROFIL = {2: ("channel_count", "v"), 8: ("name", "str"), 9: ("hash", "hex"),
            11: ("timestamp", "v")}
 # Ordre des 7 canaux d'un pad : device-confirmed (vue RGB+ du W1, brut 0-255)
-_PAD = {1: ("rouge", "v"), 2: ("vert", "v"), 3: ("bleu", "v"),
-        4: ("blanc", "v"), 5: ("ambre", "v"), 6: ("lime", "v"), 7: ("uv", "v")}
+_PAD = {1: ("red", "v"), 2: ("green", "v"), 3: ("blue", "v"),
+        4: ("white", "v"), 5: ("amber", "v"), 6: ("lime", "v"), 7: ("uv", "v")}
 
 # Sous-message FX (commun Beam/Color/Move) — research/preset-format-165.md.
 # FX6-02/03 : f6 = Phase, f8 = Size, f9 = Speed, f2 = Fade. La vitesse était
@@ -42,35 +42,35 @@ _PAD = {1: ("rouge", "v"), 2: ("vert", "v"), 3: ("bleu", "v"),
 # f3 et f5 restent des clés neutres : leur sens dépend du moteur (f3 = Feature
 # sur le faisceau, mesuré ; Fan sur le mouvement, déduit), et un schéma partagé
 # ne peut pas porter deux noms.
-_FX = {7: ("effet", "v"), 4: ("link_order", "v"), 10: ("speed_source", "v"),
+_FX = {7: ("effect", "v"), 4: ("link_order", "v"), 10: ("speed_source", "v"),
        1: ("bpm_division", "v"), 2: ("fade", "v"),
-       6: ("phase", "v"), 8: ("size", "v"), 9: ("vitesse", "v")}
+       6: ("phase", "v"), 8: ("size", "v"), 9: ("speed", "v")}
 _PRESET = {
-    19: ("id", "v"), 25: ("nom", "str"),
+    19: ("id", "v"), 25: ("name", "str"),
     1: ("beam_fx1", _FX), 2: ("beam_fx2", _FX),
     5: ("color_fx1", _FX), 6: ("color_fx2", _FX),
     21: ("move_fx1", _FX), 22: ("move_fx2", _FX),
     28: ("positions", "packed"),          # index de position par groupe A–H
     29: ("gobos", "packed"),              # index de gobo (type 145) par groupe,
                                           # 0-based, 255 = aucun — device-confirmed
-    30: ("pattern_couleur", "packed"),    # PATTERN de la couleur statique par groupe
+    30: ("color_pattern", "packed"),    # PATTERN de la couleur statique par groupe
                                           # A–H (nom lu sur l'écran) — device-confirmed
     # f31 : 20 varints packés = les octets d'un champ de bits de 160 bits,
     # découpé en huit masques de 20 bits, un par groupe A–H ; bit n du groupe
     # g = pad n+1 de la palette 140 de ce groupe — device-confirmed, registre
     # « f31 — one 20-pad mask per group A–H ».
-    31: ("couleur_statique", "packed"),
+    31: ("static_color", "packed"),
     # f10 : masque de contenu, six bits, 1 = bascule ÉTEINTE, dans l'ordre de
     # l'écran PRESET EDIT — bit0 COLOR, 1 MOVE, 2 BEAM, 3 GOBO, 4 LIVE EDIT,
     # 5 OTHER (bit 5 prédit, pas encore mesuré). Voir le registre, F4-02.
-    10: ("masque_contenu", "v"),
+    10: ("content_mask", "v"),
     17: ("dimmers", "packed"),            # dimmer par groupe A–H
     # Les cinq features de l'écran STATIC GOBO, en pourcentage par groupe
     # A–H — device-confirmed par une capture de preset, voir « GOBO-02 ».
     14: ("gobo_rotate", "packed"), 32: ("gobo_focus", "packed"),
     33: ("gobo_prism", "packed"), 34: ("gobo_zoom", "packed"),
     35: ("gobo_iris", "packed"),
-    8: ("color_fx_actif", "packed"), 24: ("move_fx_actif", "packed"),
+    8: ("color_fx_active", "packed"), 24: ("move_fx_active", "packed"),
     # Sélecteur de page par groupe A–H : 0 = FX1, 1 = FX2. Le record range
     # chaque moteur en quadruplet — paire, sélecteur, actif : f1/f2/f3 pour le
     # faisceau, f5/f6/f7/f8 pour la couleur, f21/f22/f23/f24 pour le mouvement.
@@ -84,32 +84,32 @@ _PRESET = {
 }
 
 SCHEMAS = {
-    101: {1: ("nom", "str")},
+    101: {1: ("name", "str")},
     102: {},                                  # 16 octets, champs non identifiés
     105: {5: ("patch", _PATCH)},
-    115: {5: ("fixtures", {2: ("adresse_dmx", "v"), 3: ("profil", "v"),
-                          4: ("groupe", "v")})},
-    116: {5: ("profils", _PROFIL)},
-    120: {5: ("canaux", {})},                 # entrée vide {} = `2a 00` = tout à 0
-    125: {5: ("groupes", {8: ("nom", "str")})},
+    115: {5: ("fixtures", {2: ("dmx_address", "v"), 3: ("profile", "v"),
+                          4: ("group", "v")})},
+    116: {5: ("profiles", _PROFIL)},
+    120: {5: ("channels", {})},                 # entrée vide {} = `2a 00` = tout à 0
+    125: {5: ("groups", {8: ("name", "str")})},
     135: {5: ("pads", _PAD)},
     140: {2: ("page", "v"), 5: ("pads", _PAD)},
     # 111 : plages de valeurs d'un canal (SPEC §7.6). f1/f2 = première et
     # dernière valeur DMX, f3 = fonction (14 = roue de gobos), f4 = id d'image
     # gobo des plages roue (= 145.f2, identité vérifiée). L'ordre du fil est
     # l'ordre des pads, et il est libre — device-confirmed, SORT-01.
-    111: {5: ("plages", {1: ("debut", "v"), 2: ("fin", "v"),
-                         3: ("fonction", "v"), 4: ("gobo_id", "v")})},
+    111: {5: ("ranges", {1: ("start", "v"), 2: ("end", "v"),
+                         3: ("function", "v"), 4: ("gobo_id", "v")})},
     # 145 : palette gobo. f1 = glyphe police d'icônes (' ' = vide), f2 = id
     # d'image gobo (= 111[plage].f4), f3 = nom optionnel, opérateur-assignable
     # et écrit hors appareil — device-confirmed, RENAME-01. Voir le registre.
-    145: {5: ("gobos", {1: ("glyphe", "str"), 2: ("gobo_id", "v"),
-                        3: ("nom", "str")})},
-    150: {5: ("positions", {5: ("nom", "str")})},
+    145: {5: ("gobos", {1: ("glyph", "str"), 2: ("gobo_id", "v"),
+                        3: ("name", "str")})},
+    150: {5: ("positions", {5: ("name", "str")})},
     # 151 : positions des fixtures « détachées » d'un slot de 150, découpées
     # par 150.f1/f2. Trois offsets signés, valeur = (v - 32768) / 32767 —
     # device-confirmed sur l'écran POSITION. Voir le registre, « POS-04 ».
-    151: {5: ("detachees", {1: ("fixture", "v"), 2: ("focus_offset", "v"),
+    151: {5: ("detached", {1: ("fixture", "v"), 2: ("focus_offset", "v"),
                             3: ("pan_offset", "v"), 4: ("tilt_offset", "v")})},
     # 130 : la carte de mapping DMX IN (MAP-01..05, registre). f4 = la fonction
     # visée — 20 = dimmer de groupe, 27 = MAIN, 70 = preset, 17 = BPM Tap,
@@ -124,10 +124,10 @@ SCHEMAS = {
     # La clé d'une entrée est (f4, f2), jamais son rang : l'ordre du fil bouge
     # sans que le contenu change. f1 = le nombre d'entrées. f7 et f8 valent 1
     # partout, n'ont jamais bougé, et restent sans nom.
-    130: {5: ("mappings", {2: ("instance", "v"), 4: ("fonction", "v"),
-                           5: ("canal_octet_haut", "v"),
-                           6: ("canal_octet_bas", "v")})},
-    160: {5: ("macros", {6: ("nom", "str")})},
+    130: {5: ("mappings", {2: ("instance", "v"), 4: ("function", "v"),
+                           5: ("channel_high_byte", "v"),
+                           6: ("channel_low_byte", "v")})},
+    160: {5: ("macros", {6: ("name", "str")})},
     165: {5: ("presets", _PRESET)},
 }
 # passthrough volontaire : 106, 110, 155, 161
@@ -153,6 +153,57 @@ def _wvarint(v):
         out.append(b | (0x80 if v else 0))
         if not v:
             return bytes(out)
+
+
+# Les clés publiques étaient françaises jusqu'au 2026-08-31. Elles ne sont pas
+# acceptées comme alias : une clé retirée est une erreur, et l'erreur nomme son
+# remplaçant. Le dépôt n'avait ni tag, ni release, ni consommateur connu — le
+# moment était le bon, et une couche d'alias aurait été du code écrit pour être
+# supprimé.
+CLES_RETIREES = {
+    "adresse_dmx": "dmx_address",
+    "ambiances": "moods",
+    "ambre": "amber",
+    "blanc": "white",
+    "bleu": "blue",
+    "canal": "channel",
+    "canal_octet_bas": "channel_low_byte",
+    "canal_octet_haut": "channel_high_byte",
+    "canaux": "channels",
+    "cible": "target",
+    "color_fx_actif": "color_fx_active",
+    "couleur": "color",
+    "couleur_statique": "static_color",
+    "debut": "start",
+    "detachees": "detached",
+    "effet": "effect",
+    "energie": "energy",
+    "fin": "end",
+    "fonction": "function",
+    "glyphe": "glyph",
+    "gobo_noms": "gobo_names",
+    "gobo_ordre": "gobo_order",
+    "groupe": "group",
+    "groupes": "groups",
+    "masque_contenu": "content_mask",
+    "modele": "template",
+    "move_fx_actif": "move_fx_active",
+    "nb_canaux": "channel_count",
+    "nb_entrees_106": "entry_count_106",
+    "nom": "name",
+    "pattern_couleur": "color_pattern",
+    "plages": "ranges",
+    "profil": "profile",
+    "profils": "profiles",
+    "rouge": "red",
+    "vert": "green",
+    "vitesse": "speed",
+}
+
+
+def remplacante(cle):
+    """Le nom anglais d'une clé française retirée, ou None."""
+    return CLES_RETIREES.get(cle)
 
 
 def _decode_msg(buf, schema):
@@ -222,6 +273,10 @@ def _encode_msg(d, schema):
         elif nom.startswith("f") and nom[1:].isdigit():
             f, genre = int(nom[1:]), None
         else:
+            neuve = remplacante(nom)
+            if neuve:
+                raise ValueError(
+                    f"clé {nom!r} retirée le 2026-08-31 : écrire {neuve!r}")
             raise ValueError(f"clé inconnue {nom!r}")
         if genre == "packed" and isinstance(val, list) and \
                 not (val and isinstance(val[0], (list, dict))):

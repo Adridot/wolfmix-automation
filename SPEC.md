@@ -299,7 +299,7 @@ reading from *derived* to *editable*:
 
 Both edits ride the standard path: record 111 now has a codec schema
 (byte-exact on the whole corpus, like every schema), and `wpj_show` carries
-them as the `gobo_noms` and `gobo_ordre` spec keys — same auto-verify
+them as the `gobo_names` and `gobo_order` spec keys — same auto-verify
 contract as preset edits. The compiled specs reproduce the two accepted
 candidates byte for byte.
 
@@ -516,8 +516,8 @@ the ninth bit is never set. The flash slices 6–10 do set it (§5.7).
 
 | Slice | Engine | Pinned by |
 |---|---|---|
-| 0 | **Color FX** | equals `color_fx_actif`, 3696/3697 |
-| 1 | **Move FX** | equals `move_fx_actif`, 3697/3697 |
+| 0 | **Color FX** | equals `color_fx_active`, 3696/3697 |
+| 1 | **Move FX** | equals `move_fx_active`, 3697/3697 |
 | 2 | **Beam FX** | active only on beam-page presets |
 | **3** | **unattributed, and *not* the second Colour engine** | `0` even on a preset that really runs a second Colour page — **[validated]**, FX2-01 |
 | **4** | **unattributed, and *not* the second Move engine** | same shot, same reasoning |
@@ -549,11 +549,11 @@ exclusion mask in record 102 and having a slice here are **independent** —
 including the effects slot, where the FX engines stop at 255.
 
 The alignment tests itself: at a stride of 8, slice 1 would read 254 where
-`move_fx_actif` says 255. Across 44364 slice extractions not one falls outside
+`move_fx_active` says 255. Across 44364 slice extractions not one falls outside
 `{0, 1, 2, 5, 7, 255, 511}` — 511 being the five flash slices, which set all nine
 bits at once (§5.7).
 
-**A writer must set both carriers.** `color_fx_actif` and `move_fx_actif`
+**A writer must set both carriers.** `color_fx_active` and `move_fx_active`
 duplicate slices 0 and 1; ACC-03b wrote one and not the other, and the firmware
 followed `f16` — which is why its Color FX was ignored.
 
@@ -1463,7 +1463,7 @@ drawn from it was not evidence.
 
 - ~~**L2 — group-mask asymmetry.**~~ **Closed** (§5.4): `f16` is twelve **9-bit**
   group masks, not complementary pairs. The stride is nine because record 125
-  has nine slots. Slice 0 equals `color_fx_actif` and slice 1 `move_fx_actif`
+  has nine slots. Slice 0 equals `color_fx_active` and slice 1 `move_fx_active`
   exactly; slice 2 is the Beam FX, slice 7 the strobe.
 - ~~**L3 — record 102 `f5`/`f6`/`f11`.**~~ **Closed** (§6): `f5` = SMOKE fan
   speed and `f6` = SMOKE intensity (FX-07); BLINDER fade-out was not a 100 at

@@ -128,8 +128,8 @@ def moteurs_f16(w):
     Les varints packés sont les octets d'un champ de bits little-endian
     découpé en tranches de **9** bits — 9 et non 8, parce que le record 125
     a neuf slots : les groupes A–H plus celui des effets. L'alignement se
-    teste tout seul : à 9 bits le moteur 1 vaut exactement `move_fx_actif`
-    sur tout le corpus, à 8 bits il vaudrait 254 là où `move_fx_actif` vaut
+    teste tout seul : à 9 bits le moteur 1 vaut exactement `move_fx_active`
+    sur tout le corpus, à 8 bits il vaudrait 254 là où `move_fx_active` vaut
     255. Voir le registre, « f16 » et « FLASH-01 ».
     """
     for pre in _items(w, 165):
@@ -148,7 +148,7 @@ def moteurs_f16(w):
                 f"165.f16 : moteur {m} allume le 9e slot dans {h['hex']}"
         actif = _varints(pre.get("f24", {}).get("hex", ""))
         assert (gros >> 9) & 0x1FF == (actif[0] if actif else 0), \
-            f"165.f16 : moteur 1 = {(gros >> 9) & 0x1FF} != move_fx_actif " \
+            f"165.f16 : moteur 1 = {(gros >> 9) & 0x1FF} != move_fx_active " \
             f"{actif} dans {h['hex']}"
 
 
@@ -527,9 +527,9 @@ def ajout_de_preset():
         f1a, ea = _entrees_165(av.get(165))
         f1b, eb = _entrees_165(ap.get(165))
         noms_a = sum(1 for p in wpj_codec.decode(165, av.get(165))["presets"]
-                     if p.get("nom"))
+                     if p.get("name"))
         noms_b = sum(1 for p in wpj_codec.decode(165, ap.get(165))["presets"]
-                     if p.get("nom"))
+                     if p.get("name"))
         assert (len(ea), noms_a, f1a) == (82, 81, 82), \
             f"F30-04 avant : {(len(ea), noms_a, f1a)}"
         assert (len(eb), noms_b, f1b) == (83, 81, 81), \

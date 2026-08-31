@@ -110,7 +110,7 @@ them is not in the file:
 | `165.f10`, content mask — a **set** bit means the toggle is **off** | bit 1 (`MOVE`) written by us **is** honoured (RECALL-05, validated). Bit 5 (`OTHER`) gates the group dimmers and nothing else a static cue carries — proven by writing the bit and nothing else, 18 channels moved and only those (FW-03, validated) | written: `COLOR` and `OTHER` on, `MOVE`/`BEAM` per family, `GOBO` off, `LIVE EDIT` per the `live_edit` key |
 | `165.f16`, the engine group masks | an FX edit is invisible for an engine that is off | **not written** — the generator clones a donor preset that already has the right engines |
 
-`f16` is duplicated by `color_fx_actif`/`move_fx_actif`, and writing one without
+`f16` is duplicated by `color_fx_active`/`move_fx_active`, and writing one without
 the other produces a preset the device renders differently from what the file
 says (ACC-03). Cloning sidesteps the engine slices; it does **not** sidestep
 slice 5, the mask of the groups the preset addresses. A clone inherits its

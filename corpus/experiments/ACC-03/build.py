@@ -15,14 +15,14 @@ def variant(out, mutate):
     p = next(p for p in ps if p.get('id') == 78)
     mutate(p)
     w.replace(165, C.encode(165, d))
-    w.replace(101, C.encode(101, {'nom': f'WMX TEST {os.path.basename(out)[:7].upper()}'}))
+    w.replace(101, C.encode(101, {'name': f'WMX TEST {os.path.basename(out)[:7].upper()}'}))
     w.save(out)
     # contrôle : relecture
     p2 = next(q for q in (C.decode(165, Wpj.load(out).get(165)).get('presets') or []) if q.get('id') == 78)
-    print(out, '| f4 =', p2.get('f4'), '| actif =', p2.get('color_fx_actif'))
+    print(out, '| f4 =', p2.get('f4'), '| actif =', p2.get('color_fx_active'))
 
 variant('corpus/experiments/ACC-03/acc03a.wpj', lambda p: p.__setitem__('f4', 25))
 def full(p):
     p['f4'] = 255
-    p['color_fx_actif'] = [255]
+    p['color_fx_active'] = [255]
 variant('corpus/experiments/ACC-03/acc03b.wpj', full)

@@ -82,7 +82,7 @@ def validate_project(path, project_name=None):
         metadata = wpj_codec.decode(101, project.get(101))
         if set(metadata) == {"raw"}:
             raise protocol.WolfmixError("Project name record 101 is not decodable")
-        metadata["nom"] = project_name
+        metadata["name"] = project_name
         project.replace(101, wpj_codec.encode(101, metadata))
         body = project.body()
         data = hashlib.sha1(body).digest() + body

@@ -1,15 +1,15 @@
 {
   "base": "corpus/projects/rig-a.wpj",
-  "nom": "WMX TEST ACC-02",
+  "name": "WMX TEST ACC-02",
   "presets": [
     {
       "id": 78,
-      "nom": "ACC02 Sparkle",
-      "color_fx1": {"effet": 2, "vitesse": 150, "speed_source": 2},
+      "name": "ACC02 Sparkle",
+      "color_fx1": {"effect": 2, "speed": 150, "speed_source": 2},
       "dimmers": [255, 255, 128, 128, 255, 255, 255, 255]
     }
   ],
   "palette": [
-    {"index": 3, "rouge": 128, "vert": 0, "bleu": 255}
+    {"index": 3, "red": 128, "green": 0, "blue": 255}
   ]
 }

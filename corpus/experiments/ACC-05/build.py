@@ -15,12 +15,12 @@ by_id = {p.get('id', 0): p for p in d['presets']}
 p35, p39 = by_id[35], by_id[39]
 assert p35['color_fx1'][0]['f5'] == {'hex': 'f00100'}
 p35['color_fx1'][0]['f5'] = {'hex': '0300'}   # varints [3, 0] = pads 1+2
-p35['nom'] = 'ACC05 Pads12'
-assert p39['color_fx1'][0]['vitesse'] == 50
-p39['color_fx1'][0]['vitesse'] = 200
-p39['nom'] = 'ACC05 Vite'
+p35['name'] = 'ACC05 Pads12'
+assert p39['color_fx1'][0]['speed'] == 50
+p39['color_fx1'][0]['speed'] = 200
+p39['name'] = 'ACC05 Vite'
 w.replace(165, C.encode(165, d))
-w.replace(101, C.encode(101, {'nom': 'WMX TEST ACC-05'}))
+w.replace(101, C.encode(101, {'name': 'WMX TEST ACC-05'}))
 out = 'corpus/experiments/ACC-05/acc05.wpj'
 w.save(out)
 # relecture de contrôle
@@ -28,4 +28,4 @@ ps = C.decode(165, Wpj.load(out).get(165))['presets']
 for p in ps:
     if p.get('id') in (35, 39):
         fx = p['color_fx1'][0]
-        print(p['id'], repr(p['nom']), '| f5', fx.get('f5'), '| vitesse', fx.get('vitesse', '(abs)'))
+        print(p['id'], repr(p['name']), '| f5', fx.get('f5'), '| vitesse', fx.get('speed', '(abs)'))

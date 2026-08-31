@@ -10,8 +10,8 @@ verifies it, WTOOLS uploads it. Three independent layers:
 | Layer | What changes | Where it lives | Tool |
 |---|---|---|---|
 | Icons | the 24×24 images themselves | `wolfmixFlash.bin`, global | `gobo_write.py` |
-| Names | the label under each pad | the project, record 145 | `wpj_show.py`, key `gobo_noms` |
-| Order | which pad is where | the project, record 111 | `wpj_show.py`, key `gobo_ordre` |
+| Names | the label under each pad | the project, record 145 | `wpj_show.py`, key `gobo_names` |
+| Order | which pad is where | the project, record 111 | `wpj_show.py`, key `gobo_order` |
 
 Work in a directory of your own, **outside this repository** — every command
 below calls it `$G`. `gobo_run.py` holds the gates between the steps and writes
@@ -152,8 +152,8 @@ with the same auto-verified spec as preset edits:
 
 ```json
 {"base": "in.wpj",
- "gobo_noms": {"342": "Butterfly", "344": "Sun"},
- "gobo_ordre": [342, 343, 344, 425, 424]}
+ "gobo_names": {"342": "Butterfly", "344": "Sun"},
+ "gobo_order": [342, 343, 344, 425, 424]}
 ```
 
 ```bash

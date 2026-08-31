@@ -138,7 +138,7 @@ python3 tools/wpj_api.py corpus/projects/your-project.wpj | head -40
       "known": { "colorFx1": { "type": 2, "speedPercent": 120, "linkOrder": 10 } } }
   ],
   "fixtures": { "status": "partial",
-                "items": [ { "profil": 57, "offset_106": 44, "fixture": 7, "nb_entrees_106": 4 } ] },
+                "items": [ { "profil": 57, "offset_106": 44, "fixture": 7, "entry_count_106": 4 } ] },
   "validation": {
     "checksumOk": true,
     "issues": [

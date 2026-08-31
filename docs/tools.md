@@ -78,7 +78,7 @@ Decoded today: 101, 102, 105, **111**, 115, 116, 120, 125, **130**, 135, 140,
 145, 150, **151**, 160, 165 — sixteen. `python3 tools/wpj_codec.py` prints the
 split, and is the source of truth for it.
 
-Note on 105: the keys are `offset_106` and `nb_entrees_106`, not an address and a
+Note on 105: the keys are `offset_106` and `entry_count_106`, not an address and a
 channel count — see `SPEC.md` §7. The old names were a misreading.
 Passthrough (round-tripped, undecoded): 106, 110, 155, 161 — several of these
 have a documented structure in `SPEC.md` without a codec schema yet.
@@ -205,7 +205,7 @@ longer one: past that the *whole project* refuses to open on the device
 it. The same cap guards gobo pad names.
 
 The **gobo page** is edited the same way (`SPEC.md` §3.4, RENAME-01/SORT-01):
-`gobo_noms` writes pad names into `145.f3`, and `gobo_ordre` — the complete
+`gobo_names` writes pad names into `145.f3`, and `gobo_order` — the complete
 id list of the wheel — permutes the record-111 wheel ranges and rewrites the
 palette consistently, names travelling with their gobos and glyphs
 resequenced. A wheel shared by a second group is refused as unmeasured. See

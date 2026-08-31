@@ -109,26 +109,26 @@ def projet_vers_dict(path):
     for b in blobs(13):
         d = _msg(b)
         h = d.get(3)
-        profils.append({"nom": d.get(2), "hash": h["hex"] if isinstance(h, dict) else h,
-                        "nb_canaux": d.get(5), "timestamp": d.get(11)})
+        profils.append({"name": d.get(2), "hash": h["hex"] if isinstance(h, dict) else h,
+                        "channel_count": d.get(5), "timestamp": d.get(11)})
     patch = []
     for b in blobs(12):
         d = _msg(b)
-        patch.append({"profil": d.get(2, 0), "adresse_base0": d.get(3, 0),
-                      "groupe": d.get(4, 0), "f6": d.get(6)})
+        patch.append({"profile": d.get(2, 0), "adresse_base0": d.get(3, 0),
+                      "group": d.get(4, 0), "f6": d.get(6)})
     # Presets (EXP-06) : les tableaux de 81 o sont des banques PAR EFFET —
     # ligne e = tuple de l'effet e : [vitesse, ?, phase, fade, size, ?, fan,
     # bpm_division, link_order]. Les tableaux de 8 o sont par groupe A-H.
     presets = []
     for b in blobs(3):
         d = _msg(b)
-        pr = {"nom": d.get(1)}
+        pr = {"name": d.get(1)}
         for f, nom in ((13, "banque_beam"), (5, "banque_color"), (9, "banque_move")):
             v = d.get(f)
             if isinstance(v, dict) and len(bytes.fromhex(v["hex"])) == 81:
                 raw = bytes.fromhex(v["hex"])
                 pr[nom] = [list(raw[i:i + 9]) for i in range(0, 81, 9)]
-        for f, nom in ((24, "positions"), (25, "gobos"), (21, "pattern_couleur"),
+        for f, nom in ((24, "positions"), (25, "gobos"), (21, "color_pattern"),
                        (26, "gobo_rotate"), (8, "color_actif"), (12, "move_actif")):
             v = d.get(f)
             if isinstance(v, dict):
@@ -137,21 +137,21 @@ def projet_vers_dict(path):
     positions = []
     for b in blobs(6):
         d = _msg(b)
-        positions.append({"nom": d.get(5), "pan": d.get(1), "tilt": d.get(2),
+        positions.append({"name": d.get(5), "pan": d.get(1), "tilt": d.get(2),
                           "f6": d.get(6), "f7": d.get(7)})
     edits = []
     for b in blobs(7):
         d = _msg(b)
-        edits.append({"nom": d.get(1)})
+        edits.append({"name": d.get(1)})
     gobos = []
     for f in (9, 31):
         for b in blobs(f):
             d = _msg(b)
             lst = d.get(1)
             vals = _packed(bytes.fromhex(lst["hex"])) if isinstance(lst, dict) else []
-            gobos.append({"nom": d.get(2), "glyphe": d.get(3),
+            gobos.append({"name": d.get(2), "glyph": d.get(3),
                           "valeur_par_profil": {i: x for i, x in enumerate(vals) if x != 65535}})
-    groupes = [{"nom": _msg(b).get(1)} for b in blobs(10)]
+    groupes = [{"name": _msg(b).get(1)} for b in blobs(10)]
     noms = blobs(2)
     if not noms:
         raise ValueError(f"{path} : champ 2 (nom du projet) absent")
@@ -159,8 +159,8 @@ def projet_vers_dict(path):
                     (1, 2, 3, 6, 7, 9, 10, 12, 13, 31))
     return {
         "fichier": path, "variante": var, "version_format": uns(1),
-        "nom": noms[0].decode("utf-8", "replace"),
-        "profils": profils, "patch": patch, "groupes": groupes,
+        "name": noms[0].decode("utf-8", "replace"),
+        "profiles": profils, "patch": patch, "groups": groupes,
         "presets": presets, "positions": positions, "edits": edits, "gobos": gobos,
         "nb_canaux_patches": uns(23),
         "champs_non_identifies": {f"f{f}": len(top[f]) for f in autres},

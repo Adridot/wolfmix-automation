@@ -46,8 +46,8 @@ Keys are French, matching the codec's key names.
 | `presets` | array | preset edits (record 165) |
 | `positions` | array | named pan/tilt positions (record 150, one copy per group A–H) |
 | `palette` | array | Color FX palette pads (record 135) |
-| `gobo_noms` | object | gobo pad names, `{"<gobo id>": "Nom"}` (record 145, group A) |
-| `gobo_ordre` | array | the wheel's complete gobo id list, in the wanted pad order (records 111 + 145) |
+| `gobo_names` | object | gobo pad names, `{"<gobo id>": "Nom"}` (record 145, group A) |
+| `gobo_order` | array | the wheel's complete gobo id list, in the wanted pad order (records 111 + 145) |
 | `mappings` | array | DMX IN mappings — bind an incoming channel to a controller function (record 130) |
 
 Any other key is an error. A spec with only `base` is legal and produces a
@@ -66,9 +66,9 @@ Addressed by `id`, which is the linear preset index
 | `nom` | string | **≤ 19 UTF-8 bytes** | preset name. **Enforced** — past 19 bytes the *whole project* refuses to open on the device (device-confirmed, PRESET-05), and auto-verify could not see it: the value reads back fine. |
 | `positions` | int[8] | ≥ 0 | position index per group A–H |
 | `dimmers` | int[8] | 0–255 | dimmer per group A–H, as a **percentage of 255** — the output is `f5 + (v/255)·(f6 − f5)` through the channel's travel limits, and on a fixture with colour channels it scales the colour instead. Device-confirmed (GEN-02), **but silent unless the controller setting `store group dimmers in preset` is on** — see the gates below. |
-| `masque_contenu` | int | 0–63 | `f10`, the six `PRESET EDIT` toggles: bit 0 `COLOR`, 1 `MOVE`, 2 `BEAM`, 3 `GOBO`, 4 `LIVE EDIT`, 5 `OTHER`. A **set** bit means the toggle is **off**. device-confirmed, F4-02. |
-| `pattern_couleur` | int[8] | 0–10 | `f30`, the static colour's spread mode per group; `9` = `SINGLE`. device-confirmed, F30-02. |
-| `couleur_statique` | 8 × int[] | pads 1–20 | `f31`, the static colour: for each group A–H, the pads of **that group's** palette (record 140) to light. device-confirmed. |
+| `content_mask` | int | 0–63 | `f10`, the six `PRESET EDIT` toggles: bit 0 `COLOR`, 1 `MOVE`, 2 `BEAM`, 3 `GOBO`, 4 `LIVE EDIT`, 5 `OTHER`. A **set** bit means the toggle is **off**. device-confirmed, F4-02. |
+| `color_pattern` | int[8] | 0–10 | `f30`, the static colour's spread mode per group; `9` = `SINGLE`. device-confirmed, F30-02. |
+| `static_color` | 8 × int[] | pads 1–20 | `f31`, the static colour: for each group A–H, the pads of **that group's** palette (record 140) to light. device-confirmed. |
 | `beam_fx1`, `beam_fx2` | object | see below | beam effect slots |
 | `color_fx1`, `color_fx2` | object | see below | colour effect slots |
 | `move_fx1`, `move_fx2` | object | see below | movement effect slots |
@@ -128,16 +128,16 @@ are not writable here. The seven-channel order was read off the W1's own `RGB+`
 view and is device-confirmed on record **140**; record 135 inherits it at
 `correlated`, and no write to 135 has been checked on a device either.
 
-## `gobo_noms` / `gobo_ordre`
+## `gobo_names` / `gobo_order`
 
 Both device-confirmed (RENAME-01, SORT-01 — `SPEC.md` §3.4), on group A.
 
-`gobo_noms` writes `145.f3`, the operator-assignable pad label, addressed by
+`gobo_names` writes `145.f3`, the operator-assignable pad label, addressed by
 gobo image id: `{"343": "Papillon"}`. Names are capped at 19 UTF-8 bytes —
 the preset-name limit (PRESET-05), unmeasured on this field, so refused
 conservatively.
 
-`gobo_ordre` is the **complete** id list of the wheel in the wanted order;
+`gobo_order` is the **complete** id list of the wheel in the wanted order;
 anything else is refused. The record-111 wheel ranges (`fonction` 14) are
 permuted — each keeps its DMX bounds, the id-less open range stays first —
 and the record-145 palette is rewritten consistently: names travel with
@@ -251,10 +251,10 @@ on what it verified — and one of them is not in the file at all.
 | Gate | What it silences | Where |
 |---|---|---|
 | **`store group dimmers in preset`**, a **controller setting** — not in the file at all | every `dimmers` value in the project, whatever `f10` says. A show can compile, verify and deploy perfectly and still move no level. | GEN-02, device-confirmed |
-| `165.f10`, the content mask — a **set** bit means the toggle is **off** | bit 1 (`MOVE`) written by us **is** honoured — a preset whose `MOVE` toggle is off leaves pan and tilt where the previous cue put them (RECALL-05, validated). Bit 5 (`OTHER`) gates `dimmers`, and nothing else a static cue carries: GEN-02 first showed the silence blamed on it was a controller setting, then FW-03 wrote the bit alone and measured exactly the eighteen dimmer channels the model predicts — **`validated`**. **Writable since this version** via `masque_contenu`. | RECALL-05, GEN-02, FW-03 |
-| `165.f16`, the engine group masks — slices 0/1/2 = Color/Move/Beam | an FX edit is invisible for a group the engine is not enabled on. ACC-03 set `color_fx_actif` without `f16` and the device followed `f16`. | SPEC.md §5.4, correlated |
+| `165.f10`, the content mask — a **set** bit means the toggle is **off** | bit 1 (`MOVE`) written by us **is** honoured — a preset whose `MOVE` toggle is off leaves pan and tilt where the previous cue put them (RECALL-05, validated). Bit 5 (`OTHER`) gates `dimmers`, and nothing else a static cue carries: GEN-02 first showed the silence blamed on it was a controller setting, then FW-03 wrote the bit alone and measured exactly the eighteen dimmer channels the model predicts — **`validated`**. **Writable since this version** via `content_mask`. | RECALL-05, GEN-02, FW-03 |
+| `165.f16`, the engine group masks — slices 0/1/2 = Color/Move/Beam | an FX edit is invisible for a group the engine is not enabled on. ACC-03 set `color_fx_active` without `f16` and the device followed `f16`. | SPEC.md §5.4, correlated |
 
-`color_fx_actif` and `move_fx_actif` duplicate slices 0 and 1 of `f16`. They are
+`color_fx_active` and `move_fx_active` duplicate slices 0 and 1 of `f16`. They are
 redundant, and a writer must not let them drift apart. That is why `f16` stays
 out of scope: [`wpj_generate.py`](generator.md) picks a donor preset whose
 engines already match the cue and clones it, rather than writing the mask.

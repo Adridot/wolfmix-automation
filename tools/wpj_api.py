@@ -30,15 +30,15 @@ import wpj_codec
 MODEL_VERSION = "1"
 # clé codec → clé wpj-toolkit. Les replis `fN` ont disparu avec FX6-02/03 :
 # ils portaient l'ancienne lecture (f6 = fade, f9 = phase), qui est fausse.
-_FX_OUT = {"effet": "type", "vitesse": "speedPercent",
+_FX_OUT = {"effect": "type", "speed": "speedPercent",
            "fade": "fadePercent", "phase": "phasePercent", "size": "sizePercent",
            "link_order": "linkOrder", "speed_source": "speedSource",
            "bpm_division": "bpmDivision"}
 _FX_SLOTS = {"beam_fx1": "beamFx1", "beam_fx2": "beamFx2",
              "color_fx1": "colorFx1", "color_fx2": "colorFx2",
              "move_fx1": "moveFx1", "move_fx2": "moveFx2"}
-_PAD_OUT = {"rouge": "red", "vert": "green", "bleu": "blue", "blanc": "white",
-            "ambre": "amber", "lime": "lime", "uv": "uv"}
+_PAD_OUT = {"red": "red", "green": "green", "blue": "blue", "white": "white",
+            "amber": "amber", "lime": "lime", "uv": "uv"}
 
 
 def _issue(issues, severity, code, message):
@@ -54,8 +54,8 @@ def _preset(p):
     pid = p.get("id", 0)
     out = {"id": pid, "page": pid // 20 + 1, "slot": pid % 20 + 1,
            "rawPreserved": True}
-    if "nom" in p:
-        out["name"] = p["nom"]
+    if "name" in p:
+        out["name"] = p["name"]
     known = {}
     for src, dst in _FX_SLOTS.items():
         sub = p.get(src)
@@ -93,8 +93,8 @@ def inspect(path):
     by_type = {t: d for t, d, _ in dec}
 
     project = {"warnings": warnings}
-    if "nom" in by_type.get(101, {}):
-        project["name"] = by_type[101]["nom"]
+    if "name" in by_type.get(101, {}):
+        project["name"] = by_type[101]["name"]
     pads = by_type.get(135, {}).get("pads", [])
     if pads:
         project["known"] = {"colorFxPalette": {"pads": [

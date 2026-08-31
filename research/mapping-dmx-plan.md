@@ -381,3 +381,60 @@ Sauvegarder, télécharger.
 
 Ça ne bloque pas le writer — l'ordre est déjà réputé non significatif — mais ça
 ferme le dernier fait non lu du record.
+
+---
+
+# MAP-03 mesuré — 2026-08-31 — l'aller-retour n'écrit rien, et la rotation reste sans lecture
+
+Geste : le groupe C était sur son canal d'usine **CH3** ; l'opérateur va à
+**CH2**, revient à **CH3**, puis sauvegarde. Ce n'est pas le no-op pur que MAP-03
+spécifiait — c'est une **vraie écriture suivie de son retour**, ce qui rend le
+test plus fort si l'entrée bouge, et concluant de la même façon si elle ne bouge
+pas.
+
+| | Mesure |
+|---|---|
+| records dont la charge utile diffère | **aucun** |
+| record 130 | 114 → 114 octets, **octet pour octet identique** |
+| compteur de version | 1788105380394 → **…395** |
+
+## Trois choses en sortent
+
+**1 · Le fichier enregistre l'état, pas les gestes.** Un aller-retour ne laisse
+aucune trace. `[observed]` — et c'est ce qu'un writer veut : la table est
+déclarative.
+
+**2 · « Toucher une entrée la déplace » est réfuté, deuxième contre-exemple.**
+Le groupe B avait vraiment changé de valeur sans changer de rang ; le groupe C
+a été édité puis rendu à sa valeur et n'a rien produit du tout. La rotation de
+MAP-01 garde son statut `[observed]` et **n'a toujours pas de lecture**.
+
+Ce qui reste comme piste, non testée : la rotation était la **première ouverture
+de l'écran `Mappings`** sur cet appareil. Une normalisation unique à la première
+visite expliquerait un événement qui ne s'est jamais reproduit en trois
+sauvegardes ultérieures. Non mesuré, et pas bloquant : la clé d'une entrée est
+`(f4, f2)`, jamais son rang.
+
+**3 · Le compteur de version bouge sur une charge utile identique.** Nouvelle
+instance de la contrainte n° 8 du dépôt, mesurée ici pour la troisième fois :
+**oracle négatif seulement.**
+
+## L'instance d'un preset — `f2 = 0` correspond au 1er
+
+L'opérateur a mappé le preset **« Startup », le premier**, et l'entrée porte
+`f2` absent, donc 0. Cohérent avec le groupe A qui porte `f2 = 0`.
+
+**Statut : correlated, et pas mieux.** Un zéro ne sépare pas « index 0 » de
+« champ inutilisé pour cette cible ». Mapper un preset de rang connu et non nul
+— le 5e, par exemple — attendrait `f2 = 4` et trancherait. C'est le seul champ
+de la carte qui reste à un cheveu du device-confirmed.
+
+## Tableau de chasse
+
+| Prédit | | |
+|---|---|---|
+| l'entrée de C part en fin de liste — **p 0,55** | ❌ | elle n'a pas bougé |
+| rien ne bouge du tout — **p 0,30** | ✅ | pas un octet de charge utile |
+
+Deuxième prédiction perdue sur cette campagne, et les deux portaient sur la même
+chose : l'idée que l'ordre des entrées réagit aux gestes. Il n'y réagit pas.

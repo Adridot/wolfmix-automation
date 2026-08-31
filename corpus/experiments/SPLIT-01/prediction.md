@@ -55,3 +55,75 @@ se termine par une question explicite à l'opérateur : l'écran du W1 n'est pas
 lisible depuis la machine hôte.
 
 Publié avant de brancher. Commité avant la première commande.
+
+---
+
+## Résultat — 2026-08-31, W1 Mk1 (serial withheld), fw 2.0.18, WTOOLS fermé
+
+**Six mesures, six conformes.** Aucune régression observable après le
+découpage. Une prédiction était mal formulée — pas fausse, moins précise que
+l'outil qu'elle décrivait — et une observation gratuite est arrivée que je ne
+peux pas attribuer.
+
+| # | Prédit | Mesuré | |
+|---|---|---|---|
+| 1 | `firmwareVer` = `2.0.18` en champ 14, `firmwareVersion` = 0.0 en champ 13, tous les champs présents | exactement ça, 22 champs décodés | ✅ |
+| 2 | deux téléchargements consécutifs identiques, en-tête SHA-1 valide, relisible | même SHA-256 sur les deux, en-tête valide, 41 records, et le lecteur wire indépendant compte les mêmes | ✅ |
+| 3 | mode rapporté 1, écran sur COLOR FX | mode 1, `screenFollows: true`, **opérateur : COLOR FX** | ✅ |
+| 4 | mode rapporté 5, écran **inchangé** | mode 5, `screenFollows: false`, **opérateur : toujours COLOR FX** | ✅ |
+| 5 | la cue change, `projectChanged` reste false | l'id 4 allume le **5e pad**, `projectChanged` false | ✅ |
+| 6 | archive préalable + manifeste, upload accepté, relecture identique, pas de `rollbackFailed` | 7 projets archivés avec 7 manifestes, store `success`, vérification **avant et après le restart**, pas de `rollbackFailed` | ✅ |
+
+### La mesure 4 vaut double
+
+C'est la prédiction que j'avais **ratée** le 2026-08-31 en écrivant SCREEN-02 :
+j'avais prédit que `mode presets` déplacerait l'écran, il ne l'a pas fait. Elle
+est ici confirmée dans l'autre sens, par un opérateur qui regardait, sur un
+écran de départ différent (COLOR FX au lieu de HOME). L'inertie de l'index 5 ne
+dépend donc pas de l'écran de départ — ce que SCREEN-02 affirmait déjà, et qui
+tient sur un troisième point.
+
+### Ma formulation était plus lâche que l'outil — mesure 6
+
+J'avais écrit « relecture **identique** ». Mesuré : le SHA-256 du fichier
+redescendu **diffère** de celui envoyé. Ce n'est pas une réfutation, c'est mon
+imprécision :
+
+```
+records identiques      : True  (41 records)
+préfixe identique       : False
+octets du préfixe qui bougent : 40, 41, 42, 43
+compteur de version     : 1788174926116 -> 1788199970319
+```
+
+Seul le compteur de version bouge, et `verify_project` compare **record par
+record**, précisément parce que SPEC §9 et FX-01 ont mesuré qu'une sauvegarde
+côté contrôleur n'est pas préservatrice d'octets. L'outil avait raison et la
+prédiction aurait dû dire « identique record par record ». Corrigé ici plutôt
+que dans la prédiction, qui reste telle qu'elle a été publiée.
+
+### Les trois bornes de la phase 1, revérifiées gratuitement
+
+- `preset 200` → refusé **avant le lien** : « 200-255 is unprobed and is not sent ».
+- `mode 26` → refusé, et le refus nomme les 28 modes mesurés et l'indicateur `--experimental`.
+- Un event hors liste blanche ne peut pas être encadré du tout.
+
+### L'observation que je ne peux pas attribuer
+
+Le mode rapporté a fait **5 → 0 → 5** entre mes commandes, sans qu'aucun
+`SET_MODE` ne parte. L'opérateur, interrogé, n'est pas sûr d'avoir touché le
+panneau entre-temps.
+
+Donc : **non attribuable**. Ni « le mode poussé ne persiste pas », ni « c'est
+la main de l'opérateur ». Les deux expliquent la trace, rien ne les sépare, et
+le dépôt préfère une case vide à une lecture inventée. Le geste qui trancherait
+est connu et coûte une minute : pousser un mode, ne toucher à rien, relire
+`GET_SETTINGS` deux fois à une minute d'intervalle.
+
+### Une nouvelle qui concerne LOSS-01
+
+Le contrôleur porte **4 projets** aujourd'hui, et le projet que LOSS-01
+enregistrait comme disparu le 2026-08-31 **est de retour**, à sa version d'août.
+LOSS-01 ne disait rien sur la permanence de la perte, et n'avait proposé aucune
+lecture ; ce retour ne l'explique toujours pas. Il ajoute un fait : la perte
+n'était pas définitive. `[observed]`

@@ -129,16 +129,27 @@ def demo():
     print("self-check ok", file=sys.stderr)
 
 
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
+def _cli(argv=None):
+    import argparse
+    parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parseur.add_argument("fichier", nargs="?",
+                         help="le .wpj a parcourir ; sans argument, self-check")
+    parseur.add_argument("--depth", type=int, default=MAX_DEPTH_DEFAULT,
+                         help="profondeur maximale de descente "
+                              f"(defaut : {MAX_DEPTH_DEFAULT})")
+    args = parseur.parse_args(argv)
+    if args.fichier is None:
         demo()
-        sys.exit(0)
-    depth = MAX_DEPTH_DEFAULT
-    if "--depth" in sys.argv:
-        depth = int(sys.argv[sys.argv.index("--depth") + 1])
+        return 0
     try:
-        json.dump(inspect(sys.argv[1], depth), sys.stdout, ensure_ascii=False)
+        json.dump(inspect(args.fichier, args.depth), sys.stdout,
+                  ensure_ascii=False)
         print()
-    except ValueError as e:
-        print(f"PAS du wire format protobuf : {e}", file=sys.stderr)
-        sys.exit(2)
+    except ValueError as erreur:
+        print(f"PAS du wire format protobuf : {erreur}", file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(_cli())

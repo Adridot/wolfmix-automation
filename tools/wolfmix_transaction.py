@@ -424,7 +424,7 @@ def self_check():
     assert require_managed_uuid(derive, "self-test", "exp") == (derive, nom)
     auto, nom_auto = protocol.managed_identity("self-test", "auto")
     assert auto != derive and nom_auto.startswith("WMX AUTO ")
-    for etranger in ("00000000-0000-0000-cc21-8071cb218071", auto):
+    for etranger in ("11111111-2222-3333-4444-555555555555", auto):
         try:
             require_managed_uuid(etranger, "self-test", "exp")
             raise AssertionError(f"UUID accepte : {etranger}")

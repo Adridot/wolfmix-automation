@@ -201,36 +201,55 @@ def annonce_bundle(path):
     return path
 
 
-def main(argv):
-    command = argv[1] if len(argv) > 1 else "self-test"
-    path = find_flash(os.environ.get("WOLFMIX_FLASH"))
-    if path:
-        annonce_bundle(path)
+def _parseur():
+    import argparse
+    parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parseur.add_argument("--flash", help="image flash a lire ; par defaut la "
+                                         "plus recente installee, ou $WOLFMIX_FLASH")
+    commandes = parseur.add_subparsers(dest="commande")
+    commandes.add_parser("self-test", help="verifie la table sur l'image locale")
+    commandes.add_parser("list", help="les 800 entrees, id et nom d'usine")
+    planche = commandes.add_parser("sheet", help="planche PNG des icones")
+    planche.add_argument("sortie", help="fichier PNG neuf ; un existant est refuse")
+    planche.add_argument("ids", nargs="?",
+                         help="ids separes par des virgules ; par defaut toute "
+                              "la table, case (ligne, colonne) = ligne * 20 + colonne")
+    pal = commandes.add_parser("palette", help="les ids affiches par un projet")
+    pal.add_argument("projet", help="le .wpj a lire")
+    return parseur
+
+
+def main(argv=None):
+    parseur = _parseur()
+    args = parseur.parse_args(argv)
+    commande = args.commande or "self-test"
+    path = find_flash(args.flash or os.environ.get("WOLFMIX_FLASH"))
     if not path:
         print("aucune image flash locale (WTOOLS n'a jamais téléchargé le "
               "firmware) — rien à faire", file=sys.stderr)
         return 0
-    if command == "self-test":
+    annonce_bundle(path)
+    if commande == "self-test":
         self_test(path)
         return 0
     lib = Library(path)
-    if command == "list":
+    if commande == "list":
         for gobo_id in range(TABLE_LEN):
             print(f"{gobo_id}\t{lib.name(gobo_id)}")
-    elif command == "sheet":
-        out = argv[2]
-        # Par défaut la planche entière, dans l'ordre des id : la case
-        # (ligne, colonne) vaut donc l'id `ligne * 20 + colonne`.
-        ids = ([int(x) for x in argv[3].split(",")] if len(argv) > 3
+    elif commande == "sheet":
+        ids = ([int(x) for x in args.ids.split(",")] if args.ids
                else list(range(TABLE_LEN)))
         try:
-            sheet(lib, ids, out)
+            sheet(lib, ids, args.sortie)
         except FileExistsError:
-            print(f"refus : {out} existe déjà", file=sys.stderr)
+            print(f"refus : {args.sortie} existe déjà", file=sys.stderr)
             return 2
-        print(f"{len(ids)} icônes → {out}")
-    elif command == "palette":
-        for group, pads in palette(lib, argv[2]):
+        except ValueError as erreur:
+            print(f"refus : {erreur}", file=sys.stderr)
+            return 2
+        print(f"{len(ids)} icônes → {args.sortie}")
+    elif commande == "palette":
+        for group, pads in palette(lib, args.projet):
             print(f"groupe {group}")
             for slot, (gobo_id, name) in enumerate(pads, 1):
                 if gobo_id is None:
@@ -238,11 +257,8 @@ def main(argv):
                 label = f"  nom « {name} »" if name else ""
                 print(f"  pad {slot:2d}  id={gobo_id:3d}  "
                       f"{lib.name(gobo_id)}{label}")
-    else:
-        print(__doc__, file=sys.stderr)
-        return 2
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    sys.exit(main())

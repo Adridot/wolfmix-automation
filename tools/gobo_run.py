@@ -282,11 +282,21 @@ def self_test():
           "du flash patché vérifiée, refus en tête de rapport")
 
 
-def main(argv):
-    if len(argv) < 2:
+def _parseur():
+    import argparse
+    parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parseur.add_argument("dossier", nargs="?",
+                         help="le dossier de travail, HORS du depot ; "
+                              "sans argument, self-check")
+    return parseur
+
+
+def main(argv=None):
+    args = _parseur().parse_args(argv)
+    if args.dossier is None:
         self_test()
         return 0
-    travail = os.path.abspath(os.path.expanduser(argv[1]))
+    travail = os.path.abspath(os.path.expanduser(args.dossier))
     if travail == DEPOT or sous(travail, DEPOT):
         print("refus : le dossier de travail est sous le dépôt. Silhouettes, "
               "flash patché et planche sont les données de votre lyre et "
@@ -307,4 +317,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    sys.exit(main())

@@ -101,23 +101,24 @@ def _normalise_mapping(entree):
 CANAL_MAX = 512              # borne de l'encodeur du panneau, mesurée
 
 
-def _cles(d, permises, contexte):
+def cles(d, permises, contexte):
+    """Publique : `wpj_generate` valide ses intentions avec les memes regles."""
     inconnues = [k for k in d if k not in permises]
     if inconnues:
         raise ValueError(f"{contexte} : clés hors périmètre {inconnues} ; "
                          f"permises : {list(permises)}")
 
 
-def _borne(contexte, nom, v, lo, hi):
+def borne(contexte, nom, v, lo, hi):
     if not isinstance(v, int) or isinstance(v, bool) or not lo <= v <= hi:
         raise ValueError(f"{contexte} : {nom}={v!r} hors bornes [{lo}, {hi}]")
     return v
 
 
-def _liste8(contexte, nom, v, lo, hi):
+def liste8(contexte, nom, v, lo, hi):
     if not isinstance(v, list) or len(v) != 8:
         raise ValueError(f"{contexte} : {nom} doit être une liste de 8 entiers")
-    return [_borne(contexte, f"{nom}[{i}]", x, lo, hi) for i, x in enumerate(v)]
+    return [borne(contexte, f"{nom}[{i}]", x, lo, hi) for i, x in enumerate(v)]
 
 
 def _pads_vers_masques(contexte, pads8):
@@ -137,7 +138,7 @@ def _pads_vers_masques(contexte, pads8):
             raise ValueError(f"{contexte} : couleur_statique[{g}] doit être "
                              "une liste de numéros de pad")
         for pad in pads:
-            _borne(contexte, f"couleur_statique[{g}]", pad, 1, PADS_PAR_GROUPE)
+            borne(contexte, f"couleur_statique[{g}]", pad, 1, PADS_PAR_GROUPE)
             bits |= 1 << (g * PADS_PAR_GROUPE + pad - 1)
     return list(bits.to_bytes(NB_GROUPES * PADS_PAR_GROUPE // 8, "little"))
 
@@ -156,7 +157,7 @@ def masques_vers_pads(v20):
 def compiler(spec, sortie):
     """Applique la spec au donneur, écrit sortie, auto-vérifie.
     Rend la liste des diffs [(type, occ, taille_avant, taille_après)]."""
-    _cles(spec, _SHOW_CLES, "show")
+    cles(spec, _SHOW_CLES, "show")
     if "base" not in spec:
         raise ValueError("show : clé 'base' (donneur .wpj) obligatoire")
     w = wpjlib.Wpj.load(spec["base"])
@@ -181,8 +182,8 @@ def compiler(spec, sortie):
 
     # --- record 165 : presets, adressés par id ---
     for pe in spec.get("presets", []):
-        _cles(pe, _PRESET_CLES, "preset")
-        pid = _borne("preset", "id", pe.get("id", -1), 0, 1 << 31)
+        cles(pe, _PRESET_CLES, "preset")
+        pid = borne("preset", "id", pe.get("id", -1), 0, 1 << 31)
         d165 = rec(165)
         ctx = f"preset id {pid}"
         cible = next((p for p in d165["presets"]
@@ -202,15 +203,15 @@ def compiler(spec, sortie):
                                  "refuserait de s'ouvrir (PRESET-05)")
             cible["nom"] = pe["nom"]
         if "positions" in pe:
-            cible["positions"] = _liste8(ctx, "positions", pe["positions"],
+            cible["positions"] = liste8(ctx, "positions", pe["positions"],
                                          0, 1 << 31)
         if "dimmers" in pe:
-            cible["dimmers"] = _liste8(ctx, "dimmers", pe["dimmers"], 0, 255)
+            cible["dimmers"] = liste8(ctx, "dimmers", pe["dimmers"], 0, 255)
         if "masque_contenu" in pe:
-            cible["masque_contenu"] = _borne(ctx, "masque_contenu",
+            cible["masque_contenu"] = borne(ctx, "masque_contenu",
                                              pe["masque_contenu"], 0, 63)
         if "pattern_couleur" in pe:
-            cible["pattern_couleur"] = _liste8(ctx, "pattern_couleur",
+            cible["pattern_couleur"] = liste8(ctx, "pattern_couleur",
                                                pe["pattern_couleur"], 0, 10)
         if "couleur_statique" in pe:
             cible["couleur_statique"] = _pads_vers_masques(
@@ -218,9 +219,9 @@ def compiler(spec, sortie):
         for fx in _FX_NOMS:
             if fx not in pe:
                 continue
-            _cles(pe[fx], _FX_CLES, f"{ctx} {fx}")
+            cles(pe[fx], _FX_CLES, f"{ctx} {fx}")
             for k, v in pe[fx].items():
-                _borne(f"{ctx} {fx}", k, v, *_FX_CLES[k])
+                borne(f"{ctx} {fx}", k, v, *_FX_CLES[k])
             if fx not in cible:
                 raise ValueError(f"{ctx} : {fx} absent du donneur — création "
                                  "de sous-message FX non validée, utiliser un "
@@ -234,9 +235,9 @@ def compiler(spec, sortie):
 
     # --- record 150 ×8 : positions pan/tilt nommées ---
     for pos in spec.get("positions", []):
-        _cles(pos, _POS_CLES, "position")
-        page = _borne("position", "page", pos.get("page", 0), 1, 8)
-        idx = _borne("position", "index", pos.get("index", -1), 0, 1 << 31)
+        cles(pos, _POS_CLES, "position")
+        page = borne("position", "page", pos.get("page", 0), 1, 8)
+        idx = borne("position", "index", pos.get("index", -1), 0, 1 << 31)
         d150 = rec(150, page - 1)
         entrees = d150.get("positions", [])
         if idx >= len(entrees) or not isinstance(entrees[idx], dict) or \
@@ -251,7 +252,7 @@ def compiler(spec, sortie):
             e["nom"] = pos["nom"]
         for cle, champ in _POS_CHAMPS.items():
             if cle in pos:
-                e[champ] = _borne(ctx, cle, pos[cle], 0, 65535)
+                e[champ] = borne(ctx, cle, pos[cle], 0, 65535)
         attendu = {("nom" if k == "nom" else _POS_CHAMPS[k]): v
                    for k, v in pos.items() if k in ("nom",) + tuple(_POS_CHAMPS)}
         verifs.append((150, page - 1, ctx, lambda d, i=idx, att=attendu:
@@ -260,8 +261,8 @@ def compiler(spec, sortie):
 
     # --- record 135 : palette ColorFX ---
     for pal in spec.get("palette", []):
-        _cles(pal, _PAL_CLES, "palette")
-        idx = _borne("palette", "index", pal.get("index", -1), 0, 1 << 31)
+        cles(pal, _PAL_CLES, "palette")
+        idx = borne("palette", "index", pal.get("index", -1), 0, 1 << 31)
         d135 = rec(135)
         pads = d135.get("pads", [])
         if idx >= len(pads) or not isinstance(pads[idx], dict) or \
@@ -271,7 +272,7 @@ def compiler(spec, sortie):
         ctx = f"palette index {idx}"
         for k in ("rouge", "vert", "bleu"):
             if k in pal:
-                pads[idx][k] = _borne(ctx, k, pal[k], 0, 255)
+                pads[idx][k] = borne(ctx, k, pal[k], 0, 255)
         attendu = {k: pal[k] for k in ("rouge", "vert", "bleu") if k in pal}
         verifs.append((135, 0, ctx, lambda d, i=idx, att=attendu:
                        all(d["pads"][i].get(k, 0) == v
@@ -365,7 +366,7 @@ def compiler(spec, sortie):
         entrees = d130.setdefault("mappings", [])
         attendu = {}
         for me in spec["mappings"]:
-            _cles(me, _MAP_CLES, "mapping")
+            cles(me, _MAP_CLES, "mapping")
             cible = me.get("cible")
             if cible not in _MAP_FONCTIONS:
                 raise ValueError(
@@ -379,11 +380,11 @@ def compiler(spec, sortie):
                     raise ValueError(f"{ctx} : 'groupe' doit être A–H")
                 instance = ord(g) - ord("A")
             elif cible == "preset":
-                instance = _borne(ctx, "index", me.get("index", -1),
+                instance = borne(ctx, "index", me.get("index", -1),
                                   0, PRESETS_MAX - 1)
             elif cible == "preset_page":
                 # la page s'écrit comme elle s'affiche, 1–7 ; stockée en base zéro
-                instance = _borne(ctx, "page", me.get("page", -1),
+                instance = borne(ctx, "page", me.get("page", -1),
                                   1, PAGES_PRESET) - 1
             if any(k in me for k in ("groupe", "index", "page")
                    if k != {"dimmer_groupe": "groupe", "preset": "index",
@@ -403,7 +404,7 @@ def compiler(spec, sortie):
                 entrees.remove(trouve)
                 attendu[(fonction, instance)] = None
                 continue
-            canal = _borne(ctx, "canal", canal, 1, CANAL_MAX)
+            canal = borne(ctx, "canal", canal, 1, CANAL_MAX)
             haut, bas = divmod(canal - 1, 256)
             if trouve is None:
                 # forme d'une entrée créée par l'appareil : f7 = 1, f8 = 1,
@@ -474,7 +475,7 @@ def _cree_preset(ctx, d165, pid, pe):
     if "modele" not in pe:
         raise ValueError(f"{ctx} : absent du donneur — donner 'modele' "
                          "(id du preset à cloner) pour le créer en queue")
-    mid = _borne(ctx, "modele", pe["modele"], 0, 1 << 31)
+    mid = borne(ctx, "modele", pe["modele"], 0, 1 << 31)
     modele = next((p for p in d165["presets"]
                    if isinstance(p, dict) and p.get("id", 0) == mid), None)
     if modele is None:
@@ -732,25 +733,35 @@ def _demo_sur(base):
           + os.path.basename(base), file=sys.stderr)
 
 
-def main(argv):
-    if not argv:
+def main(argv=None):
+    import argparse
+    parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    commandes = parseur.add_subparsers(dest="commande")
+    compile_cmd = commandes.add_parser(
+        "compile", help="applique une spec JSON a un projet donneur")
+    compile_cmd.add_argument("spec", help="le show.json")
+    compile_cmd.add_argument("sortie", help="projet neuf ; un existant est refuse")
+    verify_cmd = commandes.add_parser(
+        "verify", help="liste les records qui different entre deux projets")
+    verify_cmd.add_argument("base")
+    verify_cmd.add_argument("sortie")
+    args = parseur.parse_args(argv)
+    if args.commande is None:
         demo()
         return 0
-    if argv[0] == "compile" and len(argv) == 3:
-        spec = json.load(open(argv[1], encoding="utf-8"))
-        _imprime(compiler(spec, argv[2]))
-        print(f"ok : {argv[2]}")
+    if args.commande == "compile":
+        with open(args.spec, encoding="utf-8") as flux:
+            spec = json.load(flux)
+        _imprime(compiler(spec, args.sortie))
+        print(f"ok : {args.sortie}")
         return 0
-    if argv[0] == "verify" and len(argv) == 3:
-        _imprime(verifier(argv[1], argv[2]))
-        return 0
-    print(__doc__, file=sys.stderr)
-    return 2
+    _imprime(verifier(args.base, args.sortie))
+    return 0
 
 
 if __name__ == "__main__":
     try:
-        sys.exit(main(sys.argv[1:]))
+        sys.exit(main())
     except (ValueError, KeyError, OSError) as e:
         print(f"erreur : {e}", file=sys.stderr)
         sys.exit(1)

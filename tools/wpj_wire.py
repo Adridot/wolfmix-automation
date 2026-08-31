@@ -212,19 +212,27 @@ def self_check():
           "refus nommés, pas d'assertion")
 
 
-def main(argv):
-    if len(argv) < 2:
+def main(argv=None):
+    import argparse
+    parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parseur.add_argument("fichier", nargs="?",
+                         help="le .wpj a lire ; sans argument, self-check")
+    parseur.add_argument("types", nargs="?",
+                         help="types de records separes par des virgules ; "
+                              "sans eux, l'inventaire")
+    args = parseur.parse_args(argv)
+    if args.fichier is None:
         self_check()
         return 0
-    data, records = load(argv[1])
-    if len(argv) < 3:
-        print(f"== {argv[1]} ({len(data)} o)")
+    data, records = load(args.fichier)
+    if args.types is None:
+        print(f"== {args.fichier} ({len(data)} o)")
         for index, record_type, offset, payload in records:
             empreinte = hashlib.sha1(payload).hexdigest()[:8]
             print(f"  [{index:2d}] type {record_type:3d} len {len(payload):5d} "
                   f"@0x{offset:05x} sha {empreinte}")
         return 0
-    voulus = {int(x) for x in argv[2].split(",")}
+    voulus = {int(x) for x in args.types.split(",")}
     for index, record_type, offset, payload in records:
         if record_type not in voulus:
             continue
@@ -239,7 +247,7 @@ def main(argv):
 
 if __name__ == "__main__":
     try:
-        sys.exit(main(sys.argv))
+        sys.exit(main())
     except WireError as erreur:
         print(f"erreur : {erreur}", file=sys.stderr)
         sys.exit(2)

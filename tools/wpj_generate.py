@@ -176,7 +176,7 @@ def _famille_disponible(voulue, dispo):
 
 def composer(intention):
     """intention → (spec pour wpj_show.compiler, rapport ligne par ligne)."""
-    wpj_show._cles(intention, _INTENTION_CLES, "intention")
+    wpj_show.cles(intention, _INTENTION_CLES, "intention")
     if "base" not in intention:
         raise ValueError("intention : clé 'base' (donneur .wpj) obligatoire")
     rig = lire_rig(intention["base"])
@@ -186,7 +186,7 @@ def composer(intention):
         raise ValueError(f"{intention['base']} : aucun luminaire affecté à un "
                          "groupe A–H, il n'y a rien à piloter")
     page = intention.get("page") or rig["id_max"] // PADS + 2
-    wpj_show._borne("intention", "page", page, 1, 10)
+    wpj_show.borne("intention", "page", page, 1, 10)
     if (page - 1) * PADS <= rig["id_max"]:
         raise ValueError(f"page {page} : ses ids commencent à "
                          f"{(page - 1) * PADS} et le donneur va déjà jusqu'à "
@@ -194,13 +194,13 @@ def composer(intention):
 
     presets, rapport = [], []
     for n, amb in enumerate(intention.get("ambiances", [])):
-        wpj_show._cles(amb, _AMBIANCE_CLES, f"ambiance {n}")
+        wpj_show.cles(amb, _AMBIANCE_CLES, f"ambiance {n}")
         nom = amb.get("nom", f"CUE {n + 1}")
-        energie = wpj_show._borne(f"ambiance {nom!r}", "energie",
+        energie = wpj_show.borne(f"ambiance {nom!r}", "energie",
                                   amb.get("energie", 50), 0, 100)
         famille, dimmer, effet, vitesse = _palier(energie)
         if "dimmer" in amb:               # l'énergie dit l'activité, pas la
-            dimmer = wpj_show._borne(     # luminosité : override explicite
+            dimmer = wpj_show.borne(     # luminosité : override explicite
                 f"ambiance {nom!r}", "dimmer", amb["dimmer"], 0, 255)
         famille = _famille_disponible(famille, dispo)
         _, mouvement, faisceau = FAMILLES[famille]
@@ -345,30 +345,40 @@ def imprime_rig(rig):
               + (f"  « {nom} »" if nom else ""))
 
 
-def main(argv):
-    if not argv:
+def main(argv=None):
+    import argparse
+    parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    commandes = parseur.add_subparsers(dest="commande")
+    rig_cmd = commandes.add_parser(
+        "rig", help="ce qu'un projet donneur offre : groupes, palettes, ids")
+    rig_cmd.add_argument("projet")
+    compose_cmd = commandes.add_parser(
+        "compose", help="une intention JSON en entree, un projet en sortie")
+    compose_cmd.add_argument("intention", help="le fichier d'intention")
+    compose_cmd.add_argument("sortie", help="projet neuf ; un existant est refuse")
+    compose_cmd.add_argument("--spec", help="ecrit aussi la spec wpj_show "
+                                            "intermediaire dans ce fichier neuf")
+    args = parseur.parse_args(argv)
+    if args.commande is None:
         demo()
         return 0
-    if argv[0] == "rig" and len(argv) == 2:
-        imprime_rig(lire_rig(argv[1]))
+    if args.commande == "rig":
+        imprime_rig(lire_rig(args.projet))
         return 0
-    if argv[0] == "compose" and len(argv) >= 3:
-        intention = json.load(open(argv[1], encoding="utf-8"))
-        spec, rapport = composer(intention)
-        if "--spec" in argv:
-            chemin = argv[argv.index("--spec") + 1]
-            with open(chemin, "x", encoding="utf-8") as f:
-                json.dump(spec, f, ensure_ascii=False, indent=2)
-            print(f"spec : {chemin}")
-        diffs = wpj_show.compiler(spec, argv[2])
-        for ligne in rapport:
-            print(ligne)
-        for t, occ, la, lb in diffs:
-            print(f"record {t} occ {occ} : {la} -> {lb} octets")
-        print(f"ok : {argv[2]}")
-        return 0
-    print(__doc__, file=sys.stderr)
-    return 2
+    with open(args.intention, encoding="utf-8") as flux:
+        intention = json.load(flux)
+    spec, rapport = composer(intention)
+    if args.spec:
+        with open(args.spec, "x", encoding="utf-8") as flux:
+            json.dump(spec, flux, ensure_ascii=False, indent=2)
+        print(f"spec : {args.spec}")
+    diffs = wpj_show.compiler(spec, args.sortie)
+    for ligne in rapport:
+        print(ligne)
+    for t, occ, la, lb in diffs:
+        print(f"record {t} occ {occ} : {la} -> {lb} octets")
+    print(f"ok : {args.sortie}")
+    return 0
 
 
 def demo():
@@ -452,7 +462,7 @@ def _demo_sur(base):
 
 if __name__ == "__main__":
     try:
-        sys.exit(main(sys.argv[1:]))
+        sys.exit(main())
     except (ValueError, KeyError, OSError) as e:
         print(f"erreur : {e}", file=sys.stderr)
         sys.exit(1)

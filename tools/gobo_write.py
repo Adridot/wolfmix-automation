@@ -400,21 +400,34 @@ def self_test(path):
           "manifeste et PNG vérifiés")
 
 
-def main(argv):
-    command = argv[1] if len(argv) > 1 else "self-test"
-    path = find_flash(os.environ.get("WOLFMIX_FLASH"))
+def _parseur():
+    import argparse
+    parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parseur.add_argument("--flash", help="image flash source ; par defaut la "
+                                         "plus recente, ou $WOLFMIX_FLASH")
+    commandes = parseur.add_subparsers(dest="commande")
+    commandes.add_parser("self-test", help="round-trip sur les 705 icones")
+    patch_cmd = commandes.add_parser(
+        "patch", help="ecrit une COPIE patchee du flash, plus son manifeste")
+    patch_cmd.add_argument("sortie", help="fichier neuf ; un existant est refuse")
+    patch_cmd.add_argument("edits", nargs="+", metavar="id=source",
+                           help="id=#RRGGBB, id=image.png ou id=mask:image.png")
+    return parseur
+
+
+def main(argv=None):
+    parseur = _parseur()
+    args = parseur.parse_args(argv)
+    path = find_flash(args.flash or os.environ.get("WOLFMIX_FLASH"))
     if not path:
         print("aucune image flash locale (WTOOLS n'a jamais téléchargé le "
               "firmware) — rien à faire", file=sys.stderr)
         return 0
-    if command == "self-test":
+    if (args.commande or "self-test") == "self-test":
         self_test(path)
         return 0
-    if command != "patch" or len(argv) < 4:
-        print(__doc__, file=sys.stderr)
-        return 2
 
-    out = argv[2]
+    out = args.sortie
     if os.path.abspath(out) == os.path.abspath(path):
         print("refus : la sortie écraserait l'image flash d'origine",
               file=sys.stderr)
@@ -422,16 +435,15 @@ def main(argv):
     lib = Library(path)
     edits = {}
     try:
-        for spec in argv[3:]:
+        for spec in args.edits:
             key, _, value = spec.partition("=")
             if not value:
                 raise ValueError(f"argument attendu en id=source, "
                                  f"reçu « {spec} »")
-            gobo_id = int(key)
-            edits[gobo_id] = (solid(value) if value.startswith("#")
-                              else load_mask(value[5:])
-                              if value.startswith("mask:")
-                              else load_image(value))
+            edits[int(key)] = (solid(value) if value.startswith("#")
+                               else load_mask(value[5:])
+                               if value.startswith("mask:")
+                               else load_image(value))
         data = patch(lib, edits)
         changed = verify(lib.data, data, lib, list(edits))
         contenu = manifeste(path, lib, out, data, edits, changed)
@@ -451,4 +463,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    sys.exit(main())

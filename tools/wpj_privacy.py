@@ -149,6 +149,16 @@ def main(argv):
     return 0
 
 
-if __name__ == "__main__":
+def _cli(argv=None):
+    import argparse
+    parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parseur.add_argument("fichiers", nargs="*",
+                         help="fichiers a controler ; par defaut, ceux que "
+                              "git suit")
+    args = parseur.parse_args(argv)
     demo()
-    sys.exit(main(sys.argv[1:]))
+    return main(args.fichiers)
+
+
+if __name__ == "__main__":
+    sys.exit(_cli())

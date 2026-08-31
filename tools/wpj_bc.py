@@ -256,8 +256,17 @@ def demo():
     print(f"treillis d'identités vérifié sur {nb['B']} fichiers B et {nb['C']} fichier(s) C")
 
 
-if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        print(json.dumps(projet_vers_dict(sys.argv[1]), ensure_ascii=False, indent=1))
-    else:
+def _cli(argv=None):
+    import argparse
+    parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parseur.add_argument("projet", nargs="?", help="decode un projet variante B ou C en JSON ; sans argument, self-check")
+    args = parseur.parse_args(argv)
+    if args.projet is None:
         demo()
+        return 0
+    print(json.dumps(projet_vers_dict(args.projet), ensure_ascii=False, indent=1))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(_cli())

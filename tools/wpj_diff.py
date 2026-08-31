@@ -51,8 +51,20 @@ def demo():
     print("self-check ok", file=sys.stderr)
 
 
-if __name__ == "__main__":
-    if len(sys.argv) != 3:
+def _cli(argv=None):
+    import argparse
+    parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parseur.add_argument("avant", nargs="?", help="le projet de reference")
+    parseur.add_argument("apres", nargs="?", help="le projet a comparer")
+    args = parseur.parse_args(argv)
+    if args.avant is None or args.apres is None:
+        if args.avant or args.apres:
+            parseur.error("il faut les deux fichiers, ou aucun (self-check)")
         demo()
-        sys.exit(0)
-    main(sys.argv[1], sys.argv[2])
+        return 0
+    main(args.avant, args.apres)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(_cli())

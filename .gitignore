@@ -25,12 +25,5 @@ research/vendor/
 
 # OpenSpec (npx @fission-ai/openspec init --tools claude) : outillage local
 # de développement piloté par spec, pas du contenu du dépôt.
-# Exception : la skill `gobo-icons` est du contenu du dépôt et doit être
-# suivie — git ne redescend pas dans un répertoire entièrement ignoré,
-# d'où l'escalier de négations.
-!.claude/
-.claude/*
-!.claude/skills/
-.claude/skills/*
-!.claude/skills/gobo-icons/
+.claude/
 openspec/

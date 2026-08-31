@@ -13,12 +13,13 @@ read and write it, plus a client for the W1 controller's USB protocol. Python
 ## The one command
 
 ```bash
-make check          # from the repository root — nine self-checks
+make check          # from the repository root — ten self-checks
 ```
 
 Green means the structural claims hold on the corpus present — **file-format
-code only**. No USB protocol code runs: `wolfmix.py` and
-`wolfmix_experiment.py` are deliberately absent from the Makefile. Their
+code, plus `gobo_run.py`'s filesystem gates**. No USB protocol code runs:
+`wolfmix.py` and `wolfmix_experiment.py` are deliberately absent from the
+Makefile. Their
 hardware-free checks are separate subcommands:
 `python3 tools/wolfmix.py self-test` and
 `python3 tools/wolfmix_experiment.py self-test`. **If it prints
@@ -84,7 +85,7 @@ itself worth recording rather than silently resolving.
 - **Codec keys:** a proven field gets a semantic key (`nom`, `profil`,
   `effet`); an unidentified one keeps a neutral `fN` key. Renaming `fN` → a
   guess is exactly the failure mode this repository exists to avoid.
-- **Self-check idiom:** the nine tools in `make check`, plus `wpj_diff.py`,
+- **Self-check idiom:** the ten tools in `make check`, plus `wpj_diff.py`,
   run their own check with no arguments. `wolfmix.py` and
   `wolfmix_experiment.py` use a `self-test` subcommand; `tlv.py` and `dump.py`
   are argument-only helpers. New non-trivial logic follows the idiom — one

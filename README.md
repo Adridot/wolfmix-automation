@@ -108,10 +108,10 @@ self-check ok : 12/12 tilt, 11/12 pan, offsets et clamp
 wpj_privacy : 14 motifs, aucune occurrence dans 60 fichiers suivis
 ```
 
-Nine self-checks: byte-identical round-trip, codec fidelity per record type,
+Ten self-checks: byte-identical round-trip, codec fidelity per record type,
 wire parsing, the show compiler, the show generator, the inspect API, the
-structural identities, the position model against four DMX captures, and the
-anonymisation guard.
+structural identities, the position model against four DMX captures, the
+anonymisation guard, and the gobo pipeline's gates.
 
 > [!IMPORTANT]
 > With no project files present, the self-checks **abstain** — one line each,
@@ -446,7 +446,7 @@ are still French.
 | [`docs/tools.md`](docs/tools.md) | you want the CLI surface, flags and exit codes |
 | [`docs/show-format.md`](docs/show-format.md) | you are writing a `show.json` |
 | [`docs/device.md`](docs/device.md) | you are talking to a real controller |
-| [`docs/gobo-icons.md`](docs/gobo-icons.md) | you want your fixture's real gobo shapes on the W1 screen — the `gobo-icons` skill walks the recipe |
+| [`docs/gobo-icons.md`](docs/gobo-icons.md) | you want your fixture's real gobo shapes on the W1 screen — `gobo_run.py` guards the steps |
 | [`docs/methodology.md`](docs/methodology.md) | you want to *add* a finding, not just use one |
 | [`docs/troubleshooting.md`](docs/troubleshooting.md) | something printed a message you did not expect |
 | [`SPEC.md`](SPEC.md) | you need the bytes |

@@ -61,9 +61,8 @@ whatever terms the manufacturer sets.
 
 What you produce from them stays yours too: gobo photographs, the silhouettes
 generated from them and any patched `wolfmixFlash.bin` are your fixture's data
-and the manufacturer's icon work — they are never committed here, and both
-[`docs/gobo-icons.md`](docs/gobo-icons.md) and the `gobo-icons` skill refuse a
-working path inside this tree.
+and the manufacturer's icon work — they are never committed here, and
+`tools/gobo_run.py` refuses a working directory inside this tree.
 
 ## Interoperability, and what we did not do
 

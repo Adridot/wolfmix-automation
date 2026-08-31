@@ -9,9 +9,10 @@ Three conventions hold everywhere:
 - **Run with no arguments = self-check.** Each tool proves its own invariant and
   exits non-zero if it cannot. Six of them (`wpjlib`, `wpj_codec`, `wpj_api`,
   `wpj_identities`, `wpj_show`, `wpj_generate`) prove it over your corpus; the
-  other three prove it against frozen inputs in their own source
-  (`wpj_inspect`, `wpj_position`) or against the git index (`wpj_privacy`).
-  `make check` runs nine of them;
+  other four prove it against frozen inputs in their own source
+  (`wpj_inspect`, `wpj_position`), against a tree they build themselves
+  (`gobo_run`), or against the git index (`wpj_privacy`). `make check` runs
+  ten of them;
   `wpj_diff.py` self-checks too but is not wired into it.
 - **No corpus, no claim.** No project file ships with this repository
   ([`../LEGAL.md`](../LEGAL.md)). The corpus root is `corpus/`, or `$WPJ_CORPUS`
@@ -346,6 +347,42 @@ RGBA when the shape matters.
 Uploading the result is a separate, device-side act; see
 [`../research/flash-gobo-plan.md`](../research/flash-gobo-plan.md) for the order
 of operations and the way back.
+
+## `gobo_run.py` — the gates between the gobo steps
+
+The six steps of [`gobo-icons.md`](gobo-icons.md) each belong to a tool. What
+belonged to nobody were the gates *between* them, and on real hardware a
+skipped step is expensive. This one patches nothing, talks to no device and
+writes no file: it reads a working directory and refuses to name the next step
+while a gate is red.
+
+```bash
+python3 tools/gobo_run.py            # self-check
+python3 tools/gobo_run.py ~/gobos    # the board, then the next command
+```
+
+```text
+0 sauvegarde    OK   4 fichiers, 4 sha256 identiques
+1 silhouettes   OK   11 fichier(s) gobo*.png
+2 flash patché  OK   2931442 octets, longueur inchangée
+3 planche       OK   rendue après le flash patché
+```
+
+A red gate says why on its own line, and the block below the board becomes the
+command that clears it instead of the next step.
+
+Four gates, each one a mistake already made or one step from being made: a
+backup left **inside** the WTOOLS bundle folder (WTOOLS rewrites it on every
+update) or whose SHA-256 no longer match the live bundle; no silhouettes; a
+patched flash whose length moved, which would shift every absolute pointer; and
+a proof sheet older than the patched flash — rendered from the sources, so
+proving nothing about what will reach the device.
+
+**Exit 2 means a red gate**, so an agent or a script stops where a human would.
+The working directory must sit outside this repository: silhouettes, patched
+flash and sheet are your fixture's data ([`../LEGAL.md`](../LEGAL.md)). Icon
+`Open`, names over 19 bytes and a wheel carried by a second group stay refused
+by the tools that own them — `gobo_write.py` and `wpj_show.py`.
 
 ## `wolfmix.py` / `wolfmix_experiment.py`
 

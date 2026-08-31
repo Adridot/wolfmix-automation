@@ -1,14 +1,27 @@
 # Your fixture's real gobos on the W1 screen
 
 End-to-end recipe, every step device-confirmed on firmware 2.0.18
-(`research/flash-gobo-plan.md` for the measurements, RENAME-01/SORT-01 in
-`SPEC.md` §3.4 for the page edits). Three independent layers:
+([`../research/flash-gobo-plan.md`](../research/flash-gobo-plan.md) for the
+measurements, RENAME-01/SORT-01 in `SPEC.md` §3.4 for the page edits). Three
+independent layers:
 
 | Layer | What changes | Where it lives | Tool |
 |---|---|---|---|
 | Icons | the 24×24 images themselves | `wolfmixFlash.bin`, global | `gobo_write.py` |
 | Names | the label under each pad | the project, record 145 | `wpj_show.py`, key `gobo_noms` |
 | Order | which pad is where | the project, record 111 | `wpj_show.py`, key `gobo_ordre` |
+
+Work in a directory of your own, **outside this repository** — every command
+below calls it `$G`. `gobo_run.py` holds the gates between the steps and writes
+nothing:
+
+```bash
+G=~/gobos
+python3 tools/gobo_run.py $G
+```
+
+It prints where you are, refuses to name the next step while a gate is red, and
+exits 2 when one is. Run it as often as you like.
 
 ## 1. Photograph the wheel
 
@@ -19,8 +32,8 @@ step — nobody will see them at 24 pixels.
 ## 2. Generate silhouettes
 
 A photo scaled to 24×24 is mush; a bold shape survives. Feed each photo to an
-image generator with this prompt, then save the outputs as `gobo01.png`,
-`gobo02.png`, … in wheel order:
+image generator with this prompt, then save the outputs in `$G` as
+`gobo01.png`, `gobo02.png`, … in wheel order:
 
 > I will send you photos of gobos projected by a moving-head light onto a
 > surface, in the dark. For EACH photo, generate a stylised icon of the
@@ -48,22 +61,31 @@ the tool refuses it.
 ## 4. Patch and verify
 
 ```bash
-python3 tools/gobo_write.py patch flash-custom.bin 342=mask:gobo07.png 343=mask:gobo08.png ...
+python3 tools/gobo_write.py patch $G/flash-custom.bin \
+    342=mask:$G/gobo07.png 343=mask:$G/gobo08.png ...
 ```
 
 `mask:` turns white-on-black into a cut-out silhouette; the 1024×1024 files
 are reduced by area averaging. The tool itself checks the diff stays inside
 the targeted windows and the length is unchanged. To preview the real 24×24
-result before uploading, render a sheet from the patched file with
-`gobo_library.py sheet` and look at it.
+result before uploading, render a sheet **from the patched file** and look at
+it — rendering it from the sources proves nothing, and `gobo_run.py` fails the
+gate when the sheet is older than the flash it claims to show:
+
+```bash
+WOLFMIX_FLASH=$G/flash-custom.bin python3 tools/gobo_library.py \
+    sheet $G/planche.png 342,343
+```
 
 ## 5. Upload
 
-`research/flash-gobo-plan.md` is the authority — preconditions (complete
-`profiles` read, WLINK off, machine on mains, saved project), the WTOOLS
-Full Debug mode that reveals `Upload Flash`, the screen frozen at 99% that is
-**not** a crash, and the four-step safety net back to stock. Keep a verified
-backup of the original bundle **outside** the WTOOLS folder first.
+[`../research/flash-gobo-plan.md`](../research/flash-gobo-plan.md) is the
+authority — preconditions (complete `profiles` read, WLINK off, machine on
+mains, saved project), the WTOOLS Full Debug mode that reveals `Upload Flash`,
+the screen frozen at 99% that is **not** a crash, and the four-step safety net
+back to stock. Keep a verified backup of the original bundle **outside** the
+WTOOLS folder first — copy it to `$G/backup`, and `gobo_run.py` re-checks its
+SHA-256 against the live bundle on every run.
 
 ## 6. Names and order (optional, per project)
 

@@ -228,7 +228,7 @@ python3 tools/wpj_generate.py compose intent.json out.wpj --spec spec.json
 python3 tools/wpj_generate.py                                   # self-check
 ```
 
-One layer above `wpj_show.py`: it turns an **intention** — ambiances, energy,
+One layer above `wpj_show.py`: it turns an **intention** — moods, energy,
 colour, groups — into the preset bank of a show, then hands the resulting edit
 spec to the compiler, so every guarantee above still applies. The rig is not
 described by hand; it is read out of the donor (groups, fixtures, named

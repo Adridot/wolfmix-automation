@@ -2,8 +2,8 @@
 
 The input of `tools/wpj_generate.py compose`. Where
 [`show.json`](show-format.md) names fields, this names **intentions**: a list
-of ambiances with an energy, a colour and the groups they light. The generator
-reads the rig out of the donor, turns each ambiance into one preset, and hands
+of moods with an energy, a colour and the groups they light. The generator
+reads the rig out of the donor, turns each mood into one preset, and hands
 the result to the same compiler.
 
 ```bash
@@ -22,12 +22,12 @@ Everything the intention may refer to comes from that listing.
 | `base` | string | **required** — donor variant-A `.wpj` |
 | `nom` | string | project name (record 101) |
 | `page` | int 1–10 | preset page to fill; default = the first page above the donor's highest id |
-| `ambiances` | array | one cue each, filled into slots 1, 2, 3 … of that page |
+| `moods` | array | one cue each, filled into slots 1, 2, 3 … of that page |
 
 Ids follow the panel formula `id = (page − 1)·20 + (slot − 1)`, so more than
-twenty ambiances simply spill onto the next page.
+twenty moods simply spill onto the next page.
 
-## `ambiances[]`
+## `moods[]`
 
 | Key | Type | Meaning |
 |---|---|---|

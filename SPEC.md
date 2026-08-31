@@ -1139,6 +1139,25 @@ controller kept **every record byte-identical**, so writing the table also
 covers **deleting** entries and **choosing their order** — the device
 renormalises nothing.
 
+MAP-08 and MAP-10 close the rest. A file carrying the factory table was
+deployed over a device state that held thirteen entries in a different order,
+and the controller kept **every record byte-identical** — so writing covers
+**deleting** entries and **choosing their order**, and the device renormalises
+nothing. MAP-10 then deployed ten entries **created by our own encoder**, on
+channels the controller had never written: the screen shows all ten on the
+right functions, and the read-back is again byte-identical.
+
+Writing the table is therefore device-confirmed on all four operations —
+create, modify, delete, order — with byte-level fidelity, not merely a file the
+firmware tolerates.
+
+**The bytes are part of the contract.** The controller emits an entry's fields
+in ascending field number and never emits a zero-valued field; a writer that
+decodes to the same map but lays the bytes out differently is *semantically*
+right and still wrong, because the next diff against a device-rewritten file
+becomes unreadable. That defect was real in this repository's own writer and
+was only caught by comparing bytes rather than decoded maps.
+
 ---
 
 ## 7.4 The fixture → group assignment — **[correlated 45/45]**

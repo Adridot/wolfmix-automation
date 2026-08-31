@@ -690,3 +690,37 @@ en retirant le correctif, le self-check échoue sur
   une forme que l'appareil n'a jamais écrite. Non mesuré.
 - **Un index de preset au-delà de ce que le projet contient.** Le writer accepte
   0–199 sans regarder combien de presets existent.
+
+---
+
+# MAP-10 — dix entrées écrites par nous, acceptées à l'octet — **[device-confirmed]**
+
+Le dernier trou : aucun fichier portant une entrée **créée** par notre encodeur
+n'avait atteint l'appareil. MAP-06 modifiait un octet, MAP-08 supprimait et
+réordonnait.
+
+Fichier bâti depuis l'état d'usine, les dix fonctions créées par
+`wpj_show.py` sur les canaux **201 à 210** — des canaux que l'appareil n'a
+jamais écrits, pour que le résultat soit visible et **réfutable** : un `f4` mal
+attribué aurait posé la mapping sur la mauvaise fonction.
+
+| Contrôle | Résultat |
+|---|---|
+| l'écran | montre les dix, sur les bonnes fonctions |
+| records dont la charge utile diffère au retéléchargement | **aucun**, les 41 identiques |
+| record 130 | identique octet pour octet, 239 o |
+
+Prédiction : accepté et identique à l'octet — **p 0,85** ✅. La rivale — accepté
+mais récrit par l'appareil, donc notre forme d'octets diverge encore — p 0,10,
+réfutée.
+
+## Le writer est clos
+
+Créer, modifier, supprimer, ordonner : les quatre opérations sont
+device-confirmed, **avec fidélité au niveau de l'octet**, et pas seulement « un
+fichier que le firmware tolère ». Les quinze fonctions de l'écran sont
+couvertes.
+
+Restent, non mesurés et sans conséquence connue : `main` recréé de zéro — son
+entrée d'usine est la seule sans `f7` — et un index de preset au-delà de ce que
+le projet contient, que le writer accepte sans le vérifier.

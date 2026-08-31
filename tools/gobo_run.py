@@ -13,7 +13,10 @@ while a gate is red.
 Four gates, the ones no tool was holding:
 
   0 backup        the flash bundle copied OUTSIDE the WTOOLS folder — which
-                  WTOOLS rewrites on every update — SHA-256 equal to the live one
+                  WTOOLS rewrites on every update — SHA-256 equal to the live
+                  one, AND the live one checked against the manifest it ships
+                  with: a faithful copy of a bundle that is not the vendor's
+                  image is a copy of whatever was there
   1 silhouettes   at least one `gobo*.png` in the directory
   2 patched flash present, the original's length — the table's pointers are
                   absolute — and tied by its manifest to the installed bundle:
@@ -41,6 +44,10 @@ from gobo_library import find_flash
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BACKUP, PATCHED, SHEET = "backup", "flash-custom.bin", "sheet.png"
+# The manifest WTOOLS ships inside the bundle: one SHA-256 per binary,
+# under `files`. It is the vendor's, not ours — see docs/gobo-icons.md §5
+# for what it proves and what it does not.
+MANIFEST = "changelog.json"
 
 
 def sha256(path):
@@ -63,7 +70,36 @@ def under(path, parent):
     return os.path.realpath(path).startswith(parent + os.sep)
 
 
+def manifest_state(bundle):
+    """The live bundle against the manifest it ships with — three outcomes.
+
+    Not a boolean: ("absent", None) when there is nothing to check against,
+    ("verified", n) when the n files it lists all hash to the digest declared,
+    and ("diverges", name) at the first one that does not. A manifest that
+    cannot be read is `absent`, not a contradiction: an older WTOOLS, or a
+    folder copied by hand, is a real state and blocking on it would cost more
+    than the information is worth.
+    """
+    path = os.path.join(bundle, MANIFEST)
+    try:
+        with open(path, encoding="utf-8") as stream:
+            listed = [(e["file"], e["sha256"])
+                      for e in json.load(stream)["files"]]
+    except (OSError, ValueError, KeyError, TypeError):
+        return "absent", None
+    for name, digest in listed:
+        target = os.path.join(bundle, name)
+        if not os.path.isfile(target) or sha256(target) != digest:
+            return "diverges", name
+    return "verified", len(listed)
+
+
 def gate_backup(backup, bundle):
+    provenance, what = manifest_state(bundle)
+    if provenance == "diverges":
+        return False, (f"the live bundle contradicts its own {MANIFEST} at "
+                       f"{what}: a copy would not be a factory restore point — "
+                       "reinstall the bundle from WTOOLS before copying it")
     if not os.path.isdir(backup):
         return False, f"{backup} is missing"
     if under(backup, bundle) or os.path.realpath(backup) == os.path.realpath(bundle):
@@ -74,7 +110,10 @@ def gate_backup(backup, bundle):
     if gaps:
         return False, (f"{len(gaps)} file(s) missing or different from the "
                        f"live bundle: {', '.join(gaps[:3])}")
-    return True, f"{len(live)} files, {len(live)} matching SHA-256"
+    checked = (f"provenance verified against {MANIFEST}"
+               if provenance == "verified"
+               else f"provenance not verified: no {MANIFEST} in the bundle")
+    return True, f"{len(live)} files, {len(live)} matching SHA-256, {checked}"
 
 
 def gate_patched(patched, flash):
@@ -199,12 +238,14 @@ def self_test():
         flash = os.path.join(bundle, "wolfmixFlash.bin")
         for name, body in (("wolfmixFlash.bin", b"\x01" * 4096),
                            ("wolfmixFlash-reset.bin", b"\x02" * 16),
-                           ("firmware.bin", b"\x03" * 16),
-                           ("bundle.json", b"{}")):
+                           ("firmware.bin", b"\x03" * 16)):
             open(os.path.join(bundle, name), "wb").write(body)
 
         def state(name):
             return dict((e[0], e[1]) for e in gates(work, flash))[name]
+
+        def detail(name):
+            return dict((e[0], e[2]) for e in gates(work, flash))[name]
 
         assert state("0 backup") is False, "missing backup = red"
         assert "cp -R" in next_step(gates(work, flash), work, flash)
@@ -222,6 +263,34 @@ def self_test():
                 open(os.path.join(backup, name), "wb").write(
                     open(path, "rb").read())
         assert state("0 backup") is True, "faithful copy = green"
+        # No manifest in this bundle yet: the copy decides the verdict alone,
+        # and the line says the provenance was not checked.
+        assert "not verified" in detail("0 backup"), detail("0 backup")
+
+        def publish(digests_):
+            """Write the bundle's manifest, and mirror it into the backup."""
+            path = os.path.join(bundle, MANIFEST)
+            with open(path, "w", encoding="utf-8") as stream:
+                json.dump({"fwVersion": "2.0.18",
+                           "files": [{"file": n, "sha256": d}
+                                     for n, d in digests_.items()]}, stream)
+            open(os.path.join(backup, MANIFEST), "wb").write(
+                open(path, "rb").read())
+
+        truth = {n: sha256(os.path.join(bundle, n))
+                 for n in ("wolfmixFlash.bin", "wolfmixFlash-reset.bin",
+                           "firmware.bin")}
+        publish(truth)
+        assert state("0 backup") is True, "manifest honoured = green"
+        assert "provenance verified" in detail("0 backup"), detail("0 backup")
+
+        # The whole point of the check: the copy is still faithful, and the
+        # thing it was copied from is not the vendor's image.
+        publish({**truth, "firmware.bin": "00" * 32})
+        assert state("0 backup") is False, "manifest contradicted = red"
+        assert "firmware.bin" in detail("0 backup"), detail("0 backup")
+        publish(truth)
+        assert state("0 backup") is True
 
         # One byte moving in the copy breaks the gate: that is the whole point
         # of the hashes — a partial copy would otherwise go unnoticed.
@@ -276,7 +345,8 @@ def self_test():
 
         text, green = report(work, flash)
         assert green and "wlinkActivated" in text and "profiles" in text
-    print("ok — 4 gates, each red then green, the patched flash's chain of "
+    print("ok — 4 gates, each red then green, the live bundle checked against "
+          "its manifest in all three states, the patched flash's chain of "
           "hashes verified, refusal at the head of the report")
 
 

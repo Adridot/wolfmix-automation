@@ -88,8 +88,9 @@ WOLFMIX_FLASH=$G/flash-custom.bin python3 tools/gobo_library.py \
 The controller's flash is written by WTOOLS, from the copy you just verified.
 Before anything: **a verified backup of the original bundle, outside the WTOOLS
 folder** — copy it to `$G/backup`; WTOOLS rewrites `wm-fw-bundle-2.0.18/` on
-every update, and `gobo_run.py` re-checks the four SHA-256 against the live
-bundle on every run.
+every update, and `gobo_run.py` re-checks on every run both the SHA-256 of the
+copy against the live bundle **and** the live bundle against the manifest it
+ships with (see the net, below).
 
 Preconditions, all four:
 
@@ -129,6 +130,14 @@ closes; the device keeps answering the protocol throughout (`getSettings` and
 Check the `setFlashDataChunks` have stopped in the WTOOLS log, then restart the
 W1 normally: the overlay lifts and the new flash loads.
 
+That log is the only instrument on this side of the link, and it **rotates per
+launch**: `~/Library/Application Support/com.nicolaudiegroup.wtools/logs/`
+keeps five files, `wtools_logs_0.log` being the current run, and every start of
+WTOOLS pushes the oldest one out. Copy the whole folder somewhere outside this
+repository **before** launching WTOOLS again — five launches and the trace of
+your upload is gone. The files carry the controller's serial number, which is
+why `*.log` is git-ignored here and why the copy stays out of the tree.
+
 Afterwards, put `wtoolsMode` back to 0, and re-read `settings` and `profiles`:
 `firmwareVer`, `fixtureProfileCount` and `projectCount` must be what they were.
 
@@ -136,11 +145,30 @@ Afterwards, put `wtoolsMode` back to 0, and re-read `settings` and `profiles`:
 
 1. Re-upload the original `wolfmixFlash.bin` you backed up — the normal way
    back, and it is **proven**: a magenta test icon was written and then undone,
-   stock names restored (2026-08-30).
+   stock names restored (2026-08-30). The image it restores is not merely a
+   copy of what was on disk: the bundle ships `changelog.json`, the vendor's
+   own manifest, with one SHA-256 per binary, and the three installed binaries
+   hash to exactly what it declares (2026-08-31, `UPLOAD-03`). `gobo_run.py`
+   re-runs that comparison on every run and says so on gate 0's line.
+   **The limit, so the check is not read for more than it is:** the manifest
+   proves the *local* integrity of the image — nothing has rotted, been
+   truncated or been patched on this machine since the download. It says
+   nothing about what the vendor's server served, because the manifest
+   travelled inside the same bundle. A bundle that ships no manifest is not
+   refused; the gate says the provenance could not be verified and the verdict
+   rests on the copy alone.
 2. WTOOLS *Settings > Factory Reset* — reinstalls the last firmware **and** its
    flash (W1 manual v2.0 p.70).
 3. WOLF+SPEED at power-on → bootloader → WTOOLS, if the W1 no longer boots.
 4. WOLF+SMOKE → the factory firmware embedded in the device, without a PC.
+
+Present, and deliberately unnumbered: the bundle also carries
+`wolfmixFlash-reset.bin`, 15 724 544 bytes, listed in `changelog.json` and
+hashing to the digest declared there. It is **[observed]** — a name, a size and
+a place in the bundle. Nothing here has measured what it contains, what sends
+it or what it would restore, so it is given no role in the list above; it is
+named because leaving a 15 MB file out of a description of the net would be the
+omission, not the caution.
 
 No public bricking case is attributable to a flash modification; the reported
 ones come from failed firmware updates or USB faults.

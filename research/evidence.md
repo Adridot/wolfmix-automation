@@ -347,6 +347,26 @@ a renumbering of anything.
 | SCREEN-03 | 2026-08-27 | The three indexes that would not move the screen, replayed on **another live copy** → the panel yields to keys, not to `SET_MODE`. Two distinct paths, and nothing has yet measured which one the panel follows. | device-confirmed | §10.2 |
 | LINK-01 | 2026-08-27 | Seen five times in one day, always identically: after a pause, or after another process held the port, the **first** request times out and the next succeeds. | observed | §10.2 |
 
+### The resource-flash upload
+
+Four readings taken on 2026-08-31 from files already on the machine — the five
+retained WTOOLS logs and the installed bundle. **No device operation, no byte
+sent, no port opened.** They are here because they are the only state known of
+the channel that writes the resource flash, and because one of them contradicts
+something this repository publishes as `device-confirmed`.
+
+| id | date | manipulation → result | status | SPEC § |
+|---|---|---|---|---|
+| UPLOAD-01 | 2026-08-31 | The retained WTOOLS logs read on this machine → the flash upload travels on the **same tty as everything else** (`SerialPortAgent : Opened serial port (/dev/cu.usbmodem…) as read/write`), not on a raw USB pipe. RELOAD-01 went looking for a USB capture and found this machine could not make one; the channel it wanted to watch is a serial port, and the vendor's own log is the instrument. RELOAD-01's measurement stands — nothing is refuted — its **orientation** is superseded. | observed | §10.2 |
+| UPLOAD-02 | 2026-08-31 | The two sessions that carry an upload, counted and timed → **180** `setFlashDataChunks` messages each, the same shape twice: one message, refused, then **179** at a 163 ms median. `wolfmixFlash.bin` is 2 931 442 bytes, and 16 384 is the only candidate chunk size that divides it into exactly 179 messages (178 full, then 15 090). Read as one control message plus 179 chunks — the log names message *types*, never payloads or lengths, so nothing here has seen a chunk. Prediction published before the measurement that will settle it, in `corpus/experiments/UPLOAD-02/prediction.md`. | hypothesized | §10.2 |
+| UPLOAD-03 | 2026-08-31 | The three binaries of the installed bundle hashed against the `files` list of the `changelog.json` shipped inside it → **three matches out of three**. The factory image is present and provable, so a copy taken outside the WTOOLS folder is a verified restore point and not a copy of whatever was there. Local integrity only: the manifest travelled inside the same bundle and says nothing about what the vendor's server served. `gobo_run.py`'s gate 0 re-runs the comparison on every run. | observed | — |
+| UPLOAD-04 | 2026-08-31 | The two upload sessions read against what `docs/gobo-icons.md` §5 publishes → both were **refused at their first message** (`UNSAVED_PROJECT`, *Save project before updating*), and the 179 that followed came after the operator saved and clicked again; yet the upload itself is published `device-confirmed` for the same day, on the magenta-icon write and its undo. The disagreement is written rather than resolved: nothing here establishes what the device does with a refused first message, and no claim is added to §5 about what it keeps. | observed | §10.2 |
+
+The boundary question stays **open**: nothing above establishes whether
+executable firmware and the resource flash travel on the same message.
+`tools/wolfmix.py` gains no event, and this repository still writes no flash of
+its own.
+
 ### Firmware provenance
 
 | id | date | manipulation → result | status | SPEC § |

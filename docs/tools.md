@@ -421,7 +421,7 @@ python3 tools/gobo_run.py ~/gobos    # the board, then the next command
 ```
 
 ```text
-0 backup           OK   4 files, 4 matching SHA-256
+0 backup           OK   4 files, 4 matching SHA-256, provenance verified against changelog.json
 1 silhouettes      OK   11 gobo*.png file(s)
 2 patched flash    OK   2931442 bytes, 11 icon(s), chain verified
 3 sheet            OK   rendered after the patched flash
@@ -432,7 +432,10 @@ command that clears it instead of the next step.
 
 Four gates, each one a mistake already made or one step from being made: a
 backup left **inside** the WTOOLS bundle folder (WTOOLS rewrites it on every
-update) or whose SHA-256 no longer match the live bundle; no silhouettes; a
+update), whose SHA-256 no longer match the live bundle, or a live bundle that
+contradicts the `changelog.json` it ships with — a faithful copy of an image
+that is not the vendor's is not a restore point, and a bundle with no manifest
+is reported as unverified provenance rather than refused; no silhouettes; a
 patched flash whose length moved, which would shift every absolute pointer; and
 a proof sheet older than the patched flash — rendered from the sources, so
 proving nothing about what will reach the device.

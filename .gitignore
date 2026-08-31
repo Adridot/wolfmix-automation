@@ -30,6 +30,11 @@ research/vendor/
 # Vendor documents and binaries kept locally for reference, never committed.
 *.pdf
 
+# Journaux de WTOOLS. Ils portent le numéro de série du contrôleur — exactement
+# ce que tools/wpj_privacy.py refuse dans un fichier suivi — et docs/ demande
+# de les copier hors de l'arbre avant qu'ils tournent.
+*.log
+
 # Flash images and firmware bundles: the manufacturer's, or a patched copy of
 # it. Prepared and verified locally, never distributed (LEGAL.md).
 **/wm-fw-bundle*/

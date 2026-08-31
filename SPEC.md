@@ -50,6 +50,7 @@ message.
 |---|---|
 | EXP-05, EXP-05bis, EXP-06, EXP-07 (2026-08-31) | The variant-B/C campaign: the Rosetta alignment, the FX **banks per effect**, the refuted base-0/base-1 discriminator, and the three single-variable differentials written by the device. §1 still describes B and C by their envelope only. |
 | GOBO-01 (2026-08-30) | Where the gobo icon library lives — 800 entries at the tail of the resource flash, the entry index being the id in `145.f2`. §3.4 describes the palette without it. |
+| UPLOAD-01, UPLOAD-02, UPLOAD-03, UPLOAD-04 (2026-08-31) | The channel that writes the resource flash: a tty and not raw USB, the 1 + 179 message geometry inferred from the vendor's own log, the installed bundle verified against the manifest it ships with, and the contradiction between two sessions refused at their first message and an upload published `device-confirmed`. §10.2 describes the link without that upload on it; nothing here describes the flash bundle at all; and the question of whether executable firmware shares the message is open, which is why no write path follows. |
 | GUARD-01 (2026-08-31) | The nine bench measures of the write-path guards. They constrain the tools, not the format, so this may end up belonging in `docs/` rather than here — that decision is itself pending. |
 
 **On file counts.** A figure like "45/45" below is **historical**: it names the

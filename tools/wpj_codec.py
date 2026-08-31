@@ -110,10 +110,19 @@ SCHEMAS = {
     # device-confirmed sur l'écran POSITION. Voir le registre, « POS-04 ».
     151: {5: ("detachees", {1: ("fixture", "v"), 2: ("focus_offset", "v"),
                             3: ("pan_offset", "v"), 4: ("tilt_offset", "v")})},
+    # 130 : la carte de mapping DMX IN (MAP-01/MAP-02, registre). f4 = la cible
+    # — 20 = dimmer de groupe, 70 = preset, device-confirmed ; 27 = MAIN,
+    # correlated par l'écran. f2 = l'instance dans la cible, l'index de groupe
+    # pour f4 = 20. f6 = le canal DMX IN **en base zéro** : CH1 laisse le champ
+    # absent, CH30 écrit 29. La clé d'une entrée est (f4, f2), jamais son rang :
+    # l'ordre du fil bouge sans que le contenu change. f1 = le nombre d'entrées,
+    # f7 et f8 n'ont jamais bougé et restent sans nom.
+    130: {5: ("mappings", {2: ("instance", "v"), 4: ("cible", "v"),
+                           6: ("canal_dmx_in_base0", "v")})},
     160: {5: ("macros", {6: ("nom", "str")})},
     165: {5: ("presets", _PRESET)},
 }
-# passthrough volontaire : 106, 110, 130, 155, 161
+# passthrough volontaire : 106, 110, 155, 161
 
 
 # --- wire protobuf -----------------------------------------------------------

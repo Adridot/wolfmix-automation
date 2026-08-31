@@ -310,3 +310,74 @@ Un show généré peut déclarer ses mappings de dimmer de groupe et de preset :
 une entrée existante. Restent non mesurées : les catégories `Preset Page`,
 `Flash` et `General` (leurs valeurs de `f4`), et l'instance `f2` d'un preset —
 l'opérateur n'a pas dit lequel il avait choisi, et l'entrée porte `f2` absent.
+
+---
+
+# Vérifications sans matériel — 2026-08-31
+
+Sept contrôles passés avant d'envisager un writer. Aucun ne demande l'appareil.
+
+| # | Contrôle | Résultat |
+|---|---|---|
+| A | la carte d'usine sur tous les fichiers antérieurs | **50/50** portent exactement A–H → 1–8 et MAIN → 9, **zéro écart** |
+| B | `130.f4` est-il l'énumération des features (`110.f4`) ? | **non** — `70` est hors du domaine des features, qui plafonne à **33**. Le chevauchement de 20 et 27 est fortuit |
+| C | la carte existe-t-elle dans la variante de conteneur plate ? | **aucune trace** de la signature dans les 6 fichiers non-TLV — hors périmètre du writer |
+| D | quels records bougent sur toute la chaîne ? | `pre→before→after→map02` : **130 et lui seul**, aux trois transitions |
+| E | contrôle négatif de `carte_dmx_130` | fausser `f1` de 10 à 9 est rejeté ; l'identité mord |
+| F | décodage dans le codec | round-trip **octet-identique sur 54 fichiers** — les champs non nommés `f7`/`f8` survivent |
+| G | relecture de la carte par canal | **une collision** (voir ci-dessous) |
+
+## B, en détail — le piège évité
+
+`130.f4 = 20` et `f4 = 27` existent tous les deux dans le domaine de `110.f4`,
+la feature d'un canal. La lecture tentante — « c'est la même énumération, donc
+20 porte déjà un nom ailleurs » — est **réfutée par `70`** : les features
+observées vont de 1 à 33 sur tout le corpus, et 70 n'y est pas. `130.f4` est une
+énumération distincte. C'est exactement le piège n° 9 pris dans l'autre sens :
+un nombre déjà nommé ailleurs n'est pas le même champ.
+
+## G — l'appareil autorise deux entrées sur le même canal
+
+Relue par canal, la table de `map02` donne :
+
+```
+CH3 C · CH4 D · CH5 E · CH6 F · CH7 G + A · CH8 H · CH9 MAIN · CH20 B · CH30 preset
+```
+
+Le groupe **A** a été mis sur CH7, or **G y était déjà** par la carte d'usine.
+L'appareil n'a ni refusé, ni déplacé, ni vidé l'entrée de G : **les deux
+coexistent sur le canal 7**. `[observed]`
+
+Conséquences : aucune contrainte d'unicité n'est imposée par le firmware, donc
+un writer n'a pas à en imposer une — mais il doit pouvoir la signaler, parce
+qu'une collision est presque toujours une erreur d'intention. Et sur l'appareil
+de l'opérateur, **une valeur reçue sur le canal 7 pilote aujourd'hui A et G
+ensemble**.
+
+## Ce que le writer peut écrire, et ce qu'il ne doit pas
+
+| Écrivable | Interdit |
+|---|---|
+| `f6`, le canal, sur une entrée existante | inventer une valeur de `f4` non mesurée (`Preset Page`, `Flash`, `General`) |
+| une entrée neuve `f4 = 20` ou `f4 = 70`, `f7`/`f8` recopiés verbatim | supposer que le rang porte du sens |
+| `f1`, tenu égal au nombre d'entrées | supposer qu'un canal est unique |
+
+## Le discriminateur qui reste, et il est à un geste
+
+La rotation de MAP-01 est le seul `[observed]` sans lecture, et elle a un
+contre-exemple. Une hypothèse la sépare proprement : **une écriture qui ne change
+rien réinsère l'entrée en fin de liste.** Le groupe A avait été « posé » sur son
+canal d'usine (no-op) et a migré ; le groupe B a réellement changé de valeur et
+n'a pas bougé.
+
+Test : `Group Dimmer` → **groupe C** → **CH3**, c'est-à-dire son canal d'usine.
+Sauvegarder, télécharger.
+
+| Issue | p |
+|---|---|
+| l'entrée de C part en fin de liste, charge utile inchangée par ailleurs | **0,55** |
+| rien ne bouge du tout | 0,30 |
+| autre chose | 0,15 |
+
+Ça ne bloque pas le writer — l'ordre est déjà réputé non significatif — mais ça
+ferme le dernier fait non lu du record.

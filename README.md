@@ -138,7 +138,7 @@ python3 tools/wpj_api.py corpus/projects/your-project.wpj | head -40
       "known": { "colorFx1": { "type": 2, "speedPercent": 120, "linkOrder": 10 } } }
   ],
   "fixtures": { "status": "partial",
-                "items": [ { "profil": 57, "offset_106": 44, "fixture": 7, "entry_count_106": 4 } ] },
+                "items": [ { "profile": 57, "offset_106": 44, "fixture": 7, "entry_count_106": 4 } ] },
   "validation": {
     "checksumOk": true,
     "issues": [
@@ -168,12 +168,12 @@ Editing always starts from a donor project. Nothing is synthesised from scratch.
 // show.json
 {
   "base": "corpus/projects/your-project.wpj",
-  "nom": "MY SHOW",
+  "name": "MY SHOW",
   "presets": [
-    { "id": 33, "nom": "Chaser", "color_fx1": { "effet": 2, "vitesse": 120 } }
+    { "id": 33, "name": "Chaser", "color_fx1": { "effect": 2, "speed": 120 } }
   ],
   "positions": [
-    { "page": 1, "index": 0, "nom": "Public", "pan": 32768, "tilt": 15073 }
+    { "page": 1, "index": 0, "name": "Public", "pan": 32768, "tilt": 15073 }
   ]
 }
 ```

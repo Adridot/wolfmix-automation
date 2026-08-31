@@ -49,7 +49,7 @@ below `correlated`. The accepted set is in [`show-format.md`](show-format.md).
 Creating a position or palette entry from scratch has never been validated on a
 device — this message only fires for those two. A **preset** may be created:
 appending an entry with an id above every id in the donor is device-confirmed
-(PRESET-01/06/07), so pass `modele` instead. Otherwise pick a donor project that
+(PRESET-01/06/07), so pass `template` instead. Otherwise pick a donor project that
 already has the slot.
 
 **`auto-verify : records modifiés hors édition`**

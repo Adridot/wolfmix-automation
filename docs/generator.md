@@ -20,7 +20,7 @@ Everything the intention may refer to comes from that listing.
 | Key | Type | Meaning |
 |---|---|---|
 | `base` | string | **required** — donor variant-A `.wpj` |
-| `nom` | string | project name (record 101) |
+| `name` | string | project name (record 101) |
 | `page` | int 1–10 | preset page to fill; default = the first page above the donor's highest id |
 | `moods` | array | one cue each, filled into slots 1, 2, 3 … of that page |
 
@@ -31,14 +31,14 @@ twenty moods simply spill onto the next page.
 
 | Key | Type | Meaning |
 |---|---|---|
-| `nom` | string | cue name, **truncated to 19 UTF-8 bytes** on a character boundary |
-| `energie` | int 0–100 | how much the cue does — see the ladder below |
-| `couleur` | `"#rrggbb"` | the static colour asked for |
-| `groupes` | array of `"A"`…`"H"` | which groups light; default = every group that has a fixture |
+| `name` | string | cue name, **truncated to 19 UTF-8 bytes** on a character boundary |
+| `energy` | int 0–100 | how much the cue does — see the ladder below |
+| `color` | `"#rrggbb"` | the static colour asked for |
+| `groups` | array of `"A"`…`"H"` | which groups light; default = every group that has a fixture |
 | `position` | string | a named position from record 150, e.g. `"Crowd"` |
 | `dimmer` | int 0–255 | override the ladder's dimmer level; energy says how busy the cue is, this says how bright |
 | `live_edit` | bool | `false` locks the cue against panel edits. Default: inherit the template's. **Set it `false` for any cue you intend to measure** — with LIVE EDIT on, a gesture at the panel rewrites the cue's *live copy* while the file stays exactly as deployed, and a recall then measures something else (GEN-03). |
-| `modele` | int | force a template preset id instead of the one the ladder picks |
+| `template` | int | force a template preset id instead of the one the ladder picks |
 
 ## The energy ladder
 
@@ -47,7 +47,7 @@ dimmer level and an FX speed. The values are settings, not measurements — the
 table lives at the top of `wpj_generate.py` and is meant to be retuned on the
 rig.
 
-| `energie` | family | dimmer* | beam FX | speed |
+| `energy` | family | dimmer* | beam FX | speed |
 |---|---|---|---|---|
 | 0–24 | `static` | 120 | — | — |
 | 25–49 | `beam` | 180 | Sparkle | 45 % |

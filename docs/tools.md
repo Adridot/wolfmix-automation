@@ -70,8 +70,8 @@ and it verifies that itself before returning. If a type has no schema, or the
 protobuf is unexpected, it returns `{"raw": "<hex>"}` — never a partial or
 approximate decode.
 
-Naming: a field whose meaning is proven gets a semantic key (`nom`, `profil`,
-`effet`, …); an unidentified field keeps a neutral `fN` key. An absent field is
+Naming: a field whose meaning is proven gets a semantic key (`name`, `profile`,
+`effect`, …); an unidentified field keeps a neutral `fN` key. An absent field is
 absent from the dict — never a synthesised `0`.
 
 Decoded today: 101, 102, 105, **111**, 115, 116, 120, 125, **130**, 135, 140,
@@ -195,7 +195,7 @@ python3 tools/wpj_show.py                             # self-check
 Applies a JSON edit spec to a donor project. A position or palette entry being
 edited must already exist in the donor; everything else is preserved byte for
 byte by `wpjlib`. A **preset** may also be created, by cloning one of the
-donor's with the `modele` key — appending a well-formed `165.f5` entry with a
+donor's with the `template` key — appending a well-formed `165.f5` entry with a
 free, larger id is device-confirmed (PRESET-01/06/07), and `165.f1` is left
 verbatim because it gates nothing.
 

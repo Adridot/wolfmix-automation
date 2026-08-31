@@ -84,8 +84,8 @@ itself worth recording rather than silently resolving.
   `LEGAL.md`, `PROVENANCE.md`, `docs/` and `README.md` are English. `research/`
   is both — English since the type-102 entry, French before it and in the newest
   entries. Keep each file in the language it is in rather than mass-translating.
-- **Codec keys:** a proven field gets a semantic key (`nom`, `profil`,
-  `effet`); an unidentified one keeps a neutral `fN` key. Renaming `fN` → a
+- **Codec keys:** a proven field gets a semantic key (`name`, `profile`,
+  `effect`); an unidentified one keeps a neutral `fN` key. Renaming `fN` → a
   guess is exactly the failure mode this repository exists to avoid.
 - **Self-check idiom:** the tools listed in `make check`, plus `wpj_diff.py`,
   run their own check with no arguments. `wolfmix.py` and

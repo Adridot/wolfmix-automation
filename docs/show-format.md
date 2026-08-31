@@ -16,7 +16,7 @@ see [`corpus.md`](corpus.md).
 Creating a record from scratch is not something the compiler does. A
 **position** or a **palette entry** you edit must already exist in the donor;
 nothing has been measured about synthesising one. A **preset** may be created,
-by cloning one of the donor's with `modele`: PRESET-01, 06 and 07 showed that
+by cloning one of the donor's with `template`: PRESET-01, 06 and 07 showed that
 appending a well-formed entry with a free id works, is accepted, and survives
 store, restart and a cold reopen — `165.f1` gates nothing and is left verbatim
 (85 entries loaded with `f1` = 81). Creation is append-only: the new id must
@@ -42,7 +42,7 @@ Keys are French, matching the codec's key names.
 | Key | Type | Meaning |
 |---|---|---|
 | `base` | string | **required** — path to the donor variant-A `.wpj` |
-| `nom` | string | new project name (record 101) |
+| `name` | string | new project name (record 101) |
 | `presets` | array | preset edits (record 165) |
 | `positions` | array | named pan/tilt positions (record 150, one copy per group A–H) |
 | `palette` | array | Color FX palette pads (record 135) |
@@ -61,9 +61,9 @@ Addressed by `id`, which is the linear preset index
 
 | Key | Type | Bounds | Meaning |
 |---|---|---|---|
-| `id` | int | ≥ 0 | **required** — an existing preset in the donor, or a new id above every existing one when `modele` is given |
-| `modele` | int | ≥ 0 | id of the donor preset to **clone** into a new entry. Only on an id the donor does not have; refused on one it does. The clone carries every unknown field verbatim, which is the point. |
-| `nom` | string | **≤ 19 UTF-8 bytes** | preset name. **Enforced** — past 19 bytes the *whole project* refuses to open on the device (device-confirmed, PRESET-05), and auto-verify could not see it: the value reads back fine. |
+| `id` | int | ≥ 0 | **required** — an existing preset in the donor, or a new id above every existing one when `template` is given |
+| `template` | int | ≥ 0 | id of the donor preset to **clone** into a new entry. Only on an id the donor does not have; refused on one it does. The clone carries every unknown field verbatim, which is the point. |
+| `name` | string | **≤ 19 UTF-8 bytes** | preset name. **Enforced** — past 19 bytes the *whole project* refuses to open on the device (device-confirmed, PRESET-05), and auto-verify could not see it: the value reads back fine. |
 | `positions` | int[8] | ≥ 0 | position index per group A–H |
 | `dimmers` | int[8] | 0–255 | dimmer per group A–H, as a **percentage of 255** — the output is `f5 + (v/255)·(f6 − f5)` through the channel's travel limits, and on a fixture with colour channels it scales the colour instead. Device-confirmed (GEN-02), **but silent unless the controller setting `store group dimmers in preset` is on** — see the gates below. |
 | `content_mask` | int | 0–63 | `f10`, the six `PRESET EDIT` toggles: bit 0 `COLOR`, 1 `MOVE`, 2 `BEAM`, 3 `GOBO`, 4 `LIVE EDIT`, 5 `OTHER`. A **set** bit means the toggle is **off**. device-confirmed, F4-02. |
@@ -82,8 +82,8 @@ The same shape for all six slots. Only these keys are accepted:
 
 | Key | Bounds | Meaning |
 |---|---|---|
-| `effet` | 0–8 | effect type, device-confirmed (ACC-04). The bound is the **Beam** enum; Color defines only `0`–`7` and no enum is published for Move, so the compiler accepts out-of-enum values on those slots — check the right enum yourself (`SPEC.md` §5). |
-| `vitesse` | 0–100 | speed percent — **codec field `f9`**. Until FX6-02 this key wrote `f2` and the bound was 0–200; `f2` is the **fade**, so a show that set `vitesse` above 100 was lengthening the fade, not speeding the effect. The key kept its name and changed field. |
+| `effect` | 0–8 | effect type, device-confirmed (ACC-04). The bound is the **Beam** enum; Color defines only `0`–`7` and no enum is published for Move, so the compiler accepts out-of-enum values on those slots — check the right enum yourself (`SPEC.md` §5). |
+| `speed` | 0–100 | speed percent — **codec field `f9`**. Until FX6-02 this key wrote `f2` and the bound was 0–200; `f2` is the **fade**, so a show that set `speed` above 100 was lengthening the fade, not speeding the effect. The key kept its name and changed field. |
 | `link_order` | 10–13 | link order, **Group family only**. The field's domain is `0–3` None, `10–13` Group, `20–23` Fixture; the compiler accepts only the Group range. |
 | `speed_source` | 0–2 | speed source |
 | `bpm_division` | int | BPM division: `0`→×8 … `7`→1/16, default 3. **The compiler does not enforce 0–7** — any non-negative int passes. |
@@ -97,7 +97,7 @@ Record 150 exists eight times, **one per group A–H**; `page` selects which
 |---|---|---|---|
 | `page` | int | 1–8 | **required** — group A–H |
 | `index` | int | ≥ 0 | **required** — slot index within the group, must exist |
-| `nom` | string | — | position name |
+| `name` | string | — | position name |
 | `pan` | int | 0–65535 | PAN, value = percent × 65535 (codec field `f6`) |
 | `tilt` | int | 0–65535 | TILT, same scale (codec field `f7`) |
 | `fan` | int | 0–65535 | FAN, same scale (codec field `f3`) |
@@ -119,11 +119,11 @@ hypothesised; neither is writable here.
 | Key | Type | Bounds | Meaning |
 |---|---|---|---|
 | `index` | int | ≥ 0 | **required** — pad index, must exist in the donor |
-| `rouge` | int | 0–255 | red |
-| `vert` | int | 0–255 | green |
-| `bleu` | int | 0–255 | blue |
+| `red` | int | 0–255 | red |
+| `green` | int | 0–255 | green |
+| `blue` | int | 0–255 | blue |
 
-The remaining four pad channels (`blanc`, `ambre`, `lime`, `uv`) decode fine but
+The remaining four pad channels (`white`, `amber`, `lime`, `uv`) decode fine but
 are not writable here. The seven-channel order was read off the W1's own `RGB+`
 view and is device-confirmed on record **140**; record 135 inherits it at
 `correlated`, and no write to 135 has been checked on a device either.
@@ -138,7 +138,7 @@ the preset-name limit (PRESET-05), unmeasured on this field, so refused
 conservatively.
 
 `gobo_order` is the **complete** id list of the wheel in the wanted order;
-anything else is refused. The record-111 wheel ranges (`fonction` 14) are
+anything else is refused. The record-111 wheel ranges (`function` 14) are
 permuted — each keeps its DMX bounds, the id-less open range stays first —
 and the record-145 palette is rewritten consistently: names travel with
 their gobos, glyphs are resequenced from `!`. The firmware accepts the
@@ -153,14 +153,14 @@ and higher.
 
 | Key | Type | Meaning |
 |---|---|---|
-| `cible` | string | **required** — the function; see the table below |
-| `groupe` | string | `"A"`–`"H"`, required for `dimmer_groupe` only |
+| `target` | string | **required** — the function; see the table below |
+| `group` | string | `"A"`–`"H"`, required for `group_dimmer` only |
 | `index` | int | the preset index, required for `preset` only |
-| `canal` | int or null | **required** — the DMX IN channel **1–512**, or `null` to remove the mapping |
+| `channel` | int or null | **required** — the DMX IN channel **1–512**, or `null` to remove the mapping |
 
-| `cible` | `f4` | Function | Instance |
+| `target` | `f4` | Function | Instance |
 |---|---|---|---|
-| `dimmer_groupe` | 20 | a group's dimmer | `groupe`, A–H |
+| `group_dimmer` | 20 | a group's dimmer | `group`, A–H |
 | `main` | 27 | the MAIN dimmer | none |
 | `preset` | 70 | a specific preset | `index`, 0–199 |
 | `select_preset` | 70 | Select Preset — the incoming **value** picks | none |
@@ -180,7 +180,7 @@ and higher.
 screen offers five *categories*, but the file stores the *function*: the seven
 `Flash` entries carry seven different ids. Every id above was written by the
 controller when the operator selected that item; nothing is inferred from a
-sequence, so any other `cible` is refused.
+sequence, so any other `target` is refused.
 
 **A function id is not unique on its own.** `preset` and `select_preset` share
 `f4 = 70`; `jump_preset`, `previous_preset` and `next_preset` share `f4 = 78`.
@@ -189,11 +189,11 @@ compiler addresses it.
 
 **Instance 255 means "no fixed instance".** Every function without a numbered
 target carries it — including the two where the incoming DMX *value* is what
-picks the preset. Only `dimmer_groupe`, `preset` and `preset_page` take a
+picks the preset. Only `group_dimmer`, `preset` and `preset_page` take a
 number, and `main` is the one function that carries 0 instead of 255: it is a
 factory entry, and why it differs is not measured.
 
-**Removing is an absence, not a value.** `"canal": null` deletes the entry —
+**Removing is an absence, not a value.** `"channel": null` deletes the entry —
 there is no "unmapped" sentinel to write. Removing a mapping that does not
 exist is an error, so a spec cannot silently do nothing.
 
@@ -212,11 +212,11 @@ your own map.
 
 ```json
 "mappings": [
-  {"cible": "dimmer_groupe", "groupe": "A", "canal": 1},
-  {"cible": "main", "canal": 9},
-  {"cible": "preset", "index": 4, "canal": 40},
-  {"cible": "wolf", "canal": 45},
-  {"cible": "dimmer_groupe", "groupe": "C", "canal": null}
+  {"target": "group_dimmer", "group": "A", "channel": 1},
+  {"target": "main", "channel": 9},
+  {"target": "preset", "index": 4, "channel": 40},
+  {"target": "wolf", "channel": 45},
+  {"target": "group_dimmer", "group": "C", "channel": null}
 ]
 ```
 
@@ -225,20 +225,20 @@ your own map.
 ```json
 {
   "base": "corpus/projects/your-project.wpj",
-  "nom": "MY SHOW",
+  "name": "MY SHOW",
   "presets": [
     {
       "id": 33,
-      "nom": "Chaser",
+      "name": "Chaser",
       "dimmers": [255, 255, 128, 0, 0, 0, 0, 0],
-      "color_fx1": {"effet": 2, "vitesse": 80}
+      "color_fx1": {"effect": 2, "speed": 80}
     }
   ],
   "positions": [
-    {"page": 1, "index": 0, "nom": "Public", "pan": 32768, "tilt": 15073}
+    {"page": 1, "index": 0, "name": "Public", "pan": 32768, "tilt": 15073}
   ],
   "palette": [
-    {"index": 0, "rouge": 255, "vert": 40, "bleu": 0}
+    {"index": 0, "red": 255, "green": 40, "blue": 0}
   ]
 }
 ```

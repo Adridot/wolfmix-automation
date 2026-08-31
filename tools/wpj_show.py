@@ -61,7 +61,7 @@ _PAL_CLES = ("index", "red", "green", "blue")
 # reçue qui choisit. Deux fonctions partagent un `f4` avec `preset` (70) et
 # trois avec `jump_preset` (78) : c'est le couple (f4, instance) qui identifie.
 _MAP_FONCTIONS = {
-    "dimmer_groupe":   (20, None),   # instance = le groupe A–H
+    "group_dimmer":   (20, None),   # instance = le groupe A–H
     "main":            (27, 0),      # l'entrée d'usine ne porte pas de f7
     "preset":          (70, None),   # instance = l'index du preset
     "select_preset":   (70, 255),    # même f4 : la valeur reçue choisit
@@ -380,7 +380,7 @@ def compiler(spec, sortie):
                     f"{sorted(_MAP_FONCTIONS)}")
             ctx = f"mapping {cible}"
             fonction, instance = _MAP_FONCTIONS[cible]
-            if cible == "dimmer_groupe":
+            if cible == "group_dimmer":
                 g = me.get("group")
                 if g not in list("ABCDEFGH"):
                     raise ValueError(f"{ctx} : 'group' doit être A–H")
@@ -393,7 +393,7 @@ def compiler(spec, sortie):
                 instance = borne(ctx, "page", me.get("page", -1),
                                   1, PAGES_PRESET) - 1
             if any(k in me for k in ("group", "index", "page")
-                   if k != {"dimmer_groupe": "group", "preset": "index",
+                   if k != {"group_dimmer": "group", "preset": "index",
                             "preset_page": "page"}.get(cible)):
                 raise ValueError(f"{ctx} : clé d'instance qui ne s'applique pas "
                                  "à cette fonction")
@@ -577,7 +577,7 @@ def _demo_sur(base):
             "positions": [{"page": 1, "index": 1, "name": "DemoPos",
                            "pan": 12345, "tilt": 54321, "fan": 32768}],
             "palette": [{"index": 0, "red": 10, "green": 20, "blue": 30}],
-            "mappings": [{"target": "dimmer_groupe", "group": "B",
+            "mappings": [{"target": "group_dimmer", "group": "B",
                           "channel": 300},          # deux octets : f5 = 1
                          {"target": "preset", "index": 4, "channel": 40},
                          {"target": "wolf", "channel": 45},
@@ -585,9 +585,9 @@ def _demo_sur(base):
                          {"target": "smoke", "channel": 106},
                          {"target": "select_preset", "channel": 107},
                          {"target": "next_preset", "channel": 110},
-                         {"target": "dimmer_groupe", "group": "D",
+                         {"target": "group_dimmer", "group": "D",
                           "channel": 1},          # octet haut nul : doit être omis
-                         {"target": "dimmer_groupe", "group": "C",
+                         {"target": "group_dimmer", "group": "C",
                           "channel": None}]}        # retrait
     with tempfile.TemporaryDirectory() as tmp:
         out = os.path.join(tmp, "demo.wpj")
@@ -706,11 +706,11 @@ def _demo_sur(base):
                                                      "channel": 5}]},
                         # canal hors de l'univers
                         {"base": base, "mappings": [
-                            {"target": "dimmer_groupe", "group": "A",
+                            {"target": "group_dimmer", "group": "A",
                              "channel": 513}]},
                         # groupe hors A–H
                         {"base": base, "mappings": [
-                            {"target": "dimmer_groupe", "group": "I",
+                            {"target": "group_dimmer", "group": "I",
                              "channel": 5}]},
                         # une fonction sans instance n'en prend pas
                         {"base": base, "mappings": [{"target": "wolf",
@@ -738,11 +738,17 @@ def _demo_sur(base):
     # Aucun exemple suivi ne doit encore porter une clé retirée : c'est la
     # moitié du contrat qui vit dans les fichiers, pas dans le code.
     import glob
-    for exemple in sorted(glob.glob("corpus/**/*.json", recursive=True)):
-        with open(exemple, encoding="utf-8") as flux:
-            texte = flux.read()
-        perimees = [k for k in wpj_codec.CLES_RETIREES if f'"{k}"' in texte]
-        assert not perimees, f"{exemple} : clés retirées {perimees}"
+    suivis = (sorted(glob.glob("corpus/**/*.json", recursive=True))
+              + sorted(glob.glob("docs/*.md")) + ["README.md", "AGENTS.md"])
+    for exemple in suivis:
+        try:
+            with open(exemple, encoding="utf-8") as flux:
+                texte = flux.read()
+        except OSError:
+            continue
+        perimees = [k for k in wpj_codec.CLES_RETIREES
+                    if f'"{k}"' in texte or f"`{k}`" in texte]
+        assert not perimees, f"{exemple}: retired keys {perimees}"
 
     # Une clé française retirée est une erreur qui nomme sa remplaçante.
     for essai in ({"base": "x", "nom": "y"}, {"base": "x", "gobo_ordre": []}):

@@ -19,3 +19,17 @@ Lecture rivale à tuer : « le panneau ne suit jamais un `SET_MODE`, et ce qu'on
 a pris pour le mode 26 atteint venait d'un geste sur le panneau ». Si 1 et 2
 laissent l'écran sur HOME, c'est elle qui gagne, et le mode rapporté est une
 variable d'état interne sans lien avec l'affichage.
+
+## Suite, prédite après 1 et 2 mais AVANT 4 et 5
+
+Mesuré : 5 et 16 ne déplacent pas l'écran, **26 le déplace**. Lecture posée :
+`SET_MODE` ouvre un écran **modal** ; il ne sait pas re-sélectionner une page
+ordinaire, dont l'affichage appartient à l'état des touches du panneau.
+
+| # | Envoi, depuis la page Open (26) | Prédiction | p |
+|---|---|---|---|
+| 4 | `mode presets` (5) | mode rapporté 5, mais l'écran **reste sur Open** — le registre dit que 26 ne se quitte pas par 0/5/16 | 0.75 |
+| 5 | `mode 1 --experimental` (COLOR) | l'écran **quitte** le modal ; le registre donne l'index 1 comme échappatoire | 0.7 |
+
+Si 5 quitte le modal alors que 5 (la mesure 4) ne fait rien, « seuls les modaux
+sont poussables » est trop simple : il faudra dire pourquoi l'index 1 agit.

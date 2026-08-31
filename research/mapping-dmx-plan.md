@@ -515,3 +515,37 @@ le hors-par-un de la base zéro.
 - **`f2 = 0` sur MAIN** là où les autres fonctions uniques portent 255 : MAIN est
   une entrée d'usine, les autres sont créées par l'opérateur. Deux millésimes
   d'écriture, non mesuré.
+
+---
+
+# MAP-07 — notre encodeur reproduit la table d'usine — **[validated]**
+
+Preuve d'encodage complète, sans appareil. Un encodeur écrit depuis la lecture
+seule — champs en ordre croissant, valeur nulle omise, varint — produit pour la
+carte identité (A–H sur les canaux 1 à 8, MAIN sur 9) :
+
+```
+08092a062014380140012a0a100120143001380140012a0a1002…2a06201b30084001
+```
+
+**Octet pour octet identique** au record 130 des 50 fichiers du corpus. Rien
+n'est deviné : si un champ avait été mal ordonné, mal omis ou mal encodé, les
+octets divergeraient.
+
+Un détail que seule cette reconstruction expose : **l'entrée MAIN ne porte pas
+de `f7`**, alors que les huit entrées de groupe le portent à 1. C'est dans les
+octets d'usine depuis le début et personne ne l'avait relevé. `f7` reste sans
+nom, mais on sait maintenant qu'il est *absent* sur une fonction et *présent* à
+1 sur les autres — donc il n'est pas un simple remplissage.
+
+## Le fichier de remise à zéro
+
+`corpus/experiments/MAP-01/remise-usine.wpj` : l'état de fin de campagne avec le
+record 130 remplacé par la table d'usine. 15777 octets — exactement la taille du
+projet avant la première manipulation. Record 130 seul modifié, 19 identités
+passantes, SHA-1 recalculé.
+
+Prédiction avant déploiement : l'écran `Mappings` montre A–H sur 1–8 et MAIN
+sur 9, et **plus aucune entrée** en `Preset`, `Flash` ni pour les canaux 200/300
+— p 0,85. Ce serait la deuxième écriture device-confirmed, et la première qui
+**supprime** des entrées plutôt que d'en modifier une.

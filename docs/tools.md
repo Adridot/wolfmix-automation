@@ -459,7 +459,7 @@ python3 tools/ssl2.py                      # self-check
 python3 tools/ssl2.py dump f.ssl2          # the XML on stdout
 python3 tools/ssl2.py gen fixture.json     # a description → a .ssl2
 python3 tools/ssl2.py verify               # the whole local library
-python3 tools/ssl2.py enums                # rebuild both tables and diff them
+python3 tools/ssl2.py enums                # rebuild the four tables and diff them
 python3 tools/ssl2.py diff a.ssl2 b.ssl2   # structural, for bisecting
 ```
 

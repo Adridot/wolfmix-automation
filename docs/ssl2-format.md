@@ -255,6 +255,143 @@ makes it the colour wheel's rotation and not some other wheel's.
 | 62 | Barrel Pan | 112 | 51 % |  |
 | 100 | Fan Speed | 349 | 62 % |  |
 
+## 16-bit channels
+
+A coarse/fine pair is two `SSLCHANNEL`s of the same type, each carrying the
+other's **index within the mode** in `SSLCHANNEL16BITSINDEX`, one flagged
+`SSLCHANNELMSB="1"` and the other `SSLCHANNELLSB="1"`. All 62 400 pairs in the
+library are symmetric; 47 of them straddle two channel *types*, which is the
+only thing about them that is not uniform.
+
+| | Measured over 25 610 profiles |
+|---|---|
+| Wired both ways | 124 772 / 124 772 half-channels point back at their partner |
+| Same channel type | 124 753 / 124 772 |
+| Fine after coarse in the mode | 62 360 / 62 400 |
+| **Adjacent** | 115 743 / 124 772 — the other 7 % read `Pan Tilt µPan µTilt` |
+| `SSLCHANNELTYPEINDEX` | the pair counts **once**: the fine half repeats its coarse half's index. That rule holds on 56 551 of the library's 58 463 modes, against 41 609 for counting every channel — which is what the generator used to do, and what a mode with no 16-bit channel cannot tell apart |
+
+**The name, and the trap in it.** The fine half is marked with `µ`, stored
+double-encoded: the file's UTF-8 text is `Âµ`, itself the UTF-8 of the UTF-8 of
+`µ`. Writing a clean `µ` would produce a name unlike any of the library's, so
+`tools/ssl2.py` builds the marker by doing to `µ` exactly what the vendor's
+tooling did — `"µ".encode("utf-8").decode("latin-1")` — and the four bytes
+`C3 82 C2 B5` land in the file. Where it goes is a plurality, not a rule:
+
+| Form | n | |
+|---|---:|---:|
+| `Pan (Âµ)` | 28 113 | 45 % — what the generator writes |
+| `ÂµPan` | 15 379 | 25 % |
+| `( Âµ ) Pan` | 10 550 | 17 % |
+| `microPan` | 4 368 | 7 % |
+| `ï¿½Pan` and `ï¿½ Pan` | 3 590 | 6 % — the same marker, mojibake a second way |
+| `Pan Fine`, `Pan 16 bit`, … | 400 | < 1 %, across 90 more forms |
+
+## `SSLGCHANNELS` and `SSLCHANNELLINKED`
+
+`SSLGCHANNELS` is a third child of `SSLLIBRARY`, after `SSLMODES`: a channel
+list belonging to the profile rather than to a mode. A mode's channel points
+into it with `SSLCHANNELLINKED`, whose value is one of its
+`SSLCHANNELUID`s — 9 848 profiles carry the element, and not one link in any
+of them points outside it. 63 more profiles carry links and **no**
+`SSLGCHANNELS` at all, so the reference can dangle.
+
+The identity worth having is the count:
+
+> the number of `SSLCHANNEL` under `SSLGCHANNELS` equals the number of distinct
+> `SSLCHANNELLINKED` over all modes.
+
+**9 084 of 9 848 profiles (92.2 %).** The 764 that diverge all diverge the same
+way — 2 077 entries no mode points at, and never a link with no entry:
+
+| The 2 077 orphans | |
+|---|---|
+| 8-bit | 2 077 / 2 077 — not one is the fine half of a pair |
+| Carry presets | 1 512 |
+| Unique by (type, name) in their profile | 1 883 — `Color Wheel`, `Background Red`, `Index Colors` |
+
+That reads as an editor that keeps a channel's global entry after the channel
+has been removed from every mode: the list is a superset of what is used, never
+a subset. It is the one thing the generator deliberately does not reproduce.
+
+**The 16-bit pair collapses into one 8-bit entry**, which is measured and not
+assumed: all 120 869 `SSLGCHANNELS` channels carry `MSB="0" LSB="0"` and
+`SSLCHANNEL16BITSINDEX="-1"`, none carries `SSLCHANNELTYPEINDEX`, and the fine
+half of a pair never links anywhere else than its coarse half — 26 947 pairs
+share one entry, 35 453 leave the fine half unlinked, **none** point at two.
+An entry is otherwise a copy of the mode channel, presets and preset UIDs
+included; only `SSLPRESETTARGET` differs, and the next section says why.
+
+Which mode channels are "the same channel" is the vendor editor's own
+bookkeeping and cannot be read off a file. The generator uses `(type, name)`,
+and says so — that is its convention, not a reading of the format.
+
+## `SSLPRESETTARGET`
+
+The index, **within the mode**, of the channel holding the physical object the
+preset acts on; `-1` when there is none. 40 of the 63 preset types write `-1`
+on 100 % of their presets — Shutter Open, Strobe, Iris, Colour, Dimmer, Reset.
+The rest point, and what they point at is a channel type:
+
+| Preset | → channel | points | that type | |
+|---|---|---:|---:|---|
+| 3 Color Wheel Rotation | 5 Color Wheel | 99 % | 94 % | |
+| 8, 9, 10, 11, 61 (gobo rotation, index, shake, wheel rotation, bounce) | 8 Gobo Wheel | 95-99 % | 90-97 % | |
+| 32, 33 Prism Rotation / Rotation Index | 19 Prism | 97 / 84 % | 89 / 95 % | |
+| 45 Color Wheel Index | 5 Color Wheel | 90 % | 95 % | |
+| 51 Framing Rotation | 33 Framing Rotation | 93 % | 92 % | |
+| 53-56 Framing Blade 1-4 | 35 Framing Blade | 90-94 % | 100 % | |
+| 57-60 Framing Blade Rotation | 34 Framing Blade Rotation | 65-71 % | 92-100 % | |
+| 29 Speed Tracking | 1 Pan | 99 % | 84 % | |
+| 7 Gobo | — | **1 %** | 96 % | left out: it barely points |
+| 28 Speed | — | 98 % | **39 %** | left out: Pan 39 %, generic 24 %, macro 21 % |
+| 30 Speed Simple | — | 94 % | **58 %** | left out, same reason |
+| 52 Framing Rotation Index | — | 87 % | **72 %** | left out, same reason |
+
+A type is claimed only when a majority of its presets point (≥ 50 %) *and* the
+channel type they point at is settled (≥ 80 % of the pointing ones). Preset 28
+is the instructive exclusion: what a speed governs is a property of the
+fixture, not of the preset type, so `-1` and an explicit `target` are the
+honest answers and a guess is not.
+
+*Which* channel of that type, when a fixture has two gobo wheels: the preset's
+own channel if it is already of the target type, otherwise the channel of that
+type with the **same `SSLCHANNELTYPEINDEX`** as the channel carrying the preset
+— the second gobo-rotation channel drives the second wheel — falling back to
+the first channel of that type. That rule reproduces the library's own value on
+**1 930 409 of 1 981 368 presets (97.43 %)**; `ssl2.py enums` prints the
+residue per type, and preset 28 alone accounts for 34 362 of the 50 959 misses.
+Picking the first channel instead of the same-rank one scores 97.31 %, and gets
+Prism Rotation wrong ten points more often.
+
+**The `SSLGCHANNELS` copy always carries `-1`** — 421 260 of 421 260 — even
+where the mode's copy carries an index. A mode-relative channel index means
+nothing in a list that belongs to no mode.
+
+## The five optional preset attributes
+
+`SSLPRESETLEVELMIN`/`LEVELMAX`, `SSLPRESETPARAMMIN`/`PARAMMAX` and
+`SSLPRESETCOLOR`. Whether one is written at all is a property of the **preset
+type**, and the distribution says so without a threshold having to be argued
+over: across the 315 (type, attribute) cells, every one is either ≤ 21 %
+present or ≥ 94 % present. Nothing lands in the 73-point gap.
+
+| | |
+|---|---|
+| `LEVELMIN` / `LEVELMAX` | **not** the preset's DMX range. 0 and 255 on 21 679 of 21 679 gobo presets, whatever range each covers — a level scale in its own units. Present on 1 410 935 presets |
+| `PARAMMIN` / `PARAMMAX` | the physical parameter's range, in the parameter's own unit: 0-100 for a percentage, 0-250 for a strobe, 0-720 for a rotation index in degrees, 0-16 for a zoom, 1-22 for a colour temperature. The *magnitude* is settled by the preset type; the *orientation* is not — `0,100` and `100,0` split 67/33 on Speed, which is the direction of the effect and belongs in the description |
+| `SSLPRESETCOLOR` | **0xBBGGRR**, not 0xRRGGBB. The library's `Red` presets carry 255 and its `Blue` ones 16 711 680; `Yellow` is 65 535 and `Cyan` 16 776 960. A description should say `"#rrggbb"` and let the tool do the swap |
+
+`DEFAUTS_PRESET` in [`tools/ssl2.py`](../tools/ssl2.py) is the per-type default
+the generator writes when the description is silent, and `ssl2.py enums`
+re-derives all four tables from a library and refuses a disagreement — it
+reports **0 divergences** over the 25 610 profiles here. The share the dominant
+value wins by is printed rather than enforced, because it is what says which
+cells are firm: `LEVELMIN`/`LEVELMAX` at 98-100 %, `PARAMMIN`/`PARAMMAX`
+between 40 % and 100 %, and `SSLPRESETCOLOR` on preset 1 (Color) at 44 % —
+a colour preset's colour is its content, and the default white is a fallback,
+not a reading.
+
 ## Writing a fixture
 
 A description is JSON. The smallest useful one is three lines of channels:
@@ -286,13 +423,18 @@ creator field and the RDM name — and in nothing structural.
 | `properties` | top level | values passed straight into `SSLPROPERTIES` (beam angle, size, icon, 3D object…), overriding the defaults; an unknown name is refused |
 | `modes[]` | top level | at least one; `name` optional |
 | `channels[]` | mode | `type` required — a name from the table above, or its number |
-| `name`, `icon` | channel | default to the type's name and to empty |
+| `name`, `icon` | channel | default to the type's name and to empty — and for a fine channel, to the coarse one's name plus the `µ` marker |
+| `fine` | channel | `true` pairs this channel as the fine half of the nearest earlier unpaired channel of the same type; an integer names the coarse channel's index outright, for the 7 % of layouts that read `Pan Tilt µPan µTilt` |
 | `presets[]` | channel | optional |
+| `gchannels` | top level | `true` emits `SSLGCHANNELS` and links every mode channel to it; one entry per distinct `(type, name)`, a 16-bit pair counting once |
 | `type` | preset | required, from the preset table |
 | `dmx` | preset | `[start, end]`, default `[0, 255]`; overlapping ranges are refused |
 | `default` | preset | the DMX value it opens on; defaults to `start` |
 | `defaut` | preset | `true` on the one preset the channel starts on; defaults to the first |
 | `name`, `icon` | preset | default to the type's name and to `NoIcon` |
+| `color` | preset | `"#rrggbb"`, or the integer the file carries (**0xBBGGRR**); `null` drops the attribute. Defaults to the preset type's |
+| `level`, `param` | preset | `[min, max]`, either half `null` to drop it, the pair `null` to drop both. Default to the preset type's — `level` is *not* the DMX range |
+| `target` | preset | the index of the mode channel the preset acts on, or `null` for none. Defaults to the rule in [`SSLPRESETTARGET`](#sslpresettarget) |
 
 A fuller one — dimmer, shutter with three states, colour wheel with presets:
 
@@ -320,6 +462,40 @@ A fuller one — dimmer, shutter with three states, colour wheel with presets:
 }
 ```
 
+And the parts this section used to say could not be described — a 16-bit pair
+whose halves are not adjacent, a global channel list, a colour, a strobe's
+range in Hz:
+
+```json
+{
+  "name": "Test Moving 16bit",
+  "brand": "wolfmix-automation",
+  "gchannels": true,
+  "modes": [
+    {"name": "6ch", "channels": [
+      {"type": "Pan"},
+      {"type": "Tilt"},
+      {"type": "Pan", "fine": true},
+      {"type": "Tilt", "fine": true},
+      {"type": "Color Wheel", "name": "Color", "presets": [
+        {"type": "Color", "name": "White", "dmx": [0, 9], "color": "#ffffff"},
+        {"type": "Color", "name": "Red", "dmx": [10, 19], "color": "#ff0000"},
+        {"type": "Color Wheel Rotation", "name": "Spin", "dmx": [20, 255]}
+      ]},
+      {"type": "Shutter / Strobe", "name": "Shutter", "presets": [
+        {"type": "Shutter Open", "name": "Open", "dmx": [0, 15], "defaut": true},
+        {"type": "Strobe", "name": "1 to 25 Hz", "dmx": [16, 255], "param": [1, 25]}
+      ]}
+    ]}
+  ]
+}
+```
+
+The four channels come out `Pan`, `Tilt`, `Pan (Âµ)`, `Tilt (Âµ)`, each pair
+carrying the other half's index; `SSLGCHANNELS` gets four entries, not six,
+because a pair counts once; `Spin` gets `SSLPRESETTARGET="4"`, the colour
+wheel's own index, without the description saying so.
+
 Drop the result into `ScanLibrary/<Brand>/` and the software picks it up.
 
 ## Limits
@@ -328,9 +504,10 @@ Drop the result into `ScanLibrary/<Brand>/` and the software picks it up.
 |---|---|
 | `VERSION="2"` | refused, **as a version we do not decode, not as a broken file** — 9 286 of them sit in the EasyViewConnect library. They decrypt cleanly with the same key, carry `TYPE="SSLLIBRARY2008"` and have no `<?xml` prolog at all. `verify` counts them apart, and `charge_xml` raises `VersionNonPriseEnCharge`. Calling them corrupt would be a lie about someone else's file. |
 | A wrong key | refused, and told apart from the above: the marker is `<DLMFILE` in the decrypted head, not the prolog — the prolog cannot carry it, since V2 has none. |
-| `SSLBEAMS`, `SSLGCHANNELS` | read and round-tripped, **not generated**. Multi-beam bars and matrices survive a read/write cycle; they cannot be described yet. |
-| 16-bit channels | same: read, not generated. A fine channel needs `SSLCHANNELMSB`/`LSB` and `SSLCHANNEL16BITSINDEX` wired both ways, and that has not been measured against the software. |
-| `SSLPRESETTARGET`, `SSLPRESETPRISMTYPE`, `SSLPRESETSHOWDIMMER` | observed, not understood. The generator writes the library's majority value and offers no option: an unmeasured knob is worse than no knob. |
+| `SSLBEAMS` | read and round-tripped, **not generated**. Multi-beam bars and matrices survive a read/write cycle; they cannot be described yet. Of the five limits this section used to list, it is the one still standing as written. |
+| 16-bit pairs, `SSLGCHANNELS`, `SSLPRESETTARGET` and the five preset attributes | **generated and accepted; the wiring itself is still unread.** A profile carrying all four loads, patches and reports its 10 channels in Easy View (below), so nothing in them is refused. What no test here has seen is the *effect*: whether the software pairs the fine channel, in which order it holds the channels, and what it prints for the `µ` marker. Easy View 3 shows none of the three, and settling them needs a W1 driving it over the 3D Link. |
+| `SSLPRESETPRISMTYPE`, `SSLPRESETSHOWDIMMER` | observed, not understood. The generator writes the library's majority value and offers no option: an unmeasured knob is worse than no knob. `SSLPRESETTARGET` used to sit on this line and no longer does — see its own section. |
+| The `SSLGCHANNELS` orphans | 764 profiles carry global entries no mode points at, and the generator does not reproduce that. The reading — an editor keeping a removed channel's entry — is `hypothesized`: it explains every case seen, and nothing here has watched the editor do it. |
 | `SSLCREATOR` | left empty. It holds an email address in the library, and a generated profile is not theirs to sign. |
 
 ## The software test
@@ -373,11 +550,89 @@ both visible in that panel:
 | `SSLLAMPLUX`, `SSLLAMPPOWER` | `0` | the panel then reports 1 lm, and the fixture throws almost no light in the 3D view. The library's usual value is `-1` (unspecified) |
 | `SSLBEAMOPENING` | `1` | a 1° beam — right for a flat panel, wrong for anything with a lens |
 
+### The second test: 16 bits, `SSLGCHANNELS`, and the channel order
+
+The first test proved the file is read and the channel *count* is ours. It
+looked at neither the order of the channels nor the presets, and neither
+existed at the time. This one is scoped at exactly what the first did not
+cover.
+
+Description: a ten-channel moving head, `Pan Tilt µPan µTilt` — a **non-adjacent**
+16-bit layout, so the pairing cannot be read off adjacency — then Gobo Wheel,
+Gobo Rotation, Color Wheel, Shutter, Dimmer, Zoom, in that order and not in a
+canonical one. `gchannels: true`, colours given as `#rrggbb`, one strobe with
+an explicit `param` range.
+
+**Prediction, published before the test:**
+
+1. The profile is accepted, and the fixture panel reads **10 channels** —
+   **0.85**. The first test earns most of that; what is new is that nothing in
+   the five new attributes, the targets or `SSLGCHANNELS` trips a validator.
+2. The channels appear **in the description's order**, Dimmer ninth — **0.85**.
+   Nothing has ever looked at this, on any generated profile.
+3. Easy View shows Pan and Tilt as **one 16-bit parameter each**, not as four
+   independent channels — **0.7**. This is the claim the whole first item of
+   the task rests on, and the pair is deliberately non-adjacent so that a
+   passing result is about `SSLCHANNEL16BITSINDEX` and not about position.
+4. The fine channel's name displays as `Pan (Âµ)`, **not** `Pan (µ)` — **0.6**.
+   The file's UTF-8 text really is `Âµ`; a conformant reader shows the mojibake,
+   and every one of the library's own 62 400 fine channels would show it too.
+   If Easy View shows a clean `µ`, it repairs the double encoding on the way in,
+   and that is worth knowing before anyone "fixes" the marker.
+5. `SSLGCHANNELS` changes nothing visible — it is a redundant copy of what the
+   modes already carry — **0.6**.
+
+**Outcome: one confirmed, three unmeasurable in this application, one
+consistent** (Easy View 3, 2026-09-01, this machine).
+
+**1 holds.** The profile appears under `wolfmix-automation`, the Mode dropdown
+reads `Mode 1 (10 Channels)`, and it patches — `Patched On`, `Universe 1`,
+`Address 1`. The Fixture panel reads 7000 K and a 14° beam, which are our
+`SSLLAMPTEMP` and our `SSLBEAMOPENING`. So a profile carrying two 16-bit pairs,
+an `SSLGCHANNELS` list, eight `SSLCHANNELLINKED` references, non-`-1`
+`SSLPRESETTARGET`s and all five optional preset attributes is **read and
+patched without complaint**. That is the claim the writer needed and did not
+have.
+
+**2, 3 and 4 cannot be measured in Easy View 3, and this is a property of the
+application, not a failed test.** It has no per-fixture channel list — checked
+in the Fixture panel, the `View` menu (which offers only Builder View, Live
+View, DMX Levels, Full screen, Always on top), the `DMX Levels` grid, which is
+512 unnamed values, and Preferences, which has no DMX or network section. It
+has no DMX input to drive either: `Controller: None`, no Art-Net, and it holds
+no socket on the 3D-Link port. Its saved project is a ZIP whose every entry —
+`project.ev` and the wheel images — is password-encrypted, and opening that is
+the one thing [`LEGAL.md`](../LEGAL.md) rules out, so the channel order, the
+pairing and the `µ` rendering were **not** read off it. The route that can
+settle all three is not documented in this tree yet: WTOOLS drives Easy View 3
+over its 3D Link, so import the profile *there*, patch it, push channel 9 and
+watch the panel light, push channel 3 and watch a 1/256 step. It needs a W1
+connected, which is why it did not happen here.
+
+**5 is consistent, not confirmed.** Nothing visible changed, which is what was
+predicted — and "nothing visible" is not a measurement.
+
+Two things worth recording next to the result:
+
+- **A running instance does not see a new file.** With Easy View already open,
+  the profile dropped into `ScanLibrary/` was absent from Add Fixture; the
+  refresh button in that dialog rescanned and it appeared, with no restart.
+  That measures prediction 3 of the first test, which had been left untested.
+- **Adding the fixture crashed Easy View once**, and it is not the profile's
+  doing: the report is `EXC_BAD_ACCESS` in
+  `QAccessible::updateAccessibility` under `ObjectsWidget::expandParent`,
+  *after* `AddFixtureObjectCommand::redo()` and `CEvent::objectAdded()` had
+  both returned — Qt's accessibility bridge, which is live because the session
+  was driving the app through the accessibility API. It did not reproduce on
+  the same profile in a fresh project.
+
+
 ## Not the Wolfmix
 
 Loading a profile into Easy View is not the same as having a Wolfmix drive the
 fixture. WTOOLS does not read `ScanLibrary/` at all: its fixture library is
-`wmProfiles.wmx` in its own application-support directory, one of the opaque
-sidecars this repository does not touch ([`LEGAL.md`](../LEGAL.md)). A profile
+`wmProfiles.wmx` in its own application-support directory — a sidecar whose
+payload is undecoded here, no key for it being public ([`LEGAL.md`](../LEGAL.md)).
+A profile
 generated here reaches a W1 the way any other does — through WTOOLS's own
 import — and nothing in `tools/ssl2.py` shortens that path.

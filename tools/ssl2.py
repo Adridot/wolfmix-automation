@@ -19,6 +19,7 @@ Three layers, each with its own oracle:
 `verify` runs the first two over the local library and is the self-check.
 """
 import argparse
+import copy
 import glob
 import hashlib
 import json
@@ -503,6 +504,125 @@ INCERTAINS_PRESET = {
     60: "  Bottom/left/right disagree with the numbered names.",
 }
 
+# --- SSLPRESETTARGET -------------------------------------------------------
+# The index, **within the mode**, of the channel that holds the physical object
+# the preset acts on — the wheel a rotation turns, the prism a rotation index
+# steps — and `-1` when the preset acts on its own channel's object or on none.
+#
+# Derived, not assumed. `ssl2.py enums` recomputes both halves of the reading:
+#
+#   1. Which preset types point at all. 40 of the 63 types in the library write
+#      `-1` on **100 %** of their presets (Shutter Open, Strobe, Iris, Colour…).
+#      The rest split, and a type is listed below only when a majority of its
+#      presets point (>= 50 %) *and* the channel type they point at is settled
+#      (>= 80 % of the pointing ones). Preset 7 (Gobo) fails the first test —
+#      it points 1 % of the time; preset 28 (Speed) fails the second — its
+#      target is Pan 39 %, a generic channel 24 %, a macro 21 %, because what a
+#      speed governs is not a property of the preset type. Both are left out
+#      rather than guessed at.
+#   2. *Which* channel of that type, when a fixture has two gobo wheels. The
+#      rule: the preset's own channel if it is already of the target type,
+#      otherwise the channel of the target type with the **same**
+#      `SSLCHANNELTYPEINDEX` as the channel carrying the preset — the second
+#      gobo-rotation channel drives the second wheel — falling back to the
+#      first channel of that type.
+#
+# That rule reproduces the library's own value on 97.4 % of 1 981 368 presets;
+# `enums` prints the residue per type. It is what the generator writes when a
+# description says nothing, and `target` in the description overrides it.
+CIBLE_PRESET = {
+    3: 5,     # Color Wheel Rotation   → Color Wheel
+    8: 8,     # Gobo Rotation          → Gobo Wheel
+    9: 8,     # Rotation Index         → Gobo Wheel
+    10: 8,    # Gobo Shake             → Gobo Wheel
+    11: 8,    # Gobo Wheel Rotation    → Gobo Wheel
+    29: 1,    # Speed Tracking         → Pan
+    32: 19,   # Prism Rotation         → Prism
+    33: 19,   # Prism Rotation Index   → Prism
+    45: 5,    # Color Wheel Index      → Color Wheel
+    51: 33,   # Framing Rotation       → Framing Rotation
+    53: 35, 54: 35, 55: 35, 56: 35,        # Framing Blade 1-4 → Framing Blade
+    57: 34, 58: 34, 59: 34, 60: 34,        # …Rotation → Framing Blade Rotation
+    61: 8,    # Gobo Bounce            → Gobo Wheel
+}
+
+# --- The five optional preset attributes -----------------------------------
+# `(LEVELMIN, LEVELMAX, PARAMMIN, PARAMMAX, COLOR)`; `None` = the library does
+# not write that attribute for that preset type, so neither does the generator.
+#
+# Whether an attribute is written at all is a property of the **preset type**,
+# and the distribution says so without a threshold having to be chosen: over
+# the 315 (type, attribute) cells, every one is either <= 21 % present or
+# >= 94 % present. Nothing lands in the 73-point gap, so the cut below is not a
+# tuning knob. What the *value* is, is a second question with a much weaker
+# answer for some types, and `enums` prints that share per cell.
+#
+# Two readings worth keeping in mind, both of which cost a wrong guess:
+#
+#   `LEVELMIN`/`LEVELMAX` are **not** the preset's DMX range. They are 0 and
+#   255 on 21 679 of 21 679 gobo presets whatever the range those presets cover
+#   — a level scale of its own, in its own units.
+#
+#   `SSLPRESETCOLOR` is **0xBBGGRR**, not 0xRRGGBB: the library's "Red" presets
+#   carry 255 and its "Blue" ones 16 711 680. `_couleur` takes `"#rrggbb"` and
+#   does the swap, which is why a description should prefer the string form.
+DEFAUTS_PRESET = {
+      0: ("0", "255", "0", "100", None),          # No Function, n=939438
+      1: (None, None, None, None, "16777215"),    # Color, n=258783 (10 %)
+      2: (None, None, None, None, "255"),         # Color Combination 2, n=50155
+      3: ("0", "255", "0", "100", None),          # Color Wheel Rotation, n=16975
+      4: (None, None, "0", "100", "16777215"),    # Dimmer, n=64216
+      5: (None, None, "0", None, "16777215"),     # Dimmer Simple, n=590
+      6: ("0", "255", "0", "100", None),          # Dimmer Pulse, n=18899
+      7: ("0", "255", "0", "100", "16777215"),    # Gobo, n=225493
+      8: ("0", "255", "0", "100", None),          # Gobo Rotation, n=12447
+      9: ("0", "255", "0", "720", None),          # Rotation Index, n=5293
+     10: ("0", "255", "0", "100", None),          # Gobo Shake, n=3900
+     11: ("0", "255", "0", "100", None),          # Gobo Wheel Rotation, n=19572
+     12: (None, None, "100", "0", None),          # Iris, n=2038
+     13: (None, None, "100", None, None),         # Iris Open/Closed, n=874
+     14: ("0", "255", "0", "100", None),          # Iris Pulse, n=3793
+     15: (None, None, "0", "16", None),           # Zoom, n=11502
+     16: (None, None, "8", None, None),           # Zoom In/Out, n=1437
+     17: (None, None, "0", None, None),           # Lamp On, n=2761
+     18: (None, None, "0", None, None),           # Lamp Off, n=2647
+     21: ("0", "255", "0", "250", None),          # Strobe, n=69503
+     22: ("0", "255", "0", "250", None),          # Pulse Strobe, n=14566
+     24: (None, None, "0", "100", None),          # Focus, n=6286
+     25: (None, None, "50", None, None),          # Focus Simple, n=258
+     26: (None, None, "0", "100", None),          # Frost, n=4359
+     27: (None, None, "100", None, None),         # Frost Simple, n=831
+     28: ("0", "255", "0", "100", None),          # Speed, n=35215
+     29: ("0", "255", "0", "100", None),          # Speed Tracking, n=516
+     30: ("0", "255", "50", None, None),          # Speed Simple, n=1686
+     31: ("0", "255", "0", "100", None),          # Prism, n=20137
+     32: ("0", "255", "0", "100", None),          # Prism Rotation, n=12547
+     33: ("0", "255", "0", "720", None),          # Prism Rotation Index, n=6121
+     34: (None, None, "1", "22", None),           # Color Temperature, n=7364
+     35: (None, None, "7", None, None),           # Color Temperature Step, n=1607
+     36: ("0", "255", "0", "100", None),          # Barrel Roll Rotation, n=383
+     37: (None, None, "0", "100", None),          # Smoke, n=1763
+     38: (None, None, "50", None, None),          # Smoke Simple, n=134
+     39: ("0", "255", "0", "100", None),          # Frost Pulse, n=1014
+     43: (None, None, None, None, "255"),         # Color Combination 3, n=9177
+     44: (None, None, None, None, "255"),         # Color Combination 4, n=3177
+     45: ("0", "255", "0", "720", None),          # Color Wheel Index, n=1054
+     51: ("0", "255", "0", "100", None),          # Framing Rotation, n=297
+     52: ("0", "255", "0", "720", None),          # Framing Rotation Index, n=119
+     53: ("0", "255", "0", "100", None),          # Framing Blade 1, n=371
+     54: ("0", "255", "0", "100", None),          # Framing Blade 2, n=355
+     55: ("0", "255", "0", "100", None),          # Framing Blade 3, n=355
+     56: ("0", "255", "0", "100", None),          # Framing Blade 4, n=355
+     57: ("0", "255", "-180", "180", None),       # Framing Blade 1 Rot., n=68
+     58: ("0", "255", "-180", "180", None),       # Framing Blade 2 Rot., n=52
+     59: ("0", "255", "-180", "180", None),       # Framing Blade 4 Rot., n=56
+     60: ("0", "255", "-180", "180", None),       # Framing Blade 3 Rot., n=55
+     61: ("0", "255", "0", "100", None),          # Gobo Bounce, n=302
+    100: (None, None, "0", "100", None),          # Fan Speed, n=185
+}
+ATTRS_PRESET = ("SSLPRESETLEVELMIN", "SSLPRESETLEVELMAX", "SSLPRESETPARAMMIN",
+                "SSLPRESETPARAMMAX", "SSLPRESETCOLOR")
+
 # Name → number, for descriptions written by hand. Case-insensitive.
 NUM_CANAL = {nom.lower(): n for n, (nom, _, _) in TYPE_CANAL.items()}
 NUM_PRESET = {nom.lower(): n for n, (nom, _, _) in TYPE_PRESET.items()}
@@ -629,6 +749,16 @@ def _uid_long(graine, *parties):
     return f"{_uid_uuid(graine, *parties)}-{_uid(graine, *parties)[32:40]}"
 
 
+# The fine (LSB) half of a 16-bit pair is marked with µ in 87 % of the
+# library's 62 400 pairs, and stored **double-encoded**: the file's UTF-8 text
+# is `Âµ`, which is the UTF-8 of the UTF-8 of `µ`. Writing a clean `µ` would be
+# a different name from every one of the library's, so the marker is built by
+# doing to `µ` exactly what the vendor's tooling did to it. The parenthesised
+# suffix is the plurality form, 28 113 of 62 400; `Âµ{}` is next at 15 379.
+MARQUEUR_FIN = "µ".encode("utf-8").decode("latin-1")     # « Âµ »
+NOM_FIN = "{} (" + MARQUEUR_FIN + ")"
+
+
 def genere(description):
     """A description → the Element tree of a profile. Deterministic: the same
     description gives the same bytes, which is what makes a diff meaningful."""
@@ -649,65 +779,215 @@ def genere(description):
     for cle, valeur in supplement.items():
         props[cle] = echappe(depuis_utf8(str(valeur)))
 
+    globaux = _Globaux(graine) if description.get("gchannels") else None
     el_modes = Element("SSLMODES", {"SSLNBMODE": str(len(modes))})
     for i, mode in enumerate(modes):
-        el_modes.enfants.append(_genere_mode(graine, i, mode))
+        el_modes.enfants.append(_genere_mode(graine, i, mode, globaux))
     el_modes.vide = False
 
+    enfants = [Element("SSLPROPERTIES", props, vide=True), el_modes]
+    if globaux is not None:
+        enfants.append(globaux.element())
     biblio = Element("SSLLIBRARY", {
         "SSLNAME": echappe(depuis_utf8(nom)),
         "SSLLCUID": _uid_long(graine, "library"),
         "SSLLCOWNERUID": _uid_uuid(graine, "owner"),
-    }, [Element("SSLPROPERTIES", props, vide=True), el_modes], vide=False)
+    }, enfants, vide=False)
     return Element("DLMFILE", {"VERSION": "3", "TYPE": "SSLLIBRARY"},
                    [biblio], vide=False)
 
 
-def _genere_mode(graine, index, mode):
+class _Globaux:
+    """`SSLGCHANNELS`: the profile's channel list, shared by every mode.
+
+    A mode's channel points at its entry with `SSLCHANNELLINKED`, and the
+    library's identity is that the two counts match — one `SSLCHANNEL` under
+    `SSLGCHANNELS` per distinct `SSLCHANNELLINKED`, on 9 084 of its 9 848
+    profiles that carry the element. The 764 that diverge all diverge the same
+    way: 2 077 entries no mode points at, never a link with no entry. That
+    reads as an editor keeping a channel it has removed from every mode, and
+    it is the one thing this class deliberately does not reproduce.
+
+    A 16-bit pair collapses into one 8-bit entry, which is not an assumption
+    either: all 120 869 `SSLGCHANNELS` channels carry MSB=0, LSB=0 and
+    `SSLCHANNEL16BITSINDEX="-1"`, and the fine half of a pair never points
+    anywhere else than its coarse half — 26 947 pairs share one entry, 35 453
+    leave the fine half unlinked, none point at two.
+
+    Which mode channels are "the same channel" is the vendor editor's own
+    bookkeeping and cannot be read off a file, so this uses `(type, name)`.
+    """
+
+    def __init__(self, graine):
+        self.graine, self.par_cle, self.canaux = graine, {}, []
+
+    def lien(self, el):
+        """The UID of `el`'s global entry, creating it on first sight."""
+        cle = (el["SSLCHANNELTYPE"], el["SSLCHANNELNAME"])
+        uid = self.par_cle.get(cle)
+        if uid is None:
+            uid = self.par_cle[cle] = _uid_element(
+                self.graine, len(self.canaux), "global", *cle)
+            self.canaux.append(_copie_globale(el, uid))
+        return uid
+
+    def element(self):
+        return Element("SSLGCHANNELS", {"SSLNBCHANNEL": str(len(self.canaux))},
+                       self.canaux, vide=not self.canaux)
+
+
+def _copie_globale(el, uid):
+    """A mode channel as its `SSLGCHANNELS` entry: its own UID, no
+    `SSLCHANNELTYPEINDEX` (absent from all 120 869 in the library), 8 bits, and
+    every preset's `SSLPRESETTARGET` back to `-1` — a mode-relative channel
+    index means nothing in a list that belongs to no mode, and the library
+    agrees on 421 260 of 421 260."""
+    copie = copy.deepcopy(el)
+    copie.attrs["SSLCHANNELUID"] = uid
+    copie.attrs.pop("SSLCHANNELTYPEINDEX", None)
+    copie.attrs["SSLCHANNELMSB"] = copie.attrs["SSLCHANNELLSB"] = "0"
+    copie.attrs["SSLCHANNEL16BITSINDEX"] = "-1"
+    for preset in copie.trouve("SSLPRESET"):
+        preset.attrs["SSLPRESETTARGET"] = "-1"
+    return copie
+
+
+def _genere_mode(graine, index, mode, globaux=None):
     canaux = mode.get("channels")
     if not isinstance(canaux, list) or not canaux:
         raise ValueError(f"mode {index} : 'channels' doit être une liste non vide")
     if len(canaux) > MAX_CANAUX:
         raise ValueError(f"mode {index} : {len(canaux)} canaux, maximum "
                          f"{MAX_CANAUX} (un univers DMX)")
+    for i, canal in enumerate(canaux):
+        if not isinstance(canal, dict) or "type" not in canal:
+            raise ValueError(f"canal {i} : il faut au moins un 'type'")
     graine = f"{graine}\nmode{index}"
+    types = [num_canal(c["type"]) for c in canaux]
+    paires = _apparie(canaux, types)              # {fin: grossier}
+    tis = _type_index(types, paires)
     el = Element("SSLMODE", {
         "SSLMODEUID": _uid_element(graine, index, "mode"),
         "SSLMODEINDEX": str(index),
         "SSLMODENAME": echappe(depuis_utf8(str(mode.get("name", "")))),
         "SSLNBCHANNEL": str(len(canaux)),
     }, vide=False)
-    vus = {}          # type → how many of that type came before, for TYPEINDEX
+    grossier = {g: f for f, g in paires.items()}  # l'autre sens de l'appariement
     for i, canal in enumerate(canaux):
-        el.enfants.append(_genere_canal(graine, i, canal, vus))
+        el.enfants.append(_genere_canal(graine, i, canal, types, tis, paires,
+                                        grossier, canaux))
+    if globaux is not None:
+        liens = {}
+        for i, enfant in enumerate(el.enfants):
+            porteur = paires.get(i, i)            # le fin passe par son grossier
+            if porteur not in liens:
+                liens[porteur] = globaux.lien(el.enfants[porteur])
+            enfant.attrs = _insere(enfant.attrs, "SSLCHANNEL2PRESETSINDEX",
+                                   "SSLCHANNELLINKED", liens[porteur])
     return el
 
 
-def _genere_canal(graine, index, canal, vus):
-    if not isinstance(canal, dict) or "type" not in canal:
-        raise ValueError(f"canal {index} : il faut au moins un 'type'")
-    type_ = num_canal(canal["type"])
+def _apparie(canaux, types):
+    """`{index du canal fin: index de son grossier}`, from the `fine` key.
+
+    `fine: true` pairs with the nearest earlier channel of the same type that
+    is not itself fine and not already paired — which is what makes both of the
+    library's layouts expressible, `Pan µPan Tilt µTilt` and the 7 % that read
+    `Pan Tilt µPan µTilt`. `fine: <index>` says it outright.
+    """
+    paires, pris = {}, set()
+    for i, canal in enumerate(canaux):
+        fin = canal.get("fine")
+        if fin is None or fin is False:
+            continue
+        if fin is True:
+            libres = [j for j in range(i) if types[j] == types[i]
+                      and j not in pris and not canaux[j].get("fine")]
+            if not libres:
+                raise ValueError(
+                    f"canal {i} : 'fine' sans canal grossier libre de type "
+                    f"{TYPE_CANAL[types[i]][0]!r} avant lui — donnez l'index")
+            j = libres[-1]
+        elif isinstance(fin, int) and not isinstance(fin, bool):
+            j = fin
+            if not 0 <= j < len(canaux):
+                raise ValueError(f"canal {i} : 'fine' {j} hors du mode "
+                                 f"(0-{len(canaux) - 1})")
+            if j == i:
+                raise ValueError(f"canal {i} : 'fine' pointe sur lui-même")
+            if canaux[j].get("fine"):
+                raise ValueError(f"canal {i} : 'fine' pointe le canal {j}, "
+                                 f"lui-même marqué 'fine'")
+        else:
+            raise ValueError(f"canal {i} : 'fine' vaut {fin!r}, attendu true "
+                             f"ou l'index du canal grossier")
+        if j in pris:
+            raise ValueError(f"canal {i} : le canal {j} est déjà apparié au "
+                             f"canal {[f for f, g in paires.items() if g == j][0]}")
+        paires[i], _ = j, pris.add(j)
+    return paires
+
+
+def _type_index(types, paires):
+    """`SSLCHANNELTYPEINDEX` for each channel: how many channels of the same
+    type came before — counting a 16-bit **pair** once, the fine half taking
+    its coarse half's index. Measured on the library's 58 463 modes: that rule
+    holds on 56 551 of them, against 41 609 for counting every channel."""
+    vus, tis = {}, [None] * len(types)
+    for i, t in enumerate(types):
+        if i in paires:
+            continue
+        tis[i] = vus.get(t, 0)
+        vus[t] = tis[i] + 1
+    for fin, gros in paires.items():
+        tis[fin] = tis[gros]
+    return [str(t) for t in tis]
+
+
+def _insere(attrs, apres, nom, valeur):
+    """`attrs` with one attribute inserted right after another. Attribute order
+    is stream order here, so it cannot just be appended."""
+    out = {}
+    for cle, val in attrs.items():
+        out[cle] = val
+        if cle == apres:
+            out[nom] = valeur
+    return out
+
+
+def _genere_canal(graine, index, canal, types, tis, paires, grossier, descriptions):
+    type_ = types[index]
     graine = f"{graine}\ncanal{index}"
+    fin, gros = index in paires, grossier.get(index)
+    # 16 bits, câblé dans les deux sens : chacun porte l'index de l'autre, et
+    # les 62 400 paires de la bibliothèque sont symétriques sans exception.
+    if fin:
+        autre = paires[index]
+    elif gros is not None:
+        autre = gros
+    else:
+        autre = -1
+    defaut_nom = TYPE_CANAL[type_][0]
+    if fin:
+        defaut_nom = NOM_FIN.format(descriptions[paires[index]].get("name")
+                                    or TYPE_CANAL[types[paires[index]]][0])
     el = Element("SSLCHANNEL", {
         "SSLCHANNELUID": _uid_element(graine, index, "canal"),
         "SSLCHANNELTYPE": str(type_),
-        "SSLCHANNELNAME": echappe(depuis_utf8(
-            str(canal.get("name") or TYPE_CANAL[type_][0]))),
+        "SSLCHANNELNAME": echappe(depuis_utf8(str(canal.get("name") or defaut_nom))),
         "SSLCHANNELICON": echappe(depuis_utf8(str(canal.get("icon", "")))),
-        # 16-bit pairs are readable but not generated: a fine channel needs
-        # MSB/LSB and SSLCHANNEL16BITSINDEX wired both ways, and nothing here
-        # has been measured on the software yet. docs/ssl2-format.md, "Limites".
-        "SSLCHANNELMSB": "0", "SSLCHANNELLSB": "0",
+        "SSLCHANNELMSB": "1" if gros is not None else "0",
+        "SSLCHANNELLSB": "1" if fin else "0",
         "SSLCHANNEL2PRESETS": "0", "SSLCHANNEL2PRESETSINDEX": "-1",
-        "SSLCHANNELTYPEINDEX": str(vus.get(type_, 0)),
-        "SSLCHANNEL16BITSINDEX": "-1",
+        "SSLCHANNELTYPEINDEX": tis[index],
+        "SSLCHANNEL16BITSINDEX": str(autre),
     }, vide=False)
-    vus[type_] = vus.get(type_, 0) + 1
-    el.enfants.append(_genere_presets(graine, canal.get("presets") or []))
+    el.enfants.append(_genere_presets(graine, canal.get("presets") or [],
+                                      index, types, tis))
     return el
 
 
-def _genere_presets(graine, presets):
+def _genere_presets(graine, presets, canal=0, types=(), tis=()):
     el = Element("SSLPRESETS", {"SSLNBPRESET": str(len(presets))}, vide=True)
     if not presets:
         return el                      # `<SSLPRESETS SSLNBPRESET="0" />`
@@ -720,7 +1000,8 @@ def _genere_presets(graine, presets):
     defaut = _preset_par_defaut(presets)
     occupe = {}
     for i, preset in enumerate(presets):
-        el.enfants.append(_genere_preset(graine, i, preset, i == defaut, occupe))
+        el.enfants.append(_genere_preset(graine, i, preset, i == defaut, occupe,
+                                         canal, types, tis))
     return el
 
 
@@ -734,7 +1015,8 @@ def _preset_par_defaut(presets):
     return marques[0] if marques else 0
 
 
-def _genere_preset(graine, index, preset, est_defaut, occupe):
+def _genere_preset(graine, index, preset, est_defaut, occupe,
+                   canal=0, types=(), tis=()):
     if not isinstance(preset, dict) or "type" not in preset:
         raise ValueError(f"preset {index} : il faut au moins un 'type'")
     type_ = num_preset(preset["type"])
@@ -746,7 +1028,7 @@ def _genere_preset(graine, index, preset, est_defaut, occupe):
         raise ValueError(f"preset {index} : 'default' {par_defaut} hors de sa "
                          f"propre plage {debut}-{fin}")
     uid = _uid_element(graine, index, "preset")
-    return Element("SSLPRESET", {
+    attrs = {
         "SSLPRESETUID": uid, "SSLPRESETTEMPLATEUID": uid,
         "SSLPRESETDEFAULTUID": _uid_uuid(graine, "preset", index),
         "SSLPRESETTYPE": str(type_),
@@ -756,12 +1038,101 @@ def _genere_preset(graine, index, preset, est_defaut, occupe):
         "SSLPRESETDMXSTART": str(debut), "SSLPRESETDMXEND": str(fin),
         "SSLPRESETDMXDEFAULT": str(int(par_defaut)),
         "SSLPRESETDEFAULTPRESET": "1" if est_defaut else "0",
-        # SHOWDIMMER and TARGET are written at the value 65 % / 95 % of the
-        # library uses. Neither is understood, so neither is offered as an
-        # option: an unmeasured knob is worse than no knob.
+        # SHOWDIMMER is written at the value 65 % of the library uses and is
+        # still not understood, so it is still not offered as an option.
         "SSLPRESETSHOWDIMMER": "0",
-        "SSLPRESETID": "", "SSLPRESETTARGET": "-1",
-    }, vide=True)
+    }
+    # The five optional attributes, in the library's own order: COLOR, then the
+    # parameter range, then the level range. Their default is what the library
+    # writes for this preset type (DEFAUTS_PRESET); `null` in the description
+    # drops one, a value replaces it.
+    niveau, parametre, couleur = _attributs_preset(preset, index, type_)
+    for nom, valeur in (("COLOR", couleur), ("PARAMMIN", parametre[0]),
+                        ("PARAMMAX", parametre[1]), ("LEVELMIN", niveau[0]),
+                        ("LEVELMAX", niveau[1])):
+        if valeur is not None:
+            attrs["SSLPRESET" + nom] = valeur
+    attrs["SSLPRESETID"] = ""
+    attrs["SSLPRESETTARGET"] = str(_cible(preset, index, type_, canal, types, tis))
+    return Element("SSLPRESET", attrs, vide=True)
+
+
+def _attributs_preset(preset, index, type_):
+    """`(level, param, colour)` for one preset: the description's, or this
+    preset type's measured default."""
+    niv_min, niv_max, par_min, par_max, couleur = DEFAUTS_PRESET.get(
+        type_, (None, None, None, None, None))
+    niveau = _borne(preset, "level", (niv_min, niv_max), index)
+    parametre = _borne(preset, "param", (par_min, par_max), index)
+    if "color" in preset:
+        couleur = _couleur(preset["color"], index)
+    return niveau, parametre, couleur
+
+
+def _borne(preset, cle, defaut, index):
+    """`[min, max]` from the description — `null` drops the pair, and `null`
+    inside it drops one half."""
+    if cle not in preset:
+        return defaut
+    valeur = preset[cle]
+    if valeur is None:
+        return (None, None)
+    if (not isinstance(valeur, (list, tuple)) or len(valeur) != 2
+            or not all(v is None or (isinstance(v, int)
+                                     and not isinstance(v, bool))
+                       for v in valeur)):
+        raise ValueError(f"preset {index} : {cle!r} doit être [min, max], deux "
+                         f"entiers (ou null) — reçu {valeur!r}")
+    return tuple(None if v is None else str(v) for v in valeur)
+
+
+def _couleur(valeur, index):
+    """`SSLPRESETCOLOR` from `"#rrggbb"` or from the integer the file carries.
+
+    The integer is **0xBBGGRR** — the library's "Red" presets carry 255 and its
+    "Blue" ones 16 711 680 — so a description that means red should say so in
+    hex and let this do the swap."""
+    if valeur is None:
+        return None
+    if isinstance(valeur, str):
+        texte = valeur.lstrip("#")
+        if len(texte) != 6 or any(c not in "0123456789abcdefABCDEF" for c in texte):
+            raise ValueError(f"preset {index} : 'color' {valeur!r}, attendu "
+                             f"\"#rrggbb\" ou un entier 0xBBGGRR")
+        r, v, b = (int(texte[i:i + 2], 16) for i in (0, 2, 4))
+        return str(r | v << 8 | b << 16)
+    if isinstance(valeur, int) and not isinstance(valeur, bool):
+        if not 0 <= valeur <= 0xFFFFFF:
+            raise ValueError(f"preset {index} : 'color' {valeur} hors "
+                             f"0-16777215")
+        return str(valeur)
+    raise ValueError(f"preset {index} : 'color' {valeur!r}, attendu \"#rrggbb\" "
+                     f"ou un entier")
+
+
+def _cible(preset, index, type_, canal, types, tis):
+    """`SSLPRESETTARGET`: the description's `target`, or CIBLE_PRESET's rule."""
+    if "target" in preset:
+        cible = preset["target"]
+        if cible is None or cible is False:
+            return -1
+        if not isinstance(cible, int) or isinstance(cible, bool):
+            raise ValueError(f"preset {index} : 'target' {cible!r}, attendu "
+                             f"l'index d'un canal du mode, ou null")
+        if cible != -1 and not 0 <= cible < len(types):
+            raise ValueError(f"preset {index} : 'target' {cible} hors du mode "
+                             f"(0-{len(types) - 1})")
+        return cible
+    vise = CIBLE_PRESET.get(type_)
+    if vise is None:
+        return -1
+    if canal < len(types) and types[canal] == vise:
+        return canal                       # le preset agit sur son propre canal
+    memes = [j for j, t in enumerate(types) if t == vise]
+    if not memes:
+        return -1
+    rang = [j for j in memes if tis[j] == tis[canal]]
+    return (rang or memes)[0]
 
 
 def _plage(preset, index, occupe):
@@ -823,15 +1194,26 @@ def compare(a, b, chemin="", sortie=None):
 
 
 def recalcule_enums(fichiers):
-    """Recount both enums from a library. What `enums` compares the tables to.
+    """Recount every table from a library. What `enums` compares them to.
 
-    Returns {"canal": {n: (nom_dominant, part, total)}, "preset": ...} — the
-    same shape as the embedded tables, so the diff is a dict comparison and
-    not a story about one.
+    Four accumulators, one pass:
+
+    - `canal` / `preset`: `{n: (nom_dominant, part, total)}` — the same shape as
+      the embedded tables, so the diff is a dict comparison and not a story
+      about one;
+    - `cible`: per preset type, what `SSLPRESETTARGET` points at — the **type**
+      of the channel at that index, or `"-1"`;
+    - `regle`: whether `CIBLE_PRESET`'s rule, applied to that mode, reproduces
+      the value the file actually carries;
+    - `defauts`: per preset type, the value of each of the five optional
+      attributes, `None` counted as its own value.
     """
     import collections
     votes = {"canal": collections.defaultdict(collections.Counter),
              "preset": collections.defaultdict(collections.Counter)}
+    cible = collections.defaultdict(collections.Counter)
+    regle = collections.defaultdict(collections.Counter)
+    defauts = collections.defaultdict(collections.Counter)
     for chemin in fichiers:
         racine = charge(chemin)
         for e in racine.trouve("SSLCHANNEL"):
@@ -840,6 +1222,22 @@ def recalcule_enums(fichiers):
         for e in racine.trouve("SSLPRESET"):
             votes["preset"][int(e.get("SSLPRESETTYPE", -1))][
                 _normalise(e.get("SSLPRESETNAME", ""))] += 1
+            for attr in ATTRS_PRESET:
+                defauts[(int(e.get("SSLPRESETTYPE", -1)), attr)][
+                    e.get(attr)] += 1
+        for mode in racine.trouve("SSLMODE"):
+            canaux = [c for c in mode.enfants if c.tag == "SSLCHANNEL"]
+            types = [int(c.get("SSLCHANNELTYPE", -1)) for c in canaux]
+            tis = [c.get("SSLCHANNELTYPEINDEX") for c in canaux]
+            for i, c in enumerate(canaux):
+                for p in c.trouve("SSLPRESET"):
+                    tp = int(p.get("SSLPRESETTYPE", -1))
+                    v = p.get("SSLPRESETTARGET")
+                    if v is None:
+                        continue
+                    k = int(v)
+                    cible[tp][types[k] if 0 <= k < len(types) else "-1"] += 1
+                    regle[tp][_cible({}, 0, tp, i, types, tis) == k] += 1
     out = {}
     for quoi, par_type in votes.items():
         out[quoi] = {}
@@ -847,6 +1245,7 @@ def recalcule_enums(fichiers):
             nom, part = noms.most_common(1)[0]
             total = sum(noms.values())
             out[quoi][num] = (nom, round(100 * part / total), total)
+    out["cible"], out["regle"], out["defauts"] = cible, regle, defauts
     return out
 
 
@@ -894,8 +1293,89 @@ def compare_enums(fichiers):
                     f"   [table : {part} %, n={n}]"
                 print(f"{quoi} {num:3} {nom:34}{drapeau} — vote {vnom!r} "
                       f"{vpart} %, n={vn}{accord}")
+    ecarts += _compare_cibles(mesure)
+    ecarts += _compare_defauts(mesure)
     print(f"{len(mesure['canal'])} types de canal, {len(mesure['preset'])} de "
           f"preset ; {ecarts} écart(s) de couverture", file=sys.stderr)
+    return ecarts
+
+
+# The two criteria the derived tables are built on, stated once so that reading
+# them and re-deriving them cannot drift apart.
+VISE_MIN, DOMINANT_MIN = 0.50, 0.80    # CIBLE_PRESET
+PRESENT_MIN = 0.50                     # DEFAUTS_PRESET — see the table's note
+                                       # on why no value in (0.21, 0.94) exists
+
+
+def _compare_cibles(mesure):
+    """Re-derive CIBLE_PRESET, diff it, and score the rule it stands for."""
+    ecarts, derive = 0, {}
+    for tp, votes in sorted(mesure["cible"].items()):
+        total = sum(votes.values())
+        vises = total - votes["-1"]
+        if not vises:
+            continue
+        dom, ndom = max(((k, v) for k, v in votes.items() if k != "-1"),
+                        key=lambda x: x[1])
+        marque = ""
+        if vises / total >= VISE_MIN and ndom / vises >= DOMINANT_MIN:
+            derive[tp] = dom
+            marque = "VISEUR"
+        print(f"cible  preset {tp:3} {TYPE_PRESET.get(tp, ('?',))[0][:24]:26} "
+              f"n={total:7}  vise {100 * vises / total:3.0f} %, canal {dom} "
+              f"{TYPE_CANAL.get(dom, ('?',))[0][:18]!r} {100 * ndom / vises:3.0f} "
+              f"%  {marque}")
+    for tp in sorted(set(derive) | set(CIBLE_PRESET)):
+        if derive.get(tp) != CIBLE_PRESET.get(tp):
+            print(f"cible  preset {tp} : la table dit {CIBLE_PRESET.get(tp)}, "
+                  f"cette bibliothèque dit {derive.get(tp)}", file=sys.stderr)
+            ecarts += 1
+    ok = n = 0
+    for tp, votes in sorted(mesure["regle"].items()):
+        ok, n = ok + votes[True], n + votes[True] + votes[False]
+        if votes[False]:
+            t = votes[True] + votes[False]
+            print(f"règle  preset {tp:3} {TYPE_PRESET.get(tp, ('?',))[0][:24]:26} "
+                  f"{votes[True]}/{t} ({100 * votes[True] / t:.1f} %)")
+    if n:
+        print(f"SSLPRESETTARGET : la règle reproduit {ok}/{n} "
+              f"({100 * ok / n:.2f} %) des valeurs de la bibliothèque",
+              file=sys.stderr)
+    return ecarts
+
+
+def _compare_defauts(mesure):
+    """Re-derive DEFAUTS_PRESET and diff it. The share the dominant value wins
+    by is printed, not enforced: it is what says which cells are firm."""
+    ecarts, derive, parts = 0, {}, {}
+    types = {tp for tp, _ in mesure["defauts"]}
+    for tp in sorted(types):
+        ligne, part = [], []
+        for attr in ATTRS_PRESET:
+            votes = mesure["defauts"][(tp, attr)]
+            total = sum(votes.values())
+            presents = total - votes[None]
+            if not total or presents / total < PRESENT_MIN:
+                ligne.append(None)
+                part.append(None)
+                continue
+            v, n = max(((k, x) for k, x in votes.items() if k is not None),
+                       key=lambda x: x[1])
+            ligne.append(v)
+            part.append(round(100 * n / presents))
+        if any(x is not None for x in ligne):
+            derive[tp], parts[tp] = tuple(ligne), part
+    for tp in sorted(set(derive) | set(DEFAUTS_PRESET)):
+        a, b = DEFAUTS_PRESET.get(tp), derive.get(tp)
+        if a != b:
+            print(f"défauts preset {tp} : la table dit {a}, cette "
+                  f"bibliothèque dit {b}", file=sys.stderr)
+            ecarts += 1
+        if b is not None:
+            print(f"défaut preset {tp:3} {TYPE_PRESET.get(tp, ('?',))[0][:24]:26} "
+                  + "  ".join(
+                      f"{a2[9:]}={v}({p} %)" for a2, v, p
+                      in zip(ATTRS_PRESET, b, parts[tp]) if v is not None))
     return ecarts
 
 
@@ -1021,6 +1501,137 @@ def _auto_test_generateur():
             raise AssertionError(f"description acceptée : {attendu}")
 
 
+def _auto_test_16bits():
+    """A 16-bit pair, its global entry, the targets and the five attributes.
+
+    What this pins is the wiring, not the taste: each half carries the other's
+    index, the pair counts once for SSLCHANNELTYPEINDEX and once in
+    SSLGCHANNELS, and the channels come out in the description's order — which
+    is the thing the software test looks at and the round trip cannot see.
+    """
+    d = {"name": "Test 16", "brand": "wolfmix-automation", "gchannels": True,
+         "modes": [{"name": "10ch", "channels": [
+             {"type": "Pan"}, {"type": "Tilt"},
+             {"type": "Pan", "fine": True}, {"type": "Tilt", "fine": True},
+             {"type": "Gobo Wheel", "name": "Gobo", "presets": [
+                 {"type": "Gobo", "name": "Open", "dmx": [0, 7]}]},
+             {"type": "Gobo Rotation", "name": "Gobo Rot", "presets": [
+                 {"type": "Rotation Off", "dmx": [0, 7]},
+                 {"type": "Gobo Wheel Rotation", "name": "CW", "dmx": [8, 255]}]},
+             {"type": "Color Wheel", "name": "Color", "presets": [
+                 {"type": "Color", "name": "Red", "dmx": [0, 9], "color": "#ff0000"},
+                 {"type": "Color", "name": "Off", "dmx": [10, 19], "color": None},
+                 {"type": "Color Wheel Rotation", "name": "Spin", "dmx": [20, 255]}]},
+             {"type": "Shutter / Strobe", "name": "Strobe", "presets": [
+                 {"type": "Shutter Open", "dmx": [0, 7], "defaut": True},
+                 {"type": "Strobe", "dmx": [8, 255], "param": [1, 25]}]}]}]}
+    racine = genere(d)
+    assert write(parse(write(racine))) == write(racine)
+    mode = next(racine.trouve("SSLMODE"))
+    canaux = [c for c in mode.enfants if c.tag == "SSLCHANNEL"]
+    assert mode["SSLNBCHANNEL"] == "8" == str(len(canaux))
+    # l'ordre est celui de la description, pas un tri par type ou par paire
+    assert [c["SSLCHANNELTYPE"] for c in canaux] == \
+        ["1", "2", "1", "2", "8", "9", "5", "15"]
+    # câblage 16 bits : symétrique, un grossier et un fin, l'un l'index de l'autre
+    for i, j in ((0, 2), (1, 3)):
+        gros, fin = canaux[i], canaux[j]
+        assert (gros["SSLCHANNELMSB"], gros["SSLCHANNELLSB"]) == ("1", "0")
+        assert (fin["SSLCHANNELMSB"], fin["SSLCHANNELLSB"]) == ("0", "1")
+        assert gros["SSLCHANNEL16BITSINDEX"] == str(j)
+        assert fin["SSLCHANNEL16BITSINDEX"] == str(i)
+        # la paire compte pour un : le fin reprend l'index de type du grossier
+        assert fin["SSLCHANNELTYPEINDEX"] == gros["SSLCHANNELTYPEINDEX"] == "0"
+        # le marqueur µ, double-encodé comme la bibliothèque le stocke
+        assert vers_utf8(fin["SSLCHANNELNAME"]) == \
+            NOM_FIN.format(vers_utf8(gros["SSLCHANNELNAME"]))
+    # les octets qui atterrissent dans le fichier sont bien le µ double-encodé
+    assert depuis_utf8(MARQUEUR_FIN).encode("latin-1") == b"\xc3\x82\xc2\xb5"
+    assert b"Pan (\xc3\x82\xc2\xb5)" in write(racine)
+    for c in canaux[4:]:
+        assert c["SSLCHANNEL16BITSINDEX"] == "-1"
+        assert (c["SSLCHANNELMSB"], c["SSLCHANNELLSB"]) == ("0", "0")
+
+    # SSLGCHANNELS : autant d'entrées que de SSLCHANNELLINKED distincts, la
+    # paire 16 bits comptant pour une — l'identité mesurée sur la bibliothèque.
+    gc = next(racine.trouve("SSLGCHANNELS"))
+    entrees = [c for c in gc.enfants if c.tag == "SSLCHANNEL"]
+    liens = {c["SSLCHANNELLINKED"] for c in canaux}
+    assert gc["SSLNBCHANNEL"] == str(len(entrees)) == str(len(liens)) == "6"
+    assert liens == {c["SSLCHANNELUID"] for c in entrees}
+    assert canaux[0]["SSLCHANNELLINKED"] == canaux[2]["SSLCHANNELLINKED"]
+    for e in entrees:
+        assert "SSLCHANNELTYPEINDEX" not in e.attrs and "SSLCHANNELLINKED" not in e.attrs
+        assert (e["SSLCHANNELMSB"], e["SSLCHANNELLSB"],
+                e["SSLCHANNEL16BITSINDEX"]) == ("0", "0", "-1")
+        for p in e.trouve("SSLPRESET"):
+            assert p["SSLPRESETTARGET"] == "-1", p.attrs
+    # sans `gchannels`, rien de tout cela n'apparaît
+    sans = genere({**d, "gchannels": False})
+    assert not list(sans.trouve("SSLGCHANNELS"))
+    assert all("SSLCHANNELLINKED" not in c.attrs for c in sans.trouve("SSLCHANNEL"))
+
+    # SSLPRESETTARGET : l'index du canal qui porte l'objet, -1 sinon.
+    cibles = {p["SSLPRESETNAME"]: p["SSLPRESETTARGET"]
+              for c in canaux for p in c.trouve("SSLPRESET")}
+    assert cibles["CW"] == "4"          # Gobo Wheel Rotation → le canal Gobo
+    assert cibles["Spin"] == "6"        # Color Wheel Rotation → son propre canal
+    assert cibles["Open"] == cibles["Strobe"] == "-1"
+    # les cinq attributs optionnels : le défaut du type, ou ce que dit la
+    # description, et `null` retire l'attribut au lieu de le mettre à zéro.
+    presets = {p["SSLPRESETNAME"]: p for c in canaux for p in c.trouve("SSLPRESET")}
+    assert presets["Open"]["SSLPRESETLEVELMIN"] == "0"
+    assert presets["Open"]["SSLPRESETLEVELMAX"] == "255" != \
+        presets["Open"]["SSLPRESETDMXEND"]      # LEVEL n'est pas la plage DMX
+    assert presets["Strobe"]["SSLPRESETPARAMMIN"] == "1"
+    assert presets["Strobe"]["SSLPRESETPARAMMAX"] == "25"
+    assert "SSLPRESETCOLOR" not in presets["Off"].attrs
+    assert presets["Red"]["SSLPRESETCOLOR"] == "255"     # #ff0000 → 0xBBGGRR
+    assert _couleur("#0000ff", 0) == "16711680" and _couleur("#00ff00", 0) == "65280"
+    assert "SSLPRESETLEVELMIN" not in presets["Rotation Off"].attrs
+    # l'ordre des attributs est celui de la bibliothèque
+    ordre = [a for a in presets["Red"].attrs
+             if a in ATTRS_PRESET or a in ("SSLPRESETSHOWDIMMER", "SSLPRESETID")]
+    assert ordre == ["SSLPRESETSHOWDIMMER", "SSLPRESETCOLOR", "SSLPRESETID"], ordre
+
+    # l'appariement explicite, pour les paires non adjacentes déjà croisées
+    explicite = genere({"name": "n", "brand": "b", "modes": [{"channels": [
+        {"type": "Pan"}, {"type": "Dimmer"}, {"type": "Pan", "fine": 0}]}]})
+    ec = [c for c in next(explicite.trouve("SSLMODE")).enfants]
+    assert (ec[0]["SSLCHANNEL16BITSINDEX"], ec[2]["SSLCHANNEL16BITSINDEX"]) == ("2", "0")
+    assert ec[1]["SSLCHANNEL16BITSINDEX"] == "-1"
+
+    refus = [
+        ({"name": "n", "brand": "b", "modes": [{"channels": [
+            {"type": "Red"}, {"type": "Pan", "fine": True}]}]}, "sans canal grossier"),
+        ({"name": "n", "brand": "b", "modes": [{"channels": [
+            {"type": "Pan"}, {"type": "Pan", "fine": True},
+            {"type": "Pan", "fine": 0}]}]}, "déjà apparié"),
+        ({"name": "n", "brand": "b", "modes": [{"channels": [
+            {"type": "Pan"}, {"type": "Pan", "fine": 7}]}]}, "hors du mode"),
+        ({"name": "n", "brand": "b", "modes": [{"channels": [
+            {"type": "Pan", "fine": 0}]}]}, "sur lui-même"),
+        ({"name": "n", "brand": "b", "modes": [{"channels": [
+            {"type": "Pan"}, {"type": "Pan", "fine": "oui"}]}]}, "attendu true"),
+        ({"name": "n", "brand": "b", "modes": [{"channels": [
+            {"type": "Red", "presets": [
+                {"type": "Color", "color": "rouge"}]}]}]}, "#rrggbb"),
+        ({"name": "n", "brand": "b", "modes": [{"channels": [
+            {"type": "Red", "presets": [
+                {"type": "Color", "param": [1, 2, 3]}]}]}]}, "'param'"),
+        ({"name": "n", "brand": "b", "modes": [{"channels": [
+            {"type": "Red", "presets": [
+                {"type": "Color", "target": 9}]}]}]}, "hors du mode"),
+    ]
+    for description, attendu in refus:
+        try:
+            genere(description)
+        except ValueError as err:
+            assert attendu in str(err), f"{attendu!r} absent de {err}"
+        else:
+            raise AssertionError(f"description acceptée : {attendu}")
+
+
 def _auto_test(echantillon=400):
     """The self-check `make check` runs: the crypto with no files at all, then
     the full round trip on a slice of the local library.
@@ -1032,6 +1643,7 @@ def _auto_test(echantillon=400):
     """
     _auto_test_crypto()
     _auto_test_generateur()
+    _auto_test_16bits()
     fichiers = fichiers_biblio()
     if not fichiers:
         print("ssl2: crypto et générateur ok (hors fichiers)", file=sys.stderr)

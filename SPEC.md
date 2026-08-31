@@ -127,6 +127,9 @@ every run.
 
 ## 3. Record inventory — **[correlated 45/45]**
 
+20 record types <!--count:record_types-->, of which 16 <!--count:decoded-->
+have a codec schema and 4 <!--count:passthrough--> round-trip verbatim.
+
 | Type | Size (bytes) | Items | Identification | Status |
 |---|---|---|---|---|
 | 101 | 12–20 | — | project name (`f1` UTF-8) | **device-confirmed** (§4) |

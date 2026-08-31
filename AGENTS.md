@@ -163,70 +163,30 @@ predictions were wrong, and each was worth more than a vague success.
 
 ### Five traps that have already cost time
 
-- **A field that is uniform across the whole corpus may still be per-group, or
-  per-anything.** Uniformity over thousands of samples is evidence about the
-  *corpus*, not about the field: nothing had ever varied it. `f30` was read as
-  a scalar on those grounds and refuted by one photograph of the device. It has
-  now happened five times. `165.f16` slice 5 was `correlated` as "always 255"
-  over 2446 presets, then refuted when the device's own writer put the mask of
-  the groups each preset addresses there (GEN-03). And on 2026-08-27 an identity
-  added to `wpj_identities.py` that morning — "an FX engine that is on stores two
-  *different* page configurations", 3697 occurrences, zero exceptions — was
-  refuted the same evening by one preset composed at the panel (FX2-01). **The
-  author of this warning fell into it inside a day.** A correlation with no
-  exception over the whole corpus is a fact about the corpus until a fresh write
-  tests it; the defence is the write, not more counting.
-- **A field that already carries a name is not a field that was measured.** The
-  most expensive mistake of 2026-08-30, made twice in one session. `f2` of the
-  FX submessage had read "speed %" since ACC-04 at status `correlated`, so a
-  whole campaign was framed as "which of Phase / Size / Fade lands on `f6`,
-  `f8`, `f9`" — and never put `f2` back on the table. `f2` is the **fade**; the
-  speed was `f9`, sitting among the unattributed. The three-way permutation was
-  a four-way. Hours later the same shape repeated one level up: record 155 was
-  `device-confirmed` as "the 4 FX sequences", so the beam sequencer was hunted
-  in an opaque blob (161) while the answer sat in 155 behind `f2`, a field named
-  "sequence flavour" and never opened. **A record marked decoded is not a record
-  closed, and `correlated` is a statement about consistency, not about meaning.**
-  When a reading resists, list the fields you excluded *because they already had
-  names*, and check what measured them.
-- **Creating a preset does not save the project.** Nor does any other UI edit
-  until the operator performs the separate project save. Read the `uint64` at
-  offsets 40–47 before and after: if it has not incremented, nothing was
-  written, whatever the screen shows. **The converse is false** — on 2026-08-27
-  a save incremented that counter and left all 45054 payload bytes identical
-  (F7-02), so an increment proves nothing about the content. It is a
-  **negative** oracle only; to know whether anything changed, diff the records.
-  Misread three times now, in all three directions — check it, do not assume it.
-- **A probe that cannot separate "nothing moved" from "the same thing was
-  repainted" proves nothing.** Two separately captured DMX envelopes cannot tell
-  those apart, which is how RECALL-01 first concluded that preset recalls were
-  inert. They were not: they act, and they always act the same. One continuous
-  capture with timestamped transitions settled in minutes what the separate
-  envelopes had got backwards.
-- **An equality with a simpler explanation is not evidence.** "Positions 85, 86,
-  92 and 99 all render identically" was read as clamping. It was neither
-  clamping nor, as the next reading had it, a target being ignored: the payload
-  was not protobuf at all, and the device had been reading our tag byte as the
-  index. Prefer the reading that needs fewer new mechanisms — and when a whole
-  family of values behaves identically, suspect the **encoding** before the
-  semantics.
-- **The live copy is not the file, and it diverges in silence.** A recall
-  measures what the controller holds in RAM. `deploy` does not replace it — nor
-  does `store` + `RESTART`, nor a WTOOLS push; only a manual open on the panel
-  does (RELOAD-04). And with `LIVE EDIT` on (`165.f10` bit 4 clear), one gesture
-  at the panel rewrites a cue's live copy while the file stays exactly as
-  uploaded. That produced a perfectly reproducible anomaly — three shots, two
-  independent series — that pointed at the wrong field for a whole session
-  (GEN-03). Reproducibility protects nothing when it is the *state*, not the
-  measurement, that is stable. Cues meant for measurement carry `LIVE EDIT`
-  off, and a panel save followed by a download is the only way to see the
-  divergence.
+Each of these has been paid for at least once, some three times. The full
+account, with the experiments that produced them, is in
+[`docs/methodology.md`](docs/methodology.md).
+
+1. **A field uniform across the whole corpus may still be per-group, or
+   per-anything.** Uniformity over thousands of samples is evidence about the
+   *corpus*, not the field. It has happened five times; the defence is a write,
+   not more counting.
+2. **A field that already carries a name is not a field that was measured.**
+   The most expensive mistake of 2026-08-30, made twice in one session. When a
+   reading resists, list the fields you excluded *because they had names*.
+3. **Creating a preset does not save the project** — and the converse is false
+   too: a save can increment the version counter and change nothing. It is a
+   **negative** oracle only. Misread three times, in all three directions.
+4. **A probe that cannot separate "nothing moved" from "the same thing was
+   repainted" proves nothing.** That is how preset recalls were first read as
+   inert.
+5. **An equality with a simpler explanation is not evidence.** When a whole
+   family of values behaves identically, suspect the **encoding** before the
+   semantics.
 
 Much of the format can also be measured **without writing anything**: set a
 control on the device, capture `wolfmix.py dmx-envelope`, compare. Five of the
-eleven `f30` colour-spread modes were settled that way in an hour, read-only,
-with the rig returned to its opening baseline on all 2048 channels; three more
-needed a project save, and three remain derived rather than read.
+eleven `f30` colour-spread modes were settled that way in an hour, read-only.
 
 ## What this project will not do
 

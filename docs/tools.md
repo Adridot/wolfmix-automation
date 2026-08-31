@@ -14,6 +14,13 @@ Three conventions hold everywhere:
   (`gobo_run`), or against the git index (`wpj_privacy`). **The canonical list
   is the `Makefile`** — read `make check` rather than a count written here.
   `wpj_diff.py` self-checks too but is not wired into it.
+- **`tests/` covers the refusals.** `python3 -m unittest discover -s tests -t .`
+  (also the last line of `make check`) exercises what the tools reject:
+  truncated files, impossible varints, an event outside the allowlist, an
+  untested firmware, a raw mode, a failed rollback, an archive with no
+  manifest, a flash from another bundle, an icon id out of the table, a broken
+  PNG, an existing output. It builds its own bytes, so unlike the self-checks
+  it never abstains.
 - **No corpus, no claim.** No project file ships with this repository
   ([`../LEGAL.md`](../LEGAL.md)). The corpus root is `corpus/`, or `$WPJ_CORPUS`
   if set; with nothing there, a self-check prints one line saying it abstained

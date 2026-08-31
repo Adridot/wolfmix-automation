@@ -17,8 +17,9 @@ make check          # from the repository root — every hardware-free self-chec
 ```
 
 Green means the structural claims hold on the corpus present — **file-format
-code, `gobo_run.py`'s filesystem gates, and `wolfmix_transaction.py`'s archive
-and rollback guards, which run against a fake link**. No port is ever opened:
+code, `gobo_run.py`'s filesystem gates, `wolfmix_transaction.py`'s archive and
+rollback guards, which run against a fake link, and the `tests/` suite, which
+builds its own bytes and therefore proves the same thing on a bare clone**. No port is ever opened:
 `wolfmix.py` and `wolfmix_experiment.py` are deliberately absent from the
 Makefile. Their
 hardware-free checks are separate subcommands:
@@ -73,6 +74,8 @@ research/        the lab notebook. ALWAYS the most current. Mostly English
 SPEC.md          the consolidated English read of research/. May lag.
 docs/            task-oriented guides for users.
 tools/           the implementation. Self-checks are the ground truth.
+tests/           boundary tests: what is refused, and what never reaches
+                 the wire. Corpus-free, and not stripped by `python3 -O`.
 ```
 
 When `SPEC.md` and `research/` disagree, `research/` is newer — and that gap is
@@ -87,10 +90,15 @@ itself worth recording rather than silently resolving.
 - **Codec keys:** a proven field gets a semantic key (`name`, `profile`,
   `effect`); an unidentified one keeps a neutral `fN` key. Renaming `fN` → a
   guess is exactly the failure mode this repository exists to avoid.
-- **Self-check idiom:** the tools listed in `make check`, plus `wpj_diff.py`,
-  run their own check with no arguments. `wolfmix.py` and
-  `wolfmix_experiment.py` use a `self-test` subcommand. New non-trivial logic
-  follows the idiom — one runnable assertion, no test framework.
+- **Self-check idiom, plus one suite at the boundaries:** the tools listed in
+  `make check`, plus `wpj_diff.py`, run their own check with no arguments.
+  `wolfmix.py` and `wolfmix_experiment.py` use a `self-test` subcommand. New
+  non-trivial logic follows the idiom — one runnable assertion, in the file it
+  proves. `tests/` is the deliberate exception: it holds what the tools
+  **refuse**, on `unittest`, because those two properties matter there and the
+  idiom cannot give them — `assert` disappears under `python3 -O`, and a
+  self-check that needs a corpus abstains on the clone where a rotted boundary
+  would go unnoticed. `tests/fixtures.py` builds every byte it needs.
 - **One wire reader, and one oracle.** `tools/wpj_wire.py` is the production
   reader: varints, protobuf fields, the TLV container, shared by the codec, the
   B/C reader, the USB protocol and the gobo palette. `tools/wpj_inspect.py`

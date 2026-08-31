@@ -47,7 +47,8 @@ class Wpj:
 
     @classmethod
     def load(cls, path):
-        return cls.from_bytes(open(path, "rb").read(), str(path))
+        with open(path, "rb") as flux:
+            return cls.from_bytes(flux.read(), str(path))
 
     @classmethod
     def from_bytes(cls, d, source="<bytes>"):

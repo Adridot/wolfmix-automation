@@ -60,7 +60,8 @@ def find_flash(path=None, version=None):
 
 class Library:
     def __init__(self, path):
-        self.data = open(path, "rb").read()
+        with open(path, "rb") as flux:
+            self.data = flux.read()
         anchor = self.data.find(ANCHOR)
         if anchor < 0:
             raise ValueError("no gobo table found in this flash image")

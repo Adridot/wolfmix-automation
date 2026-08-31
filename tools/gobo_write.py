@@ -72,7 +72,8 @@ def encode(pixels):
 
 def read_png(path):
     """Minimal PNG reader: 8 bits per channel, RGB or RGBA, non-interlaced."""
-    data = open(path, "rb").read()
+    with open(path, "rb") as flux:
+        data = flux.read()
     if data[:8] != b"\x89PNG\r\n\x1a\n":
         raise ValueError(f"{path} is not a PNG")
     width = height = mode = None

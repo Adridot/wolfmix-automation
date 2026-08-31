@@ -560,13 +560,44 @@ def ajout_de_preset():
             "FLASH-09 : l'écart de taille n'est pas « les deux ajouts, exactement »"
 
 
+def carte_dmx_130(w):
+    """130 = la carte de mapping DMX IN, et `f1` en compte les entrées.
+
+    Mesuré sur l'appareil (MAP-01 / MAP-02, registre) : `f6` est le canal
+    DMX IN de l'entrée, **en base zéro** — CH1 laisse `f6` absent, CH7 écrit
+    6, CH20 écrit 19, CH30 écrit 29. `f4` est la cible : **20** = dimmer de
+    groupe, **70** = preset. `f2` est l'instance dans la cible, l'index de
+    groupe pour `f4 = 20` : c'est l'entrée `f2 = 1` qui a pris le canal 20
+    quand l'opérateur a mappé le groupe B, alors qu'elle était en position 0
+    — donc la clé est `f2`, pas le rang.
+
+    La table est **appendable** : mapper un preset a ajouté une 10e entrée à
+    une table qui en portait 9 depuis toujours, et `f1` a suivi de 9 à 10.
+    Les 9 d'usine sont la carte identité — A–H sur les canaux 1 à 8, MAIN sur
+    9 — ce qui explique que 130 ait été octet pour octet identique sur les
+    51 premiers fichiers : personne n'y avait jamais touché.
+
+    `f7` et `f8` n'ont jamais bougé et n'ont pas de nom.
+    """
+    for occurrence, (typ, _) in enumerate(
+            [(t, p) for t, p in w.records if t == 130]):
+        items = _items(w, 130, occurrence)
+        annonce = wpj_codec._decode_msg(
+            w.get(130, occurrence), {1: ("f1", "uint")}).get("f1", 0)
+        assert annonce == len(items), \
+            f"130.f1 = {annonce} mais la table porte {len(items)} entrées"
+        for i, e in enumerate(items):
+            assert e.get("f6", 0) < 512, \
+                f"130[{i}] : canal DMX IN {e.get('f6', 0)} hors d'un univers"
+
+
 IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
               groupe_fixture, moteurs_f16, tranche5_f16,
               plages_111, roles_106,
               ordre_fixtures_115, bornes_106, tranches_151,
               tableaux_par_groupe_165, f4_autorise_les_moteurs,
               schema_du_prefixe, canal_principal_110, noms_de_preset_bornes,
-              flavours_155)
+              flavours_155, carte_dmx_130)
 
 
 def demo():

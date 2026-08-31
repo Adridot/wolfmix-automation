@@ -250,3 +250,63 @@ Deux sous-étapes, deux sauvegardes, un seul aller au panneau. Chaque diff reste
 | un item de **130** prend `f6 = 29` — les catégories partagent le record | **0,50** |
 | un **autre record** bouge — la carte est éclatée par catégorie | 0,40 |
 | rien ne bouge — la catégorie `Preset` n'est pas stockée | 0,10 |
+
+---
+
+# MAP-02 mesuré — 2026-08-31 — la carte se lit en entier
+
+Deux sauvegardes (392 → 394), l'état intermédiaire non récupérable ; les deux
+changements portent des valeurs distinctes (19 et 29), donc le diff reste
+lisible. **Record 130 est encore le seul record dont la charge utile bouge**,
++10 octets, 9 → 10 entrées.
+
+| Geste au panneau | Écrit dans 130 |
+|---|---|
+| `Group Dimmer` → groupe **B** → **CH20** | l'entrée `f2 = 1` : `f6` 1 → **19** |
+| `Preset` → un preset → **CH30** | **une entrée neuve** : `f4 = 70`, `f6 = 29`, `f7 = 1`, `f8 = 1` |
+| — | `f1` : 9 → **10** |
+
+```
+groupe B   2a 0a  1001 2014 3013 3801 4001      f2=1, f4=20, f6=19, f7=1, f8=1
+preset     2a 08       2046 301d 3801 4001            f4=70, f6=29, f7=1, f8=1
+```
+
+## Ce qui est nommé, et par quelle mesure
+
+| Champ | Lecture | Statut | Ce qui l'établit |
+|---|---|---|---|
+| `f6` | **canal DMX IN, base zéro** | **device-confirmed** | trois écritures indépendantes : CH7→6, CH20→19, CH30→29 |
+| `f4` | **la cible** : `20` = dimmer de groupe, `70` = preset | **device-confirmed** | `70` apparaît exactement quand l'opérateur choisit la catégorie `Preset` |
+| `f4 = 27` | **MAIN** | correlated | l'écran liste A–H sur 1–8 puis `MAIN` sur **9**, et l'entrée `f4=27` porte `f6 = 8` |
+| `f2` | **l'instance dans la cible** — l'index de groupe pour `f4 = 20` | **device-confirmed** | mapper le **groupe B** a modifié l'entrée `f2 = 1`, qui était en **position 0** : la clé est `f2`, pas le rang |
+| `f1` | **le nombre d'entrées** | **device-confirmed** | 9 → 10 en suivant l'ajout |
+| `f7`, `f8` | — | — | n'ont jamais bougé, pas de nom |
+
+**La table est appendable.** Les 9 entrées d'usine sont la carte identité —
+A–H sur 1–8, MAIN sur 9 — confirmée à l'écran par l'opérateur. Une catégorie
+non mappée n'a **pas** d'entrée ; en mapper une en ajoute une. C'est l'explication
+complète de l'invariance sur 51 fichiers.
+
+**Les catégories partagent le record.** `Preset` et `Group Dimmer` écrivent
+toutes deux dans 130, distinguées par `f4`. La carte n'est pas éclatée.
+
+## Prédictions — le tableau de chasse
+
+| Prédit | | |
+|---|---|---|
+| l'entrée `f2 = 1` prend `f6 = 19` — **p 0,75** | ✅ | et ça nomme `f2` |
+| la mapping `Preset` atterrit dans **130** — **p 0,50** | ✅ | `f4 = 70`, entrée neuve |
+| l'entrée touchée part en fin de liste — **p 0,60** | ❌ | le groupe B est resté en position 0 |
+
+**La rotation de MAP-01 reste inexpliquée, et elle a maintenant un
+contre-exemple.** Elle est `[observed]` et sans lecture : ce n'est pas
+« l'entrée touchée passe en dernier ». Un writer doit donc traiter l'ordre des
+entrées comme non significatif et ne jamais s'y fier — `f2` + `f4` sont la clé.
+
+## Ce que L5 rend possible, et ce qui manque encore
+
+Un show généré peut déclarer ses mappings de dimmer de groupe et de preset :
+`f2`, `f4`, `f6` et `f1` sont mesurés, et `f7`/`f8` se recopient verbatim depuis
+une entrée existante. Restent non mesurées : les catégories `Preset Page`,
+`Flash` et `General` (leurs valeurs de `f4`), et l'instance `f2` d'un preset —
+l'opérateur n'a pas dit lequel il avait choisi, et l'entrée porte `f2` absent.

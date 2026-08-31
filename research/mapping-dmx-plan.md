@@ -724,3 +724,20 @@ couvertes.
 Restent, non mesurés et sans conséquence connue : `main` recréé de zéro — son
 entrée d'usine est la seule sans `f7` — et un index de preset au-delà de ce que
 le projet contient, que le writer accepte sans le vérifier.
+
+## MAP-11 — le retour à l'usine, par le compilateur — **[device-confirmed]**
+
+Fichier produit par `wpj_show.py` depuis l'état courant de l'appareil, les dix
+entrées retirées par `canal: null`. Record 130 seul modifié, 15914 → 15777
+octets, et son contenu **identique octet pour octet à la table d'usine des 50
+fichiers du corpus**.
+
+Déployé : l'écran montre les huit groupes sur CH1–CH8, MAIN sur CH9, et rien
+ailleurs. Retéléchargé : **aucun record ne diffère**.
+
+Ça exerce sur le matériel le chemin de **suppression du compilateur**, que
+MAP-08 n'avait couvert qu'avec un fichier bâti par un encodeur ad hoc. Les
+quatre opérations sont maintenant device-confirmed *par l'outil que le dépôt
+publie*, pas seulement par un script d'expérience.
+
+L'appareil est rendu à sa carte d'usine.

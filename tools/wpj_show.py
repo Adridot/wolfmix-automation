@@ -28,7 +28,7 @@ import wpj_codec
 
 _FX_NOMS = ("beam_fx1", "beam_fx2", "color_fx1", "color_fx2",
             "move_fx1", "move_fx2")
-# FX key → bounds (correlated statuses, research/preset-format-165.md).
+# FX key → bounds (correlated statuses, SPEC.md §5, FX submessage).
 # `speed` was bounded to 200 while it pointed at f2; f2 is the fade, and the
 # speed is a percentage — never above 100 across 352 presets (FX6-02).
 # phase/size/fade are named but stay off this list: read, not written.

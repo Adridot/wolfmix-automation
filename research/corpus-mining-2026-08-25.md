@@ -61,7 +61,7 @@ Every record has the same envelope: `field 1 varint = item count`, then
 | 155 | 562 – 563 | **4** always | **4 FX sequences**, each an 8 × 16 grid + step count | correlated |
 | 160 | 393 – 542, **optional** | 8 – 11 | named macros | correlated (pre-existing) |
 | 161 | 599 – 604 | **3** always | 3 × ~190-byte blob, volatile | observed |
-| 165 | 26219 – 29831 | 80 – 82 | preset container — see `research/preset-format-165.md` | correlated |
+| 165 | 26219 – 29831 | 80 – 82 | preset container — see `SPEC.md` §5 | correlated |
 
 `160` is the only optional record (absent from `cc21`, `cd21` and everything
 derived from them: 40 records instead of 41).
@@ -153,7 +153,7 @@ Every value stays below 512. **[hypothesized]** `115.f2` is an address in a
 512-slot internal channel arena that is *not* compacted when fixtures are
 deleted or re-patched, while 120 is always rewritten densely. Alternative
 candidate: `115.f2` is a stale field the firmware ignores entirely. This
-matters because `research/rig-c-bug.md` blames the blackout on record
+matters because BUG-01 (`research/evidence.md`) blames the blackout on record
 120 — if the firmware indexes 120 by `115.f2`, an un-compacted arena is a
 second, independent way to read zeros. It does **not** by itself explain
 rig-c: the healthy revision has out-of-range offsets too.

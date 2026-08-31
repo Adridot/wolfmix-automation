@@ -48,7 +48,7 @@ publishing any count.
 ## The differential protocol
 
 Software-only, no device connected. This is how EXP-01…05 in
-[`../research/experiments.md`](../research/experiments.md) are run.
+[`../research/evidence.md`](../research/evidence.md) are run.
 
 1. In WTOOLS, duplicate an existing project — **never the original**.
 2. Change **exactly one** parameter. Save.

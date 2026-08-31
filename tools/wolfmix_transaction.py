@@ -194,7 +194,7 @@ def archive_projects(connection, root):
     created after it and lost before the next ``init`` would be recoverable
     nowhere. On 2026-08-31 four projects vanished from the controller with no
     delete command and outside any run of this harness
-    (``research/perte-projets-2026-08-31.md``); only the 25 August snapshot gave
+    (``research/evidence.md``, LOSS-01); only the 25 August snapshot gave
     one of them back.
 
     Incremental because the link is slow and unreliable: the list is cheap, and

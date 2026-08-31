@@ -110,7 +110,7 @@ TESTED_FIRMWARE = ("2.0.18",)
 # unprobed either way, so it is not sent.
 PRESET_ID_MAX = 199
 
-# Modes reached from the panel and measured (research/mode-map.md). Entering
+# Modes reached from the panel and measured (SPEC.md §10.2). Entering
 # one changes the screen, not the show — BLACKOUT excepted, and the operator
 # asks for that one by name.
 NAMED_MODES = {

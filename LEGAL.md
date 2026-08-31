@@ -93,7 +93,7 @@ application preference is use of software we hold a licence for, on our own
 machine, to interoperate with our own device.
 
 Where the work touches vendor software, it stays on the interface: the
-`WM_MODE_*` names in [`research/mode-map.md`](research/mode-map.md) are
+`WM_MODE_*` names in [`PROVENANCE.md`](PROVENANCE.md) are
 constant names read out of strings in software installed on our own machine,
 and every **numeric value** in that map was measured on our own device rather
 than taken from a binary. Names and numbers of an interface are facts about how

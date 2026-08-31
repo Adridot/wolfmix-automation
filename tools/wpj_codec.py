@@ -8,7 +8,7 @@ itself; on failure (unsupported type, unexpected protobuf) it returns
 whole variant-A corpus.
 
 Representation:
-- a named field (proof: research/rig-c-bug.md) → a semantic key;
+- a named field (proof: research/evidence.md) → a semantic key;
 - an unidentified field → the neutral "fN" key: varint = int, length =
   {"hex":…}, fixed = {"f32":…}/{"f64":…};
 - an absent field is absent from the dict (≠ an explicit zero); the dict's
@@ -35,7 +35,7 @@ _PROFIL = {2: ("channel_count", "v"), 8: ("name", "str"), 9: ("hash", "hex"),
 _PAD = {1: ("red", "v"), 2: ("green", "v"), 3: ("blue", "v"),
         4: ("white", "v"), 5: ("amber", "v"), 6: ("lime", "v"), 7: ("uv", "v")}
 
-# Sous-message FX (commun Beam/Color/Move) — research/preset-format-165.md.
+# FX sub-message, shared by Beam/Color/Move — SPEC.md §5, FX submessage.
 # FX6-02/03: f6 = Phase, f8 = Size, f9 = Speed, f2 = Fade. The speed had been
 # read on f2 since ACC-04; the screen says f9, and f2 follows the fade all the
 # way to vanishing when it reaches 0. "speed" stays the name of the speed: it

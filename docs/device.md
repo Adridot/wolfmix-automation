@@ -140,7 +140,7 @@ visible in the envelope.
 
 `watch-mode` is the ground truth for the `WM_MODE_*` enum: it polls
 `GET_SETTINGS` (read-only) while the operator walks the controller through its
-screens. Mapping status: [`../research/mode-map.md`](../research/mode-map.md).
+screens. The measured map: [`../SPEC.md`](../SPEC.md) §10.2.
 
 ## `wolfmix_experiment.py`
 

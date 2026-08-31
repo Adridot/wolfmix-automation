@@ -123,8 +123,17 @@ each one saves someone a search:
   `Settings.extSyncState` is presumably its gate. `ours-inferred`, and a cheap
   target.
 - **Nothing public documents the WTOOLS → Easy View link**, the UDP port 3024,
-  its frame format or its XOR. Easy View also ingests ArtNet, so a visualiser
-  fed by our own data does not need those frames reproduced.
+  its frame format or its XOR. This entry used to add "Easy View also ingests
+  ArtNet, so a visualiser fed by our own data does not need those frames
+  reproduced" — **withdrawn on 2026-08-31**. Easy View 3.0.0 has no Art-Net:
+  `art-net`, `artnet`, `sACN` and `E1.31` appear nowhere in its 185 MB bundle,
+  its Preferences offer General/Stage/Rendering and no input at all, and the
+  running application binds one UDP port of its own. Whatever another build or
+  another platform does, the escape hatch that sentence promised is not there.
+  Not reproducing the 3024 frames remains the decision — it is now a choice
+  about a proprietary link rather than a free one, and the price is that a
+  fixture profile generated here cannot be exercised in the visualiser without
+  WTOOLS driving it.
 - **`wolfmix_project_v2` does not exist.** The only "v2" in this world is
   cosmetic: converting a pre-2.0 project appends a `v2` suffix to the project
   *name*. Do not go looking for a v2 container.

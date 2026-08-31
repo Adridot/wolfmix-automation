@@ -3158,7 +3158,7 @@ and has nothing further to say about them.
 | record 120 | see above |
 | record 130 | byte-identical in all 32 files |
 | record 161 | one bit moved in seven saves |
-| MIDI mapping | never located |
+| MIDI mapping | never located — le **MIDI** est MK2+ ; la carte **DMX** est le record 130, résolue le 2026-08-31 |
 
 ## The vendor manual, read — several fields named at once
 
@@ -3442,6 +3442,14 @@ fails.
   buttons is stored in the preset. So a preset carries flash state, and nothing
   in record 165 has been attributed to it yet. Six flash buttons, and `f4` has
   **four** unexplained bits (1, 5, 6, 7) plus bit 0.
+
+### L5 close — la carte DMX est le record 130 — 2026-08-31
+
+> **Résolu.** La table de l'écran `Mappings` est le **record 130**, lue et
+> écrite, device-confirmed de bout en bout. Voir `SPEC.md` §7.3 et
+> `research/mapping-dmx-plan.md`. Le paragraphe ci-dessous reste pour l'histoire :
+> il dit ce qu'on croyait quand la piste semblait intestable, et il avait raison
+> sur le MIDI, faux sur « L5 ne s'applique pas ».
 
 ### MIDI mapping is MK2 and higher — lead L5 does not apply to this hardware
 

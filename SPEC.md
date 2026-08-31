@@ -119,7 +119,7 @@ every run.
 | 116 | 162–334 | 3–7 | **fixture profile catalogue** | correlated |
 | 120 | 532–1199 | 86–258 | flat per-fixture-channel value table | correlated |
 | 125 | 111–137 | **9** | **the 8 groups A–H + a 9th slot**: name + profile bitmask | correlated (§7.2) |
-| 130 | **102** | **9** | one single payload across 45/45 files | observed — no project data |
+| 130 | 102–155 | 9–13 | **the DMX IN mapping table** | **device-confirmed** (§7.3) |
 | 135 | 140–145 | **16** | the 16 ColorFX palette pads (RGBWALU) | correlated |
 | 140 ×8 | 182–189 | **20** each | **static COLOUR palette**, one per group A–H, `f2` = group 0…7 | **device-confirmed** (§3.3) |
 | 145 ×8 | 40–159 | **20** each | **static GOBO palette**, one per group A–H, `f2` = group 0…7 | **device-confirmed** (§3.4) |
@@ -1045,15 +1045,65 @@ the device added a preset (F30-04), so it tracks something the device writes;
 what, is open. An earlier reading tied it to record 151 being populated: that is
 withdrawn, since 15 of the 24 files at `0x30` carry a populated 151.
 
-### 7.3 Record 130 carries no project data — **[observed]**
+### 7.3 Record 130 is the DMX IN mapping table — **[device-confirmed]**
 
-102 bytes, 9 items, byte-identical in 45/45 files across 4 rigs with 3–7
-profiles and 10–22 fixtures. Items 0–7 read `{f2 = i, f4 = 20, f6 = i, f7 = 1,
-f8 = 1}`, item 8 reads `{f4 = 27, f6 = 8, f8 = 1}`. The 9-item shape matches
-record 125's nine slots one-for-one and `f4 = 20` matches the pads-per-page
-limit. **[hypothesized]** per-category factory defaults. Negative result worth
-recording: **no differential experiment will be productive on 130** unless the
-operator edits something category-related.
+The `Mappings` screen (mode 43) binds an incoming DMX channel to a controller
+action. On a Mk1 only the DMX side exists; MIDI is Mk2 and higher. That table
+is record 130, and every field below was written by the device in a
+single-variable differential, then read back.
+
+| Field | Meaning | Status |
+|---|---|---|
+| `f1` | number of entries | **device-confirmed** — tracked 9 → 13 on append and 13 → 12 on removal |
+| `f2` | the **instance** inside the function, zero-based; **255** when the function has no instance | **device-confirmed** — group B wrote `f2 = 1`, the 5th preset wrote `f2 = 4`, BPM Tap and Wolf wrote 255 |
+| `f4` | the **function** targeted | **device-confirmed** — see the table below |
+| `f5`, `f6` | the DMX IN channel, zero-based, as **two bytes**: `channel0 = f5 × 256 + f6` | **device-confirmed** — CH300 wrote (1, 43), CH512 wrote (1, 255) |
+| `f7`, `f8` | 1 everywhere, never moved | **no name** |
+
+Functions measured, each by the entry the device created when that item was
+selected on the `Mappings` screen:
+
+| `f4` | Function |
+|---|---|
+| 20 | group dimmer — `f2` is the group index 0–7 |
+| 27 | MAIN dimmer |
+| 70 | preset — `f2` is the preset index |
+| 17 | BPM Tap |
+| 10 | Wolf |
+
+**`f4` is the function, not the screen's category.** BPM Tap and Wolf both live
+under the `Flash` category and carry different `f4`. The five categories the
+screen offers are a display grouping and are not stored at all.
+
+**An unmapped function has no entry.** Removing a mapping deletes its line and
+decrements `f1`; there is no sentinel value to recognise.
+
+**The order of the entries carries no meaning.** Two reorders were observed in
+eleven saves, neither caused by the entry that had just been edited, and no
+reading survives them. An entry is keyed by `(f4, f2)` and never by its rank.
+
+**Duplicate channels are allowed.** Group A was put on CH7 where group G
+already sat; the device kept both, and a value on that channel drives the two
+together. No uniqueness is enforced by the firmware, so none is enforced here.
+
+### Why it looked inert for so long — **[observed]**
+
+130 was byte-identical in the first 51 files of the corpus, which is what made
+it read as "no project data". The factory table is the **identity map** — groups
+A–H on channels 1–8 and MAIN on channel 9, confirmed on the device's own screen
+— and no operator had ever changed a mapping. Item *i* carrying `f6 = i` was the
+channel, not a slot index, and the coincidence hid the field.
+
+`f5` stayed invisible for the same kind of reason: every channel ever seen was
+below 256, so the high byte was always zero and therefore omitted. It only
+appeared when the operator was asked to push the encoder to its ceiling.
+
+### Written back, and accepted — **[device-confirmed]**
+
+MAP-06: group D moved from CH4 to CH200 by editing the file alone — one entry's
+`f6` from 3 to 199, +1 byte, record 130 the only payload record touched, SHA-1
+recomputed, all identities passing before upload. Deployed, and the controller's
+`Mappings` screen displays **CH200**. The table is writable, not just readable.
 
 ---
 

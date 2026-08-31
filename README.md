@@ -255,7 +255,7 @@ argument-only helpers.
 | UI mode enum (`WM_MODE_*`) | 🟡 **31 values device-confirmed** — 29 driven from the panel, plus 39 and 42 reachable only by a raw index — never read out of a binary; and the reported mode is **not** the screen on display |
 | Hands-off preset recall over USB | 🟢 **device-confirmed** — one raw byte, not protobuf: `payload[0]` is the preset **id**, not the entry position; no second byte is read; the whole panel range 0–199 is reachable; an absent id — above the highest one, or in an interior gap — is a **no-op** |
 | Variants B and C | 🔴 top level only — read-only by rule |
-| The DMX mapping record | 🔴 not located — only the **MIDI** side is MK2 and higher; the **DMX** side does run on this MK1 (`Mappings`, mode 43, five categories), so the hardware does not rule it out. Whether the map lives in the project file at all is untested |
+| The DMX mapping table (record 130) | 🟢 **device-confirmed, read and written** — `f4` is the **function** (20 group dimmer, 27 MAIN, 70 preset, 17 BPM Tap, 10 Wolf), not the screen's category; `f2` is the instance, **255** when there is none; the channel is **two bytes**, `f5 × 256 + f6`, zero-based. An unmapped function has **no entry**, entry order carries no meaning, duplicate channels are allowed. It read as inert in 51 files because the factory table is the identity map — A–H on 1–8, MAIN on 9 — and nobody had ever changed one. A file-authored mapping was deployed and the controller displays it |
 
 <details>
 <summary><b>A worked example: the gobo palette is not stored, it is derived</b></summary>

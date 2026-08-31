@@ -438,3 +438,80 @@ de la carte qui reste à un cheveu du device-confirmed.
 
 Deuxième prédiction perdue sur cette campagne, et les deux portaient sur la même
 chose : l'idée que l'ordre des entrées réagit aux gestes. Il n'y réagit pas.
+
+---
+
+# MAP-04 à MAP-06 — la table est fermée, et elle s'écrit — 2026-08-31
+
+Onze sauvegardes, une variable par sauvegarde, un téléchargement entre chacune.
+
+| Geste | Écrit dans 130 |
+|---|---|
+| preset **n° 5** → CH40 | entrée neuve `f4=70`, **`f2=4`**, `f6=39` — `f2` est bien l'index de l'instance |
+| `Flash` → **BPM Tap** → CH41 | entrée neuve `f4=17`, **`f2=255`** |
+| `Flash` → **Wolf** → CH45 | entrée neuve **`f4=10`**, `f2=255` |
+| **MAIN** → CH44 | `f4=27` passe de `f6=8` à `f6=43` |
+| **retirer** le groupe C | l'entrée **disparaît**, `f1` 13 → 12 |
+| groupe C → **CH512** | **`f5=1`**, `f6=255` — un champ jamais vu |
+| groupe C → **CH300** | `f5=1`, `f6=43` |
+
+## Les deux corrections que ces mesures ont imposées
+
+**1 · `f4` est la fonction, pas la catégorie.** BPM Tap (17) et Wolf (10) sont
+deux entrées de la **même** catégorie `Flash` avec des `f4` distincts. Les cinq
+catégories de l'écran ne sont pas stockées du tout. Ce qui avait été écrit après
+MAP-02 — « les catégories partagent le record, distinguées par `f4` » — était
+faux, et deux entrées `Flash` ont suffi à le montrer.
+
+**2 · Le canal est sur deux octets.** `canal_base0 = f5 × 256 + f6`. `f5` est
+resté invisible sur 51 fichiers et six écritures parce que **tout tenait sous le
+canal 256**. Un writer qui aurait posé le canal 300 dans `f6` seul aurait produit
+une entrée que l'appareil ne lit pas comme prévu, sans que rien ne le signale.
+
+C'est le résultat le plus utile de la campagne, et il ne vient pas d'une
+déduction : il vient d'avoir demandé à l'opérateur de **pousser l'encodeur à sa
+borne**. Une mesure au milieu du domaine (CH300) a ensuite séparé « octet haut »
+de « drapeau au-delà de 256 ».
+
+## MAP-06 — l'écriture, vérifiée sur l'appareil — **[device-confirmed]**
+
+Fichier construit hors appareil depuis `etape5b.wpj` : le groupe D passe de CH4
+à CH200, soit `f6` de 3 à 199. Sept contrôles avant le moindre contact :
+en-tête SHA-1 valide, reparse, décodage à CH200, `f1` cohérent, **19 identités**,
++1 octet, **record 130 seul modifié**.
+
+Déployé. L'écran `Mappings` du W1 affiche **CH200**.
+
+> **La carte de mapping DMX se lit et s'écrit.** Un show généré peut déclarer ses
+> propres associations, et le dépôt cesse d'être un compilateur.
+
+## Le tableau de chasse complet
+
+| Prédit | | |
+|---|---|---|
+| 130 bouge sur l'entrée du groupe A — p 0,55 | ✅ | |
+| l'entrée gagne un champ portant 7 — p 0,55 | ❌ | elle porte 6, base zéro |
+| `f4` passe de 20 à autre chose — p 0,35 | ❌ | |
+| `f2 = 1` prend `f6 = 19` — p 0,75 | ✅ | et ça nomme `f2` |
+| la mapping `Preset` atterrit dans 130 — p 0,50 | ✅ | |
+| l'entrée touchée part en fin de liste — p 0,60 | ❌ | |
+| l'entrée de C part en fin de liste — p 0,55 | ❌ | |
+| rien ne bouge sur un aller-retour — p 0,30 | ✅ | |
+| `f2 = 4`, `f4 = 70`, `f6 = 39` pour le 5e preset — p 0,75 | ✅ | les trois exacts |
+| `f5 = 1`, `f6 = 43` pour CH300 — p ~0,7 | ✅ | |
+
+**Quatre prédictions perdues sur dix**, et trois portaient sur la même idée :
+que l'ordre des entrées réagit aux gestes. Il n'y réagit pas. La quatrième est
+le hors-par-un de la base zéro.
+
+## Ce qui reste ouvert, et assumé comme tel
+
+- **L'ordre des entrées** : deux réorganisations en onze sauvegardes, jamais
+  celle de l'entrée éditée, aucune lecture. `[observed]`. Sans conséquence : la
+  clé est `(f4, f2)`.
+- **`f7` et `f8`** : 1 partout, jamais bougé, **pas de nom**.
+- **Les autres fonctions** de `Flash`, `General` et `Preset Page` : un geste par
+  fonction. À faire à la demande, pas nécessaire pour écrire.
+- **`f2 = 0` sur MAIN** là où les autres fonctions uniques portent 255 : MAIN est
+  une entrée d'usine, les autres sont créées par l'opérateur. Deux millésimes
+  d'écriture, non mesuré.

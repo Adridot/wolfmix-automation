@@ -80,7 +80,7 @@ gate when the sheet is older than the flash it claims to show:
 
 ```bash
 WOLFMIX_FLASH=$G/flash-custom.bin python3 tools/gobo_library.py \
-    sheet $G/planche.png 342,343
+    sheet $G/sheet.png 342,343
 ```
 
 ## 5. Upload

@@ -387,10 +387,10 @@ python3 tools/gobo_run.py ~/gobos    # the board, then the next command
 ```
 
 ```text
-0 sauvegarde    OK   4 fichiers, 4 sha256 identiques
-1 silhouettes   OK   11 fichier(s) gobo*.png
-2 flash patché  OK   2931442 octets, longueur inchangée
-3 planche       OK   rendue après le flash patché
+0 backup           OK   4 files, 4 matching SHA-256
+1 silhouettes      OK   11 gobo*.png file(s)
+2 patched flash    OK   2931442 bytes, 11 icon(s), chain verified
+3 sheet            OK   rendered after the patched flash
 ```
 
 A red gate says why on its own line, and the block below the board becomes the

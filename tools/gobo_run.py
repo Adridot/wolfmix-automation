@@ -1,36 +1,34 @@
 #!/usr/bin/env python3
-"""Conduite du chantier gobos : où en est le dossier de travail, et après ?
+"""The gobo job, guided: where the working directory stands, and what is next.
 
-Les six étapes de `docs/gobo-icons.md` sont portées par les outils du dépôt.
-Ce qui n'appartenait à personne, ce sont les gardes *entre* les étapes — et
-c'est un pas sauté qui coûte cher sur du matériel réel. Cet outil ne patche
-rien, ne parle à aucun appareil et n'écrit aucun fichier : il regarde un
-dossier de travail et refuse d'annoncer l'étape suivante tant qu'une garde est
-rouge.
+The six steps of `docs/gobo-icons.md` each belong to a tool of this repository.
+What belonged to nobody were the gates *between* them — and on real hardware a
+skipped step is expensive. This tool patches nothing, talks to no device and
+writes no file: it reads a working directory and refuses to name the next step
+while a gate is red.
 
-  gobo_run.py DOSSIER    l'état du chantier, puis la commande suivante
-  gobo_run.py            self-check
+  gobo_run.py DIRECTORY   the state of the job, then the next command
+  gobo_run.py             self-check
 
-Quatre gardes, celles qu'aucun outil ne tenait :
+Four gates, the ones no tool was holding:
 
-  0 sauvegarde    le bundle flash copié HORS du dossier WTOOLS — que WTOOLS
-                  réécrit à chaque mise à jour — sha256 identiques au vivant
-  1 silhouettes   au moins un `gobo*.png` dans le dossier
-  2 flash patché  présent, de la longueur de l'original — les pointeurs de la
-                  table sont absolus — et rattaché par son manifeste au bundle
-                  installé : la longueur seule laissait passer n'importe quel
-                  fichier de même taille
-  3 planche       rendue APRÈS le flash patché, donc relue depuis lui et non
-                  depuis les sources — c'est la seule preuve avant l'upload
+  0 backup        the flash bundle copied OUTSIDE the WTOOLS folder — which
+                  WTOOLS rewrites on every update — SHA-256 equal to the live one
+  1 silhouettes   at least one `gobo*.png` in the directory
+  2 patched flash present, the original's length — the table's pointers are
+                  absolute — and tied by its manifest to the installed bundle:
+                  length alone let any file of the same size through
+  3 sheet         rendered AFTER the patched flash, therefore read back from it
+                  and not from the sources — the only proof before an upload
 
-Le reste est déjà refusé par l'outil qui le possède : `Open` et ses 96 entrées
-par `gobo_write.py`, les noms > 19 octets et la roue portée par un second
-groupe par `wpj_show.py`. Ici on ne recalcule rien, on ordonne.
+The rest is already refused by the tool that owns it: `Open` and its 96 entries
+by `gobo_write.py`, names over 19 bytes and a wheel carried by a second group by
+`wpj_show.py`. Nothing is recomputed here; things are put in order.
 
-Exit 2 = garde rouge, l'étape suivante est refusée. Le dossier de travail est
-celui de l'opérateur : silhouettes, flash patché et planche sont les données de
-sa lyre et ne rentrent jamais dans le dépôt (LEGAL.md) — un dossier sous
-l'arborescence du dépôt est refusé.
+Exit 2 = a red gate, the next step is refused. The working directory is the
+operator's: silhouettes, patched flash and contact sheet are their fixture's
+data and never enter this repository (LEGAL.md) — a directory under the
+repository tree is refused.
 """
 import glob
 import hashlib
@@ -41,279 +39,279 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gobo_library import find_flash
 
-DEPOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SAUVEGARDE, PATCHE, PLANCHE = "backup", "flash-custom.bin", "planche.png"
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BACKUP, PATCHED, SHEET = "backup", "flash-custom.bin", "sheet.png"
 
 
-def sha256(chemin):
-    empreinte = hashlib.sha256()
-    with open(chemin, "rb") as flux:
-        for bloc in iter(lambda: flux.read(1 << 20), b""):
-            empreinte.update(bloc)
-    return empreinte.hexdigest()
+def sha256(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as stream:
+        for block in iter(lambda: stream.read(1 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
-def empreintes(dossier):
-    """{nom: sha256} des fichiers directement sous `dossier`."""
-    noms = sorted(os.listdir(dossier))
-    return {n: sha256(os.path.join(dossier, n)) for n in noms
-            if os.path.isfile(os.path.join(dossier, n))}
+def digests(directory):
+    """{name: sha256} of the files directly under `directory`."""
+    names = sorted(os.listdir(directory))
+    return {n: sha256(os.path.join(directory, n)) for n in names
+            if os.path.isfile(os.path.join(directory, n))}
 
 
-def sous(chemin, parent):
+def under(path, parent):
     parent = os.path.realpath(parent)
-    return os.path.realpath(chemin).startswith(parent + os.sep)
+    return os.path.realpath(path).startswith(parent + os.sep)
 
 
-def garde_sauvegarde(sauve, bundle):
-    if not os.path.isdir(sauve):
-        return False, f"{sauve} absent"
-    if sous(sauve, bundle) or os.path.realpath(sauve) == os.path.realpath(bundle):
-        return False, ("sous le dossier WTOOLS : la prochaine mise à jour "
-                       "la réécrira")
-    vivant, copie = empreintes(bundle), empreintes(sauve)
-    ecarts = [n for n in vivant if copie.get(n) != vivant[n]]
-    if ecarts:
-        return False, (f"{len(ecarts)} fichier(s) absents ou différents du "
-                       f"bundle vivant : {', '.join(ecarts[:3])}")
-    return True, f"{len(vivant)} fichiers, {len(vivant)} sha256 identiques"
+def gate_backup(backup, bundle):
+    if not os.path.isdir(backup):
+        return False, f"{backup} is missing"
+    if under(backup, bundle) or os.path.realpath(backup) == os.path.realpath(bundle):
+        return False, ("inside the WTOOLS folder: the next update will "
+                       "overwrite it")
+    live, copy = digests(bundle), digests(backup)
+    gaps = [n for n in live if copy.get(n) != live[n]]
+    if gaps:
+        return False, (f"{len(gaps)} file(s) missing or different from the "
+                       f"live bundle: {', '.join(gaps[:3])}")
+    return True, f"{len(live)} files, {len(live)} matching SHA-256"
 
 
-def garde_patche(patche, flash):
-    """La chaîne bundle installé → manifeste → fichier qui part dans l'appareil.
+def gate_patched(patched, flash):
+    """The chain installed bundle → manifest → the file that goes in the device.
 
-    La longueur ne prouve rien : un fichier arbitraire de même taille passait
-    cette garde. Le manifeste écrit par `gobo_write.py patch` porte les deux
-    empreintes qui la ferment.
+    Length proves nothing: an arbitrary file of the same size used to pass this
+    gate. The manifest written by `gobo_write.py patch` carries the two hashes
+    that close it.
     """
-    if not os.path.isfile(patche):
-        return False, f"{PATCHE} absent"
-    chemin = patche + ".json"
-    if not os.path.isfile(chemin):
-        return False, (f"{os.path.basename(chemin)} absent : refaire le patch, "
-                       "qui l'écrit avec le fichier")
+    if not os.path.isfile(patched):
+        return False, f"{PATCHED} is missing"
+    path = patched + ".json"
+    if not os.path.isfile(path):
+        return False, (f"{os.path.basename(path)} is missing: run the patch "
+                       "again, it writes one alongside the file")
     try:
-        with open(chemin, encoding="utf-8") as flux:
-            releve = json.load(flux)
-        source, resultat = releve["source"], releve["result"]
-        attendus = source["sha256"], resultat["sha256"]
-    except (ValueError, KeyError, OSError) as err:
-        return False, f"manifeste illisible ({err})"
-    if os.path.getsize(patche) != os.path.getsize(flash):
-        return False, (f"{os.path.getsize(patche)} octets contre "
-                       f"{os.path.getsize(flash)} à l'original : les pointeurs "
-                       "sont absolus, la longueur ne doit pas bouger")
-    if sha256(patche) != attendus[1]:
-        return False, ("le fichier patché ne correspond pas à son manifeste : "
-                       "même longueur ne veut pas dire même contenu")
-    if sha256(flash) != attendus[0]:
-        return False, (f"le bundle installé n'est plus celui du patch "
-                       f"({source.get('bundle')}) : repatcher depuis le bundle "
-                       "courant")
-    return True, (f"{os.path.getsize(patche)} octets, "
-                  f"{len(releve.get('ids', []))} icône(s), chaîne vérifiée")
+        with open(path, encoding="utf-8") as stream:
+            manifest = json.load(stream)
+        source, result = manifest["source"], manifest["result"]
+        expected = source["sha256"], result["sha256"]
+    except (ValueError, KeyError, OSError) as error:
+        return False, f"unreadable manifest ({error})"
+    if os.path.getsize(patched) != os.path.getsize(flash):
+        return False, (f"{os.path.getsize(patched)} bytes against "
+                       f"{os.path.getsize(flash)} in the original: the pointers "
+                       "are absolute, the length must not move")
+    if sha256(patched) != expected[1]:
+        return False, ("the patched file does not match its manifest: the same "
+                       "length does not mean the same content")
+    if sha256(flash) != expected[0]:
+        return False, (f"the installed bundle is no longer the one the patch "
+                       f"came from ({source.get('bundle')}): re-patch from the "
+                       "current bundle")
+    return True, (f"{os.path.getsize(patched)} bytes, "
+                  f"{len(manifest.get('ids', []))} icon(s), chain verified")
 
 
-def gardes(travail, flash):
-    """[(étiquette, vert, détail)] dans l'ordre des étapes de la recette."""
+def gates(work, flash):
+    """[(label, green, detail)] in the order of the recipe's steps."""
     bundle = os.path.dirname(flash)
-    sauve = os.path.join(travail, SAUVEGARDE)
-    patche = os.path.join(travail, PATCHE)
-    planche = os.path.join(travail, PLANCHE)
+    backup = os.path.join(work, BACKUP)
+    patched = os.path.join(work, PATCHED)
+    sheet = os.path.join(work, SHEET)
 
-    etats = [("0 sauvegarde",) + garde_sauvegarde(sauve, bundle)]
+    states = [("0 backup",) + gate_backup(backup, bundle)]
 
-    silhouettes = glob.glob(os.path.join(travail, "gobo*.png"))
-    etats.append(("1 silhouettes", bool(silhouettes),
-                  f"{len(silhouettes)} fichier(s) gobo*.png"
-                  if silhouettes else "aucun gobo*.png dans le dossier"))
+    silhouettes = glob.glob(os.path.join(work, "gobo*.png"))
+    states.append(("1 silhouettes", bool(silhouettes),
+                   f"{len(silhouettes)} gobo*.png file(s)"
+                   if silhouettes else "no gobo*.png in the directory"))
 
-    etats.append(("2 flash patché",) + garde_patche(patche, flash))
+    states.append(("2 patched flash",) + gate_patched(patched, flash))
 
-    if not os.path.isfile(planche):
-        etats.append(("3 planche", False, f"{PLANCHE} absente"))
-    elif not os.path.isfile(patche):
-        etats.append(("3 planche", False, "rendue sans flash patché"))
-    elif os.path.getmtime(planche) < os.path.getmtime(patche):
-        etats.append(("3 planche", False,
-                      "plus ancienne que le flash patché : elle ne montre pas "
-                      "ce qui partira dans l'appareil"))
+    if not os.path.isfile(sheet):
+        states.append(("3 sheet", False, f"{SHEET} is missing"))
+    elif not os.path.isfile(patched):
+        states.append(("3 sheet", False, "rendered with no patched flash"))
+    elif os.path.getmtime(sheet) < os.path.getmtime(patched):
+        states.append(("3 sheet", False,
+                       "older than the patched flash: it does not show what "
+                       "will go into the device"))
     else:
-        etats.append(("3 planche", True, "rendue après le flash patché"))
-    return etats
+        states.append(("3 sheet", True, "rendered after the patched flash"))
+    return states
 
 
-def suite(etats, travail, flash):
-    """Le texte de l'étape suivante : la première garde rouge, ou l'appareil."""
+def next_step(states, work, flash):
+    """The text of the next step: the first red gate, or the device."""
     bundle = os.path.dirname(flash)
-    patche = os.path.join(travail, PATCHE)
-    rouge = next((e for e in etats if not e[1]), None)
-    if rouge is None:
-        return ("planche validée par l'opérateur ? alors les préconditions "
-                "appareil, puis l'upload à la main :\n"
+    patched = os.path.join(work, PATCHED)
+    red = next((e for e in states if not e[1]), None)
+    if red is None:
+        return ("sheet approved by the operator? then the device "
+                "preconditions, and the upload by hand:\n"
                 "  python3 tools/wolfmix.py profiles | tail -3   "
-                "# lecture complète, sinon redémarrer le W1\n"
+                "# a complete read, otherwise restart the W1\n"
                 "  python3 tools/wolfmix.py settings             "
-                "# wlinkActivated doit être false\n"
-                "  # puis docs/gobo-icons.md : secteur, projet enregistré, "
-                "wtoolsMode=2, et le filet de restauration\n"
-                "  # noms et ordre ensuite, si besoin : docs/gobo-icons.md §6")
-    etape = rouge[0][0]
-    if etape == "0":
-        return ("refus : pas de sauvegarde vérifiée, pas de patch ni "
-                "d'upload.\n"
-                f'  cp -R "{bundle}" "{os.path.join(travail, SAUVEGARDE)}"\n'
-                f"  python3 tools/gobo_run.py {travail}")
-    if etape == "1":
-        return ("photographier la roue puis générer les silhouettes — le "
-                "prompt est dans docs/gobo-icons.md §1-2.\n"
-                f"  enregistrer gobo01.png, gobo02.png… dans {travail}")
-    if etape == "2":
-        return ("lire la palette, puis patcher une COPIE — jamais l'entrée "
-                "`Open`, l'outil la refuse.\n"
-                "  python3 tools/gobo_library.py palette VOTRE-PROJET.wpj\n"
-                f"  python3 tools/gobo_write.py patch {patche} \\\n"
-                f"      342=mask:{os.path.join(travail, 'gobo01.png')}")
-    return ("rendre la planche DEPUIS le fichier patché, et la faire valider "
-            "avant tout upload.\n"
-            f"  WOLFMIX_FLASH={patche} python3 tools/gobo_library.py \\\n"
-            f"      sheet {os.path.join(travail, PLANCHE)} 342,343")
+                "# wlinkActivated must be false\n"
+                "  # then docs/gobo-icons.md: mains power, saved project, "
+                "wtoolsMode=2, and the safety net\n"
+                "  # names and order afterwards, if needed: "
+                "docs/gobo-icons.md §6")
+    step = red[0][0]
+    if step == "0":
+        return ("refused: no verified backup, no patch and no upload.\n"
+                f'  cp -R "{bundle}" "{os.path.join(work, BACKUP)}"\n'
+                f"  python3 tools/gobo_run.py {work}")
+    if step == "1":
+        return ("photograph the wheel, then generate the silhouettes — the "
+                "prompt is in docs/gobo-icons.md §1-2.\n"
+                f"  save gobo01.png, gobo02.png… in {work}")
+    if step == "2":
+        return ("read the palette, then patch a COPY — never the `Open` entry, "
+                "the tool refuses it.\n"
+                "  python3 tools/gobo_library.py palette YOUR-PROJECT.wpj\n"
+                f"  python3 tools/gobo_write.py patch {patched} \\\n"
+                f"      342=mask:{os.path.join(work, 'gobo01.png')}")
+    return ("render the sheet FROM the patched file, and have it approved "
+            "before any upload.\n"
+            f"  WOLFMIX_FLASH={patched} python3 tools/gobo_library.py \\\n"
+            f"      sheet {os.path.join(work, SHEET)} 342,343")
 
 
-def rapport(travail, flash):
-    etats = gardes(travail, flash)
-    largeur = max(len(e[0]) for e in etats)
-    lignes = [f"dossier de travail  {travail}",
-              f"flash d'origine     {flash}", ""]
-    lignes += [f"{e[0]:<{largeur}}  {'OK ' if e[1] else 'NON'}  {e[2]}"
-               for e in etats]
-    lignes += ["", suite(etats, travail, flash)]
-    return "\n".join(lignes), all(e[1] for e in etats)
+def report(work, flash):
+    states = gates(work, flash)
+    width = max(len(e[0]) for e in states)
+    lines = [f"working directory  {work}",
+             f"original flash     {flash}", ""]
+    lines += [f"{e[0]:<{width}}  {'OK ' if e[1] else 'NO '}  {e[2]}"
+              for e in states]
+    lines += ["", next_step(states, work, flash)]
+    return "\n".join(lines), all(e[1] for e in states)
 
 
 def self_test():
     import tempfile
     with tempfile.TemporaryDirectory() as tmp:
         bundle = os.path.join(tmp, "wm-fw-bundle-2.0.18")
-        travail = os.path.join(tmp, "gobos")
+        work = os.path.join(tmp, "gobos")
         os.makedirs(bundle)
-        os.makedirs(travail)
+        os.makedirs(work)
         flash = os.path.join(bundle, "wolfmixFlash.bin")
-        for nom, corps in (("wolfmixFlash.bin", b"\x01" * 4096),
+        for name, body in (("wolfmixFlash.bin", b"\x01" * 4096),
                            ("wolfmixFlash-reset.bin", b"\x02" * 16),
                            ("firmware.bin", b"\x03" * 16),
                            ("bundle.json", b"{}")):
-            open(os.path.join(bundle, nom), "wb").write(corps)
+            open(os.path.join(bundle, name), "wb").write(body)
 
-        def etat(nom):
-            return dict((e[0], e[1]) for e in gardes(travail, flash))[nom]
+        def state(name):
+            return dict((e[0], e[1]) for e in gates(work, flash))[name]
 
-        assert etat("0 sauvegarde") is False, "sauvegarde absente = rouge"
-        assert "cp -R" in suite(gardes(travail, flash), travail, flash)
+        assert state("0 backup") is False, "missing backup = red"
+        assert "cp -R" in next_step(gates(work, flash), work, flash)
 
-        # Une sauvegarde restée dans le dossier WTOOLS n'en est pas une.
-        dedans = os.path.join(bundle, "backup")
-        os.makedirs(dedans)
-        assert garde_sauvegarde(dedans, bundle)[0] is False
+        # A backup left inside the WTOOLS folder is not a backup.
+        inside = os.path.join(bundle, "backup")
+        os.makedirs(inside)
+        assert gate_backup(inside, bundle)[0] is False
 
-        sauve = os.path.join(travail, SAUVEGARDE)
-        os.makedirs(sauve)
-        for nom in os.listdir(bundle):
-            chemin = os.path.join(bundle, nom)
-            if os.path.isfile(chemin):
-                open(os.path.join(sauve, nom), "wb").write(
-                    open(chemin, "rb").read())
-        assert etat("0 sauvegarde") is True, "copie fidèle = vert"
+        backup = os.path.join(work, BACKUP)
+        os.makedirs(backup)
+        for name in os.listdir(bundle):
+            path = os.path.join(bundle, name)
+            if os.path.isfile(path):
+                open(os.path.join(backup, name), "wb").write(
+                    open(path, "rb").read())
+        assert state("0 backup") is True, "faithful copy = green"
 
-        # Un octet qui bouge dans la copie casse la garde : c'est tout l'objet
-        # des empreintes, une copie partielle passerait sinon inaperçue.
-        open(os.path.join(sauve, "firmware.bin"), "wb").write(b"\x04" * 16)
-        assert etat("0 sauvegarde") is False, "sha256 différent = rouge"
-        open(os.path.join(sauve, "firmware.bin"), "wb").write(b"\x03" * 16)
+        # One byte moving in the copy breaks the gate: that is the whole point
+        # of the hashes — a partial copy would otherwise go unnoticed.
+        open(os.path.join(backup, "firmware.bin"), "wb").write(b"\x04" * 16)
+        assert state("0 backup") is False, "different sha256 = red"
+        open(os.path.join(backup, "firmware.bin"), "wb").write(b"\x03" * 16)
 
-        assert etat("1 silhouettes") is False
-        open(os.path.join(travail, "gobo01.png"), "wb").write(b"x")
-        assert etat("1 silhouettes") is True
+        assert state("1 silhouettes") is False
+        open(os.path.join(work, "gobo01.png"), "wb").write(b"x")
+        assert state("1 silhouettes") is True
 
-        assert etat("2 flash patché") is False
-        patche = os.path.join(travail, PATCHE)
+        assert state("2 patched flash") is False
+        patched = os.path.join(work, PATCHED)
 
-        def manifeste(source_sha, resultat_sha):
-            with open(patche + ".json", "w", encoding="utf-8") as flux:
+        def manifest(source_sha, result_sha):
+            with open(patched + ".json", "w", encoding="utf-8") as stream:
                 json.dump({"source": {"sha256": source_sha,
                                       "bundle": "wm-fw-bundle-2.0.18"},
-                           "result": {"sha256": resultat_sha},
-                           "ids": [342]}, flux)
+                           "result": {"sha256": result_sha},
+                           "ids": [342]}, stream)
 
-        open(patche, "wb").write(b"\x01" * 4095)
-        assert etat("2 flash patché") is False, "manifeste absent = rouge"
-        manifeste(sha256(flash), sha256(patche))
-        assert etat("2 flash patché") is False, "longueur différente = rouge"
-        open(patche, "wb").write(b"\x01" * 4096)
-        manifeste(sha256(flash), sha256(patche))
-        assert etat("2 flash patché") is True
+        open(patched, "wb").write(b"\x01" * 4095)
+        assert state("2 patched flash") is False, "missing manifest = red"
+        manifest(sha256(flash), sha256(patched))
+        assert state("2 patched flash") is False, "different length = red"
+        open(patched, "wb").write(b"\x01" * 4096)
+        manifest(sha256(flash), sha256(patched))
+        assert state("2 patched flash") is True
 
-        # Même longueur, contenu étranger : la garde des longueurs le laissait
-        # passer, la chaîne d'empreintes non.
-        etranger = os.path.join(travail, "autre.bin")
-        open(etranger, "wb").write(b"\x09" * 4096)
-        manifeste(sha256(flash), sha256(etranger))
-        assert etat("2 flash patché") is False, "sha du patch ignoré"
+        # Same length, foreign content: the length gate let it through, the
+        # chain of hashes does not.
+        foreign = os.path.join(work, "other.bin")
+        open(foreign, "wb").write(b"\x09" * 4096)
+        manifest(sha256(flash), sha256(foreign))
+        assert state("2 patched flash") is False, "patch sha ignored"
 
-        # Le bundle réécrit par WTOOLS depuis le patch : rouge aussi.
-        manifeste(sha256(etranger), sha256(patche))
-        assert etat("2 flash patché") is False, "bundle source ignoré"
-        os.remove(etranger)
-        manifeste(sha256(flash), sha256(patche))
-        assert etat("2 flash patché") is True
+        # The bundle rewritten by WTOOLS since the patch: red as well.
+        manifest(sha256(foreign), sha256(patched))
+        assert state("2 patched flash") is False, "source bundle ignored"
+        os.remove(foreign)
+        manifest(sha256(flash), sha256(patched))
+        assert state("2 patched flash") is True
 
-        # La planche doit être postérieure au flash patché, sinon elle montre
-        # les sources et non ce qui partira dans l'appareil.
-        planche = os.path.join(travail, PLANCHE)
-        open(planche, "wb").write(b"png")
-        os.utime(planche, (0, os.path.getmtime(patche) - 10))
-        assert etat("3 planche") is False, "planche antérieure = rouge"
-        os.utime(planche, (0, os.path.getmtime(patche) + 10))
-        assert etat("3 planche") is True
+        # The sheet must be newer than the patched flash, otherwise it shows
+        # the sources and not what will go into the device.
+        sheet = os.path.join(work, SHEET)
+        open(sheet, "wb").write(b"png")
+        os.utime(sheet, (0, os.path.getmtime(patched) - 10))
+        assert state("3 sheet") is False, "older sheet = red"
+        os.utime(sheet, (0, os.path.getmtime(patched) + 10))
+        assert state("3 sheet") is True
 
-        texte, vert = rapport(travail, flash)
-        assert vert and "wlinkActivated" in texte and "profiles" in texte
-    print("ok — 4 gardes, chacune rouge puis verte, chaîne d'empreintes "
-          "du flash patché vérifiée, refus en tête de rapport")
+        text, green = report(work, flash)
+        assert green and "wlinkActivated" in text and "profiles" in text
+    print("ok — 4 gates, each red then green, the patched flash's chain of "
+          "hashes verified, refusal at the head of the report")
 
 
-def _parseur():
+def _parser():
     import argparse
-    parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parseur.add_argument("dossier", nargs="?",
-                         help="le dossier de travail, HORS du depot ; "
-                              "sans argument, self-check")
-    return parseur
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("directory", nargs="?",
+                        help="the working directory, OUTSIDE the repository; "
+                             "with no argument, self-check")
+    return parser
 
 
 def main(argv=None):
-    args = _parseur().parse_args(argv)
-    if args.dossier is None:
+    args = _parser().parse_args(argv)
+    if args.directory is None:
         self_test()
         return 0
-    travail = os.path.abspath(os.path.expanduser(args.dossier))
-    if travail == DEPOT or sous(travail, DEPOT):
-        print("refus : le dossier de travail est sous le dépôt. Silhouettes, "
-              "flash patché et planche sont les données de votre lyre et "
-              "restent dehors (LEGAL.md) — ~/gobos par exemple.",
+    work = os.path.abspath(os.path.expanduser(args.directory))
+    if work == REPO or under(work, REPO):
+        print("refused: the working directory is under the repository. "
+              "Silhouettes, patched flash and contact sheet are your fixture's "
+              "data and stay outside (LEGAL.md) — ~/gobos, for example.",
               file=sys.stderr)
         return 2
-    if not os.path.isdir(travail):
-        print(f"refus : {travail} n'est pas un dossier", file=sys.stderr)
+    if not os.path.isdir(work):
+        print(f"refused: {work} is not a directory", file=sys.stderr)
         return 2
     flash = find_flash(os.environ.get("WOLFMIX_FLASH"))
     if not flash:
-        print("aucune image flash locale (WTOOLS n'a jamais téléchargé le "
-              "firmware) — rien à conduire", file=sys.stderr)
+        print("no local flash image (WTOOLS never downloaded the firmware) — "
+              "nothing to guide", file=sys.stderr)
         return 0
-    texte, vert = rapport(travail, flash)
-    print(texte)
-    return 0 if vert else 2
+    text, green = report(work, flash)
+    print(text)
+    return 0 if green else 2
 
 
 if __name__ == "__main__":

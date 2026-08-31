@@ -47,16 +47,38 @@ PADS_PAR_GROUPE = 20         # un masque de 20 bits par groupe dans f31
 _POS_CLES = ("page", "index", "nom", "pan", "tilt", "fan")
 _POS_CHAMPS = {"pan": "f6", "tilt": "f7", "fan": "f3"}
 _PAL_CLES = ("index", "rouge", "vert", "bleu")
-# Record 130 = la carte de mapping DMX IN (SPEC §7.3, MAP-01..07). `f4` est la
-# FONCTION visée, pas la catégorie de l'écran : deux entrées de la catégorie
-# `Flash` portent des `f4` distincts. Seules les cinq fonctions écrites par
-# l'appareil sous nos yeux sont ici — en inventer une autre serait deviner.
-_MAP_FONCTIONS = {"dimmer_groupe": 20, "main": 27, "preset": 70,
-                  "bpm_tap": 17, "wolf": 10}
-# L'instance, quand la fonction n'en a pas : MAIN porte 0 (entrée d'usine),
-# BPM Tap et Wolf portent 255 (entrées créées par l'appareil). Mesuré, pas déduit.
-_MAP_INSTANCE_FIXE = {"main": 0, "bpm_tap": 255, "wolf": 255}
-_MAP_CLES = ("cible", "groupe", "index", "canal")
+# Record 130 = la carte de mapping DMX IN (SPEC §7.3, MAP-01..09). `f4` est la
+# FONCTION visée, pas la catégorie de l'écran : les sept fonctions `Flash` en
+# portent sept différents. Les quinze ci-dessous sont l'inventaire complet des
+# cinq catégories, chacune mesurée par l'entrée que l'appareil a créée quand
+# l'opérateur l'a sélectionnée à l'écran (MAP-09, dix d'un coup, chaque canal
+# étiquetant son entrée).
+#
+# Valeur = (f4, instance fixe) ; `None` = l'instance vient de la spec.
+# L'instance vaut **255** dès que la fonction n'est pas liée à une instance
+# numérotée — y compris `select_preset` et `jump_preset`, où c'est la VALEUR
+# reçue qui choisit. Deux fonctions partagent un `f4` avec `preset` (70) et
+# trois avec `jump_preset` (78) : c'est le couple (f4, instance) qui identifie.
+_MAP_FONCTIONS = {
+    "dimmer_groupe":   (20, None),   # instance = le groupe A–H
+    "main":            (27, 0),      # l'entrée d'usine ne porte pas de f7
+    "preset":          (70, None),   # instance = l'index du preset
+    "select_preset":   (70, 255),    # même f4 : la valeur reçue choisit
+    "preset_page":     (82, None),   # instance = la page, base zéro
+    "bpm_tap":         (17, 255),
+    "wolf":            (10, 255),
+    "strobe":          (11, 255),
+    "blinder":         (12, 255),
+    "speed":           (13, 255),
+    "blackout":        (14, 255),
+    "smoke":           (15, 255),
+    "jump_preset":     (78, 255),    # la valeur reçue choisit
+    "previous_preset": (78, 1),
+    "next_preset":     (78, 2),
+}
+_MAP_CLES = ("cible", "groupe", "index", "page", "canal")
+PAGES_PRESET = 7             # Page 1 à 7, l'écran n'en propose pas d'autres
+PRESETS_MAX = 200            # 0–199, la borne du panneau
 CANAL_MAX = 512              # borne de l'encodeur du panneau, mesurée
 
 
@@ -331,18 +353,24 @@ def compiler(spec, sortie):
                     f"mapping : cible {cible!r} hors périmètre ; mesurées : "
                     f"{sorted(_MAP_FONCTIONS)}")
             ctx = f"mapping {cible}"
-            fonction = _MAP_FONCTIONS[cible]
+            fonction, instance = _MAP_FONCTIONS[cible]
             if cible == "dimmer_groupe":
                 g = me.get("groupe")
                 if g not in list("ABCDEFGH"):
                     raise ValueError(f"{ctx} : 'groupe' doit être A–H")
                 instance = ord(g) - ord("A")
             elif cible == "preset":
-                instance = _borne(ctx, "index", me.get("index", -1), 0, 199)
-            else:
-                if "groupe" in me or "index" in me:
-                    raise ValueError(f"{ctx} : cette fonction n'a pas d'instance")
-                instance = _MAP_INSTANCE_FIXE[cible]
+                instance = _borne(ctx, "index", me.get("index", -1),
+                                  0, PRESETS_MAX - 1)
+            elif cible == "preset_page":
+                # la page s'écrit comme elle s'affiche, 1–7 ; stockée en base zéro
+                instance = _borne(ctx, "page", me.get("page", -1),
+                                  1, PAGES_PRESET) - 1
+            if any(k in me for k in ("groupe", "index", "page")
+                   if k != {"dimmer_groupe": "groupe", "preset": "index",
+                            "preset_page": "page"}.get(cible)):
+                raise ValueError(f"{ctx} : clé d'instance qui ne s'applique pas "
+                                 "à cette fonction")
             canal = me.get("canal", "absent")
             if canal == "absent":
                 raise ValueError(f"{ctx} : clé 'canal' obligatoire "
@@ -526,6 +554,10 @@ def _demo_sur(base):
                           "canal": 300},          # deux octets : f5 = 1
                          {"cible": "preset", "index": 4, "canal": 40},
                          {"cible": "wolf", "canal": 45},
+                         {"cible": "preset_page", "page": 3, "canal": 101},
+                         {"cible": "smoke", "canal": 106},
+                         {"cible": "select_preset", "canal": 107},
+                         {"cible": "next_preset", "canal": 110},
                          {"cible": "dimmer_groupe", "groupe": "C",
                           "canal": None}]}        # retrait
     with tempfile.TemporaryDirectory() as tmp:
@@ -598,7 +630,12 @@ def _demo_sur(base):
         assert carte[(10, 255)] == 45, carte         # créée, instance 255
         assert (20, 2) not in carte, carte           # retirée
         assert carte[(20, 0)] == 1 and carte[(27, 0)] == 9, carte  # intactes
-        assert d130["f1"] == len(d130["mappings"]) == 9 - 1 + 2, d130["f1"]
+        assert carte[(82, 2)] == 101, carte      # page 3 -> instance 2
+        assert carte[(15, 255)] == 106, carte
+        assert carte[(70, 255)] == 107, carte    # même f4 que preset, inst. 255
+        assert carte[(78, 2)] == 110, carte      # f4 partagé, instance fixe 2
+        assert carte[(70, 4)] != carte[(70, 255)], "les deux f4=70 confondus"
+        assert d130["f1"] == len(d130["mappings"]) == 9 - 1 + 6, d130["f1"]
 
         for mauvais in [{"base": base, "fondu": 1},
                         {"base": base, "presets": [{"id": 9999, "nom": "x"}]},
@@ -637,7 +674,16 @@ def _demo_sur(base):
                         {"base": base, "mappings": [{"cible": "wolf"}]},
                         # retirer une entrée absente
                         {"base": base, "mappings": [{"cible": "bpm_tap",
-                                                     "canal": None}]}]:
+                                                     "canal": None}]},
+                        # page hors 1–7
+                        {"base": base, "mappings": [{"cible": "preset_page",
+                                                     "page": 8, "canal": 5}]},
+                        # clé d'instance qui ne s'applique pas à la fonction
+                        {"base": base, "mappings": [{"cible": "preset_page",
+                                                     "groupe": "A", "page": 1,
+                                                     "canal": 5}]},
+                        {"base": base, "mappings": [{"cible": "select_preset",
+                                                     "index": 3, "canal": 5}]}]:
             try:
                 compiler(mauvais, os.path.join(tmp, "err.wpj"))
                 raise AssertionError(f"erreur attendue : {mauvais}")

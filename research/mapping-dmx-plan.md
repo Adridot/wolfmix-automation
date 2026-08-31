@@ -549,3 +549,83 @@ Prédiction avant déploiement : l'écran `Mappings` montre A–H sur 1–8 et M
 sur 9, et **plus aucune entrée** en `Preset`, `Flash` ni pour les canaux 200/300
 — p 0,85. Ce serait la deuxième écriture device-confirmed, et la première qui
 **supprime** des entrées plutôt que d'en modifier une.
+
+---
+
+# MAP-08 et MAP-09 — la table est complète, et le writer la couvre entièrement
+
+## MAP-08 — écrire, c'est aussi supprimer et ordonner — **[device-confirmed]**
+
+`remise-usine.wpj` déployé sur un appareil qui portait **13 entrées dans un
+ordre différent du nôtre** (`B D E F G H MAIN A … C`). Relu après :
+
+| Contrôle | Résultat |
+|---|---|
+| records dont la charge utile diffère | **aucun**, les 41 identiques |
+| record 130 | identique octet pour octet à ce que nous avons écrit |
+| entrées | 13 → 9, dans **notre** ordre `A B C D E F G H MAIN` |
+
+L'appareil ne renormalise rien. Le writer est donc device-confirmed sur les
+quatre opérations : créer, modifier, **supprimer**, **ordonner**.
+
+## MAP-09 — les dix fonctions restantes, en une seule sauvegarde
+
+Le protocole coûteux d'une manip par mesure n'était pas nécessaire ici : chaque
+mapping crée une **entrée neuve**, donc en donnant à chaque fonction un canal
+distinct, **le canal étiquette son entrée**. Dix fonctions, un seul aller au
+panneau, une seule sauvegarde, aucun état intermédiaire à perdre.
+
+| Canal | `f4` | `f2` | Fonction |
+|---|---|---|---|
+| 101 | **82** | **2** | Preset Page 3 |
+| 102 | **11** | 255 | Strobe |
+| 103 | **12** | 255 | Blinder |
+| 104 | **13** | 255 | Speed |
+| 105 | **14** | 255 | Blackout |
+| 106 | **15** | 255 | Smoke |
+| 107 | **70** | 255 | Select Preset |
+| 108 | **78** | 255 | Jump Preset |
+| 109 | 78 | **1** | Previous Preset |
+| 110 | 78 | **2** | Next Preset |
+
+Record 130 seul modifié, `f1` 9 → 19.
+
+**Contrôle interne de l'étiquetage.** La méthode dépend de l'opérateur ayant
+suivi l'ordre donné. Elle se vérifie toute seule : `Strobe Blinder Speed
+Blackout Smoke` sortent en **11 12 13 14 15**, une suite monotone dans l'ordre
+exact de l'écran. Une attribution mélangée ne produirait pas ça.
+
+## Les trois choses que la mesure a imposées
+
+**1 · Un `f4` n'identifie pas une entrée.** `f4 = 70` est porté par un preset
+précis **et** par `Select Preset` ; `f4 = 78` par les trois actions de
+navigation. La clé est le **couple** `(f4, f2)` — ce que le writer faisait
+déjà, mais par prudence sur l'ordre, pas parce qu'on savait les `f4` partagés.
+
+**2 · `f2 = 255` veut dire « pas d'instance numérotée »**, et couvre aussi les
+deux fonctions où c'est la **valeur reçue** qui choisit le preset. Ma lecture
+antérieure — « 255 quand la fonction est unique » — était juste par accident.
+
+**3 · La suite `Flash` a un trou.** 10 à 15 sont contigus dans l'ordre de
+l'écran, mais **BPM Tap est à 17, pas 16**. C'est exactement pourquoi les dix
+ont été mesurés au lieu d'être extrapolés depuis Wolf = 10 : une règle
+apparente aurait donné 16.
+
+## Ma prédiction
+
+| Prédit | | |
+|---|---|---|
+| record 130 seul, `f1` 9 → 19, dix `f4` neufs et distincts — p 0,70 | ⚠️ | tout juste **sauf** « distincts » : 70 et 78 sont réutilisés |
+| `f2 = 2` sur Preset Page — p 0,70 | ✅ | l'instance est la page en base zéro |
+| `f2 = 255` sur les neuf autres — p 0,70 | ❌ | vrai pour six, faux pour Previous (1) et Next (2) |
+| les `General` portent une instance plutôt que 255 — p 0,25 | ✅ en partie | deux des quatre |
+
+La lecture minoritaire était la bonne moitié du temps, et sur la moitié que la
+lecture majoritaire ne voyait pas.
+
+## Le writer couvre maintenant les quinze
+
+`wpj_show.py` accepte les quinze cibles de l'écran. Validation : à partir de
+l'état d'usine, il reproduit la table de **19 entrées** que l'appareil venait
+d'écrire — mêmes fonctions, mêmes instances, mêmes canaux, `f7` et `f8`
+compris. Rien de l'écran `Mappings` n'échappe désormais au compilateur.

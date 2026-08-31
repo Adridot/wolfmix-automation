@@ -158,19 +158,40 @@ and higher.
 | `index` | int | the preset index, required for `preset` only |
 | `canal` | int or null | **required** — the DMX IN channel **1–512**, or `null` to remove the mapping |
 
-| `cible` | Function | Instance |
-|---|---|---|
-| `dimmer_groupe` | a group's dimmer | `groupe`, A–H |
-| `main` | the MAIN dimmer | none |
-| `preset` | a preset | `index` |
-| `bpm_tap` | BPM Tap | none |
-| `wolf` | Wolf | none |
+| `cible` | `f4` | Function | Instance |
+|---|---|---|---|
+| `dimmer_groupe` | 20 | a group's dimmer | `groupe`, A–H |
+| `main` | 27 | the MAIN dimmer | none |
+| `preset` | 70 | a specific preset | `index`, 0–199 |
+| `select_preset` | 70 | Select Preset — the incoming **value** picks | none |
+| `preset_page` | 82 | a preset page | `page`, 1–7 |
+| `bpm_tap` | 17 | BPM Tap | none |
+| `wolf` | 10 | Wolf | none |
+| `strobe` | 11 | Strobe | none |
+| `blinder` | 12 | Blinder | none |
+| `speed` | 13 | Speed | none |
+| `blackout` | 14 | Blackout | none |
+| `smoke` | 15 | Smoke | none |
+| `jump_preset` | 78 | Jump Preset — the incoming **value** picks | none |
+| `previous_preset` | 78 | Previous Preset | none |
+| `next_preset` | 78 | Next Preset | none |
 
-**Only these five are writable, and that is on purpose.** The screen offers
-five *categories*, but the file stores the *function*: BPM Tap and Wolf both
-sit under `Flash` and carry different ids. Every function above was written by
-the controller under observation; naming a sixth would mean guessing an id, so
-any other `cible` is refused.
+**These fifteen are the whole screen, and nothing else is writable.** The
+screen offers five *categories*, but the file stores the *function*: the seven
+`Flash` entries carry seven different ids. Every id above was written by the
+controller when the operator selected that item; nothing is inferred from a
+sequence, so any other `cible` is refused.
+
+**A function id is not unique on its own.** `preset` and `select_preset` share
+`f4 = 70`; `jump_preset`, `previous_preset` and `next_preset` share `f4 = 78`.
+An entry is identified by the **pair** `(f4, instance)`, which is also how this
+compiler addresses it.
+
+**Instance 255 means "no fixed instance".** Every function without a numbered
+target carries it — including the two where the incoming DMX *value* is what
+picks the preset. Only `dimmer_groupe`, `preset` and `preset_page` take a
+number, and `main` is the one function that carries 0 instead of 255: it is a
+factory entry, and why it differs is not measured.
 
 **Removing is an absence, not a value.** `"canal": null` deletes the entry —
 there is no "unmapped" sentinel to write. Removing a mapping that does not

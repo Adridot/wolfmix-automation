@@ -119,7 +119,7 @@ every run.
 | 116 | 162–334 | 3–7 | **fixture profile catalogue** | correlated |
 | 120 | 532–1199 | 86–258 | flat per-fixture-channel value table | correlated |
 | 125 | 111–137 | **9** | **the 8 groups A–H + a 9th slot**: name + profile bitmask | correlated (§7.2) |
-| 130 | 102–155 | 9–13 | **the DMX IN mapping table** | **device-confirmed** (§7.3) |
+| 130 | 102–229 | 9–19 | **the DMX IN mapping table** | **device-confirmed** (§7.3) |
 | 135 | 140–145 | **16** | the 16 ColorFX palette pads (RGBWALU) | correlated |
 | 140 ×8 | 182–189 | **20** each | **static COLOUR palette**, one per group A–H, `f2` = group 0…7 | **device-confirmed** (§3.3) |
 | 145 ×8 | 40–159 | **20** each | **static GOBO palette**, one per group A–H, `f2` = group 0…7 | **device-confirmed** (§3.4) |
@@ -1061,15 +1061,43 @@ single-variable differential, then read back.
 | `f7`, `f8` | 1 everywhere, never moved | **no name** |
 
 Functions measured, each by the entry the device created when that item was
-selected on the `Mappings` screen:
+selected on the `Mappings` screen. MAP-09 took the last ten in a single save:
+each was given a distinct channel, so the channel labels its own entry and no
+intermediate state had to be preserved.
 
-| `f4` | Function |
-|---|---|
-| 20 | group dimmer — `f2` is the group index 0–7 |
-| 27 | MAIN dimmer |
-| 70 | preset — `f2` is the preset index |
-| 17 | BPM Tap |
-| 10 | Wolf |
+| `f4` | Function | Instance | Category on screen |
+|---|---|---|---|
+| 20 | group dimmer | the group, 0–7 | Group Dimmer |
+| 27 | MAIN dimmer | 0 | Group Dimmer |
+| 70 | a specific preset | the preset index | Preset |
+| 70 | Select Preset | 255 | General |
+| 82 | a preset page | the page, 0-based | Preset Page |
+| 10 | Wolf | 255 | Flash |
+| 11 | Strobe | 255 | Flash |
+| 12 | Blinder | 255 | Flash |
+| 13 | Speed | 255 | Flash |
+| 14 | Blackout | 255 | Flash |
+| 15 | Smoke | 255 | Flash |
+| 17 | BPM Tap | 255 | Flash |
+| 78 | Jump Preset | 255 | General |
+| 78 | Previous Preset | 1 | General |
+| 78 | Next Preset | 2 | General |
+
+That is the whole screen: fifteen functions across five categories, and no id
+is inferred from a neighbour. The `Flash` run 10–15 is contiguous but **BPM Tap
+sits at 17, not 16** — the gap is real, and it is why the sequence was measured
+rather than extrapolated.
+
+**A function id does not identify an entry on its own.** `f4 = 70` is carried
+by both a specific preset and `Select Preset`; `f4 = 78` by all three preset
+navigation actions. The identifying key is the **pair** `(f4, f2)`.
+
+**`f2 = 255` means "no numbered instance".** It covers the seven flash keys and
+also `Select Preset` and `Jump Preset`, where the incoming DMX **value** is
+what picks the preset. `Previous`/`Next Preset` carry 1 and 2 under the same
+`f4`; nothing carries 0 there, and why is not measured. `MAIN` carrying 0 rather
+than 255 is the other unexplained instance — it is the one factory entry among
+the non-instanced functions.
 
 **`f4` is the function, not the screen's category.** BPM Tap and Wolf both live
 under the `Flash` category and carry different `f4`. The five categories the
@@ -1104,6 +1132,12 @@ MAP-06: group D moved from CH4 to CH200 by editing the file alone — one entry'
 `f6` from 3 to 199, +1 byte, record 130 the only payload record touched, SHA-1
 recomputed, all identities passing before upload. Deployed, and the controller's
 `Mappings` screen displays **CH200**. The table is writable, not just readable.
+
+MAP-08 closed the rest of it. A file carrying the factory table was deployed
+over a device state that held thirteen entries in a different order: the
+controller kept **every record byte-identical**, so writing the table also
+covers **deleting** entries and **choosing their order** — the device
+renormalises nothing.
 
 ---
 

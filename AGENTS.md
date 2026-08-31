@@ -7,7 +7,9 @@ condensed version of [`README.md`](README.md) + [`docs/methodology.md`](docs/met
 
 Reverse-engineering of the Wolfmix `.wpj` project file format, plus tools that
 read and write it, plus a client for the W1 controller's USB protocol. Python
-3, **standard library only**. The deliverable is trustworthy knowledge:
+**3.10 or later**, **standard library only** — the floor is measured, and
+[`.github/workflows/check.yml`](.github/workflows/check.yml) runs the gate on
+3.10 and 3.14 on a clone with no corpus. The deliverable is trustworthy knowledge:
 [`SPEC.md`](SPEC.md) is the product, `tools/` is its executable proof.
 
 ## The one command

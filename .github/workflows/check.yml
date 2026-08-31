@@ -1,0 +1,46 @@
+name: check
+
+# The gate, on a clone with nothing but the repository: no project files, no
+# vendor bundle, no controller, no private name list. That is the whole point
+# — everything a corpus would prove is proved on the operator's machine, and
+# everything that must hold *without* one is proved here.
+#
+# `--abstentions-ok` maps exit 3 to 0. This job is the one context that
+# expects abstentions, and it says so rather than hiding them: the summary at
+# the end of the run still names every check that verified nothing.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The measured floor and a current one. `tools/check.py` shells out to
+        # `python3`, so the matrix reaches every self-check, not just this
+        # step's interpreter.
+        python-version: ['3.10', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      # No `pip install`: the repository is standard library only, and a
+      # dependency appearing here would be the first sign that stopped
+      # being true.
+      - name: make check
+        run: python3 tools/check.py --abstentions-ok
+      - name: hardware-free self-tests
+        run: |
+          python3 tools/wolfmix.py self-test
+          python3 tools/wolfmix_experiment.py self-test
+      - name: the same, with assertions disabled
+        run: python3 -O -m unittest discover -s tests -t .

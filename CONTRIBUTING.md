@@ -16,6 +16,10 @@ the whole method.
 - Exit **0** = everything passed. Exit **3** = green, but something abstained:
   the summary names it, and nothing it covers was verified. That is not a pass.
   Exit **1** = something failed.
+- CI runs the same gate on a clone with no corpus, on Python 3.10 and 3.14, so
+  a change that only works with your project files fails there. It passes
+  `--abstentions-ok` because that context expects them — the summary still
+  names every one.
 
 ## Adding or correcting a format claim
 

@@ -49,10 +49,10 @@ rig.
 
 | `energie` | family | dimmer* | beam FX | speed |
 |---|---|---|---|---|
-| 0–24 | `statique` | 120 | — | — |
-| 25–49 | `faisceau` | 180 | Sparkle | 45 % |
-| 50–74 | `mouvement` | 225 | — | 70 % |
-| 75–100 | `mouvement+faisceau` | 255 | Chaser | 95 % |
+| 0–24 | `static` | 120 | — | — |
+| 25–49 | `beam` | 180 | Sparkle | 45 % |
+| 50–74 | `move` | 225 | — | 70 % |
+| 75–100 | `move+beam` | 255 | Chaser | 95 % |
 
 > [!WARNING]
 > Before FX6-02 the two upper rungs read 110 % and 170 %, and the speed key

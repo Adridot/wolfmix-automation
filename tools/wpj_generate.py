@@ -1,29 +1,27 @@
 #!/usr/bin/env python3
-"""Générateur de shows : une intention + le rig lu dans le donneur → un .wpj.
+"""Show generator: an intention + the rig read from the donor → a .wpj.
 
-Ce que l'outil compose, c'est la **banque de presets** d'un show : une
-ambiance de l'intention devient un preset nommé, posé sur une page libre,
-avec sa couleur statique, ses dimmers par groupe, sa position et ses FX.
-Le rig n'est pas décrit à la main — il est **lu dans le donneur** (groupes,
-luminaires, positions nommées, palettes par groupe), ce qui évite d'inventer
-un patch que rien ne validerait.
+What this composes is a show's **preset bank**: one mood of the intention
+becomes a named preset, placed on a free page, with its static colour, its
+per-group dimmers, its position and its FX. The rig is not described by hand —
+it is **read from the donor** (groups, fixtures, named positions, per-group
+palettes), which avoids inventing a patch nothing would validate.
 
-Trois choses qu'il ne fait pas, et pourquoi :
-- il ne crée ni luminaire ni groupe ni profil : rien n'a été mesuré dans ce
-  sens, et un patch synthétisé n'aurait aucune preuve derrière lui ;
-- il n'écrit pas `165.f16` (les masques de moteurs) : il **choisit** un
-  preset du donneur dont les moteurs correspondent à l'ambiance et le clone.
-  Écrire f16 sans écrire son doublon `color_fx_active`/`move_fx_active`
-  produirait un preset que l'appareil rend autrement que le fichier ne le
-  dit (registre, ACC-03) ;
-- il ne rappelle rien : le déploiement et le pilotage restent
-  `wolfmix_experiment.py deploy` puis UNE ouverture manuelle, puis
-  `wolfmix.py mode` + `wolfmix.py preset <id>`.
+Three things it does not do, and why:
+- it creates no fixture, no group and no profile: nothing was measured in that
+  direction, and a synthesised patch would have no evidence behind it;
+- it does not write `165.f16` (the engine masks): it **picks** a donor preset
+  whose engines match the mood, and clones it. Writing f16 without writing its
+  twin `color_fx_active`/`move_fx_active` would produce a preset the device
+  renders differently from what the file says (registry, ACC-03);
+- it recalls nothing: deploying and driving stay
+  `wolfmix_experiment.py deploy`, then ONE manual open, then `wolfmix.py mode`
+  + `wolfmix.py preset <id>`.
 
-Usage :
-  wpj_generate.py rig donneur.wpj                    le rig lu dans le donneur
-  wpj_generate.py compose intention.json sortie.wpj  [--spec spec.json]
-  wpj_generate.py                                    self-check (corpus)
+Usage:
+  wpj_generate.py rig donor.wpj                     the rig read from the donor
+  wpj_generate.py compose intention.json out.wpj    [--spec spec.json]
+  wpj_generate.py                                   self-check (corpus)
 """
 import json
 import os
@@ -37,43 +35,43 @@ import wpj_identities
 
 GROUPES = "ABCDEFGH"
 PADS = wpj_show.PADS_PAR_GROUPE
-SINGLE = 9                     # `f30` : PATTERN = SINGLE — device-confirmed
+SINGLE = 9                     # `f30`: PATTERN = SINGLE — device-confirmed
 
-# Bits de `165.f10`, dans l'ordre de l'écran PRESET EDIT ; un bit MIS =
-# bascule ÉTEINTE = ce contenu-là n'est pas appliqué (F4-02).
+# Bits of `165.f10`, in PRESET EDIT screen order; a SET bit = the toggle is
+# OFF = that content is not applied (F4-02).
 BIT_COLOR, BIT_MOVE, BIT_BEAM, BIT_GOBO, BIT_LIVE, BIT_OTHER = range(6)
 
-# Familles = l'état (couleur, mouvement, faisceau) des trois premiers
-# moteurs de `f16`. Toutes ont le moteur COULEUR à l'arrêt : c'est ce qui
-# rend la couleur statique de l'ambiance visible plutôt qu'écrasée par un
-# Color FX. Échelle d'activité croissante.
+# Families = the (colour, move, beam) state of the first three engines of
+# `f16`. All of them keep the COLOUR engine off: that is what makes the mood's
+# static colour visible instead of being overwritten by a Color FX. Ordered by
+# increasing activity.
 FAMILLES = {
-    "statique": (False, False, False),
-    "faisceau": (False, False, True),
-    "mouvement": (False, True, False),
-    "mouvement+faisceau": (False, True, True),
+    "static": (False, False, False),
+    "beam": (False, False, True),
+    "move": (False, True, False),
+    "move+beam": (False, True, True),
 }
-# Paliers d'énergie — RÉGLAGES, pas des mesures : à retoucher sur le rig.
-# (énergie max, famille, dimmer, effet de faisceau, vitesse %)
-# Les vitesses 45/110/170 d'avant FX6-02 partaient sur f2 en croyant régler la
-# vitesse : f2 est le fondu, donc les deux paliers hauts allongeaient le fondu
-# au lieu d'accélérer l'effet — et 110/170 tombaient dans la plage « Flick ».
-# La clé `vitesse` vise maintenant f9, et les paliers rentrent dans 0–100.
+# Energy steps — SETTINGS, not measurements: retune them on your rig.
+# (max energy, family, dimmer, beam effect, speed %)
+# The 45/110/170 speeds from before FX6-02 went to f2 believing they set the
+# speed: f2 is the fade, so the two upper steps lengthened the fade instead of
+# speeding the effect up — and 110/170 fell into the "Flick" range. The `speed`
+# key now targets f9, and the steps fit inside 0–100.
 PALIERS = (
-    (24, "statique", 120, None, None),
-    (49, "faisceau", 180, 1, 45),            # 1 = Sparkle
-    (74, "mouvement", 225, None, 70),
-    (100, "mouvement+faisceau", 255, 2, 95),   # 2 = Chaser
+    (24, "static", 120, None, None),
+    (49, "beam", 180, 1, 45),                  # 1 = Sparkle
+    (74, "move", 225, None, 70),
+    (100, "move+beam", 255, 2, 95),            # 2 = Chaser
 )
 _INTENTION_CLES = ("base", "name", "page", "moods")
 _AMBIANCE_CLES = ("name", "energy", "color", "groups", "position",
                   "template", "dimmer", "live_edit")
 
 
-# --- lecture du rig ----------------------------------------------------------
+# --- reading the rig ---------------------------------------------------------
 
 def _moteurs(preset):
-    """Les douze tranches de 9 bits de `f16`, ou None si le champ manque."""
+    """The twelve 9-bit slices of `f16`, or None when the field is missing."""
     h = preset.get("f16")
     if not isinstance(h, dict) or "hex" not in h:
         return None
@@ -85,14 +83,14 @@ def _moteurs(preset):
 
 
 def lire_rig(chemin):
-    """Le rig tel que le donneur le porte : groupes, luminaires, positions,
-    palettes, et les presets utilisables comme modèles."""
+    """The rig as the donor carries it: groups, fixtures, positions, palettes,
+    and the presets usable as templates."""
     w = wpjlib.Wpj.load(chemin)
     profils = wpj_codec.decode(116, w.get(116)).get("profiles", [])
     groupes = {g: [] for g in range(len(GROUPES))}
-    # Chaque entrée de 115 est un luminaire réel — vérifié sur les 45 fichiers
-    # du corpus : leur nombre égale celui des index `fixture` du record 105.
-    # `dmx_address` absent = 0 = adresse DMX 1 (le champ est 0-based).
+    # Every entry of 115 is a real fixture — checked over the corpus files:
+    # their count equals the number of `fixture` indexes in record 105.
+    # An absent `dmx_address` = 0 = DMX address 1 (the field is 0-based).
     for f in wpj_codec.decode(115, w.get(115)).get("fixtures", []):
         if not isinstance(f, dict):
             continue
@@ -121,10 +119,10 @@ def lire_rig(chemin):
 
 
 def modeles(rig):
-    """famille → id du preset du donneur qui la porte (le plus petit id)."""
+    """family → id of the donor preset that carries it (the smallest id)."""
     trouves = {}
     for p in rig["presets"]:
-        if "id" not in p:                  # l'id 0 omet le champ : inclonable
+        if "id" not in p:                  # id 0 omits the field: not clonable
             continue
         m = _moteurs(p)
         if m is None:
@@ -149,8 +147,8 @@ def _couleur(valeur):
 
 
 def _pad_le_plus_proche(palette, rgb):
-    """Le pad 1-based dont la couleur est la plus proche, distance RGB au carré.
-    Aucune écriture de palette : on choisit dans ce que le groupe porte déjà."""
+    """The 1-based pad whose colour is nearest, squared RGB distance. No palette
+    is written: we choose from what the group already carries."""
     if not palette:
         return None
     ecart = [sum((a - b) ** 2 for a, b in zip(pad, rgb)) for pad in palette]
@@ -165,32 +163,32 @@ def _palier(energie):
 
 
 def _famille_disponible(voulue, dispo):
-    """La famille voulue, ou la plus proche vers le bas que le donneur porte."""
+    """The family asked for, or the nearest one below that the donor carries."""
     echelle = list(FAMILLES)
     for nom in reversed(echelle[:echelle.index(voulue) + 1]):
         if nom in dispo:
             return nom
-    raise ValueError(f"aucun preset du donneur ne porte la famille {voulue!r} "
-                     f"ni une plus sobre ; familles trouvées : {sorted(dispo)}")
+    raise ValueError(f"no donor preset carries the family {voulue!r} nor a "
+                     f"quieter one; families found: {sorted(dispo)}")
 
 
 def composer(intention):
-    """intention → (spec pour wpj_show.compiler, rapport ligne par ligne)."""
+    """intention → (spec for wpj_show.compiler, a line-by-line report)."""
     wpj_show.cles(intention, _INTENTION_CLES, "intention")
     if "base" not in intention:
-        raise ValueError("intention : clé 'base' (donneur .wpj) obligatoire")
+        raise ValueError("intention: the 'base' key (donor .wpj) is required")
     rig = lire_rig(intention["base"])
     dispo = modeles(rig)
     peuples = [g for g, f in rig["groups"].items() if f]
     if not peuples:
-        raise ValueError(f"{intention['base']} : aucun luminaire affecté à un "
-                         "groupe A–H, il n'y a rien à piloter")
+        raise ValueError(f"{intention['base']}: no fixture assigned to a group "
+                         "A–H, there is nothing to drive")
     page = intention.get("page") or rig["id_max"] // PADS + 2
     wpj_show.borne("intention", "page", page, 1, 10)
     if (page - 1) * PADS <= rig["id_max"]:
-        raise ValueError(f"page {page} : ses ids commencent à "
-                         f"{(page - 1) * PADS} et le donneur va déjà jusqu'à "
-                         f"{rig['id_max']} — la création se fait en queue")
+        raise ValueError(f"page {page}: its ids start at {(page - 1) * PADS} "
+                         f"and the donor already reaches {rig['id_max']} — "
+                         "creation happens at the tail")
 
     presets, rapport = [], []
     for n, amb in enumerate(intention.get("moods", [])):
@@ -199,8 +197,8 @@ def composer(intention):
         energie = wpj_show.borne(f"ambiance {nom!r}", "energy",
                                   amb.get("energy", 50), 0, 100)
         famille, dimmer, effet, vitesse = _palier(energie)
-        if "dimmer" in amb:               # l'énergie dit l'activité, pas la
-            dimmer = wpj_show.borne(     # luminosité : override explicite
+        if "dimmer" in amb:               # energy says activity, not
+            dimmer = wpj_show.borne(      # brightness: an explicit override
                 f"ambiance {nom!r}", "dimmer", amb["dimmer"], 0, 255)
         famille = _famille_disponible(famille, dispo)
         _, mouvement, faisceau = FAMILLES[famille]
@@ -210,7 +208,7 @@ def composer(intention):
             lus = [_index_groupe(nom, g) for g in amb["groups"]]
             inconnus = [g for g in lus if g not in peuples]
             if inconnus:
-                raise ValueError(f"ambiance {nom!r} : groupes sans luminaire "
+                raise ValueError(f"mood {nom!r}: groups with no fixture "
                                  f"{[GROUPES[g] for g in inconnus]}")
         else:
             lus = peuples
@@ -237,13 +235,13 @@ def composer(intention):
         if faisceau and effet is not None:
             entree["beam_fx1"] = {"effect": effet, "speed": vitesse}
         if mouvement and vitesse is not None:
-            # pas d'`effet` sur un slot Move : aucun enum n'est publié pour
-            # cette famille, on ne pose que la vitesse.
+            # no `effect` on a Move slot: no enum is published for that
+            # family, so only the speed is set.
             entree["move_fx1"] = {"speed": vitesse}
         presets.append(entree)
         rapport.append(f"id {pid:3d} (page {pid // PADS + 1} slot "
                        f"{pid % PADS + 1:2d})  {_coupe(nom):<19s}  "
-                       f"énergie {energie:3d}  {famille:<18s} modèle {modele:3d}  "
+                       f"energy {energie:3d}  {famille:<18s} template {modele:3d}  "
                        f"groupes {''.join(GROUPES[g] for g in lus) or '-':<8s} "
                        f"pad {pads[lus[0]][0] if lus and pads[lus[0]] else '-'}")
 
@@ -260,7 +258,7 @@ def _index_groupe(nom, lettre):
 
 
 def _coupe(nom):
-    """Tronque sur une frontière UTF-8 : au-delà de 19 octets, le projet
+    """Truncates on a UTF-8 boundary: past 19 bytes, the project
     ENTIER refuse de s'ouvrir (PRESET-05)."""
     b = nom.encode("utf-8")[:wpj_show.NOM_MAX_OCTETS]
     while b:
@@ -272,15 +270,15 @@ def _coupe(nom):
 
 
 def _masque(mouvement, faisceau, rig, modele, live_edit):
-    """`f10` : COLOR et OTHER allumés (la couleur et les dimmers écrits sont
-    lus), MOVE/BEAM selon la famille, GOBO éteint — on n'écrit pas de gobo.
+    """`f10`: COLOR and OTHER on (the colour and the dimmers written are read),
+    MOVE/BEAM per the family, GOBO off — we write no gobo.
 
-    LIVE EDIT est repris du modèle par défaut. `live_edit: false` l'éteint —
-    à faire pour toute cue destinée à une mesure : allumé, un geste au panneau
-    réécrit la copie vive de la cue **sans toucher au fichier**, et le rappel
-    mesure alors autre chose que ce qu'on croit avoir déployé. Ça a coûté une
-    anomalie parfaitement reproductible qui pointait vers le mauvais champ
-    (registre, « GEN-03 retiré »).
+    LIVE EDIT is taken from the template by default. `live_edit: false` turns it
+    off — do that for any cue meant for a measurement: with it on, one gesture
+    at the panel rewrites the cue's live copy **without touching the file**, and
+    the recall then measures something other than what was deployed. That cost
+    us a perfectly reproducible anomaly pointing at the wrong field (registry,
+    "GEN-03 withdrawn").
     """
     src = next((p for p in rig["presets"] if p.get("id", 0) == modele), {})
     if live_edit is None:
@@ -296,9 +294,9 @@ def _masque(mouvement, faisceau, rig, modele, live_edit):
 
 
 def _positions(nom, voulue, rig, lus, modele):
-    """L'index de la position nommée, par groupe. Le record 150 existe une
-    fois par groupe, donc l'index peut différer d'un groupe à l'autre. Un
-    groupe éteint garde celle du modèle : sinon on ferait voyager des
+    """The index of the named position, per group. Record 150 exists once per
+    group, so the index can differ from one group to the next. A group that is
+    off keeps the template's: otherwise we would move
     projecteurs noirs."""
     src = next((p for p in rig["presets"] if p.get("id", 0) == modele), {})
     defaut = src.get("positions") or [0] * len(GROUPES)
@@ -311,7 +309,7 @@ def _positions(nom, voulue, rig, lus, modele):
             sortie.append(table[voulue])
         else:
             raise ValueError(f"ambiance {nom!r} : position {voulue!r} absente "
-                             f"du groupe {GROUPES[g]} ; disponibles : "
+                             f"of group {GROUPES[g]}; available: "
                              f"{sorted(table)}")
     return sortie
 
@@ -321,7 +319,7 @@ def _positions(nom, voulue, rig, lus, modele):
 def imprime_rig(rig):
     print(f"donneur : {rig['fichier']}")
     print(f"presets : {len(rig['presets'])}, id max {rig['id_max']} "
-          f"(page {rig['id_max'] // PADS + 1}) ; première page libre : "
+          f"(page {rig['id_max'] // PADS + 1}); first free page: "
           f"{rig['id_max'] // PADS + 2}")
     print("\ngroupes")
     for g, fixtures in rig["groups"].items():
@@ -332,11 +330,11 @@ def imprime_rig(rig):
         adr = ", ".join(str(f["dmx_address"]) for f in fixtures)
         print(f"  {GROUPES[g]} : {len(fixtures):2d} luminaires — {detail}")
         print(f"      adresses DMX (1-based) : {adr}")
-    print("\npositions nommées, par groupe")
+    print("\nnamed positions, per group")
     for g, table in enumerate(rig["positions"]):
         if rig["groups"][g] and table:
             print(f"  {GROUPES[g]} : " + ", ".join(sorted(table)))
-    print("\nmodèles disponibles (famille → id du preset cloné)")
+    print("\navailable templates (family → id of the cloned preset)")
     for famille in FAMILLES:
         trouve = modeles(rig).get(famille)
         nom = next((p.get("name", "?") for p in rig["presets"]
@@ -350,14 +348,14 @@ def main(argv=None):
     parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     commandes = parseur.add_subparsers(dest="commande")
     rig_cmd = commandes.add_parser(
-        "rig", help="ce qu'un projet donneur offre : groupes, palettes, ids")
+        "rig", help="what a donor project offers: groups, palettes, ids")
     rig_cmd.add_argument("projet")
     compose_cmd = commandes.add_parser(
-        "compose", help="une intention JSON en entree, un projet en sortie")
-    compose_cmd.add_argument("intention", help="le fichier d'intention")
-    compose_cmd.add_argument("sortie", help="projet neuf ; un existant est refuse")
-    compose_cmd.add_argument("--spec", help="ecrit aussi la spec wpj_show "
-                                            "intermediaire dans ce fichier neuf")
+        "compose", help="a JSON intention in, a project out")
+    compose_cmd.add_argument("intention", help="the intention file")
+    compose_cmd.add_argument("sortie", help="new project; an existing one is refused")
+    compose_cmd.add_argument("--spec", help="also write the intermediate "
+                                            "wpj_show spec to this new file")
     args = parseur.parse_args(argv)
     if args.commande is None:
         demo()
@@ -376,13 +374,13 @@ def main(argv=None):
     for ligne in rapport:
         print(ligne)
     for t, occ, la, lb in diffs:
-        print(f"record {t} occ {occ} : {la} -> {lb} octets")
+        print(f"record {t} occ {occ}: {la} -> {lb} bytes")
     print(f"ok : {args.sortie}")
     return 0
 
 
 def demo():
-    """Compose un show de trois ambiances sur le premier donneur utilisable."""
+    """Composes a three-mood show on the first usable donor."""
     for base in wpjlib.corpus_files():
         try:
             return _demo_sur(base)
@@ -395,23 +393,23 @@ def _demo_sur(base):
     import tempfile
     rig = lire_rig(base)
     peuples = [g for g, f in rig["groups"].items() if f]
-    assert peuples, "donneur sans groupe peuplé"
+    assert peuples, "donor with no populated group"
     intention = {"base": base, "name": "WMX GEN DEMO",
                  "moods": [
                      {"name": "ouverture douce", "energy": 10,
                       "color": "#ff0000",
                       "groups": [GROUPES[peuples[0]]]},
-                     {"name": "montée", "energy": 60, "color": "#0000ff"},
-                     {"name": "un nom beaucoup trop long pour la mémoire",
+                     {"name": "build-up", "energy": 60, "color": "#0000ff"},
+                     {"name": "a name far too long for the memory",
                       "energy": 95, "color": "#ffffff"}]}
     spec, rapport = composer(intention)
     assert len(spec["presets"]) == 3 and len(rapport) == 3
     ids = [p["id"] for p in spec["presets"]]
     assert ids == [ids[0], ids[0] + 1, ids[0] + 2] and ids[0] > rig["id_max"]
-    # le nom trop long est coupé AVANT le compilateur, qui le refuserait
+    # the over-long name is cut BEFORE the compiler, which would refuse it
     assert all(len(p["name"].encode("utf-8")) <= wpj_show.NOM_MAX_OCTETS
                for p in spec["presets"])
-    # rouge demandé sur la première ambiance → un pad, et le plus rouge
+    # red asked for on the first mood → one pad, and the reddest one
     pads = spec["presets"][0]["static_color"]
     g = peuples[0]
     assert len(pads[g]) == 1, pads
@@ -419,15 +417,15 @@ def _demo_sur(base):
     assert palette[pads[g][0] - 1] == max(palette, key=lambda c:
                                           -sum((a - b) ** 2 for a, b in
                                                zip(c, (255, 0, 0))))
-    # groupes non nommés = éteints, et pas de couleur posée dessus
+    # groups not named = off, and no colour placed on them
     d = spec["presets"][0]["dimmers"]
     assert d[g] > 0 and all(v == 0 for i, v in enumerate(d) if i != g)
     assert all(not pads[i] for i in range(len(GROUPES)) if i != g)
-    # le masque de contenu laisse COLOR et OTHER allumés dans les trois cas
+    # the content mask leaves COLOR and OTHER on in all three cases
     for p in spec["presets"]:
         assert not p["content_mask"] & (1 << BIT_COLOR)
         assert not p["content_mask"] & (1 << BIT_OTHER)
-    # live_edit: false verrouille la cue contre une réécriture au panneau
+    # live_edit: false locks the cue against a rewrite at the panel
     verrou, _ = composer({**intention, "moods": [
         {**intention["moods"][0], "live_edit": False}]})
     assert verrou["presets"][0]["content_mask"] & (1 << BIT_LIVE)
@@ -443,20 +441,20 @@ def _demo_sur(base):
         assert [p.get("id") for p in presets[-3:]] == ids
         assert wpj_show.masques_vers_pads(
             presets[-3]["static_color"])[g] == pads[g]
-        # une page déjà occupée est refusée
+        # a page already occupied is refused
         try:
             composer({**intention, "page": 1})
-            raise AssertionError("page occupée : erreur attendue")
+            raise AssertionError("occupied page: an error was expected")
         except ValueError:
             pass
-        # une position inconnue est refusée, avec la liste des connues
+        # an unknown position is refused, with the list of known ones
         try:
             composer({**intention, "moods": [
                 {"name": "x", "energy": 50, "position": "Nulle Part"}]})
-            raise AssertionError("position inconnue : erreur attendue")
+            raise AssertionError("unknown position: an error was expected")
         except ValueError:
             pass
-    print(f"self-check ok : 3 ambiances composées et compilées sur "
+    print(f"self-check ok: 3 moods composed and compiled on "
           f"{os.path.basename(base)}", file=sys.stderr)
 
 

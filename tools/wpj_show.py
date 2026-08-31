@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
-"""Compilateur de show minimal, template-based (sur wpjlib + wpj_codec).
+"""A minimal, template-based show compiler (on wpjlib + wpj_codec).
 
-Principe : on part TOUJOURS d'un projet donneur variante A existant et on
-applique une spec JSON d'édition. Tout ce que la spec ne nomme pas est
-préservé octet pour octet par wpjlib. Une position et une entrée de palette
-éditées doivent exister dans le donneur ; un preset peut en plus être **créé
-en queue** en clonant un preset du donneur (clé `modele`) — l'ajout d'une
-entrée `165.f5` avec l'id suivant est device-confirmed, `165.f1` reste
-verbatim (registre, PRESET-01).
-Périmètre = champs à statut ≥ correlated (records 101, 111, 130, 135, 145,
-150, 165). Phase, Size et Fade sont mesurées (FX6-02/03) mais restent hors des
-clés écrites : lues, pas écrites — la liste des clés est `_FX_CLES`.
+The principle: we ALWAYS start from an existing variant-A donor project and
+apply a JSON edit spec. Everything the spec does not name is preserved byte for
+byte by wpjlib. An edited position or palette entry must already exist in the
+donor; a preset may additionally be **created at the tail** by cloning a donor
+preset (the `template` key) — appending a `165.f5` entry with the next id is
+device-confirmed, and `165.f1` is left verbatim (registry, PRESET-01).
 
-Usage :
-  wpj_show.py compile show.json sortie.wpj   compile + auto-verify
-  wpj_show.py verify base.wpj sortie.wpj     liste les records qui diffèrent
-  wpj_show.py                                self-check (corpus, sans trace)
+Scope = fields at status >= correlated (records 101, 111, 130, 135, 145, 150,
+165). Phase, Size and Fade are measured (FX6-02/03) but stay outside the keys
+that get written: read, not written — the key list is `_FX_CLES`.
+
+Usage:
+  wpj_show.py compile show.json out.wpj   compile + self-verify
+  wpj_show.py verify base.wpj out.wpj     list the records that differ
+  wpj_show.py                             self-check (corpus, leaves no trace)
 """
 import copy
 import json
@@ -28,10 +28,10 @@ import wpj_codec
 
 _FX_NOMS = ("beam_fx1", "beam_fx2", "color_fx1", "color_fx2",
             "move_fx1", "move_fx2")
-# clé FX → bornes (statuts correlated, research/preset-format-165.md).
-# `vitesse` était bornée à 200 quand elle désignait f2 ; f2 est le fondu, et la
-# vitesse est un pourcentage — jamais au-dessus de 100 sur 352 presets (FX6-02).
-# phase/size/fade sont nommés mais restent hors de la liste : lus, pas écrits.
+# FX key → bounds (correlated statuses, research/preset-format-165.md).
+# `speed` was bounded to 200 while it pointed at f2; f2 is the fade, and the
+# speed is a percentage — never above 100 across 352 presets (FX6-02).
+# phase/size/fade are named but stay off this list: read, not written.
 _FX_CLES = {"effect": (0, 8), "speed": (0, 100), "link_order": (10, 13),
             "speed_source": (0, 2), "bpm_division": (0, 1 << 31)}
 _SHOW_CLES = ("base", "name", "presets", "positions", "palette",
@@ -39,33 +39,33 @@ _SHOW_CLES = ("base", "name", "presets", "positions", "palette",
 _PRESET_CLES = ("id", "template", "name", "positions", "dimmers",
                 "content_mask", "color_pattern",
                 "static_color") + _FX_NOMS
-NOM_MAX_OCTETS = 19          # au-delà, le projet entier refuse de s'ouvrir
+NOM_MAX_OCTETS = 19          # past this, the whole project refuses to open
 NB_GROUPES = 8               # A–H
-PADS_PAR_GROUPE = 20         # un masque de 20 bits par groupe dans f31
-# Attribution device-confirmed (registre, type 150) : f6 = PAN, f7 = TILT,
-# f3 = FAN, f4 = FOCUS OFFSET. Une lecture antérieure plaçait pan/tilt en
-# f3/f4 ; elle est réfutée par l'écran d'édition du W1.
+PADS_PAR_GROUPE = 20         # one 20-bit mask per group in f31
+# Device-confirmed attribution (registry, type 150): f6 = PAN, f7 = TILT,
+# f3 = FAN, f4 = FOCUS OFFSET. An earlier reading put pan/tilt on f3/f4; the
+# W1's own edit screen refuted it.
 _POS_CLES = ("page", "index", "name", "pan", "tilt", "fan")
 _POS_CHAMPS = {"pan": "f6", "tilt": "f7", "fan": "f3"}
 _PAL_CLES = ("index", "red", "green", "blue")
-# Record 130 = la carte de mapping DMX IN (SPEC §7.3, MAP-01..09). `f4` est la
-# FONCTION visée, pas la catégorie de l'écran : les sept fonctions `Flash` en
-# portent sept différents. Les quinze ci-dessous sont l'inventaire complet des
-# cinq catégories, chacune mesurée par l'entrée que l'appareil a créée quand
-# l'opérateur l'a sélectionnée à l'écran (MAP-09, dix d'un coup, chaque canal
-# étiquetant son entrée).
+# Record 130 = the DMX IN mapping table (SPEC §7.3, MAP-01..09). `f4` is the
+# FUNCTION targeted, not the screen's category: the seven `Flash` functions
+# carry seven different ones. The fifteen below are the complete inventory of
+# the five categories, each measured through the entry the device created when
+# the operator selected it on screen (MAP-09, ten at once, each channel
+# labelling its own entry).
 #
-# Valeur = (f4, instance fixe) ; `None` = l'instance vient de la spec.
-# L'instance vaut **255** dès que la fonction n'est pas liée à une instance
-# numérotée — y compris `select_preset` et `jump_preset`, où c'est la VALEUR
-# reçue qui choisit. Deux fonctions partagent un `f4` avec `preset` (70) et
-# trois avec `jump_preset` (78) : c'est le couple (f4, instance) qui identifie.
+# Value = (f4, fixed instance); `None` = the instance comes from the spec.
+# The instance is **255** as soon as the function is not bound to a numbered
+# instance — including `select_preset` and `jump_preset`, where the incoming
+# VALUE picks. Two functions share an `f4` with `preset` (70) and three with
+# `jump_preset` (78): the pair (f4, instance) is what identifies an entry.
 _MAP_FONCTIONS = {
-    "group_dimmer":   (20, None),   # instance = le groupe A–H
-    "main":            (27, 0),      # l'entrée d'usine ne porte pas de f7
-    "preset":          (70, None),   # instance = l'index du preset
-    "select_preset":   (70, 255),    # même f4 : la valeur reçue choisit
-    "preset_page":     (82, None),   # instance = la page, base zéro
+    "group_dimmer":    (20, None),   # instance = the group A–H
+    "main":            (27, 0),      # the factory entry carries no f7
+    "preset":          (70, None),   # instance = the preset index
+    "select_preset":   (70, 255),    # same f4: the incoming value picks
+    "preset_page":     (82, None),   # instance = the page, zero-based
     "bpm_tap":         (17, 255),
     "wolf":            (10, 255),
     "strobe":          (11, 255),
@@ -73,24 +73,24 @@ _MAP_FONCTIONS = {
     "speed":           (13, 255),
     "blackout":        (14, 255),
     "smoke":           (15, 255),
-    "jump_preset":     (78, 255),    # la valeur reçue choisit
+    "jump_preset":     (78, 255),    # the incoming value picks
     "previous_preset": (78, 1),
     "next_preset":     (78, 2),
 }
 _MAP_CLES = ("target", "group", "index", "page", "channel")
-PAGES_PRESET = 7             # Page 1 à 7, l'écran n'en propose pas d'autres
-PRESETS_MAX = 200            # 0–199, la borne du panneau
-# L'appareil écrit ses champs dans l'ordre numérique et OMET tout champ nul —
-# `28 00` n'apparaît jamais chez lui. Une entrée éditée doit être remise dans
-# cette forme, sinon le fichier diverge des octets de l'appareil alors même que
-# sa sémantique est juste : c'est invisible à une comparaison décodée, et ça
-# casserait tout diff ultérieur contre un fichier que l'appareil a récrit.
+PAGES_PRESET = 7             # Page 1 to 7, the screen offers no others
+PRESETS_MAX = 200            # 0–199, the panel's own bound
+# The device writes its fields in numeric order and OMITS any zero field —
+# `28 00` never appears in its output. An edited entry must be put back into
+# that shape, or the file diverges from the device's bytes even though its
+# semantics are right: invisible to a decoded comparison, and it would break
+# every later diff against a file the device rewrote.
 _MAP_ORDRE = (("instance", 2), ("function", 4), ("channel_high_byte", 5),
               ("channel_low_byte", 6), ("f7", 7), ("f8", 8))
 
 
 def _normalise_mapping(entree):
-    """Rend l'entrée dans l'ordre des champs de l'appareil, sans champ nul."""
+    """Returns the entry in the device's field order, with no zero field."""
     connus = {nom for nom, _ in _MAP_ORDRE}
     propre = {nom: entree[nom] for nom, _ in _MAP_ORDRE
               if entree.get(nom)}
@@ -98,21 +98,21 @@ def _normalise_mapping(entree):
     entree.clear()
     entree.update(propre)
     return entree
-CANAL_MAX = 512              # borne de l'encodeur du panneau, mesurée
+CANAL_MAX = 512              # the panel encoder's bound, measured
 
 
 def cles(d, permises, contexte):
-    """Publique : `wpj_generate` valide ses intentions avec les memes regles."""
+    """Public: `wpj_generate` validates its intentions with the same rules."""
     inconnues = [k for k in d if k not in permises]
     retirees = {k: wpj_codec.remplacante(k) for k in inconnues
                 if wpj_codec.remplacante(k)}
     if retirees:
         detail = ", ".join(f"{v!r} → {n!r}" for v, n in sorted(retirees.items()))
-        raise ValueError(f"{contexte} : clés retirées le 2026-08-31, "
-                         f"écrire leur remplaçante : {detail}")
+        raise ValueError(f"{contexte}: keys retired on 2026-08-31, write "
+                         f"their replacement: {detail}")
     if inconnues:
-        raise ValueError(f"{contexte} : clés hors périmètre {inconnues} ; "
-                         f"permises : {list(permises)}")
+        raise ValueError(f"{contexte}: keys out of scope {inconnues}; "
+                         f"allowed: {list(permises)}")
 
 
 def borne(contexte, nom, v, lo, hi):
@@ -123,26 +123,26 @@ def borne(contexte, nom, v, lo, hi):
 
 def liste8(contexte, nom, v, lo, hi):
     if not isinstance(v, list) or len(v) != 8:
-        raise ValueError(f"{contexte} : {nom} doit être une liste de 8 entiers")
+        raise ValueError(f"{contexte}: {nom} must be a list of 8 integers")
     return [borne(contexte, f"{nom}[{i}]", x, lo, hi) for i, x in enumerate(v)]
 
 
 def _pads_vers_masques(contexte, pads8):
-    """8 listes de numéros de pad (1–20) → les 20 octets packés de `f31`.
+    """8 lists of pad numbers (1–20) → the 20 packed bytes of `f31`.
 
-    `f31` = 20 varints = 160 bits en petit-boutien, découpés en huit masques
-    de 20 bits (un par groupe A–H) ; le bit n du groupe g allume le pad n+1
-    de la palette 140 de ce groupe — device-confirmed.
+    `f31` = 20 varints = 160 little-endian bits, cut into eight 20-bit masks
+    (one per group A–H); bit n of group g lights pad n+1 of that group's
+    palette 140 — device-confirmed.
     """
     if not isinstance(pads8, list) or len(pads8) != NB_GROUPES:
-        raise ValueError(f"{contexte} : static_color doit être "
-                         f"{NB_GROUPES} listes de numéros de pad (1–"
-                         f"{PADS_PAR_GROUPE}), une par groupe A–H")
+        raise ValueError(f"{contexte}: static_color must be {NB_GROUPES} "
+                         f"lists of pad numbers (1–{PADS_PAR_GROUPE}), one "
+                         "per group A–H")
     bits = 0
     for g, pads in enumerate(pads8):
         if not isinstance(pads, list):
-            raise ValueError(f"{contexte} : static_color[{g}] doit être "
-                             "une liste de numéros de pad")
+            raise ValueError(f"{contexte}: static_color[{g}] must be a list "
+                             "of pad numbers")
         for pad in pads:
             borne(contexte, f"static_color[{g}]", pad, 1, PADS_PAR_GROUPE)
             bits |= 1 << (g * PADS_PAR_GROUPE + pad - 1)
@@ -150,10 +150,10 @@ def _pads_vers_masques(contexte, pads8):
 
 
 def masques_vers_pads(v20):
-    """Inverse de _pads_vers_masques : les 20 octets → 8 listes de pads."""
+    """The inverse of _pads_vers_masques: the 20 bytes → 8 pad lists."""
     if not isinstance(v20, list) or any(not isinstance(x, int) or not 0 <= x < 256
                                         for x in v20):
-        return None                      # f31 illisible : pas d'interprétation
+        return None                      # unreadable f31: no interpretation
     bits = int.from_bytes(bytes(v20), "little")
     return [[p + 1 for p in range(PADS_PAR_GROUPE)
              if bits >> (g * PADS_PAR_GROUPE + p) & 1]
@@ -161,32 +161,32 @@ def masques_vers_pads(v20):
 
 
 def compiler(spec, sortie):
-    """Applique la spec au donneur, écrit sortie, auto-vérifie.
-    Rend la liste des diffs [(type, occ, taille_avant, taille_après)]."""
+    """Applies the spec to the donor, writes the output, self-verifies.
+    Returns the diff list [(type, occ, size_before, size_after)]."""
     cles(spec, _SHOW_CLES, "show")
     if "base" not in spec:
-        raise ValueError("show : clé 'base' (donneur .wpj) obligatoire")
+        raise ValueError("show: the 'base' key (donor .wpj) is required")
     w = wpjlib.Wpj.load(spec["base"])
-    cache = {}      # (type, occ) -> dict décodé, réencodé à la fin
-    verifs = []     # (type, occ, description, fn(dict décodé) -> bool)
+    cache = {}      # (type, occ) -> decoded dict, re-encoded at the end
+    verifs = []     # (type, occ, description, fn(decoded dict) -> bool)
 
     def rec(typ, occ=0):
         if (typ, occ) not in cache:
             d = wpj_codec.decode(typ, w.get(typ, occ))
             if set(d) == {"raw"}:
-                raise ValueError(f"record {typ} occ {occ} : non décodable")
+                raise ValueError(f"record {typ} occ {occ}: not decodable")
             cache[(typ, occ)] = d
         return cache[(typ, occ)]
 
-    # --- record 101 : nom du projet (device-confirmed, ACC-01) ---
+    # --- record 101: the project name (device-confirmed, ACC-01) ---
     if "name" in spec:
         nom = spec["name"]
         if not isinstance(nom, str) or not nom:
-            raise ValueError("show : 'name' doit être une chaîne non vide")
+            raise ValueError("show: 'name' must be a non-empty string")
         rec(101)["name"] = nom
         verifs.append((101, 0, "nom projet", lambda d, v=nom: d.get("name") == v))
 
-    # --- record 165 : presets, adressés par id ---
+    # --- record 165: presets, addressed by id ---
     for pe in spec.get("presets", []):
         cles(pe, _PRESET_CLES, "preset")
         pid = borne("preset", "id", pe.get("id", -1), 0, 1 << 31)
@@ -197,15 +197,15 @@ def compiler(spec, sortie):
         if cible is None:
             cible = _cree_preset(ctx, d165, pid, pe)
         elif "template" in pe:
-            raise ValueError(f"{ctx} : déjà présent dans le donneur, "
-                             "'template' ne s'applique qu'à une création")
+            raise ValueError(f"{ctx}: already in the donor, 'template' only "
+                             "applies to a creation")
         if "name" in pe:
             if not isinstance(pe["name"], str):
-                raise ValueError(f"{ctx} : nom doit être une chaîne")
+                raise ValueError(f"{ctx}: the name must be a string")
             octets = len(pe["name"].encode("utf-8"))
             if octets > NOM_MAX_OCTETS:
                 raise ValueError(f"{ctx} : nom de {octets} octets UTF-8 > "
-                                 f"{NOM_MAX_OCTETS} — le projet ENTIER "
+                                 f"{NOM_MAX_OCTETS} — the WHOLE project "
                                  "refuserait de s'ouvrir (PRESET-05)")
             cible["name"] = pe["name"]
         if "positions" in pe:
@@ -229,9 +229,9 @@ def compiler(spec, sortie):
             for k, v in pe[fx].items():
                 borne(f"{ctx} {fx}", k, v, *_FX_CLES[k])
             if fx not in cible:
-                raise ValueError(f"{ctx} : {fx} absent du donneur — création "
-                                 "de sous-message FX non validée, utiliser un "
-                                 "donneur où ce FX existe")
+                raise ValueError(f"{ctx}: {fx} is absent from the donor — "
+                                 "creating an FX sub-message is not validated, "
+                                 "use a donor where this FX exists")
             cible[fx][0].update(pe[fx])
         attendu = {k: (_pads_vers_masques(ctx, v)
                        if k == "static_color" else v)
@@ -239,7 +239,7 @@ def compiler(spec, sortie):
         verifs.append((165, 0, ctx, lambda d, pid=pid, att=attendu:
                        _verif_preset(d, pid, att)))
 
-    # --- record 150 ×8 : positions pan/tilt nommées ---
+    # --- record 150 ×8: named pan/tilt positions ---
     for pos in spec.get("positions", []):
         cles(pos, _POS_CLES, "position")
         page = borne("position", "page", pos.get("page", 0), 1, 8)
@@ -248,13 +248,13 @@ def compiler(spec, sortie):
         entrees = d150.get("positions", [])
         if idx >= len(entrees) or not isinstance(entrees[idx], dict) or \
                 set(entrees[idx]) == {"hex"}:
-            raise ValueError(f"position page {page} index {idx} : l'entrée "
-                             "doit exister dans le donneur")
+            raise ValueError(f"position page {page} index {idx}: the entry "
+                             "must exist in the donor")
         e = entrees[idx]
         ctx = f"position page {page} index {idx}"
         if "name" in pos:
             if not isinstance(pos["name"], str):
-                raise ValueError(f"{ctx} : nom doit être une chaîne")
+                raise ValueError(f"{ctx}: the name must be a string")
             e["name"] = pos["name"]
         for cle, champ in _POS_CHAMPS.items():
             if cle in pos:
@@ -273,8 +273,8 @@ def compiler(spec, sortie):
         pads = d135.get("pads", [])
         if idx >= len(pads) or not isinstance(pads[idx], dict) or \
                 set(pads[idx]) == {"hex"}:
-            raise ValueError(f"palette index {idx} : l'entrée doit exister "
-                             "dans le donneur")
+            raise ValueError(f"palette index {idx}: the entry must exist in "
+                             "the donor")
         ctx = f"palette index {idx}"
         for k in ("red", "green", "blue"):
             if k in pal:
@@ -284,10 +284,10 @@ def compiler(spec, sortie):
                        all(d["pads"][i].get(k, 0) == v
                            for k, v in att.items())))
 
-    # --- records 145 + 111 : page gobos du groupe A ---
-    # Device-confirmed (RENAME-01, SORT-01) : le nom d'un pad est `145.f3`,
-    # et l'ordre des pads est l'ordre du fil des plages roue (fonction 14)
-    # du record 111 — plages non monotones acceptées, bornes DMX embarquées.
+    # --- records 145 + 111: group A's gobo page ---
+    # Device-confirmed (RENAME-01, SORT-01): a pad's name is `145.f3`, and the
+    # pad order is the wire order of the wheel ranges (function 14) of record
+    # 111 — non-monotonic ranges accepted, DMX bounds travelling with them.
     if "gobo_names" in spec:
         d145 = rec(145)
         att_noms = {}
@@ -295,16 +295,16 @@ def compiler(spec, sortie):
             gid = int(cle)
             ctx = f"gobo_names id {gid}"
             if not isinstance(nom, str) or not nom:
-                raise ValueError(f"{ctx} : nom doit être une chaîne non vide")
+                raise ValueError(f"{ctx}: the name must be a non-empty string")
             if len(nom.encode("utf-8")) > NOM_MAX_OCTETS:
                 raise ValueError(f"{ctx} : nom > {NOM_MAX_OCTETS} octets "
-                                 "UTF-8 — limite mesurée sur les presets "
-                                 "(PRESET-05), non mesurée ici, donc refusée")
+                                 "UTF-8 — a limit measured on presets "
+                                 "(PRESET-05), not measured here, so refused")
             slot = next((s for s in d145.get("gobos", [])
                          if isinstance(s, dict) and s.get("gobo_id") == gid),
                         None)
             if slot is None:
-                raise ValueError(f"{ctx} : absent de la palette du donneur")
+                raise ValueError(f"{ctx}: absent from the donor's palette")
             slot["name"] = nom
             att_noms[gid] = nom
         verifs.append((145, 0, "gobo_names", lambda d, att=att_noms: all(
@@ -318,20 +318,20 @@ def compiler(spec, sortie):
         slots = d145.get("gobos", [])
         pleins = [s for s in slots if isinstance(s, dict) and "gobo_id" in s]
         if sorted(s["gobo_id"] for s in pleins) != sorted(ordre):
-            raise ValueError("gobo_order : la liste doit porter exactement "
-                             "les ids de la palette du donneur")
-        # roue partagée par un autre groupe = non mesuré : refus.
+            raise ValueError("gobo_order: the list must carry exactly the "
+                             "ids of the donor's palette")
+        # a wheel shared with another group = not measured: refused.
         for occ in range(1, sum(1 for t, _ in w.records if t == 145)):
             autres = wpj_codec.decode(145, w.get(145, occ)).get("gobos", [])
             ids = sorted(s["gobo_id"] for s in autres
                          if isinstance(s, dict) and "gobo_id" in s)
             if ids == sorted(ordre):
-                raise ValueError(f"gobo_order : le groupe {occ} porte la "
-                                 "même roue — cas non mesuré, refusé")
+                raise ValueError(f"gobo_order: group {occ} carries the same "
+                                 "wheel — an unmeasured case, refused")
         par_id = {s["gobo_id"]: s for s in pleins}
         nouveaux = [par_id[g] for g in ordre]
         for k, s in enumerate(nouveaux):
-            s["glyph"] = chr(0x21 + k)      # séquence, la forme de l'appareil
+            s["glyph"] = chr(0x21 + k)      # a sequence, the device's own shape
         d145["gobos"] = nouveaux + slots[len(pleins):]
         verifs.append((145, 0, "gobo_order palette",
                        lambda d, o=list(ordre):
@@ -359,14 +359,14 @@ def compiler(spec, sortie):
                             if p.get("function") == 14 and "gobo_id" in p]
                            == o))
         if not touchees:
-            raise ValueError("gobo_order : aucune roue du donneur ne porte "
-                             "ces ids dans un record 111 décodable")
+            raise ValueError("gobo_order: no wheel of the donor carries these "
+                             "ids in a decodable record 111")
 
-    # --- record 130 : la carte de mapping DMX IN (device-confirmed, MAP-01..07) ---
-    # Une entrée est identifiée par (fonction, instance), JAMAIS par son rang :
-    # l'ordre du fil bouge sans que le contenu change, deux fois observé en onze
-    # sauvegardes, sans lecture. `canal: null` retire l'entrée — « non mappé »
-    # est l'absence, il n'existe pas de sentinelle.
+    # --- record 130: the DMX IN mapping table (device-confirmed, MAP-01..07) ---
+    # An entry is identified by (function, instance), NEVER by its rank: the
+    # wire order moves without the content changing, seen twice across eleven
+    # saves, with no read in between. `channel: null` removes the entry —
+    # "unmapped" is absence, there is no sentinel.
     if "mappings" in spec:
         d130 = rec(130)
         entrees = d130.setdefault("mappings", [])
@@ -376,52 +376,52 @@ def compiler(spec, sortie):
             cible = me.get("target")
             if cible not in _MAP_FONCTIONS:
                 raise ValueError(
-                    f"mapping : cible {cible!r} hors périmètre ; mesurées : "
+                    f"mapping: target {cible!r} out of scope; measured: "
                     f"{sorted(_MAP_FONCTIONS)}")
             ctx = f"mapping {cible}"
             fonction, instance = _MAP_FONCTIONS[cible]
             if cible == "group_dimmer":
                 g = me.get("group")
                 if g not in list("ABCDEFGH"):
-                    raise ValueError(f"{ctx} : 'group' doit être A–H")
+                    raise ValueError(f"{ctx}: 'group' must be A–H")
                 instance = ord(g) - ord("A")
             elif cible == "preset":
                 instance = borne(ctx, "index", me.get("index", -1),
                                   0, PRESETS_MAX - 1)
             elif cible == "preset_page":
-                # la page s'écrit comme elle s'affiche, 1–7 ; stockée en base zéro
+                # the page is written as displayed, 1–7; stored zero-based
                 instance = borne(ctx, "page", me.get("page", -1),
                                   1, PAGES_PRESET) - 1
             if any(k in me for k in ("group", "index", "page")
                    if k != {"group_dimmer": "group", "preset": "index",
                             "preset_page": "page"}.get(cible)):
-                raise ValueError(f"{ctx} : clé d'instance qui ne s'applique pas "
-                                 "à cette fonction")
+                raise ValueError(f"{ctx}: an instance key that does not apply "
+                                 "to this function")
             canal = me.get("channel", "absent")
             if canal == "absent":
-                raise ValueError(f"{ctx} : clé 'channel' obligatoire "
-                                 "(un entier 1–512, ou null pour retirer)")
+                raise ValueError(f"{ctx}: the 'channel' key is required "
+                                 "(an integer 1–512, or null to remove)")
             trouve = next((e for e in entrees
                            if e.get("function") == fonction
                            and e.get("instance", 0) == instance), None)
             if canal is None:
                 if trouve is None:
-                    raise ValueError(f"{ctx} : aucune entrée à retirer")
+                    raise ValueError(f"{ctx}: no entry to remove")
                 entrees.remove(trouve)
                 attendu[(fonction, instance)] = None
                 continue
             canal = borne(ctx, "channel", canal, 1, CANAL_MAX)
             haut, bas = divmod(canal - 1, 256)
             if trouve is None:
-                # forme d'une entrée créée par l'appareil : f7 = 1, f8 = 1,
-                # observée sur les treize qu'il a créées (MAP-02, MAP-09).
+                # the shape of an entry the device creates: f7 = 1, f8 = 1,
+                # seen on the thirteen it created (MAP-02, MAP-09).
                 trouve = {"instance": instance, "function": fonction,
                           "f7": 1, "f8": 1}
                 entrees.append(trouve)
             trouve["channel_high_byte"], trouve["channel_low_byte"] = haut, bas
             _normalise_mapping(trouve)
             attendu[(fonction, instance)] = canal
-        d130["f1"] = len(entrees)             # device-confirmed : f1 = le compte
+        d130["f1"] = len(entrees)             # device-confirmed: f1 = the count
 
         def _verif_130(d, att=attendu):
             if d.get("f1") != len(d.get("mappings", [])):
@@ -441,26 +441,26 @@ def compiler(spec, sortie):
 
         verifs.append((130, 0, "mappings", _verif_130))
 
-    # --- réencodage + écriture (nouveau fichier, jamais d'écrasement) ---
+    # --- re-encode + write (a new file, never an overwrite) ---
     for (typ, occ), d in cache.items():
         w.replace(typ, wpj_codec.encode(typ, d), occ)
     try:
         w.save(sortie)
     except FileExistsError:
-        raise ValueError(f"{sortie} existe déjà — écrasement refusé")
+        raise ValueError(f"{sortie} already exists — overwrite refused")
 
-    # --- auto-verify : recharge (SHA-1 revalidé), re-décode, compare ---
+    # --- self-verify: reload (SHA-1 revalidated), re-decode, compare ---
     try:
-        w2 = wpjlib.Wpj.load(sortie)                 # SHA-1 vérifié par load
+        w2 = wpjlib.Wpj.load(sortie)                 # SHA-1 checked by load
         for typ, occ, desc, ok in verifs:
             d = wpj_codec.decode(typ, w2.get(typ, occ))
             if not ok(d):
-                raise ValueError(f"auto-verify : {desc} ne relit pas la "
-                                 "valeur demandée")
+                raise ValueError(f"self-verify: {desc} does not read back the "
+                                 "value asked for")
         diffs = verifier(spec["base"], sortie)
         en_trop = [d for d in diffs if (d[0], d[1]) not in cache]
         if en_trop:
-            raise ValueError(f"auto-verify : records modifiés hors édition : "
+            raise ValueError(f"self-verify: records changed outside the edit: "
                              f"{en_trop}")
     except Exception:
         os.unlink(sortie)
@@ -469,38 +469,39 @@ def compiler(spec, sortie):
 
 
 def _cree_preset(ctx, d165, pid, pe):
-    """Crée un preset en queue de `165.f5` en clonant `modele`.
+    """Creates a preset at the tail of `165.f5` by cloning `template`.
 
-    Device-confirmed (registre, PRESET-01/06/07) : appendre une entrée
-    bien formée avec un id libre suffit — l'appareil la stocke, l'affiche,
-    la rappelle et la conserve à travers store, RESTART et réouverture à
-    froid. `165.f1` ne garde rien (81 avec 85 entrées) : laissé verbatim.
-    Les trous d'id se chargent ; l'id doit rester croissant, donc la
-    création se fait en queue, comme les deux ajouts mesurés.
+    Device-confirmed (registry, PRESET-01/06/07): appending a well-formed entry
+    with a free id is enough — the device stores it, displays it, recalls it and
+    keeps it across store, RESTART and a cold reopen. `165.f1` tracks nothing
+    (81 with 85 entries): left verbatim. Gaps in the ids get filled; the id must
+    stay increasing, so creation happens at the tail, like the two measured
+    additions.
     """
     if "template" not in pe:
-        raise ValueError(f"{ctx} : absent du donneur — donner 'template' "
-                         "(id du preset à cloner) pour le créer en queue")
+        raise ValueError(f"{ctx}: absent from the donor — give 'template' "
+                         "(the id of the preset to clone) to create it at the "
+                         "tail")
     mid = borne(ctx, "template", pe["template"], 0, 1 << 31)
     modele = next((p for p in d165["presets"]
                    if isinstance(p, dict) and p.get("id", 0) == mid), None)
     if modele is None:
-        raise ValueError(f"{ctx} : modèle {mid} absent du donneur")
+        raise ValueError(f"{ctx}: template {mid} is absent from the donor")
     if "id" not in modele:
-        raise ValueError(f"{ctx} : le modèle {mid} n'écrit pas son id "
-                         "(l'id 0 omet le champ) — choisir un autre modèle")
+        raise ValueError(f"{ctx}: template {mid} does not write its id "
+                         "(id 0 omits the field) — pick another template")
     maxi = max(p.get("id", 0) for p in d165["presets"] if isinstance(p, dict))
     if pid <= maxi:
-        raise ValueError(f"{ctx} : création en queue seulement, l'id doit "
-                         f"dépasser {maxi} (le plus grand du donneur)")
+        raise ValueError(f"{ctx}: tail creation only, the id must exceed "
+                         f"{maxi} (the donor's largest)")
     if pid > 127:
-        # `SET_PRESET` porte l'id sur un seul octet (RECALL-03) et le deuxième
-        # n'est pas lu (RAW-02) ; tous les tirs publiés tiennent dans 0–127.
-        # Au-delà, rappel exact, troncature à 7 bits et no-op restent tous
-        # possibles. Le panneau, lui, va jusqu'à 199 : la cue est rappelable
-        # à la main, pas forcément à distance.
-        print(f"attention : {ctx} — le rappel par USB n'a jamais été mesuré "
-              "au-dessus de l'id 127 (RECALL-06) ; au panneau, oui",
+        # `SET_PRESET` carries the id in a single byte (RECALL-03) and the
+        # second is not read (RAW-02); every published shot fits in 0–127.
+        # Above that, an exact recall, a 7-bit truncation and a no-op all stay
+        # possible. The panel itself goes to 199: the cue is recallable by
+        # hand, not necessarily from a distance.
+        print(f"warning: {ctx} — USB recall has never been measured above "
+              "id 127 (RECALL-06); at the panel, it has",
               file=sys.stderr)
     cible = copy.deepcopy(modele)
     cible["id"] = pid
@@ -524,11 +525,11 @@ def _verif_preset(d165, pid, attendu):
 
 
 def verifier(base, sortie):
-    """Rend les records qui diffèrent : [(type, occ, taille_avant, taille_après)]."""
+    """Returns the records that differ: [(type, occ, size_before, size_after)]."""
     a, b = wpjlib.Wpj.load(base), wpjlib.Wpj.load(sortie)
     if [t for t, _ in a.records] != [t for t, _ in b.records]:
-        raise ValueError("séquences de types différentes : comparaison "
-                         "record à record impossible")
+        raise ValueError("different type sequences: a record-by-record "
+                         "comparison is impossible")
     diffs, occs = [], {}
     for (t, pa), (_, pb) in zip(a.records, b.records):
         occ = occs.get(t, 0)
@@ -540,23 +541,23 @@ def verifier(base, sortie):
 
 def _imprime(diffs):
     if not diffs:
-        print("aucun record modifié")
+        print("no record changed")
     for t, occ, la, lb in diffs:
-        print(f"type {t} occ {occ} : {la} -> {lb} octets")
+        print(f"type {t} occ {occ}: {la} -> {lb} bytes")
 
 
 def demo():
-    """Cherche un donneur utilisable dans le corpus local ; s'abstient sinon.
+    """Looks for a usable donor in the local corpus; abstains otherwise.
 
-    Aucun .wpj n'est distribué avec ce dépôt (docs/corpus.md) : le self-check
-    prend le premier fichier variante A du corpus qui porte les emplacements
-    édités (preset 80, position page 1 index 1, pad 0).
+    No .wpj ships with this repository (docs/corpus.md): the self-check takes
+    the first variant-A file of the corpus that carries the edited slots
+    (preset 80, position page 1 index 1, pad 0).
     """
     for base in wpjlib.corpus_files():
         try:
             return _demo_sur(base)
         except (ValueError, KeyError, StopIteration, OSError):
-            continue                      # donneur sans les emplacements voulus
+            continue                      # a donor without the wanted slots
     return wpjlib.pas_de_corpus("wpj_show")
 
 
@@ -564,7 +565,7 @@ def _demo_sur(base):
     import tempfile
     ids = [p.get("id", 0) for p in
            wpj_codec.decode(165, wpjlib.Wpj.load(base).get(165))["presets"]]
-    neuf = max(ids) + 3                       # création en queue, avec un trou
+    neuf = max(ids) + 3                       # tail creation, leaving a gap
     spec = {"base": base, "name": "WMX SHOW DEMO",
             "presets": [{"id": 80, "name": "demo",
                          "beam_fx1": {"effect": 1, "speed": 80},
@@ -586,7 +587,7 @@ def _demo_sur(base):
                          {"target": "select_preset", "channel": 107},
                          {"target": "next_preset", "channel": 110},
                          {"target": "group_dimmer", "group": "D",
-                          "channel": 1},          # octet haut nul : doit être omis
+                          "channel": 1},          # zero high byte: must be omitted
                          {"target": "group_dimmer", "group": "C",
                           "channel": None}]}        # retrait
     with tempfile.TemporaryDirectory() as tmp:
@@ -595,7 +596,7 @@ def _demo_sur(base):
         assert {(t, o) for t, o, *_ in diffs} == {(101, 0), (165, 0),
                                                  (150, 0), (135, 0),
                                                  (130, 0)}, diffs
-        # relecture indépendante des valeurs demandées
+        # an independent read-back of the values asked for
         w = wpjlib.Wpj.load(out)
         assert wpj_codec.decode(101, w.get(101))["name"] == "WMX SHOW DEMO"
         p = next(p for p in wpj_codec.decode(165, w.get(165))["presets"]
@@ -607,7 +608,7 @@ def _demo_sur(base):
         assert e["f3"] == 32768
         assert wpj_codec.decode(135, w.get(135))["pads"][0] == \
             {"red": 10, "green": 20, "blue": 30}
-        # le preset créé : cloné, en queue, relu champ par champ
+        # the created preset: cloned, at the tail, read back field by field
         presets = wpj_codec.decode(165, w.get(165))["presets"]
         c = presets[-1]
         assert c["id"] == neuf and c["name"] == "cree", c.get("id")
@@ -620,8 +621,8 @@ def _demo_sur(base):
                  "static_color")} == \
                {k: v for k, v in modele.items() if k not in
                 ("id", "name", "content_mask", "dimmers", "color_pattern",
-                 "static_color")}, "le clone doit être le modèle verbatim"
-        # spec vide = round-trip octet-identique du donneur
+                 "static_color")}, "the clone must be the template verbatim"
+        # an empty spec = a byte-identical round trip of the donor
         out2 = os.path.join(tmp, "ident.wpj")
         assert compiler({"base": base}, out2) == []
         assert open(out2, "rb").read() == open(base, "rb").read()
@@ -630,7 +631,7 @@ def _demo_sur(base):
         gids = [s["gobo_id"] for s in pal
                 if isinstance(s, dict) and "gobo_id" in s]
         if len(gids) < 2:
-            raise ValueError("donneur sans palette gobo")
+            raise ValueError("donor with no gobo palette")
         rot = gids[1:] + gids[:1]
         out3 = os.path.join(tmp, "gobo.wpj")
         compiler({"base": base, "gobo_names": {str(gids[0]): "DemoGobo"},
@@ -639,37 +640,37 @@ def _demo_sur(base):
         assert [s["gobo_id"] for s in d if "gobo_id" in s] == rot
         assert next(s["name"] for s in d
                     if s.get("gobo_id") == gids[0]) == "DemoGobo"
-        # rotation puis rotation inverse, sans renommage : donneur intact à
-        # l'octet près (glyphes séquentiels = la forme que l'appareil écrit)
+        # a rotation then its inverse, with no rename: the donor comes back
+        # byte-identical (sequential glyphs = the shape the device writes)
         if [s.get("glyph") for s in pal if "gobo_id" in s] == \
                 [chr(0x21 + k) for k in range(len(gids))]:
             ga, gb = os.path.join(tmp, "ga.wpj"), os.path.join(tmp, "gb.wpj")
             compiler({"base": base, "gobo_order": rot}, ga)
             compiler({"base": ga, "gobo_order": gids}, gb)
             assert open(gb, "rb").read() == open(base, "rb").read()
-        # erreurs attendues : clé inconnue, entrée absente
-        # --- la carte, relue indépendamment ---
+        # expected errors: unknown key, absent entry
+        # --- the table, read back independently ---
         d130 = wpj_codec.decode(130, w.get(130))
         carte = {(e.get("function"), e.get("instance", 0)):
                  e.get("channel_high_byte", 0) * 256
                  + e.get("channel_low_byte", 0) + 1
                  for e in d130["mappings"]}
-        assert carte[(20, 1)] == 300, carte          # modifiée, sur deux octets
-        assert carte[(70, 4)] == 40, carte           # créée
-        assert carte[(10, 255)] == 45, carte         # créée, instance 255
-        assert (20, 2) not in carte, carte           # retirée
+        assert carte[(20, 1)] == 300, carte          # changed, across two bytes
+        assert carte[(70, 4)] == 40, carte           # created
+        assert carte[(10, 255)] == 45, carte         # created, instance 255
+        assert (20, 2) not in carte, carte           # removed
         assert carte[(20, 0)] == 1 and carte[(27, 0)] == 9, carte  # intactes
         assert carte[(82, 2)] == 101, carte      # page 3 -> instance 2
         assert carte[(15, 255)] == 106, carte
-        assert carte[(70, 255)] == 107, carte    # même f4 que preset, inst. 255
-        assert carte[(78, 2)] == 110, carte      # f4 partagé, instance fixe 2
-        assert carte[(70, 4)] != carte[(70, 255)], "les deux f4=70 confondus"
+        assert carte[(70, 255)] == 107, carte    # same f4 as preset, inst. 255
+        assert carte[(78, 2)] == 110, carte      # shared f4, fixed instance 2
+        assert carte[(70, 4)] != carte[(70, 255)], "the two f4=70 were merged"
         assert d130["f1"] == len(d130["mappings"]) == 9 - 1 + 6, d130["f1"]
 
-        # --- la forme des octets, pas seulement la sémantique ---
-        # L'appareil écrit ses champs dans l'ordre numérique et n'émet jamais
-        # un champ nul. Une divergence ici est invisible au décodage et rendrait
-        # tout diff futur illisible contre un fichier que l'appareil a récrit.
+        # --- the shape of the bytes, not only the semantics ---
+        # The device writes its fields in numeric order and never emits a zero
+        # field. A divergence here is invisible to a decode and would make every
+        # later diff unreadable against a file the device rewrote.
         import wpj_wire
         brut = [x for x in wpj_wire.load(out)[1] if x[1] == 130][0][3]
         for e in wpj_wire.walk(brut):
@@ -677,10 +678,10 @@ def _demo_sur(base):
                 continue
             octets = e[2]
             assert b"\x28\x00" not in octets, \
-                f"champ 5 nul émis : {octets.hex()}"
+                f"a zero field 5 was emitted: {octets.hex()}"
             numeros = [c[0] for c in e[3]]
             assert numeros == sorted(numeros), \
-                f"champs hors de l'ordre numérique : {octets.hex()}"
+                f"fields out of numeric order: {octets.hex()}"
 
         for mauvais in [{"base": base, "fondu": 1},
                         {"base": base, "presets": [{"id": 9999, "name": "x"}]},
@@ -689,11 +690,11 @@ def _demo_sur(base):
                         # nom de 20 octets : tueur device-confirmed
                         {"base": base, "presets": [{"id": 80,
                                                     "name": "a" * 20}]},
-                        # création sous l'id le plus grand du donneur
+                        # creating below the donor's largest id
                         {"base": base, "presets": [{"id": 1, "template": 23}]},
-                        # 'template' sur un preset qui existe déjà
+                        # 'template' on a preset that already exists
                         {"base": base, "presets": [{"id": 80, "template": 23}]},
-                        # pad hors de la grille de 20
+                        # a pad outside the grid of 20
                         {"base": base, "presets": [
                             {"id": neuf, "template": 23,
                              "static_color": [[21]] + [[]] * 7}]},
@@ -701,7 +702,7 @@ def _demo_sur(base):
                         {"base": base, "gobo_names": {"999999": "x"}},
                         {"base": base, "gobo_order": gids[:-1]},
                         {"base": base, "gobo_names": {str(gids[0]): "a" * 20}},
-                        # fonction non mesurée : on ne devine pas un f4
+                        # an unmeasured function: we do not guess an f4
                         {"base": base, "mappings": [{"target": "preset_page",
                                                      "channel": 5}]},
                         # canal hors de l'univers
@@ -712,18 +713,18 @@ def _demo_sur(base):
                         {"base": base, "mappings": [
                             {"target": "group_dimmer", "group": "I",
                              "channel": 5}]},
-                        # une fonction sans instance n'en prend pas
+                        # a function with no instance does not take one
                         {"base": base, "mappings": [{"target": "wolf",
                                                      "index": 2, "channel": 5}]},
-                        # 'channel' obligatoire, même pour retirer
+                        # 'channel' is required, even to remove
                         {"base": base, "mappings": [{"target": "wolf"}]},
-                        # retirer une entrée absente
+                        # removing an absent entry
                         {"base": base, "mappings": [{"target": "bpm_tap",
                                                      "channel": None}]},
                         # page hors 1–7
                         {"base": base, "mappings": [{"target": "preset_page",
                                                      "page": 8, "channel": 5}]},
-                        # clé d'instance qui ne s'applique pas à la fonction
+                        # an instance key that does not apply to the function
                         {"base": base, "mappings": [{"target": "preset_page",
                                                      "group": "A", "page": 1,
                                                      "channel": 5}]},
@@ -735,8 +736,8 @@ def _demo_sur(base):
             except ValueError:
                 pass
         assert not os.path.exists(os.path.join(tmp, "err.wpj"))
-    # Aucun exemple suivi ne doit encore porter une clé retirée : c'est la
-    # moitié du contrat qui vit dans les fichiers, pas dans le code.
+    # No tracked example may still carry a retired key: that is the half of
+    # the contract that lives in files rather than in code.
     import glob
     suivis = (sorted(glob.glob("corpus/**/*.json", recursive=True))
               + sorted(glob.glob("docs/*.md")) + ["README.md", "AGENTS.md"])
@@ -750,15 +751,15 @@ def _demo_sur(base):
                     if f'"{k}"' in texte or f"`{k}`" in texte]
         assert not perimees, f"{exemple}: retired keys {perimees}"
 
-    # Une clé française retirée est une erreur qui nomme sa remplaçante.
+    # A retired French key is an error that names its replacement.
     for essai in ({"base": "x", "nom": "y"}, {"base": "x", "gobo_ordre": []}):
         try:
             cles(essai, _SHOW_CLES, "show.json")
-            raise AssertionError(f"clé retirée acceptée : {essai}")
+            raise AssertionError(f"retired key accepted: {essai}")
         except ValueError as erreur:
-            assert "retirées" in str(erreur) and "→" in str(erreur), erreur
+            assert "retired" in str(erreur) and "→" in str(erreur), erreur
 
-    print("self-check ok : compile + création + auto-verify + erreurs sur "
+    print("self-check ok: compile + creation + self-verify + errors on "
           + os.path.basename(base), file=sys.stderr)
 
 
@@ -767,11 +768,11 @@ def main(argv=None):
     parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     commandes = parseur.add_subparsers(dest="commande")
     compile_cmd = commandes.add_parser(
-        "compile", help="applique une spec JSON a un projet donneur")
-    compile_cmd.add_argument("spec", help="le show.json")
-    compile_cmd.add_argument("sortie", help="projet neuf ; un existant est refuse")
+        "compile", help="applies a JSON spec to a donor project")
+    compile_cmd.add_argument("spec", help="the show.json")
+    compile_cmd.add_argument("sortie", help="new project; an existing one is refused")
     verify_cmd = commandes.add_parser(
-        "verify", help="liste les records qui different entre deux projets")
+        "verify", help="lists the records that differ between two projects")
     verify_cmd.add_argument("base")
     verify_cmd.add_argument("sortie")
     args = parseur.parse_args(argv)

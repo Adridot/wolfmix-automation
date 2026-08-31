@@ -13,5 +13,6 @@ check:
 	python3 tools/wpj_position.py
 	python3 tools/wolfmix_transaction.py
 	python3 tools/wpj_privacy.py
+	python3 tools/wpj_links.py
 	python3 tools/gobo_run.py
 	python3 -m unittest discover -s tests -t .

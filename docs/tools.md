@@ -14,6 +14,9 @@ Three conventions hold everywhere:
   (`gobo_run`), or against the git index (`wpj_privacy`). **The canonical list
   is the `Makefile`** — read `make check` rather than a count written here.
   `wpj_diff.py` self-checks too but is not wired into it.
+- **`wpj_links.py` checks the cross-references.** Every Markdown link in a
+  tracked document must land on a tracked path; a renamed file that leaves a
+  document pointing at nothing fails `make check`.
 - **`tests/` covers the refusals.** `python3 -m unittest discover -s tests -t .`
   (also the last line of `make check`) exercises what the tools reject:
   truncated files, impossible varints, an event outside the allowlist, an

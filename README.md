@@ -230,6 +230,7 @@ Three properties hold at every stage:
 | [`wolfmix_experiment.py`](tools/wolfmix_experiment.py) | Transactional experiments: snapshot → deploy → verify → restore on failure. |
 | [`wpj_position.py`](tools/wpj_position.py) | The position model, executable: the DMX a recalled position emits, computed from the project alone. |
 | [`wpj_privacy.py`](tools/wpj_privacy.py) | The anonymisation guard: fails `make check` if a real name reaches a tracked file. |
+| [`wpj_links.py`](tools/wpj_links.py) | The reference guard: fails `make check` if a tracked document links to a path that is not in the tree. |
 
 Run any of them with **no arguments** to execute its self-check — except
 `wolfmix.py` and `wolfmix_experiment.py`, which take it as a subcommand

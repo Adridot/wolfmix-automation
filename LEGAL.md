@@ -104,12 +104,32 @@ answer:
 
 - **No circumvention of any protection measure.** The `.wm`/`.wmx` sidecars are
   observed to be high-entropy and are recorded as opaque. We do not attempt to
-  decrypt them, and no key, key-recovery routine or decryptor for any vendor
-  format or link is published here.
+  decrypt them, and no key or key-recovery routine for any vendor format or
+  link is published here. The one obfuscated format this repository does read
+  is `.ssl2`, and the paragraph below says exactly why that is a different
+  question.
 - **No licence, activation or entitlement work.** Universe count, WLINK and
   3D Link are paid, per-controller entitlements. The research notes that they
   exist and that they are bound to the device and the vendor account; nothing
   here touches, emulates or bypasses them.
+
+### `.ssl2` fixture profiles, and why they are read here
+
+`tools/ssl2.py` reads and writes `.ssl2` fixture profiles, which are XML under
+a stream cipher (AraCrypt). That is a narrower thing than it may look, and the
+four properties that make it so are the boundary — not one of them is optional:
+
+| | |
+|---|---|
+| **No key was recovered here.** | The cipher and its key were published by third parties years before this repository existed — the Open Fixture Library discussion, HakanL's public gist, and the MIT-licensed `ssl2-tools` package on npm. We re-implement published knowledge in Python rather than take an npm dependency; we do not analyse a binary to obtain it. |
+| **It protects nothing.** | The obfuscation covers a fixture-profile description — channel names, DMX ranges, an icon id. It carries no licence, no entitlement and no activation, and reading it unlocks nothing that was locked. Contrast the `.wm`/`.wmx` sidecars, which stay opaque here. |
+| **The purpose is to write, not to read.** | The point is to produce **our own** fixture profiles for hardware we own, in a format our own software will load, without the vendor's web Profile Builder. The vendor's library is used as the round-trip oracle a writer needs, on our own machine, exactly as the `.wpj` corpus is. |
+| **Nothing of theirs is redistributed.** | No `.ssl2` from the vendor's library, and no XML decrypted from one, is committed here — the ciphertext and the plaintext are the same content, and the rule follows the content. The enum tables in `tools/ssl2.py` are counts measured over a local library, the same class of fact as the `WM_MODE_*` names: how to interoperate, not what the vendor authored. |
+
+If any of the four stops being true, the code goes. In particular, this is
+**not** a licence to decrypt the next vendor format that turns out to be
+scrambled: the first property is a fact about `.ssl2`, and it has to be
+established again, in public, before it is claimed again.
 
 ## Hardware safety
 

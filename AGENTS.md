@@ -191,6 +191,12 @@ eleven `f30` colour-spread modes were settled that way in an hour, read-only.
 ## What this project will not do
 
 No circumvention of any protection measure, no decryption of the vendor's
-opaque sidecar formats, no licence/activation/entitlement work, no
-redistribution of vendor material. If a request heads that way, stop and say
-so — the reasoning is in [`LEGAL.md`](LEGAL.md).
+opaque sidecar formats (`.wm`/`.wmx` stay opaque), no licence/activation/
+entitlement work, no redistribution of vendor material. If a request heads that
+way, stop and say so — the reasoning is in [`LEGAL.md`](LEGAL.md).
+
+The single exception is `.ssl2` fixture profiles, which `tools/ssl2.py` reads
+and writes: their cipher was published by third parties long before this
+repository, it guards a channel list rather than an entitlement, and the reason
+to read one is to write our own. LEGAL.md states the four conditions in full;
+they are conditions, not a precedent for the next scrambled format.

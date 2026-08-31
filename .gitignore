@@ -17,6 +17,13 @@ __pycache__/
 corpus/**/dmx/
 research/vendor/
 
+# Fixture profiles, in either state: a `.ssl2` from the vendor's library and
+# the XML decrypted from it are the same content, and neither is ours to
+# publish. Our own generated fixtures are ignored too — the JSON description
+# they are built from is what belongs in the tree (LEGAL.md, `tools/ssl2.py`).
+*.ssl2
+*.ssl2.xml
+
 # Liste locale des noms réels interdits (tools/wpj_privacy.py).
 .wpj-private-names
 

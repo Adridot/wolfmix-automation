@@ -600,8 +600,14 @@ def deploy_one(args, candidate_path, case_id):
                         "firmwareVer": state.get("firmware")}
             check_identity(before_settings, identity, "since init")
             # Fail-closed: an unarchived project is what we cannot get back,
-            # so a failure here stops the run before anything is uploaded.
-            archived = archive_projects(connection, root)
+            # so a failure here stops the run before anything is uploaded — and
+            # says which step failed rather than leaking a bare OSError.
+            try:
+                archived = archive_projects(connection, root)
+            except (OSError, wolfmix.WolfmixError) as error:
+                raise wolfmix.WolfmixError(
+                    f"Pre-deploy archive failed, nothing was uploaded: {error}"
+                ) from error
             if archived:
                 print(f"archive: {len(archived)} project(s) saved", file=sys.stderr)
             previous = download_project(connection, state["uuid"])

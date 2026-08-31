@@ -4,6 +4,7 @@ check:
 	python3 tools/wpjlib.py
 	python3 tools/wpj_codec.py
 	python3 tools/wpj_inspect.py
+	python3 tools/wpj_bc.py
 	python3 tools/wpj_show.py
 	python3 tools/wpj_generate.py
 	python3 tools/wpj_api.py

@@ -8119,3 +8119,104 @@ les 352 presets distincts, sur les entrées neuves et sur les 8 presets en
 > des trois moteurs impose et que le moteur faisceau n'utilise pas. Même statut
 > que `102.f11`, et pour la même raison — plus d'hypothèse à discriminateur pas
 > cher. La recherche s'arrête là, et c'est un résultat, pas un abandon.
+
+## Variant B/C — the WTOOLS serialization, top-level map (campaign L8, 2026-08-31)
+
+**B and C are one format, two versions — not two layouts.** The top-level
+field census is identical across all six local B/C files: same field set, same
+fixed cardinalities (×100, ×16, ×80, ×48, ×40, ×2048). C is simply the older
+version. New measurement: `848d7dcf` (the most recently saved B file) carries
+**field 1 = 8**, so three values are now observed — 6 (C, no digest), 7 (four
+B files), 8 (one B file, which alone adds `f43` ×3). `[observed]`
+`[hypothesized]` field 1 is the format version, the digest arrived with 7, and
+WTOOLS 2.0.x writes 8. EXP-05 still discriminates.
+
+**Independence warning.** The six files are only **three lineages**: `386fbb63`
++ `f4a5d15f` share patch and preset names; `4cf6b152` + `ef8ba8f7` + `848d7dcf`
+share both too; `8b6f612f` is the factory demo project. "6/6" below means three
+independent sources at best.
+
+**Method.** Everything was aligned on measured values, never on field rank:
+the profile quadruple identity against variant A (name + 16-byte hash +
+channel count + epoch-ms timestamp = record 116 `f8`/`f9`/`f2`/`f11`, exact on
+the two profiles the corpora share), factory preset and position names (14
+preset names of the demo file exist verbatim in A's record 165; position slots
+cycle `Floor / Center / Center Point / Ceiling / Ceiling Point / Default` ×8,
+record 150's vocabulary), and the arithmetic lattice below, which closes over
+patch → profiles → channel masks on all six files.
+
+### The identity lattice (all hold 6/6 — `wpj_bc.py` re-checks them)
+
+| Identity | What it establishes |
+|---|---|
+| `f18 = count(f12)`, `f19 = count(f13)`, `f20 = count(f14)`, `f21 = count(f17)`, `f22 = count(f11) = count(f29)`, `f33 = count(f3) = 100` | the counters, and which lists they count |
+| `f23 = |patched channels|` where patched = union of `[f12.f3, f12.f3 + f13[f12.f2].f5)` | `f12.f2` = profile index, `f12.f3` = 0-based absolute channel, `f13.f5` = channel count — as a system |
+| nonzero bytes of `f16` (2048 o) == exactly that patched set | `f16` = channel-occupancy mask |
+| every non-empty `f15` entry index ∈ the patched set | `f15` = per-channel table |
+| nonzero bytes of `f25` = fixture count ; of `f26` = profile count | per-fixture / per-profile flag arrays |
+| nonzero **count** of `f27` = `count(f14)` — but the flagged **indices** are NOT `f14.f2` (refuted: `f14.f2` repeats) | one `f27` channel per `f14` entry; which channel, unknown |
+
+### Top-level fields
+
+| Field | Card. | Reading | Status |
+|---|---|---|---|
+| 1 | ×1 | format version 6/7/8 | hypothesized |
+| 2 | ×1 | project name UTF-8 | correlated |
+| 3 | ×100 | presets, fixed 100 slots — see sub-message below | correlated |
+| 4 | ×16 | color pads, 7-value model like record 135 — channel order beyond RGB unattributed | hypothesized |
+| 5 | ×80 | color-pad-shaped entries; 80 ≠ A's 8×20 pages — unresolved | observed |
+| 6 | ×48 | position palette, 8 groups × 6 slots: `f5` name, `f1`/`f2` pan/tilt u16 (32768 = centre, record-151 encoding) | correlated (names), hypothesized (pan/tilt) |
+| 7 | ×40 | the 40 custom **edits**: `f1` name (`Edit N` defaults), `f3` packed 2048 per-channel values, `f4` 2048-byte channel mask — on `386fbb63` the value lands on the prism-channel offset of both moving heads | correlated |
+| 8 | ×6 | 8 × 32-byte masks each; 6 = flash keys? | observed |
+| 9, 31 | ×40 each | gobo palette, 8 groups × 5 slots (f9 = slots 1–5, f31 = 6–10?): `f2` name, `f3` icon-font glyph id (record 145.f1's model), `f1` packed **50-slot per-profile** DMX value, 65535 = profile lacks it | correlated (per-profile values), hypothesized (split, glyph) |
+| 10 | ×9 | groups A–H + slot 9 (the FX slot, = `105.f6` value 8): `f1` name, `f2` 50-byte per-profile membership | correlated (names ↔ A 125), hypothesized (membership) |
+| 11 | ×n | per-fixture channel-value messages (`f3` sub-entries: channel, value pairs) | observed |
+| 12 | ×n | **the patch**: `f2` profile index, `f3` 0-based absolute channel in the 2048 space; `f4`, `f6` unattributed | correlated (lattice) |
+| 13 | ×n | **fixture profiles**: `f2` name, `f3` 16-byte hash, `f5` channel count, `f11` epoch-ms — all four equal record 116's values on shared profiles | correlated |
+| 14 | ×n | per-?? entries, `f2` NOT the `f27` channel | observed |
+| 15 | ×2048 | flat per-channel map, empty off-patch; sub: `f1` 1 = coarse / 2 = fine, `f2` = paired channel (coarse↔fine, verified pan 0↔2 / tilt 1↔3 absolute), `f3` default value, `f4` flag | correlated |
+| 16 | ×1 | 2048-byte occupancy mask (see lattice) | correlated |
+| 17 | ×n | entries with DMX-like values; count = `f21` | observed |
+| 24 | ×1 | per-fixture-shaped array (order permutation?) | observed |
+| 25, 26, 27 | ×1 | flag arrays (see lattice); 25 is 680 bytes → ceiling ≈ 680 fixtures | correlated (counts) |
+| 28 | ×1 | 5000 o = 100 presets × 50 profiles? | observed |
+| 29 | ×n | per-fixture single-channel message | observed |
+| 30 | ×40 | position-shaped slots, default name `Position` — second bank? | observed |
+| 32, 34–42 | ×1 | scalars/6-byte blob, unattributed | observed |
+| 40 | ×32 | u16 triplets centred on 32768 | observed |
+| 43 | ×3 | **v8 only**: 3 varints + 680-byte mask | observed |
+
+The 2048-channel space is real: the demo file patches 71 fixtures across
+absolute channels 0–2047 (4 × 512). `[correlated]`
+
+### Preset sub-message (one `f3` entry)
+
+`f1` name `[correlated]` ; `f2` = 1000 constant — same constant as the A
+preset's `f15`, candidate BPM ×10 `[observed]`. Four 81-byte arrays = **9
+slots × 9-byte FX tuple** (8 groups + slot 9): `f13` = beam, `f5` = color,
+`f9` = move, `f16` = ? (zero everywhere seen). Tuple layout `[0]` = speed,
+`[2]` = phase, `[3]`/`[4]` = size/fade (beam order unresolved; color `[3]` =
+fade), `[6]` = fan/`f3`, `[7]` = bpm_division; the **effect id is not located**.
+Evidence: one exact 7-value match (the demo's `Purple Rain` move tuple against
+A's, including phase 19 and bpm 0) plus the engine-default constants phase
+25/20/0 and bpm 3/3/2. `[hypothesized]` — the demo's presets are customized
+per group, so they do not equal A's factory presets; tuple-level validation
+needs EXP-06/07. Per-group 8-byte arrays (`f8`, `f12`, `f21`, `f24`–`f29`…)
+and the 135-byte `f4` blob: `[observed]`.
+
+### Where the A ↔ B correspondence breaks
+
+No same-show pair exists locally: WTOOLS stores device-synced projects **in
+variant A** (`wlinkData` holds both layouts, never both of one show). And the
+two sides model palettes differently — per-group stored content in A (gobos
+8×20, positions 8×20, color pages 8×20) vs global per-profile definitions in
+B (gobos 8×5 with per-profile DMX values, positions 8×6, color 80). These
+cardinality mismatches are model differences, not decode errors; nothing was
+attributed on counts alone.
+
+### The trap
+
+Per-fixture is the wrong default: every sentinel-padded list here (`f9.f1`,
+`f10.f2`, `f26`, 50 slots) is per-**profile**, and reading it per-fixture
+collides with the demo file's 71 fixtures. The counters expose the mistake
+immediately — use the lattice before naming anything.

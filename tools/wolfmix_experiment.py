@@ -176,6 +176,40 @@ def snapshot_all(connection, destination, settings):
     return manifest
 
 
+def archive_projects(connection, root):
+    """Archive tout projet du contrôleur qu'on n'a pas déjà, clé (uuid, version).
+
+    L'instantané d'`init` ne suffit pas : il est pris une fois, et un projet
+    créé après lui puis perdu avant le prochain `init` ne serait récupérable
+    nulle part. Le 2026-08-31, quatre projets ont disparu du contrôleur sans
+    commande de suppression et hors de toute exécution du harnais
+    (`research/perte-projets-2026-08-31.md`) ; seul l'instantané du 25 août a
+    permis d'en rendre un.
+
+    Incrémental parce que le lien est lent et faillible : la liste est bon
+    marché, et on ne retélécharge que ce dont on n'a pas déjà la version. Un
+    échec d'archivage ne fait pas échouer le déploiement — mieux vaut une
+    archive incomplète qu'un déploiement bloqué.
+    """
+    archive = Path(root) / "archive"
+    archive.mkdir(parents=True, exist_ok=True)
+    ajoutes = []
+    for item in project_list(connection):
+        base = f"{item['uuid']}-{item.get('version', 0)}"
+        cible = archive / f"{base}.wpj"
+        if cible.exists():
+            continue
+        data = download_project(connection, item["uuid"])["data"]
+        with cible.open("xb") as stream:
+            stream.write(data)
+        atomic_json(archive / f"{base}.json",
+                    {**item, "sha256": sha256(data), "file": cible.name,
+                     "archivedAt": datetime.datetime.now(
+                         datetime.timezone.utc).isoformat()})
+        ajoutes.append(cible.name)
+    return ajoutes
+
+
 def capture_dmx(connection):
     settings = wolfmix.decode_settings(connection.request(wolfmix.GET_SETTINGS))
     enabled_by_us = not settings["dmxUsbSendState"]
@@ -475,6 +509,13 @@ def deploy_one(args, candidate_path, case_id):
             before_settings = preflight(connection)
             if before_settings["serialNumber"] != state["controllerSerial"]:
                 raise wolfmix.WolfmixError("Refusing a different Wolfmix controller")
+            try:
+                ajoutes = archive_projects(connection, root)
+                if ajoutes:
+                    print(f"archive : {len(ajoutes)} projet(s) sauvegardes",
+                          file=sys.stderr)
+            except Exception as error:            # jamais bloquant
+                print(f"warning: archivage impossible ({error})", file=sys.stderr)
             previous = download_project(connection, state["uuid"])
             previous_data = previous["data"]
             with (run_dir / "before.wpj").open("xb") as stream:
@@ -587,6 +628,33 @@ def self_test(_args):
             value = {"sha256": sha256(data), "size": len(data)}
             atomic_json(target, value)
             assert read_json(target) == value
+    # archive_projects : incrémental, et un échec de téléchargement n'avale pas
+    # les projets déjà archivés.
+    class FauxLien:
+        def __init__(self): self.telecharges = 0
+    faux = FauxLien()
+    vrai_liste, vrai_dl = globals()["project_list"], globals()["download_project"]
+    globals()["project_list"] = lambda _c: [
+        {"uuid": "a" * 8, "version": 1}, {"uuid": "b" * 8, "version": 2}]
+    def _dl(_c, uuid):
+        faux.telecharges += 1
+        return {"data": b"charge-" + uuid.encode()}
+    globals()["download_project"] = _dl
+    try:
+        with tempfile.TemporaryDirectory() as directory:
+            premier = archive_projects(None, directory)
+            assert len(premier) == 2 and faux.telecharges == 2, premier
+            second = archive_projects(None, directory)
+            assert second == [] and faux.telecharges == 2, second
+            # une version neuve du même projet est archivée à part
+            globals()["project_list"] = lambda _c: [{"uuid": "a" * 8, "version": 9}]
+            troisieme = archive_projects(None, directory)
+            assert troisieme == [f"{'a' * 8}-9.wpj"], troisieme
+            garde = Path(directory) / "archive" / f"{'a' * 8}-1.wpj"
+            assert garde.exists(), "l'archive precedente a ete perdue"
+    finally:
+        globals()["project_list"], globals()["download_project"] = vrai_liste, vrai_dl
+
     changes = describe_change(102, bytes.fromhex("2802"), bytes.fromhex("2803"))
     assert changes == ["  type 102 field 5: 2 -> 3"], changes
     appeared = describe_change(102, b"", bytes.fromhex("2807"))

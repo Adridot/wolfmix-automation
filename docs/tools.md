@@ -145,6 +145,20 @@ the `except ValueError` that both the probe and the offset fallback rely on, so
 this tool exists to read. Fixed, with three truncated buffers added to the
 self-check.
 
+## `wpj_bc.py` — variant B/C semantic reader
+
+```bash
+python3 tools/wpj_bc.py file.wpj   # identified fields as JSON (read-only)
+python3 tools/wpj_bc.py            # identity-lattice self-check over the corpus
+```
+
+The semantic layer over `wpj_inspect.py`'s raw walk, for the WTOOLS
+serialization: profiles, patch, groups, presets, positions, edits, gobos come
+out under their names; everything below `correlated` stays a numbered field.
+The self-check re-runs the identity lattice from the registry ("Variant B/C
+top-level map") on every B/C file present, and abstains without a corpus.
+Strictly read-only — variants B and C have no writer, by rule.
+
 ## `wpj_api.py` — inspect JSON, `wpj-toolkit` shape
 
 ```bash

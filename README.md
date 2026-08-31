@@ -28,7 +28,8 @@ own, changing one parameter at a time in the vendor's own editor, and watching
 what our own controller does on its USB link and on its DMX output.
 
 **📄 A specification.** [`SPEC.md`](SPEC.md) describes the format byte by byte:
-three container variants, twenty record types, the patch model, presets, FX,
+three container variants, 20 <!--count:record_types--> record types, the patch
+model, presets, FX,
 the static palettes and the USB protocol. Every claim carries an evidence
 status, and [`research/evidence.md`](research/evidence.md) is the ledger it was
 built from — one line per finding, refutations first.
@@ -68,7 +69,8 @@ keep them. Full guide: [`docs/corpus.md`](docs/corpus.md).
 make check
 ```
 
-It ends with a summary: `17 checks, 17 passed, 0 abstained, 0 failed`.
+It ends with a summary — 18 <!--count:checks--> checks, and a line naming
+every one that abstained.
 
 > [!IMPORTANT]
 > With no project files present, the corpus-dependent checks **abstain**. They
@@ -89,9 +91,9 @@ python3 tools/wpj_show.py compile show.json donor.wpj out.wpj
 
 Run any of them with **no arguments** to execute its self-check — except
 `wolfmix.py` and `wolfmix_experiment.py`, which take it as a subcommand
-(`python3 tools/wolfmix.py self-test`). Eight more — the identity checker, the
-diff, the position model, the inspect API and the four guards that keep the
-tree honest — plus every flag and exit code: [`docs/tools.md`](docs/tools.md).
+(`python3 tools/wolfmix.py self-test`). The rest — the identity checker, the
+diff, the position model, the readers, and the guards that keep the tree
+honest — plus every flag and exit code: [`docs/tools.md`](docs/tools.md).
 
 | Tool | One line |
 |---|---|

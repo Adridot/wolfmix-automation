@@ -18,7 +18,10 @@ Three conventions hold everywhere:
   even after one fails, then prints a summary naming each abstention. Exit 0 =
   all passed, 3 = green with abstentions, 1 = a failure. `--abstentions-ok`
   turns 3 into 0 for a context that expects them, such as the corpus-free CI
-  job.
+  job. Before anything else it parses every file under `tools/` and `tests/`
+  and fails on **an import the standard library does not have** — the
+  repository's first invariant, which until now was a promise in three
+  documents and a habit in the code.
 - **`wpj_links.py` checks the cross-references.** Every Markdown link in a
   tracked document must land on a tracked path; a renamed file that leaves a
   document pointing at nothing fails `make check`. It also checks **finding

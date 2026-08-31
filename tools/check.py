@@ -25,6 +25,7 @@ import argparse
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from wpjlib import ABSTENTION
@@ -53,7 +54,46 @@ CONTROLES = [
                     "-t", "."]),
 ]
 
+# What the summary counts: the subprocesses above, plus the in-process
+# stdlib-only step below. `wpj_counts.py` reads this rather than len(CONTROLES),
+# so a document quoting the number cannot drift from what a run prints.
+NOMBRE_DE_CONTROLES = len(CONTROLES) + 1
+
 PASSE, ABSTENU, ECHEC = "passed", "abstained", "failed"
+
+# The repository's first invariant had no gate until now: "standard library
+# only" was a promise in three documents and a habit in the code.
+NOTRES = ("tools", "tests")
+
+
+def imports_hors_stdlib():
+    """Every module imported by our own code that the standard library lacks.
+
+    Parsed, not executed: a dependency that only appears at run time under a
+    `try` is still a dependency, and importing the tree to find out would run
+    it. `sys.stdlib_module_names` is the authority — it is what this
+    interpreter actually ships.
+    """
+    import ast
+    trouves = []
+    for dossier in NOTRES:
+        for chemin in sorted(Path(RACINE, dossier).rglob("*.py")):
+            arbre = ast.parse(chemin.read_text(encoding="utf-8"), str(chemin))
+            for noeud in ast.walk(arbre):
+                if isinstance(noeud, ast.Import):
+                    noms = [a.name for a in noeud.names]
+                elif isinstance(noeud, ast.ImportFrom):
+                    noms = [noeud.module] if noeud.level == 0 and noeud.module else []
+                else:
+                    continue
+                for nom in noms:
+                    racine = nom.split(".")[0]
+                    if (racine in sys.stdlib_module_names
+                            or Path(RACINE, "tools", racine + ".py").exists()
+                            or racine in ("tests",)):
+                        continue
+                    trouves.append((chemin.relative_to(RACINE), noeud.lineno, nom))
+    return trouves
 
 
 def executer(commande):
@@ -106,6 +146,17 @@ def main(argv=None):
                               "corpus-free CI job")
     args = parseur.parse_args(argv)
     resultats = []
+    etrangers = imports_hors_stdlib()
+    print("--- stdlib-only: no import outside the standard library")
+    if etrangers:
+        for chemin, ligne, nom in etrangers:
+            print(f"{chemin}:{ligne}: imports {nom!r}, which is not in the "
+                  "standard library", file=sys.stderr)
+        resultats.append(("stdlib-only", ECHEC, ""))
+    else:
+        print(f"ok — {NOMBRE_DE_CONTROLES} checks in this run, none of them "
+              "needs a dependency")
+        resultats.append(("stdlib-only", PASSE, ""))
     for nom, commande in CONTROLES:
         print(f"--- {nom}: {' '.join(commande)}")
         etat, ligne = classer(*executer(commande))
@@ -126,6 +177,8 @@ def demo():
     assert ligne == f"{ABSTENTION} — no corpus in corpus/", ligne
     assert classer(1, f"x: {ABSTENTION}")[0] == ECHEC, "a failure outranks it"
     assert classer(2, "boom")[0] == ECHEC
+    # Not asserted here on purpose: a real dependency must be *reported* by the
+    # run, with the file and the line, not crash the self-check before it.
 
 
 if __name__ == "__main__":

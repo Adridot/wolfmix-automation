@@ -39,7 +39,7 @@ ENTIER = re.compile(r"\d+")
 def compter():
     """Every drifting figure, from the code that defines it."""
     return {
-        "checks": len(check.CONTROLES),
+        "checks": check.NOMBRE_DE_CONTROLES,
         "identities": len(wpj_identities.IDENTITES),
         "record_types": len(wpj_codec.TYPES),
         "decoded": len(wpj_codec.SCHEMAS),

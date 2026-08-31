@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
-"""Codec sémantique JSON ↔ octets des records TLV variante A (sur wpjlib).
+"""The semantic JSON ↔ bytes codec for variant-A TLV records (on wpjlib).
 
-Contrat de sûreté : decode(type, payload) rend un dict JSON-compatible dont
-encode(type, dict) reproduit les octets EXACTS. decode vérifie lui-même le
-round-trip ; en cas d'échec (type non supporté, protobuf inattendu) il rend
-{"raw": hex} — jamais de perte, jamais d'à-peu-près. Preuve : demo() sur
-tout le corpus variante A.
+The safety contract: decode(type, payload) returns a JSON-compatible dict whose
+encode(type, dict) reproduces the EXACT bytes. decode checks that round trip
+itself; on failure (unsupported type, unexpected protobuf) it returns
+{"raw": hex} — never a loss, never an approximation. Proof: demo() over the
+whole variant-A corpus.
 
-Représentation :
-- champ nommé (preuve : research/rig-c-bug.md) → clé sémantique ;
-- champ non identifié → clé neutre "fN" : varint = int, longueur = {"hex":…},
-  fixe = {"f32":…}/{"f64":…} ;
-- champ absent = absent du dict (≠ zéro explicite) ; ordre du dict = ordre wire.
+Representation:
+- a named field (proof: research/rig-c-bug.md) → a semantic key;
+- an unidentified field → the neutral "fN" key: varint = int, length =
+  {"hex":…}, fixed = {"f32":…}/{"f64":…};
+- an absent field is absent from the dict (≠ an explicit zero); the dict's
+  order is the wire order.
 """
 import json
 import sys
@@ -19,29 +20,29 @@ import sys
 import wpj_wire
 import wpjlib
 
-# Schémas : champ → (nom, genre). genre : "v" varint, "str" UTF-8,
-# "hex" octets bruts, "packed" = varints packés (liste d'ints),
-# dict = sous-message (répété pour les listes d'entrées).
-# 105 : f4/f7 délimitent la tranche du record 106 qui appartient à l'entrée,
-# PAS une adresse DMX (l'adresse est 115.f2). Voir le registre, « record 105 ».
-# f6 = index de groupe (0-7 = A-H, 8 = le slot des effets), redondant avec
-# 115.f4 — voir le registre, « l'affectation luminaire → groupe ».
+# Schemas: field → (name, kind). kind: "v" varint, "str" UTF-8, "hex" raw
+# bytes, "packed" = packed varints (a list of ints), dict = sub-message
+# (repeated for lists of entries).
+# 105: f4/f7 delimit the slice of record 106 that belongs to the entry, NOT a
+# DMX address (the address is 115.f2). See the registry, "record 105".
+# f6 = the group index (0-7 = A-H, 8 = the effects slot), redundant with
+# 115.f4 — see the registry, "the fixture → group assignment".
 _PATCH = {1: ("profile", "v"), 4: ("offset_106", "v"), 5: ("fixture", "v"),
           6: ("group", "v"), 7: ("entry_count_106", "v")}
 _PROFIL = {2: ("channel_count", "v"), 8: ("name", "str"), 9: ("hash", "hex"),
            11: ("timestamp", "v")}
-# Ordre des 7 canaux d'un pad : device-confirmed (vue RGB+ du W1, brut 0-255)
+# The order of a pad's 7 channels: device-confirmed (the W1's RGB+ view, raw 0-255)
 _PAD = {1: ("red", "v"), 2: ("green", "v"), 3: ("blue", "v"),
         4: ("white", "v"), 5: ("amber", "v"), 6: ("lime", "v"), 7: ("uv", "v")}
 
 # Sous-message FX (commun Beam/Color/Move) — research/preset-format-165.md.
-# FX6-02/03 : f6 = Phase, f8 = Size, f9 = Speed, f2 = Fade. La vitesse était
-# lue sur f2 depuis ACC-04 ; l'écran dit f9, et f2 suit le fondu jusqu'à
-# disparaître quand il vaut 0. « vitesse » reste le nom de la vitesse : il
-# change de champ, pas de sens, et les appelants gardent leur intention.
-# f3 et f5 restent des clés neutres : leur sens dépend du moteur (f3 = Feature
-# sur le faisceau, mesuré ; Fan sur le mouvement, déduit), et un schéma partagé
-# ne peut pas porter deux noms.
+# FX6-02/03: f6 = Phase, f8 = Size, f9 = Speed, f2 = Fade. The speed had been
+# read on f2 since ACC-04; the screen says f9, and f2 follows the fade all the
+# way to vanishing when it reaches 0. "speed" stays the name of the speed: it
+# changes field, not meaning, and callers keep their intent.
+# f3 and f5 stay neutral keys: their meaning depends on the engine (f3 =
+# Feature on beam, measured; Fan on move, inferred), and one shared schema
+# cannot carry two names.
 _FX = {7: ("effect", "v"), 4: ("link_order", "v"), 10: ("speed_source", "v"),
        1: ("bpm_division", "v"), 2: ("fade", "v"),
        6: ("phase", "v"), 8: ("size", "v"), 9: ("speed", "v")}
@@ -50,80 +51,79 @@ _PRESET = {
     1: ("beam_fx1", _FX), 2: ("beam_fx2", _FX),
     5: ("color_fx1", _FX), 6: ("color_fx2", _FX),
     21: ("move_fx1", _FX), 22: ("move_fx2", _FX),
-    28: ("positions", "packed"),          # index de position par groupe A–H
-    29: ("gobos", "packed"),              # index de gobo (type 145) par groupe,
-                                          # 0-based, 255 = aucun — device-confirmed
-    30: ("color_pattern", "packed"),    # PATTERN de la couleur statique par groupe
-                                          # A–H (nom lu sur l'écran) — device-confirmed
-    # f31 : 20 varints packés = les octets d'un champ de bits de 160 bits,
-    # découpé en huit masques de 20 bits, un par groupe A–H ; bit n du groupe
-    # g = pad n+1 de la palette 140 de ce groupe — device-confirmed, registre
+    28: ("positions", "packed"),          # position index per group A–H
+    29: ("gobos", "packed"),              # gobo index (type 145) per group,
+                                          # 0-based, 255 = none — device-confirmed
+    30: ("color_pattern", "packed"),    # the static colour's PATTERN per group
+                                          # A–H (name read on screen) — device-confirmed
+    # f31: 20 packed varints = the bytes of a 160-bit field, cut into eight
+    # 20-bit masks, one per group A–H; bit n of group g = pad n+1 of that
+    # group's palette 140 — device-confirmed, registry
     # « f31 — one 20-pad mask per group A–H ».
     31: ("static_color", "packed"),
-    # f10 : masque de contenu, six bits, 1 = bascule ÉTEINTE, dans l'ordre de
-    # l'écran PRESET EDIT — bit0 COLOR, 1 MOVE, 2 BEAM, 3 GOBO, 4 LIVE EDIT,
-    # 5 OTHER (bit 5 prédit, pas encore mesuré). Voir le registre, F4-02.
+    # f10: the content mask, six bits, 1 = toggle OFF, in PRESET EDIT screen
+    # order — bit0 COLOR, 1 MOVE, 2 BEAM, 3 GOBO, 4 LIVE EDIT, 5 OTHER
+    # (bit 5 predicted, not yet measured). See the registry, F4-02.
     10: ("content_mask", "v"),
-    17: ("dimmers", "packed"),            # dimmer par groupe A–H
-    # Les cinq features de l'écran STATIC GOBO, en pourcentage par groupe
-    # A–H — device-confirmed par une capture de preset, voir « GOBO-02 ».
+    17: ("dimmers", "packed"),            # dimmer per group A–H
+    # The five features of the STATIC GOBO screen, as a percentage per group
+    # A–H — device-confirmed by a preset capture, see "GOBO-02".
     14: ("gobo_rotate", "packed"), 32: ("gobo_focus", "packed"),
     33: ("gobo_prism", "packed"), 34: ("gobo_zoom", "packed"),
     35: ("gobo_iris", "packed"),
     8: ("color_fx_active", "packed"), 24: ("move_fx_active", "packed"),
-    # Sélecteur de page par groupe A–H : 0 = FX1, 1 = FX2. Le record range
-    # chaque moteur en quadruplet — paire, sélecteur, actif : f1/f2/f3 pour le
-    # faisceau, f5/f6/f7/f8 pour la couleur, f21/f22/f23/f24 pour le mouvement.
-    # Les trois sont mesurés, un tir chacun : F7-01 couleur, F7-03 mouvement,
-    # F7-04 faisceau. Indépendant du masque de `f16` : un groupe garde sa page
-    # en attente même quand le moteur est à l'arrêt. Une page 1 posée à la main
-    # vaut 0, comme une page jamais réglée — le champ encode la page, pas le
-    # fait d'avoir été réglé (contrôle de F7-04).
+    # The page selector per group A–H: 0 = FX1, 1 = FX2. The record files each
+    # engine as a quadruple — pair, selector, active: f1/f2/f3 for beam,
+    # f5/f6/f7/f8 for colour, f21/f22/f23/f24 for move. All three are measured,
+    # one shot each: F7-01 colour, F7-03 move, F7-04 beam. Independent of the
+    # `f16` mask: a group keeps its pending page even when the engine is off.
+    # A page 1 set by hand reads 0, like a page never set — the field encodes
+    # the page, not the fact of having been set (F7-04's control).
     3: ("page_beam_fx", "packed"),
     7: ("page_color_fx", "packed"), 23: ("page_move_fx", "packed"),
 }
 
 SCHEMAS = {
     101: {1: ("name", "str")},
-    102: {},                                  # 16 octets, champs non identifiés
+    102: {},                                  # 16 bytes, unidentified fields
     105: {5: ("patch", _PATCH)},
     115: {5: ("fixtures", {2: ("dmx_address", "v"), 3: ("profile", "v"),
                           4: ("group", "v")})},
     116: {5: ("profiles", _PROFIL)},
-    120: {5: ("channels", {})},                 # entrée vide {} = `2a 00` = tout à 0
+    120: {5: ("channels", {})},                 # an empty {} entry = `2a 00` = all zero
     125: {5: ("groups", {8: ("name", "str")})},
     135: {5: ("pads", _PAD)},
     140: {2: ("page", "v"), 5: ("pads", _PAD)},
-    # 111 : plages de valeurs d'un canal (SPEC §7.6). f1/f2 = première et
-    # dernière valeur DMX, f3 = fonction (14 = roue de gobos), f4 = id d'image
-    # gobo des plages roue (= 145.f2, identité vérifiée). L'ordre du fil est
-    # l'ordre des pads, et il est libre — device-confirmed, SORT-01.
+    # 111: the value ranges of a channel (SPEC §7.6). f1/f2 = first and last
+    # DMX value, f3 = function (14 = gobo wheel), f4 = the gobo image id of the
+    # wheel ranges (= 145.f2, identity checked). The wire order is the pad
+    # order, and it is free — device-confirmed, SORT-01.
     111: {5: ("ranges", {1: ("start", "v"), 2: ("end", "v"),
                          3: ("function", "v"), 4: ("gobo_id", "v")})},
-    # 145 : palette gobo. f1 = glyphe police d'icônes (' ' = vide), f2 = id
-    # d'image gobo (= 111[plage].f4), f3 = nom optionnel, opérateur-assignable
-    # et écrit hors appareil — device-confirmed, RENAME-01. Voir le registre.
+    # 145: the gobo palette. f1 = icon-font glyph (' ' = empty), f2 = gobo
+    # image id (= 111[range].f4), f3 = an optional name, operator-assignable and
+    # written off-device — device-confirmed, RENAME-01. See the registry.
     145: {5: ("gobos", {1: ("glyph", "str"), 2: ("gobo_id", "v"),
                         3: ("name", "str")})},
     150: {5: ("positions", {5: ("name", "str")})},
-    # 151 : positions des fixtures « détachées » d'un slot de 150, découpées
-    # par 150.f1/f2. Trois offsets signés, valeur = (v - 32768) / 32767 —
-    # device-confirmed sur l'écran POSITION. Voir le registre, « POS-04 ».
+    # 151: the positions of fixtures "detached" from a slot of 150, cut by
+    # 150.f1/f2. Three signed offsets, value = (v - 32768) / 32767 —
+    # device-confirmed on the POSITION screen. See the registry, "POS-04".
     151: {5: ("detached", {1: ("fixture", "v"), 2: ("focus_offset", "v"),
                             3: ("pan_offset", "v"), 4: ("tilt_offset", "v")})},
-    # 130 : la carte de mapping DMX IN (MAP-01..05, registre). f4 = la fonction
-    # visée — 20 = dimmer de groupe, 27 = MAIN, 70 = preset, 17 = BPM Tap,
-    # 10 = Wolf : ce n'est PAS la catégorie de l'écran, deux entrées de la même
-    # catégorie portent des f4 différents. f2 = l'index de l'instance quand la
-    # fonction est instanciée (groupe 0-7, preset 0-n), et **255** quand elle ne
-    # l'est pas. Le canal DMX IN est sur **16 bits répartis sur deux champs** :
-    # `canal_base0 = f5 * 256 + f6`, le canal affiché valant canal_base0 + 1.
-    # f5 est resté invisible jusqu'à CH300 parce que tout le corpus tenait sous
-    # 256 — mesuré à CH300 (f5=1, f6=43) et CH512 (f5=1, f6=255).
-    # Une fonction non mappée n'a **pas d'entrée** : absence, pas de sentinelle.
-    # La clé d'une entrée est (f4, f2), jamais son rang : l'ordre du fil bouge
-    # sans que le contenu change. f1 = le nombre d'entrées. f7 et f8 valent 1
-    # partout, n'ont jamais bougé, et restent sans nom.
+    # 130: the DMX IN mapping table (MAP-01..05, registry). f4 = the function
+    # targeted — 20 = group dimmer, 27 = MAIN, 70 = preset, 17 = BPM Tap,
+    # 10 = Wolf: this is NOT the screen's category, two entries of the same
+    # category carry different f4. f2 = the instance index when the function is
+    # instanced (group 0-7, preset 0-n), and **255** when it is not. The DMX IN
+    # channel is **16 bits spread over two fields**: `channel_base0 = f5 * 256
+    # + f6`, the displayed channel being channel_base0 + 1. f5 stayed invisible
+    # until CH300 because the whole corpus fit under 256 — measured at CH300
+    # (f5=1, f6=43) and CH512 (f5=1, f6=255). An unmapped function has **no
+    # entry**: absence, not a sentinel. An entry's key is (f4, f2), never its
+    # rank: the wire order moves without the content changing. f1 = the number
+    # of entries. f7 and f8 are 1 everywhere, have never moved, and stay
+    # unnamed.
     130: {5: ("mappings", {2: ("instance", "v"), 4: ("function", "v"),
                            5: ("channel_high_byte", "v"),
                            6: ("channel_low_byte", "v")})},
@@ -135,18 +135,18 @@ SCHEMAS = {
 
 # --- wire protobuf -----------------------------------------------------------
 
-_rvarint = wpj_wire.read_varint          # un seul lecteur de varint (WireError
-                                         # est une ValueError : les `except`
-                                         # existants continuent de l'attraper)
+_rvarint = wpj_wire.read_varint          # one varint reader for the repository
+                                         # (WireError is a ValueError, so the
+                                         # existing `except` clauses still catch)
 
 
 def _wvarint(v):
-    # -1 ne terminerait pas (le décalage arithmétique reste à -1) et True
-    # s'encoderait en 1 sans que personne l'ait demandé.
+    # -1 would not terminate (the arithmetic shift stays at -1) and True would
+    # encode as 1 without anyone asking for it.
     if isinstance(v, bool) or not isinstance(v, int):
-        raise ValueError(f"varint : entier attendu, reçu {v!r}")
+        raise ValueError(f"varint: integer expected, got {v!r}")
     if v < 0:
-        raise ValueError(f"varint : valeur négative {v}")
+        raise ValueError(f"varint: negative value {v}")
     out = bytearray()
     while True:
         b = v & 0x7F; v >>= 7
@@ -155,11 +155,10 @@ def _wvarint(v):
             return bytes(out)
 
 
-# Les clés publiques étaient françaises jusqu'au 2026-08-31. Elles ne sont pas
-# acceptées comme alias : une clé retirée est une erreur, et l'erreur nomme son
-# remplaçant. Le dépôt n'avait ni tag, ni release, ni consommateur connu — le
-# moment était le bon, et une couche d'alias aurait été du code écrit pour être
-# supprimé.
+# The public keys were French until 2026-08-31. They are not accepted as
+# aliases: a retired key is an error, and the error names its replacement. The
+# repository had no tag, no release and no known consumer — the moment was
+# right, and an alias layer would have been code written to be deleted.
 CLES_RETIREES = {
     "adresse_dmx": "dmx_address",
     "ambiances": "moods",
@@ -202,7 +201,7 @@ CLES_RETIREES = {
 
 
 def remplacante(cle):
-    """Le nom anglais d'une clé française retirée, ou None."""
+    """The English name of a retired French key, or None."""
     return CLES_RETIREES.get(cle)
 
 
@@ -253,9 +252,9 @@ def _decode_msg(buf, schema):
             v = {"f64": buf[i:i + 8].hex()}; i += 8
         else:
             raise ValueError(f"wire type {wt}")
-        if isinstance(genre, dict):          # liste d'entrées : toujours une liste
+        if isinstance(genre, dict):          # a list of entries: always a list
             out.setdefault(nom, []).append(v)
-        elif nom in out:                     # répétition inattendue → liste
+        elif nom in out:                     # unexpected repeat → list
             if not isinstance(out[nom], list):
                 out[nom] = [out[nom]]
             out[nom].append(v)
@@ -276,11 +275,11 @@ def _encode_msg(d, schema):
             neuve = remplacante(nom)
             if neuve:
                 raise ValueError(
-                    f"clé {nom!r} retirée le 2026-08-31 : écrire {neuve!r}")
-            raise ValueError(f"clé inconnue {nom!r}")
+                    f"key {nom!r} was retired on 2026-08-31: write {neuve!r}")
+            raise ValueError(f"unknown key {nom!r}")
         if genre == "packed" and isinstance(val, list) and \
                 not (val and isinstance(val[0], (list, dict))):
-            vals = [val]                     # une occurrence = une liste d'ints
+            vals = [val]                     # one occurrence = one list of ints
         else:
             vals = val if isinstance(val, list) else [val]
         for v in vals:
@@ -306,7 +305,7 @@ def _emit(f, genre, v):
     elif isinstance(v, dict):
         pl = _encode_msg(v, genre if isinstance(genre, dict) else {})
     else:
-        raise ValueError(f"valeur inencodable pour f{f}: {v!r}")
+        raise ValueError(f"value cannot be encoded for f{f}: {v!r}")
     return _wvarint(f << 3 | 2) + _wvarint(len(pl)) + pl
 
 
@@ -322,7 +321,7 @@ def decode(typ, payload):
     if typ in SCHEMAS:
         try:
             d = _decode_msg(payload, SCHEMAS[typ])
-            if encode(typ, d) == payload:    # auto-vérification octet
+            if encode(typ, d) == payload:    # byte-level self-check
                 return d
         except ValueError:
             pass
@@ -335,7 +334,7 @@ def projet_vers_dict(path):
             "records": [{"type": t, **decode(t, p)} for t, p in w.records]}
 
 
-# --- preuve de fidélité ------------------------------------------------------
+# --- the fidelity proof ------------------------------------------------------
 
 def demo():
     files = wpjlib.corpus_files()
@@ -350,24 +349,26 @@ def demo():
         nb_fichiers += 1
         for t, p in w.records:
             d = decode(t, p)
-            assert encode(t, d) == p, f"fidélité rompue : type {t} dans {path}"
+            assert encode(t, d) == p, f"fidelity broken: type {t} in {path}"
             occ, raw = stats.get(t, (0, 0))
             stats[t] = (occ + 1, raw + ("raw" in d))
     if not nb_fichiers:
         return wpjlib.pas_de_corpus("wpj_codec")
-    print(f"fidélité octet vérifiée sur {nb_fichiers} fichiers variante A")
-    print("type  occ  décodé")
+    print(f"byte fidelity verified on {nb_fichiers} variant-A files")
+    print("type  occ  decoded")
     for t in sorted(stats):
         occ, raw = stats[t]
-        etat = "oui" if t in SCHEMAS and raw == 0 else "non (passthrough)"
+        etat = "yes" if t in SCHEMAS and raw == 0 else "no (passthrough)"
         print(f"{t:4d} {occ:4d}  {etat}")
-        assert t not in SCHEMAS or raw == 0, f"type {t} : {raw}/{occ} en raw"
+        assert t not in SCHEMAS or raw == 0, f"type {t}: {raw}/{occ} as raw"
 
 
 def _cli(argv=None):
     import argparse
     parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parseur.add_argument("projet", nargs="?", help="decode un projet variante A en JSON ; sans argument, self-check")
+    parseur.add_argument("projet", nargs="?",
+                         help="decode a variant-A project to JSON; "
+                              "with no argument, self-check")
     args = parseur.parse_args(argv)
     if args.projet is None:
         demo()

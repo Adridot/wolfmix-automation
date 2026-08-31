@@ -125,6 +125,25 @@ fits `SEQ_POSITION_PICKER`, and a browser that falls through to the USB screen
 for want of a medium fits `FILE_BROWSER`. Nothing in the binary binds either
 name to either number.
 
+## SCREEN-02 — l'écran suit une liste, pas une humeur (2026-08-31)
+
+Neuf `SET_MODE` envoyés depuis l'hôte, l'opérateur lisant l'écran après chacun.
+Le mode **rapporté** prend la valeur demandée 9 fois sur 9. L'écran ne suit que
+pour **1 (COLOR FX), 3 (MOVE FX), 4 (BEAM FX) et 26 (Open)** ; il ignore
+**0 (HOME), 5 (PRESET) et 16 (SETUP)**. [device-confirmed]
+
+C'est la **cible** qui décide, pas l'écran de départ : l'index 5 est resté sans
+effet depuis HOME, depuis le modal Open et depuis COLOR FX. L'index 1 ferme le
+modal Open en même temps qu'il ouvre COLOR FX, ce qui confirme l'échappatoire
+notée pour 26 — mais réfute « seuls les modaux sont poussables ».
+
+Aucun mécanisme n'est nommé : les six pages ont toutes une touche ou une icône
+dédiée sur le panneau. Détail non mesuré : 7/8/9/10, 23, 25, 28-34, 43, 44.
+Conséquence pratique : depuis l'hôte on atteint les trois moteurs FX et la page
+Open, et **on ne revient pas à l'accueil** — il faut une touche.
+
+Le détail des neuf envois est dans `corpus/experiments/SCREEN-02/`.
+
 Note what index 39 adds to SCREEN-01: the firmware moves **three** things
 independently — the reported mode, the pad LEDs, and the screen. Mode 39
 moves the first two and leaves the third alone.

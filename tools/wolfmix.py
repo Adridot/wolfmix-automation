@@ -144,6 +144,21 @@ NAMED_MODES = {
 # name is a guess. Every other index is simply unmeasured.
 ACTING_MODES = {26, 39, 40, 42}
 
+# SCREEN-02 : le mode rapporté prend toujours la valeur demandée, l'écran non.
+# Partition mesurée sur l'appareil, stable et indépendante de l'écran de départ.
+# Ce qui n'est dans aucun des deux ensembles n'a pas été essayé.
+MODES_MOVING_SCREEN = {1, 3, 4, 26}
+MODES_SCREEN_INERT = {0, 5, 16}
+
+
+def screen_follows(index):
+    """True / False / None (jamais mesuré) — SCREEN-02."""
+    if index in MODES_MOVING_SCREEN:
+        return True
+    if index in MODES_SCREEN_INERT:
+        return False
+    return None
+
 EVENT_NAMES = {
     GET_PROFILE_LIST: "GET_PROFILE_LIST",
     GET_PROFILE: "GET_PROFILE",
@@ -993,6 +1008,11 @@ def self_test():
             pass
     assert resolve_mode("42", experimental=True) == 42
     assert not ACTING_MODES & set(NAMED_MODES.values())
+    # SCREEN-02 : mesuré des deux côtés, et muet sur ce qui n'a pas été essayé.
+    assert not MODES_MOVING_SCREEN & MODES_SCREEN_INERT
+    assert screen_follows(4) is True and screen_follows(26) is True
+    assert screen_follows(0) is False and screen_follows(5) is False
+    assert screen_follows(29) is None
     # No firmware operation is reachable: the allowlist is the only way out.
     assert MUTATING_EVENTS <= ALLOWED_OUTGOING_EVENTS
 
@@ -1184,6 +1204,7 @@ def main(argv=None):
             print_json({"requested": index,
                         "measured": index not in ACTING_MODES
                                     and index in NAMED_MODES.values(),
+                        "screenFollows": screen_follows(index),
                         "wolfmixMode": settings["wolfmixMode"]})
         elif args.command == "watch-mode":
             watch_mode(connection, args.interval, args.seconds)

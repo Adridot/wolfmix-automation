@@ -106,7 +106,7 @@ python3 tools/wolfmix.py [--port PATH] [--timeout SECONDS] <command>
 | `dmx-envelope out.json [--seconds N]` | per-channel min/max over a window |
 | `watch-mode [--interval S] [--seconds N]` | print every change of `wolfmixMode` |
 | `preset ID` | recall a preset by its id, hands-off |
-| `mode INDEX` | set the reported mode; the panel does not always follow (SCREEN-01) |
+| `mode NAME` | set the reported mode by name; raw indexes need `--experimental`. The panel follows for `color`, `move`, `beam` and raw 26 (Open) and stays put for `home`, `presets`, `setup` — `screenFollows` in the output says which, `null` when never measured (SCREEN-02) |
 | `self-test` | protocol checks, no hardware needed |
 
 `dmx` enables USB DMX only if it was off, and disables it again on exit.

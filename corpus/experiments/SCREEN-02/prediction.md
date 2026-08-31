@@ -33,3 +33,18 @@ ordinaire, dont l'affichage appartient à l'état des touches du panneau.
 
 Si 5 quitte le modal alors que 5 (la mesure 4) ne fait rien, « seuls les modaux
 sont poussables » est trop simple : il faudra dire pourquoi l'index 1 agit.
+
+## Mesure 6, prédite avant d'être faite
+
+4 et 5 ont réfuté « seuls les modaux sont poussables » : depuis le modal Open,
+l'index 5 n'a rien fait et l'index 1 a ouvert COLOR FX — une page ordinaire.
+Reste deux lectures rivales :
+
+- **la cible décide** — certains index sont poussables (1, 26), d'autres non
+  (5, 16) ;
+- **l'écran de départ décide** — depuis HOME rien ne passe, depuis une autre
+  page tout passe.
+
+| # | Envoi, depuis COLOR FX | Si « la cible décide » | Si « le départ décide » | p |
+|---|---|---|---|---|
+| 6 | `mode presets` (5) | l'écran reste sur COLOR FX | l'écran passe sur PRESET | 0.5 / 0.5 |

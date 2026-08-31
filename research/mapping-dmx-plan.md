@@ -44,6 +44,30 @@ Et dans le cas où 130 bouge :
 écriture les fasse bouger. La coïncidence « 9 slots » est exactement l'argument
 qui a menti sur « 125 = neuf catégories » et sur « 161 = trois séquences ».
 
+## Le gate que l'appareil vient de révéler — à vérifier avant tout
+
+`GET_SETTINGS` sur l'unité de l'opérateur, 2026-08-31 : **`wlinkActivated: false`**.
+
+WLINK est un add-on payant (manuel, §WTOOLS : « Purchase add-ons including extra
+DMX universes, **WLINK** and 3D Link »), et c'est lui qui porte l'entrée DMX :
+le connecteur est décrit comme « 1x 5pin DMX **IN**/OUT XLR connector **with
+WLINK** », le réglage `WLINK input mode` a un mode **`DMX IN`** — « DMX input
+data will be received via XLR C and **mapped to group dimmers** and DMX output
+channels » — et l'écran `DMX Values` annote son mapping d'entrée « WLINK add-on
+required ».
+
+Deux lectures, et la première étape du protocole les sépare pour zéro geste
+supplémentaire :
+
+| Lecture | Conséquence |
+|---|---|
+| l'écran `Mappings` **laisse poser** la mapping sans WLINK (config stockée, simplement inerte) | MAP-01 se déroule tel quel |
+| l'écran **refuse** le côté DMX sans WLINK (grisé, encodeur mort, catégorie vide) | la carte est inatteignable sur cette unité sans l'add-on — négatif publiable, et L5 s'arrête là faute de matériel |
+
+Noter que « `mapped to group dimmers` » dans la définition même du mode `DMX IN`
+corrobore la catégorie `Group Dimmer` comme cible privilégiée — sans rien dire
+de l'endroit où la table est rangée.
+
 ## Le protocole — un seul geste discriminant
 
 WTOOLS fermée (le port série est exclusif). Aucune écriture sur l'appareil :
@@ -56,7 +80,10 @@ changer** de toute la session :
 python3 tools/wolfmix.py projects
 ```
 
-**1 · La ligne de base.** Sauvegarder le projet au panneau **sans rien
+**1 · La ligne de base.** `pre.wpj` a déjà été téléchargé sans aucun geste
+(2026-08-31) ; le diff `pre` → `before` mesurera gratuitement ce qu'une
+sauvegarde nue réécrit sur ce projet précis, c'est-à-dire le plancher de bruit.
+ Sauvegarder le projet au panneau **sans rien
 toucher**, puis :
 
 ```bash

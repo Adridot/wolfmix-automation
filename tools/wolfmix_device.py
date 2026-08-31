@@ -21,13 +21,13 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from wolfmix_protocol import (
     ALLOWED_OUTGOING_EVENTS, DELETE_PROJECT, DISABLE_USB_DMX, DMX_PACKET,
-    ENABLE_USB_DMX, EVENT_NAMES, EXPERIMENT_NAME_PREFIX, GET_PROJECT,
+    ENABLE_USB_DMX, EVENT_NAMES, GET_PROJECT,
     GET_PROJECT_LIST, GET_SETTINGS, HEADER_SIZE, MAX_MESSAGE_SIZE,
     MUTATING_EVENTS, RETURN_PROGRESS, RETURN_STATUS, SET_PROJECT,
     TESTED_FIRMWARE, VERSION, ProtocolError, WolfmixError, build_frame,
     decode_dmx_packet, decode_item_list, decode_project, decode_settings,
-    decode_status, encode_project, encode_request_uuid, experiment_identity,
-    print_json,
+    decode_status, encode_project, encode_request_uuid, is_managed_name,
+    managed_identity, print_json,
 )
 
 def discover_port():
@@ -383,7 +383,8 @@ def require_success(payload, operation):
         )
     return status
 
-def store_experiment_project(connection, label, data, version=None, attempts=3):
+def store_managed_project(connection, label, data, version=None, attempts=3,
+                          kind="exp"):
     """Upload a project, retrying when the controller rejects the transfer.
 
     The link corrupts large transfers in both directions. A corrupted upload is
@@ -392,7 +393,7 @@ def store_experiment_project(connection, label, data, version=None, attempts=3):
     firmware stores nothing on a failed status, and the caller verifies by
     downloading afterwards.
     """
-    project_uuid, name = experiment_identity(label)
+    project_uuid, name = managed_identity(label, kind)
     version = int(time.time() * 1000) if version is None else version
     payload = encode_project(project_uuid, version, name, data)
     for attempt in range(1, attempts + 1):
@@ -416,17 +417,23 @@ def store_experiment_project(connection, label, data, version=None, attempts=3):
         "status": status,
     }
 
-def remove_experiment_project(connection, label, project_list=None):
-    project_uuid, name = experiment_identity(label)
+def remove_managed_project(connection, label, project_list=None, kind="exp"):
+    project_uuid, name = managed_identity(label, kind)
     projects = project_list
     if projects is None:
         projects = decode_item_list(connection.request(GET_PROJECT_LIST))
     item = next((item for item in projects if item.get("uuid") == project_uuid), None)
     if item is None:
         raise WolfmixError(f"Experiment project is not on the controller: {name}")
-    if not item.get("name", "").startswith(EXPERIMENT_NAME_PREFIX):
-        raise WolfmixError("Refusing to delete a project without the experiment prefix")
+    if not is_managed_name(item.get("name", "")):
+        raise WolfmixError("Refusing to delete a project we did not derive")
     return require_success(
         connection.request(DELETE_PROJECT, encode_request_uuid(project_uuid)),
         "Deleting experiment project",
     )
+
+
+# Anciens noms, gardes le temps d'une version : le seul changement est que la
+# cible peut desormais etre l'espace « auto ».
+store_experiment_project = store_managed_project
+remove_experiment_project = remove_managed_project

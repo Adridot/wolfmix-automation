@@ -17,7 +17,8 @@ make check          # from the repository root — every hardware-free self-chec
 ```
 
 Green means the structural claims hold on the corpus present — **file-format
-code, plus `gobo_run.py`'s filesystem gates**. No USB protocol code runs:
+code, `gobo_run.py`'s filesystem gates, and `wolfmix_transaction.py`'s archive
+and rollback guards, which run against a fake link**. No port is ever opened:
 `wolfmix.py` and `wolfmix_experiment.py` are deliberately absent from the
 Makefile. Their
 hardware-free checks are separate subcommands:

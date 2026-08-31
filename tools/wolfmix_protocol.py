@@ -63,6 +63,13 @@ EXPERIMENT_NAMESPACE = uuid.UUID("d7ad3c90-367d-5eef-a8bb-f523c6f96d9a")
 
 EXPERIMENT_NAME_PREFIX = "WMX EXP "
 
+# Les deux seuls espaces de noms que ce depot ecrit. « exp » derive du label nu
+# — c'est l'historique, et les etats deja poses sur disque en dependent ;
+# « auto » derive d'un label prefixe, donc jamais le meme UUID.
+MANAGED_PREFIXES = {"exp": EXPERIMENT_NAME_PREFIX, "auto": "WMX AUTO "}
+
+PROJECT_NAME_MAX = 19
+
 ALLOWED_OUTGOING_EVENTS = {
     GET_PROFILE_LIST,
     GET_PROFILE,
@@ -379,25 +386,44 @@ def encode_request_uuid(value):
         raise WolfmixError(f"Invalid UUID: {value}") from error
     return encode_protobuf_field(1, 2, raw_uuid)
 
-def experiment_identity(label):
+def managed_identity(label, kind="exp"):
+    """(UUID derive, nom) d'un projet gere. Deterministe, jamais aleatoire.
+
+    C'est ce qui fait qu'aucun projet ordinaire n'est ecrit : la cible n'est
+    pas choisie, elle est calculee a partir du label.
+    """
+    if kind not in MANAGED_PREFIXES:
+        raise WolfmixError(
+            f"Unknown managed namespace {kind!r}; "
+            f"known: {', '.join(sorted(MANAGED_PREFIXES))}"
+        )
     label = label.strip()
     if not label:
-        raise WolfmixError("Experiment label cannot be empty")
-    return (
-        str(uuid.uuid5(EXPERIMENT_NAMESPACE, label)),
-        (EXPERIMENT_NAME_PREFIX + label)[:19],
-    )
+        raise WolfmixError("Managed project label cannot be empty")
+    graine = label if kind == "exp" else f"{kind}:{label}"
+    nom = (MANAGED_PREFIXES[kind] + label)[:PROJECT_NAME_MAX]
+    return str(uuid.uuid5(EXPERIMENT_NAMESPACE, graine)), nom
+
+
+def is_managed_name(name):
+    return name.startswith(tuple(MANAGED_PREFIXES.values()))
+
+
+def experiment_identity(label):
+    """L'espace de noms des experiences — le cas historique."""
+    return managed_identity(label, "exp")
 
 def encode_project(project_uuid, version, name, data):
     try:
         raw_uuid = uuid.UUID(project_uuid).bytes
     except ValueError as error:
         raise WolfmixError(f"Invalid UUID: {project_uuid}") from error
-    if not name.startswith(EXPERIMENT_NAME_PREFIX):
+    if not is_managed_name(name):
         raise WolfmixError(
-            f"Experiment project names must start with {EXPERIMENT_NAME_PREFIX!r}"
+            "Managed project names must start with one of "
+            + ", ".join(repr(x) for x in sorted(MANAGED_PREFIXES.values()))
         )
-    if len(name) > 19:
+    if len(name) > PROJECT_NAME_MAX:
         raise WolfmixError("Wolfmix project names cannot exceed 19 characters")
     if not data:
         raise WolfmixError("Refusing to upload an empty project")

@@ -1,44 +1,44 @@
 #!/usr/bin/env python3
 """Lecteur wire de production : varints, champs protobuf, conteneur TLV.
 
-Deux implémentations du wire coexistent **volontairement** dans ce dépôt
-(AGENTS.md, « une exception documentée à la non-répétition ») :
+Two wire implementations coexist here **on purpose** (AGENTS.md, "one
+documented exception to no-repetition"):
 
-  wpj_wire.py     celle-ci, partagée par le codec, le lecteur B/C, le
-                  protocole USB et la palette gobo ;
-  wpj_inspect.py  une seconde, indépendante, qui sert d'oracle.
+  wpj_wire.py     this one, shared by the codec, the B/C reader, the USB
+                  protocol and the gobo palette;
+  wpj_inspect.py  a second, independent one, which serves as the oracle.
 
-Un oracle qui partage son code avec ce qu'il vérifie ne vérifie que la
-cohérence de ce code avec lui-même. Les autres duplications, elles, ont été
-supprimées : ce fichier remplace `tlv.py` et `dump.py`.
+An oracle that shares its code with what it verifies only proves that code
+agrees with itself. The other duplications are gone: this file replaces
+`tlv.py` and `dump.py`.
 
-Tout refus est une `WireError` (une `ValueError`) : jamais une assertion — elles
-disparaissent sous `python3 -O` — et jamais une exception de la bibliothèque
-standard remontée telle quelle.
+Every refusal is a `WireError` (a `ValueError`): never an assertion — those
+vanish under `python3 -O` — and never a standard-library exception passed
+through as-is.
 
 Usage :
-  wpj_wire.py fichier.wpj            l'inventaire des records du conteneur
-  wpj_wire.py fichier.wpj 165,150    l'arbre protobuf de ces types
+  wpj_wire.py project.wpj            the container's record inventory
+  wpj_wire.py project.wpj 165,150    the protobuf tree of those types
   wpj_wire.py                        self-check
 """
 import hashlib
 import sys
 
-BODY_OFF = 0x40          # préfixe opaque : octets 20..0x40
+BODY_OFF = 0x40          # the opaque prefix is bytes 20..0x40
 ROOT_TYPE = 100
 ROOT_HEADER = 6          # longueur u32 + type u16
 
 
 class WireError(ValueError):
-    """Ce qui est lu n'a pas la forme annoncée."""
+    """What was read does not have the shape it claimed."""
 
 
 def read_varint(buf, i):
-    """(valeur, offset suivant). Refuse un varint tronqué ou aberrant."""
+    """(value, next offset). Refuses a truncated or absurd varint."""
     value = shift = 0
     while True:
         if i >= len(buf):
-            raise WireError(f"varint tronqué à {i}")
+            raise WireError(f"truncated varint at {i}")
         byte = buf[i]
         i += 1
         value |= (byte & 0x7F) << shift
@@ -46,43 +46,43 @@ def read_varint(buf, i):
         if not byte & 0x80:
             return value, i
         if shift > 70:
-            raise WireError(f"varint trop long à {i}")
+            raise WireError(f"varint too long at {i}")
 
 
 def fields(buf):
-    """Champs de premier niveau : (numéro, type wire, valeur).
+    """Top-level fields: (number, wire type, value).
 
-    La valeur est un entier pour un varint, les octets bruts pour les trois
-    autres types. Rien n'est interprété plus loin : c'est le rôle des schémas.
+    The value is an int for a varint and the raw bytes for the other three
+    types. Nothing is interpreted further — that is the schemas' job.
     """
     i = 0
     while i < len(buf):
         tag, i = read_varint(buf, i)
         number, wire_type = tag >> 3, tag & 7
         if number == 0:
-            raise WireError(f"numéro de champ 0 à {i}")
+            raise WireError(f"field number 0 at {i}")
         if wire_type == 0:
             value, i = read_varint(buf, i)
         elif wire_type == 2:
             size, i = read_varint(buf, i)
             if i + size > len(buf):
-                raise WireError(f"longueur {size} dépasse le tampon à {i}")
+                raise WireError(f"length {size} runs past the buffer at {i}")
             value, i = buf[i:i + size], i + size
         elif wire_type in (1, 5):
             width = 8 if wire_type == 1 else 4
             if i + width > len(buf):
-                raise WireError(f"champ {width * 8} bits tronqué à {i}")
+                raise WireError(f"truncated {width * 8}-bit field at {i}")
             value, i = buf[i:i + width], i + width
         else:
-            raise WireError(f"type wire {wire_type} inconnu à {i}")
+            raise WireError(f"unknown wire type {wire_type} at {i}")
         yield number, wire_type, value
 
 
 def walk(buf, depth=0, max_depth=6):
-    """Arbre : [(champ, 'v'|'len'|'f32'|'f64', valeur[, sous-arbre])].
+    """Tree: [(field, 'v'|'len'|'f32'|'f64', value[, subtree])].
 
-    Un bloc `len` est ré-essayé comme sous-message ; s'il ne parse pas, le
-    sous-arbre vaut None et les octets restent disponibles tels quels.
+    A `len` block is retried as a sub-message; when it does not parse, the
+    subtree is None and the bytes stay available as they are.
     """
     out = []
     for number, wire_type, value in fields(buf):
@@ -102,7 +102,7 @@ def walk(buf, depth=0, max_depth=6):
 
 
 def parse_container(data):
-    """Records enfants du conteneur racine : (index, type, offset, payload)."""
+    """Child records of the root container: (index, type, offset, payload)."""
     if len(data) < BODY_OFF + ROOT_HEADER:
         raise WireError(f"fichier trop court : {len(data)} octets, "
                         f"{BODY_OFF + ROOT_HEADER} minimum")
@@ -119,11 +119,11 @@ def parse_container(data):
     records, i, index = [], 0, 0
     while i < len(body):
         if i + ROOT_HEADER > len(body):
-            raise WireError(f"en-tête de record tronqué à {i}")
+            raise WireError(f"truncated record header at {i}")
         size = int.from_bytes(body[i:i + 4], "little")
         record_type = int.from_bytes(body[i + 4:i + 6], "little")
         if i + ROOT_HEADER + size > len(body):
-            raise WireError(f"record de type {record_type} tronqué à {i}")
+            raise WireError(f"truncated record of type {record_type} at {i}")
         records.append((index, record_type, start + i + ROOT_HEADER,
                         body[i + ROOT_HEADER:i + ROOT_HEADER + size]))
         i += ROOT_HEADER + size
@@ -132,16 +132,16 @@ def parse_container(data):
 
 
 def load(path):
-    """(octets, records) d'un fichier variante A, en-tête SHA-1 vérifié."""
+    """(bytes, records) of a variant-A file, SHA-1 header verified."""
     with open(path, "rb") as flux:
         data = flux.read()
     if len(data) < 20 or data[:20] != hashlib.sha1(data[20:]).digest():
-        raise WireError(f"{path} : en-tête SHA-1 invalide")
+        raise WireError(f"{path}: invalid SHA-1 header")
     return data, parse_container(data)
 
 
 def fmt_tree(tree, indent=0, maxlen=64):
-    """L'arbre en lignes lisibles — texte quand c'est du texte, hex sinon."""
+    """The tree as readable lines — text when it is text, hex otherwise."""
     lines = []
     for entry in tree:
         number, kind, pad = entry[0], entry[1], "  " * indent
@@ -182,44 +182,44 @@ def self_check():
                   b"\x0d\x01\x02", b"\x09\x01"):
         try:
             list(fields(refus))
-            raise AssertionError(f"accepté : {refus!r}")
+            raise AssertionError(f"accepted: {refus!r}")
         except WireError:
             pass
 
-    # Le conteneur : une racine bien formée passe, chaque troncature est nommée.
+    # The container: a well-formed root passes, every truncation is named.
     inner = (3).to_bytes(4, "little") + (101).to_bytes(2, "little") + b"abc"
     racine = len(inner).to_bytes(4, "little") + ROOT_TYPE.to_bytes(2, "little")
     bon = b"\x00" * BODY_OFF + racine + inner
     assert parse_container(bon) == [(0, 101, BODY_OFF + 12, b"abc")]
     mauvais = {
-        "trop court": b"\x00" * 8,
-        "type racine": b"\x00" * BODY_OFF + len(inner).to_bytes(4, "little")
-                       + (99).to_bytes(2, "little") + inner,
-        "racine débordante": b"\x00" * BODY_OFF
-                             + (len(inner) + 8).to_bytes(4, "little")
-                             + ROOT_TYPE.to_bytes(2, "little") + inner,
-        "record débordant": b"\x00" * BODY_OFF + racine
+        "too short": b"\x00" * 8,
+        "root type": b"\x00" * BODY_OFF + len(inner).to_bytes(4, "little")
+                     + (99).to_bytes(2, "little") + inner,
+        "root overflowing": b"\x00" * BODY_OFF
+                            + (len(inner) + 8).to_bytes(4, "little")
+                            + ROOT_TYPE.to_bytes(2, "little") + inner,
+        "record overflowing": b"\x00" * BODY_OFF + racine
                             + (99).to_bytes(4, "little")
                             + (101).to_bytes(2, "little") + b"abc",
     }
     for nom, corps in mauvais.items():
         try:
             parse_container(corps)
-            raise AssertionError(f"accepté : {nom}")
+            raise AssertionError(f"accepted: {nom}")
         except WireError:
             pass
-    print("self-check ok : varints, champs, arbre et conteneur — "
-          "refus nommés, pas d'assertion")
+    print("self-check ok: varints, fields, tree and container — "
+          "named refusals, no assertion")
 
 
 def main(argv=None):
     import argparse
     parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parseur.add_argument("fichier", nargs="?",
-                         help="le .wpj a lire ; sans argument, self-check")
+                         help="the .wpj to read; with no argument, self-check")
     parseur.add_argument("types", nargs="?",
-                         help="types de records separes par des virgules ; "
-                              "sans eux, l'inventaire")
+                         help="record types separated by commas; without "
+                              "them, the inventory")
     args = parseur.parse_args(argv)
     if args.fichier is None:
         self_check()
@@ -241,7 +241,7 @@ def main(argv=None):
             print("\n".join(fmt_tree(walk(payload), 1)))
         except WireError as erreur:
             apercu = payload[:96].hex() + ("…" if len(payload) > 96 else "")
-            print(f"  (pas du protobuf : {erreur}) hex: {apercu}")
+            print(f"  (not protobuf: {erreur}) hex: {apercu}")
     return 0
 
 
@@ -249,5 +249,5 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except WireError as erreur:
-        print(f"erreur : {erreur}", file=sys.stderr)
+        print(f"error: {erreur}", file=sys.stderr)
         sys.exit(2)

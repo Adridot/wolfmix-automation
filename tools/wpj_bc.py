@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""Lecteur des variantes B et C du .wpj (sérialisation WTOOLS). LECTURE SEULE.
+"""Reader for .wpj variants B and C (WTOOLS serialisation). READ-ONLY.
 
 Trois dispositions partagent l'extension .wpj (registre, « Trois variantes ») :
   A  SHA-1 + conteneur TLV        — dumps appareil ; wpjlib/wpj_codec
-  B  SHA-1 + protobuf à l'offset 20 — projets WTOOLS courants (champ 1 = 7 ou 8)
-  C  protobuf nu à l'offset 0       — projets WTOOLS anciens (champ 1 = 6)
+  B  SHA-1 + protobuf at offset 20 — current WTOOLS projects (field 1 = 7 or 8)
+  C  bare protobuf at offset 0      — older WTOOLS projects (field 1 = 6)
 
-B et C portent le MÊME schéma top-level : C est une version antérieure du même
-format, pas une autre disposition. Ce module rend ce schéma lisible au niveau
-des champs identifiés (registre, « Variant B/C top-level map ») et laisse le
-reste en hex verbatim. Aucune écriture : la règle « lecture avant écriture »
-tient tant que le round-trip différentiel et l'acceptation aval n'existent pas.
+B and C carry the SAME top-level schema: C is an earlier version of the same
+format, not a different layout. This module makes that schema readable for the
+fields that are identified (registry, "Variant B/C top-level map") and leaves
+the rest as verbatim hex. No writing: the "read before write" rule holds until
+a differential round trip and downstream acceptance exist.
 
 Usage :
-  wpj_bc.py fichier.wpj      décode en JSON sur stdout
-  wpj_bc.py                  self-check sur le corpus (abstention sans corpus)
+  wpj_bc.py project.wpj      decode to JSON on stdout
+  wpj_bc.py                  self-check over the corpus (abstains without one)
 """
 import glob
 import hashlib
@@ -41,7 +41,7 @@ def variante(data):
 
 
 def charger(path):
-    """(variante, corps protobuf) d'un fichier B ou C. ValueError sur A/illisible."""
+    """(variant, protobuf body) of a B or C file. ValueError on A/unreadable."""
     data = open(path, "rb").read()
     v = variante(data)
     if v == "A":
@@ -52,15 +52,15 @@ def charger(path):
 
 
 def _walk_top(body):
-    """[(champ, wt, valeur|octets)] au niveau 0, sans descendre.
+    """[(field, wt, value|bytes)] at level 0, without descending.
 
-    Le lecteur de production fait exactement ça, et ses refus sont nommés.
+    The production reader does exactly this, and its refusals are named.
     """
     return list(wpj_wire.fields(body))
 
 
 def _msg(chunk):
-    """Sous-message → dict {champ: valeur} ; répétition → liste. Varints et str seuls."""
+    """Sub-message → dict {field: value}; repeats → list. Varints and str only."""
     out = {}
     for f, wt, v in _walk_top(chunk):
         if wt == 2:
@@ -92,7 +92,7 @@ def _str(chunk, f):
 
 
 def projet_vers_dict(path):
-    """Décode les champs identifiés (statuts : registre) ; le reste en compteurs."""
+    """Decodes the identified fields (statuses: registry); the rest as counts."""
     var, body = charger(path)
     top = {}
     for f, wt, v in _walk_top(body):
@@ -116,9 +116,9 @@ def projet_vers_dict(path):
         d = _msg(b)
         patch.append({"profile": d.get(2, 0), "adresse_base0": d.get(3, 0),
                       "group": d.get(4, 0), "f6": d.get(6)})
-    # Presets (EXP-06) : les tableaux de 81 o sont des banques PAR EFFET —
+    # Presets (EXP-06): the 81-byte arrays are banks PER EFFECT —
     # ligne e = tuple de l'effet e : [vitesse, ?, phase, fade, size, ?, fan,
-    # bpm_division, link_order]. Les tableaux de 8 o sont par groupe A-H.
+    # bpm_division, link_order]. The 8-byte arrays are per group A-H.
     presets = []
     for b in blobs(3):
         d = _msg(b)
@@ -154,7 +154,7 @@ def projet_vers_dict(path):
     groupes = [{"name": _msg(b).get(1)} for b in blobs(10)]
     noms = blobs(2)
     if not noms:
-        raise ValueError(f"{path} : champ 2 (nom du projet) absent")
+        raise ValueError(f"{path}: field 2 (project name) is absent")
     autres = sorted(f for f in top if f not in
                     (1, 2, 3, 6, 7, 9, 10, 12, 13, 31))
     return {
@@ -167,7 +167,7 @@ def projet_vers_dict(path):
     }
 
 
-# --- self-check : le treillis d'identités du registre, sur tout le corpus ----
+# --- self-check: the registry's identity lattice, over the whole corpus -----
 
 def _identites(body):
     top = {}
@@ -195,46 +195,46 @@ def _identites(body):
     assert uns(18) == n(12) and uns(19) == n(13), "compteurs f18/f19"
     assert uns(20) == n(14) and uns(21) == n(17), "compteurs f20/f21"
     assert uns(22) == n(11) == n(29), "compteur f22"
-    assert uns(23) == len(occupe), "f23 ≠ canaux patchés"
+    assert uns(23) == len(occupe), "f23 != patched channels"
     assert {i for i, o in enumerate(blob(16)) if o} == occupe, "masque f16"
     assert {i for i, c in enumerate(f15) if c} <= occupe, "f15 hors patch"
     assert sum(1 for o in blob(25) if o) == n(12), "f25 ≠ nb fixtures"
     assert sum(1 for o in blob(26) if o) == n(13), "f26 ≠ nb profils"
-    assert sum(1 for o in blob(27) if o) == n(14), "f27 ≠ nb entrées f14"
+    assert sum(1 for o in blob(27) if o) == n(14), "f27 != f14 entry count"
 
 
 def _refus():
-    """Les refus qui ne dépendent d'aucun corpus — et qui tiennent sous -O.
+    """The refusals that need no corpus — and that hold under -O.
 
-    Ces cas vivent ici parce que `wpj_bc` est déjà dans `make check` et lit le
-    wire de bout en bout ; le conteneur lui-même est couvert par le self-check
-    de `wpj_wire`.
+    These cases live here because `wpj_bc` is already in `make check` and reads
+    the wire end to end; the container itself is covered by `wpj_wire`'s own
+    self-check.
     """
     for tronque in (b"\x0d\x01\x02", b"\x09\x01\x02\x03"):
         try:
             _walk_top(tronque)
-            raise AssertionError(f"bloc fixe tronqué accepté : {tronque!r}")
+            raise AssertionError(f"truncated fixed block accepted: {tronque!r}")
         except ValueError:
             pass
     entete = hashlib.sha1(b"").digest()
-    # Le conteneur lui-même est couvert par le self-check de wpj_wire ; ici on
-    # vérifie seulement que wpj_bc passe bien par lui.
+    # The container itself is covered by wpj_wire's self-check; here we only
+    # verify that wpj_bc really goes through it.
     try:
         wpj_wire.parse_container(entete)
-        raise AssertionError("conteneur trop court accepté")
+        raise AssertionError("a too-short container was accepted")
     except wpj_wire.WireError:
         pass
-    # Un blob obligatoire absent se nomme, au lieu de lever un IndexError.
+    # A missing mandatory blob is named, instead of raising IndexError.
     import tempfile
     with tempfile.TemporaryDirectory() as dossier:
-        chemin = os.path.join(dossier, "sans-nom.wpj")
+        chemin = os.path.join(dossier, "nameless.wpj")
         with open(chemin, "xb") as flux:
-            flux.write(b"\x08\x06")          # champ 1 = 6, et rien d'autre
+            flux.write(b"\x08\x06")          # field 1 = 6, and nothing else
         try:
             projet_vers_dict(chemin)
-            raise AssertionError("projet sans nom accepté")
+            raise AssertionError("a nameless project was accepted")
         except ValueError as err:
-            assert "champ 2" in str(err), err
+            assert "field 2" in str(err), err
 
 
 def demo():
@@ -251,15 +251,18 @@ def demo():
             projet_vers_dict(path)
             nb[v] += 1
     if not nb["B"] and not nb["C"]:
-        print("wpj_bc : ignoré, aucun fichier B/C dans le corpus")
+        print("wpj_bc: skipped, no B/C file in the corpus")
         return
-    print(f"treillis d'identités vérifié sur {nb['B']} fichiers B et {nb['C']} fichier(s) C")
+    print(f"identity lattice verified on {nb['B']} B files and "
+          f"{nb['C']} C file(s)")
 
 
 def _cli(argv=None):
     import argparse
     parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parseur.add_argument("projet", nargs="?", help="decode un projet variante B ou C en JSON ; sans argument, self-check")
+    parseur.add_argument("projet", nargs="?",
+                         help="decode a variant B or C project to JSON; "
+                              "with no argument, self-check")
     args = parseur.parse_args(argv)
     if args.projet is None:
         demo()

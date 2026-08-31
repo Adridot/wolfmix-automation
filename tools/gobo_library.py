@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Bibliothèque d'icônes gobo du W1, lue dans l'image flash locale (lecture seule).
+"""The W1's gobo icon library, read from the local flash image (read-only).
 
-Table de 800 entrées de 30 octets à la fin de `wolfmixFlash.bin` :
-`ptr u32 LE | 6 octets (couleur/flags) | nom 20o NUL-terminé`. Chaque `ptr`
-vise une icône de 1728 octets = 24x24 px, RGB565 LE + alpha 8 bits.
-L'index de l'entrée EST l'id gobo qu'on lit dans `145.f2` du .wpj et dans
-`userNum` du profil de luminaire. Rien n'est écrit, ici ni ailleurs.
+A table of 800 30-byte entries at the end of `wolfmixFlash.bin`:
+`ptr u32 LE | 6 bytes (colour/flags) | 20-byte NUL-terminated name`. Each `ptr`
+points at a 1728-byte icon = 24x24 px, RGB565 LE + 8-bit alpha. The entry's
+index IS the gobo id read from `145.f2` in the .wpj and from `userNum` in the
+fixture profile. Nothing is written, here or anywhere else.
 
-Les icônes sont l'oeuvre du fabricant : les rendus restent hors du dépôt.
+The icons are the manufacturer's work: renders stay outside the repository.
 """
 import glob
 import os
@@ -30,8 +30,8 @@ FLASH_GLOBS = (
 
 
 def version_tuple(chemin):
-    """`wm-fw-bundle-2.0.18` → (2, 0, 18) ; sans numéro, (-1,) — jamais choisi
-    devant une version lisible. Le tri lexical mettait 2.0.9 après 2.0.18."""
+    """`wm-fw-bundle-2.0.18` → (2, 0, 18); with no number, (-1,) — never chosen
+    over a readable version. Lexical order put 2.0.9 after 2.0.18."""
     nom = os.path.basename(os.path.dirname(chemin))
     _, _, version = nom.partition("wm-fw-bundle-")
     morceaux = [m for m in version.split(".") if m.isdigit()]
@@ -39,7 +39,7 @@ def version_tuple(chemin):
 
 
 def flash_bundles():
-    """Toutes les images flash installées, la plus récente en tête."""
+    """Every installed flash image, the most recent one first."""
     trouves = []
     for pattern in FLASH_GLOBS:
         trouves += glob.glob(os.path.expanduser(pattern))
@@ -47,8 +47,8 @@ def flash_bundles():
 
 
 def find_flash(path=None, version=None):
-    """L'image flash à lire : celle qu'on nomme, celle d'une version demandée,
-    ou la plus récente installée."""
+    """The flash image to read: the one named, the one of a requested version,
+    or the most recent installed."""
     if path:
         return path
     bundles = flash_bundles()
@@ -63,13 +63,13 @@ class Library:
         self.data = open(path, "rb").read()
         anchor = self.data.find(ANCHOR)
         if anchor < 0:
-            raise ValueError("table gobo introuvable dans cette image flash")
+            raise ValueError("no gobo table found in this flash image")
         self.table = anchor - 4
         while self._ptr(self.table - ENTRY) >> 24 == 0x10:
             self.table -= ENTRY
         ptrs = [self._ptr(self.table + k * ENTRY) for k in range(TABLE_LEN)]
-        # La zone d'images se termine exactement là où la table commence :
-        # c'est ce qui fixe l'adresse de base du flash (0x10100000 en 2.0.18).
+        # The image area ends exactly where the table begins: that is what
+        # fixes the flash base address (0x10100000 in 2.0.18).
         self.base = max(ptrs) + ICON - self.table
         self.ptrs = ptrs
 
@@ -77,13 +77,14 @@ class Library:
         return struct.unpack_from("<I", self.data, off)[0] if off >= 0 else 0
 
     def check_id(self, gobo_id):
-        """Python indexerait -1 sur la dernière entrée et lèverait au-delà de
-        800 : les deux sont des refus, avec la plage en clair."""
+        """Python would index -1 onto the last entry and raise past 800: both
+        are refusals here, with the range spelled out."""
         if not isinstance(gobo_id, int) or isinstance(gobo_id, bool):
-            raise ValueError(f"id gobo entier attendu, reçu {gobo_id!r}")
+            raise ValueError(f"integer gobo id expected, got {gobo_id!r}")
         if not 0 <= gobo_id < TABLE_LEN:
             raise ValueError(
-                f"id gobo {gobo_id} hors table : la plage est 0-{TABLE_LEN - 1}")
+                f"gobo id {gobo_id} is out of table: the range is "
+                f"0-{TABLE_LEN - 1}")
         return gobo_id
 
     def name(self, gobo_id):
@@ -92,7 +93,7 @@ class Library:
         return self.data[off:off + 20].split(b"\x00")[0].decode("latin1")
 
     def icon(self, gobo_id):
-        """Rend l'icône en RGB 24x24 aplati sur fond noir."""
+        """Renders the icon as 24x24 RGB, flattened onto black."""
         self.check_id(gobo_id)
         raw = self.data[self.ptrs[gobo_id] - self.base:][:ICON]
         out = bytearray()
@@ -142,7 +143,7 @@ def sheet(lib, ids, path, scale=4, cols=20):
 
 
 def palette(lib, wpj):
-    """Palettes gobo (record 145) d'un projet, id → nom d'icône."""
+    """A project's gobo palettes (record 145), id → icon name."""
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from wpj_wire import load, walk
     _, records = load(wpj)
@@ -174,48 +175,49 @@ def self_test(path):
     assert len(lib.icon(425)) == SIDE * SIDE * 3
     assert len(set(lib.ptrs)) == 705, len(set(lib.ptrs))
 
-    # Le tri par version, pas par ordre lexical : 2.0.9 est avant 2.0.18.
+    # Sorted by version, not lexically: 2.0.9 comes before 2.0.18.
     assert version_tuple("/x/wm-fw-bundle-2.0.18/wolfmixFlash.bin") == (2, 0, 18)
     assert (version_tuple("/x/wm-fw-bundle-2.0.9/f.bin")
             < version_tuple("/x/wm-fw-bundle-2.0.18/f.bin"))
     assert version_tuple("/x/wm-fw-bundle/f.bin") == (-1,)
 
-    # Un id hors table est refusé aux deux bouts, sans repli silencieux.
+    # An out-of-table id is refused at both ends, with no silent fallback.
     for refuse in (-1, TABLE_LEN, TABLE_LEN + 10, True, "342"):
         try:
             lib.check_id(refuse)
-            raise AssertionError(f"id accepté : {refuse!r}")
+            raise AssertionError(f"id accepted: {refuse!r}")
         except ValueError:
             pass
     assert lib.check_id(0) == 0 and lib.check_id(TABLE_LEN - 1) == TABLE_LEN - 1
 
-    print(f"ok — {TABLE_LEN} entrées, {len(set(lib.ptrs))} icônes distinctes")
+    print(f"ok — {TABLE_LEN} entries, {len(set(lib.ptrs))} distinct icons")
 
 
 def annonce_bundle(path):
-    """Dire laquelle a été retenue : plusieurs bundles peuvent coexister."""
+    """Say which one was picked: several bundles can coexist."""
     autres = [b for b in flash_bundles() if b != path]
     if autres and not os.environ.get("WOLFMIX_FLASH"):
-        print(f"bundle retenu : {os.path.basename(os.path.dirname(path))} "
-              f"({len(autres)} autre(s) installé(s))", file=sys.stderr)
+        print(f"bundle chosen: {os.path.basename(os.path.dirname(path))} "
+              f"({len(autres)} other(s) installed)", file=sys.stderr)
     return path
 
 
 def _parseur():
     import argparse
     parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parseur.add_argument("--flash", help="image flash a lire ; par defaut la "
-                                         "plus recente installee, ou $WOLFMIX_FLASH")
+    parseur.add_argument("--flash", help="flash image to read; by default the "
+                                         "most recent installed, or "
+                                         "$WOLFMIX_FLASH")
     commandes = parseur.add_subparsers(dest="commande")
-    commandes.add_parser("self-test", help="verifie la table sur l'image locale")
-    commandes.add_parser("list", help="les 800 entrees, id et nom d'usine")
-    planche = commandes.add_parser("sheet", help="planche PNG des icones")
-    planche.add_argument("sortie", help="fichier PNG neuf ; un existant est refuse")
+    commandes.add_parser("self-test", help="check the table on the local image")
+    commandes.add_parser("list", help="the 800 entries, id and stock name")
+    planche = commandes.add_parser("sheet", help="PNG contact sheet of the icons")
+    planche.add_argument("sortie", help="new PNG file; an existing one is refused")
     planche.add_argument("ids", nargs="?",
-                         help="ids separes par des virgules ; par defaut toute "
-                              "la table, case (ligne, colonne) = ligne * 20 + colonne")
-    pal = commandes.add_parser("palette", help="les ids affiches par un projet")
-    pal.add_argument("projet", help="le .wpj a lire")
+                         help="ids separated by commas; by default the whole "
+                              "table, cell (row, column) = row * 20 + column")
+    pal = commandes.add_parser("palette", help="the ids a project displays")
+    pal.add_argument("projet", help="the .wpj to read")
     return parseur
 
 
@@ -225,8 +227,8 @@ def main(argv=None):
     commande = args.commande or "self-test"
     path = find_flash(args.flash or os.environ.get("WOLFMIX_FLASH"))
     if not path:
-        print("aucune image flash locale (WTOOLS n'a jamais téléchargé le "
-              "firmware) — rien à faire", file=sys.stderr)
+        print("no local flash image (WTOOLS never downloaded the firmware) — "
+              "nothing to do", file=sys.stderr)
         return 0
     annonce_bundle(path)
     if commande == "self-test":
@@ -242,19 +244,19 @@ def main(argv=None):
         try:
             sheet(lib, ids, args.sortie)
         except FileExistsError:
-            print(f"refus : {args.sortie} existe déjà", file=sys.stderr)
+            print(f"refused: {args.sortie} already exists", file=sys.stderr)
             return 2
         except ValueError as erreur:
-            print(f"refus : {erreur}", file=sys.stderr)
+            print(f"refused: {erreur}", file=sys.stderr)
             return 2
-        print(f"{len(ids)} icônes → {args.sortie}")
+        print(f"{len(ids)} icons → {args.sortie}")
     elif commande == "palette":
         for group, pads in palette(lib, args.projet):
-            print(f"groupe {group}")
+            print(f"group {group}")
             for slot, (gobo_id, name) in enumerate(pads, 1):
                 if gobo_id is None:
                     continue
-                label = f"  nom « {name} »" if name else ""
+                label = f"  name \"{name}\"" if name else ""
                 print(f"  pad {slot:2d}  id={gobo_id:3d}  "
                       f"{lib.name(gobo_id)}{label}")
     return 0

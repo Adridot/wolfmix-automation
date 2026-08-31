@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
-"""Écrit des icônes de gobo dans une copie de l'image flash du W1.
+"""Writes gobo icons into a copy of the W1's flash image.
 
-Inverse exact de `gobo_library.Library.icon()` : une icône est un bloc de
-1728 octets, 24x24 pixels, 3 octets par pixel entrelacés — RGB565
-little-endian puis alpha 8 bits. La taille est fixe et les pointeurs de la
-table sont absolus : on réécrit sur place, on n'insère jamais.
+The exact inverse of `gobo_library.Library.icon()`: an icon is a 1728-byte
+block, 24x24 pixels, 3 interleaved bytes per pixel — RGB565 little-endian then
+8-bit alpha. The size is fixed and the table's pointers are absolute: we
+rewrite in place, we never insert.
 
-L'image flash d'origine n'est jamais touchée ; `patch` écrit un fichier neuf
-et vérifie que le diff tient dans les seules fenêtres visées.
+The original flash image is never touched; `patch` writes a new file and
+checks that the diff stays inside the targeted windows.
 
-  self-test                      round-trip sur les 705 icônes distinctes
-  patch SORTIE id=img.png ...    id=#RRGGBB pour une icône unie,
-                                 id=mask:img.png pour une silhouette
-                                 (écrit aussi SORTIE.json, le manifeste)
+  self-test                     round trip over the 705 distinct icons
+  patch OUTPUT id=img.png ...   id=#RRGGBB for a solid icon,
+                                id=mask:img.png for a silhouette
+                                (also writes OUTPUT.json, the manifest)
 
-Une image carrée plus grande que 24x24 est réduite par moyenne de zone.
-`mask:` lit la luminance comme canal alpha et rend la forme en blanc — le
-format que produit « motif blanc sur fond noir » d'un générateur d'images.
+A square image larger than 24x24 is reduced by area averaging. `mask:` reads
+luminance as the alpha channel and renders the shape in white — the format an
+image generator produces from "white motif on a black background".
 
-Les icônes d'origine sont l'oeuvre du fabricant : rien n'est extrait ici.
+The stock icons are the manufacturer's work: nothing is extracted here.
 """
 import collections
 import datetime
@@ -42,7 +42,7 @@ def raw_icon(lib, gobo_id):
 
 
 def decode_raw(raw):
-    """1728 octets → 576 quadruplets (r, g, b, a) sur 8 bits."""
+    """1728 bytes → 576 (r, g, b, a) quadruples on 8 bits."""
     out = []
     for i in range(0, ICON, 3):
         v = raw[i] | (raw[i + 1] << 8)
@@ -56,11 +56,11 @@ def decode_raw(raw):
 def encode(pixels):
     """576 quadruplets (r, g, b, a) → 1728 octets.
 
-    L'arrondi (+127) est ce qui rend l'aller-retour exact : la troncature
-    ferait perdre un pas de quantification sur la moitié des valeurs.
+    The +127 rounding is what makes the round trip exact: truncation would
+    lose one quantisation step on half the values.
     """
     if len(pixels) != PIXELS:
-        raise ValueError(f"{len(pixels)} pixels, il en faut {PIXELS}")
+        raise ValueError(f"{len(pixels)} pixels, {PIXELS} required")
     out = bytearray()
     for r, g, b, a in pixels:
         v = ((((r * 31 + 127) // 255) << 11)
@@ -71,32 +71,32 @@ def encode(pixels):
 
 
 def read_png(path):
-    """Lecteur PNG minimal : 8 bits par canal, RGB ou RGBA, non entrelacé."""
+    """Minimal PNG reader: 8 bits per channel, RGB or RGBA, non-interlaced."""
     data = open(path, "rb").read()
     if data[:8] != b"\x89PNG\r\n\x1a\n":
-        raise ValueError(f"{path} n'est pas un PNG")
+        raise ValueError(f"{path} is not a PNG")
     width = height = mode = None
     idat, off, fin = bytearray(), 8, False
     while off + 12 <= len(data):
         size, tag = struct.unpack_from(">I4s", data, off)
         if off + 12 + size > len(data):
-            raise ValueError(f"{path} : chunk {tag.decode('latin1')} tronqué")
+            raise ValueError(f"{path}: truncated {tag.decode('latin1')} chunk")
         body = data[off + 8:off + 8 + size]
         crc, = struct.unpack_from(">I", data, off + 8 + size)
         if zlib.crc32(tag + body) != crc:
             raise ValueError(
-                f"{path} : CRC invalide sur le chunk {tag.decode('latin1')}")
+                f"{path}: invalid CRC on the {tag.decode('latin1')} chunk")
         if tag == b"IHDR":
             if size != 13:
-                raise ValueError(f"{path} : IHDR de {size} octets")
+                raise ValueError(f"{path}: {size}-byte IHDR")
             width, height, depth, mode, _, _, interlace = struct.unpack(
                 ">IIBBBBB", body)
             if depth != 8 or mode not in (2, 6) or interlace:
                 raise ValueError(
-                    f"{path} : PNG attendu en 8 bits, RGB ou RGBA, "
-                    "non entrelacé")
+                    f"{path}: expected an 8-bit, RGB or RGBA, "
+                    "non-interlaced PNG")
             if not width or not height:
-                raise ValueError(f"{path} : image {width}x{height}")
+                raise ValueError(f"{path}: {width}x{height} image")
         elif tag == b"IDAT":
             idat += body
         elif tag == b"IEND":
@@ -104,19 +104,19 @@ def read_png(path):
             break
         off += 12 + size
     if width is None:
-        raise ValueError(f"{path} : IHDR absent")
+        raise ValueError(f"{path}: no IHDR")
     if not fin:
-        raise ValueError(f"{path} : IEND absent, fichier tronqué")
+        raise ValueError(f"{path}: no IEND, truncated file")
     step = 3 if mode == 2 else 4
     stride = width * step
     try:
         raw = zlib.decompress(bytes(idat))
     except zlib.error as err:
-        raise ValueError(f"{path} : données IDAT illisibles ({err})") from None
+        raise ValueError(f"{path}: unreadable IDAT data ({err})") from None
     if len(raw) != height * (1 + stride):
         raise ValueError(
-            f"{path} : {len(raw)} octets décompressés, "
-            f"{height * (1 + stride)} attendus pour {width}x{height}")
+            f"{path}: {len(raw)} bytes inflated, "
+            f"{height * (1 + stride)} expected for {width}x{height}")
     out, prev, pos = bytearray(), bytearray(stride), 0
     for _ in range(height):
         kind, pos = raw[pos], pos + 1
@@ -138,7 +138,7 @@ def read_png(path):
                         else up if pb <= pc else corner)
                 line[i] = (line[i] + near) & 255
             elif kind:
-                raise ValueError(f"{path} : filtre PNG {kind} inconnu")
+                raise ValueError(f"{path}: unknown PNG filter {kind}")
         out += line
         prev = line
     pixels = [(out[i], out[i + 1], out[i + 2],
@@ -148,15 +148,15 @@ def read_png(path):
 
 
 def downscale(width, height, pixels, value):
-    """Moyenne de zone d'un carré N×N vers 24×24, une valeur par pixel source.
+    """Area average of an N×N square down to 24×24, one value per source pixel.
 
-    `value` extrait ce qui est moyenné : un tuple (canaux) ou un scalaire.
-    Les bornes entières `k*N//24` couvrent chaque pixel source exactement une
-    fois, quelle que soit la divisibilité de N.
+    `value` extracts what gets averaged: a tuple (channels) or a scalar. The
+    integer bounds `k*N//24` cover every source pixel exactly once, whatever
+    N divides into.
     """
     if width != height or width < SIDE:
-        raise ValueError(f"image carrée d'au moins {SIDE}x{SIDE} attendue, "
-                         f"reçu {width}x{height}")
+        raise ValueError(f"square image of at least {SIDE}x{SIDE} expected, "
+                         f"got {width}x{height}")
     out = []
     for ty in range(SIDE):
         y0, y1 = ty * height // SIDE, (ty + 1) * height // SIDE
@@ -174,8 +174,8 @@ def downscale(width, height, pixels, value):
 
 
 def load_image(path):
-    """Un PNG sans canal alpha rend l'icône entièrement opaque : les icônes
-    du fabricant sont détourées, donc exporter en RGB écrase leur découpe."""
+    """A PNG with no alpha channel makes the icon fully opaque: the stock icons
+    are cut out, so exporting as RGB flattens that cut-out away."""
     width, height, pixels = read_png(path)
     if (width, height) == (SIDE, SIDE):
         return pixels
@@ -183,8 +183,8 @@ def load_image(path):
 
 
 def load_mask(path):
-    """Silhouette : luminance × alpha du PNG source → canal alpha, forme
-    rendue en blanc. C'est l'inverse d'un aplat « blanc sur fond noir »."""
+    """Silhouette: luminance × alpha of the source PNG → alpha channel, shape
+    rendered in white. The inverse of a flat "white on black"."""
     width, height, pixels = read_png(path)
     lum = downscale(width, height, pixels,
                     lambda p: ((p[0] * 299 + p[1] * 587 + p[2] * 114)
@@ -193,19 +193,19 @@ def load_mask(path):
 
 
 def solid(spec):
-    """`#RRGGBB` → une icône unie, opaque."""
+    """`#RRGGBB` → a solid, opaque icon."""
     if len(spec) != 7:
-        raise ValueError(f"couleur attendue en #RRGGBB, reçu « {spec} »")
+        raise ValueError(f"colour expected as #RRGGBB, got \"{spec}\"")
     r, g, b = (int(spec[k:k + 2], 16) for k in (1, 3, 5))
     return [(r, g, b, 255)] * PIXELS
 
 
 def patch(lib, edits):
-    """edits : {gobo_id: pixels} → image flash modifiée, longueur inchangée.
+    """edits: {gobo_id: pixels} → the modified flash image, same length.
 
-    Refuse toute icône dont le pointeur est partagé : dans la table 2.0.18,
-    « Open » (0x1029417E) sert 96 entrées, et la réécrire les repeindrait
-    toutes d'un coup.
+    Refuses any icon whose pointer is shared: in the 2.0.18 table, "Open"
+    (0x1029417E) serves 96 entries, and rewriting it would repaint all of
+    them at once.
     """
     uses = collections.Counter(lib.ptrs)
     data = bytearray(lib.data)
@@ -215,25 +215,25 @@ def patch(lib, edits):
         if uses[ptr] > 1:
             others = [i for i, p in enumerate(lib.ptrs) if p == ptr]
             raise ValueError(
-                f"l'icône {gobo_id} (« {lib.name(gobo_id)} ») partage son "
-                f"pointeur avec {len(others) - 1} autres entrées "
-                f"({others[:6]}…) : la réécrire les repeindrait toutes")
+                f"icon {gobo_id} (\"{lib.name(gobo_id)}\") shares its pointer "
+                f"with {len(others) - 1} other entries ({others[:6]}…): "
+                "rewriting it would repaint them all")
         off = ptr - lib.base
         data[off:off + ICON] = encode(pixels)
     return bytes(data)
 
 
 def verify(before, after, lib, ids):
-    """Le diff doit tenir exactement dans les fenêtres des icônes visées."""
+    """The diff must fit exactly inside the targeted icons' windows."""
     if len(before) != len(after):
-        raise ValueError("la longueur de l'image flash a changé")
+        raise ValueError("the flash image's length changed")
     windows = [(lib.ptrs[i] - lib.base, lib.ptrs[i] - lib.base + ICON)
                for i in ids]
     scratch = bytearray(after)
     for lo, hi in windows:
         scratch[lo:hi] = before[lo:hi]
     if bytes(scratch) != before:
-        raise ValueError("des octets ont changé hors des icônes visées")
+        raise ValueError("bytes changed outside the targeted icons")
     return sum(x != y
                for lo, hi in windows
                for x, y in zip(before[lo:hi], after[lo:hi]))
@@ -244,11 +244,11 @@ def sha256(donnees):
 
 
 def manifeste(source, lib, sortie, data, edits, changed):
-    """Ce qu'il faut pour prouver plus tard que cette copie vient de ce bundle.
+    """What it takes to prove later that this copy came from that bundle.
 
-    La longueur seule ne prouve rien : n'importe quel fichier de même taille
-    passait la garde d'upload. Les deux empreintes, elles, ferment la chaîne
-    bundle installé → manifeste → fichier qui part dans l'appareil.
+    Length alone proves nothing: any file of the same size used to pass the
+    upload guard. The two hashes close the chain installed bundle → manifest →
+    the file that goes into the device.
     """
     dossier = os.path.basename(os.path.dirname(os.path.abspath(source)))
     return {
@@ -265,7 +265,7 @@ def manifeste(source, lib, sortie, data, edits, changed):
 
 
 def ecrire(sortie, data, contenu):
-    """Le fichier patché puis son manifeste ; l'un sans l'autre ne sert à rien."""
+    """The patched file then its manifest; either one alone is useless."""
     with open(sortie, "xb") as handle:
         handle.write(data)
     try:
@@ -273,13 +273,13 @@ def ecrire(sortie, data, contenu):
             json.dump(contenu, handle, ensure_ascii=False, indent=2)
             handle.write("\n")
     except OSError:
-        os.remove(sortie)                # jamais de patch sans son manifeste
+        os.remove(sortie)                # never a patch without its manifest
         raise
 
 
 def self_test(path):
-    # La quantification doit être réversible sur toute la plage, sinon le
-    # round-trip ne tiendrait que par chance sur les icônes du fabricant.
+    # Quantisation must be reversible over the whole range, or the round trip
+    # would hold only by luck on the manufacturer's icons.
     for v in range(32):
         assert ((v * 255 // 31) * 31 + 127) // 255 == v, v
     for v in range(64):
@@ -292,7 +292,7 @@ def self_test(path):
         assert encode(decode_raw(raw)) == raw, gobo_id
     assert len(distinct) == 705, len(distinct)
 
-    # Un PNG écrit par le dépôt doit se relire à l'identique.
+    # A PNG written by this repository must read back identical.
     with tempfile.TemporaryDirectory() as tmp:
         png = os.path.join(tmp, "t.png")
         rgb = bytes(range(256)) * ((SIDE * SIDE * 3 + 255) // 256)
@@ -303,8 +303,8 @@ def self_test(path):
             tuple(rgb[k:k + 3]) for k in range(0, len(rgb), 3)]
         assert all(p[3] == 255 for p in pixels)
 
-    # Réduction et silhouette : un 48x48 moitié blanc / moitié noir doit
-    # donner 12 colonnes pleines, 12 vides, sans demi-teinte hors frontière.
+    # Downscale and silhouette: a 48x48 half white / half black must give 12
+    # full columns and 12 empty ones, with no half tone off the boundary.
     with tempfile.TemporaryDirectory() as tmp:
         png = os.path.join(tmp, "m.png")
         rgb = b"".join((b"\xff\xff\xff" if x < 24 else b"\x00\x00\x00")
@@ -312,33 +312,33 @@ def self_test(path):
         write_png(png, 48, 48, rgb)
         icon = load_mask(png)
         assert all(p == (255, 255, 255, 255) for i, p in enumerate(icon)
-                   if i % SIDE < 12), "gauche : alpha plein attendu"
+                   if i % SIDE < 12), "left: full alpha expected"
         assert all(p[3] == 0 for i, p in enumerate(icon)
-                   if i % SIDE >= 12), "droite : alpha nul attendu"
+                   if i % SIDE >= 12), "right: zero alpha expected"
         flat = load_image(png)
         assert flat[0] == (255, 255, 255, 255) and flat[23] == (0, 0, 0, 255)
 
-    # Un patch ne doit toucher que sa propre fenêtre.
+    # A patch must touch nothing but its own window.
     target = next(i for i in range(len(lib.ptrs))
                   if collections.Counter(lib.ptrs)[lib.ptrs[i]] == 1)
     after = patch(lib, {target: solid("#ff00ff")})
     changed = verify(lib.data, after, lib, [target])
-    assert changed > 0, "le patch n'a rien écrit"
+    assert changed > 0, "the patch wrote nothing"
     assert len(after) == len(lib.data)
 
-    # Un octet changé hors des fenêtres visées est un refus, pas une trace.
+    # A byte changed outside the targeted windows is a refusal, not a log line.
     hors = bytearray(after)
     debut = lib.ptrs[target] - lib.base
     libre = 0 if debut > 0 else debut + ICON
     hors[libre] ^= 0xFF
     try:
         verify(lib.data, bytes(hors), lib, [target])
-        raise AssertionError("un octet hors fenêtre est passé")
+        raise AssertionError("an out-of-window byte got through")
     except ValueError:
         pass
 
-    # Le manifeste compte les octets réellement différents, et le patch et
-    # son manifeste vivent ou meurent ensemble.
+    # The manifest counts the bytes that actually differ, and the patch and
+    # its manifest live or die together.
     with tempfile.TemporaryDirectory() as tmp:
         sortie = os.path.join(tmp, "flash-custom.bin")
         contenu = manifeste(path, lib, sortie, after, {target: None}, changed)
@@ -351,11 +351,11 @@ def self_test(path):
         assert releve["result"]["size"] == releve["source"]["size"]
         try:
             ecrire(sortie, after, contenu)
-            raise AssertionError("une sortie existante a été écrasée")
+            raise AssertionError("an existing output was overwritten")
         except FileExistsError:
             pass
 
-    # Un PNG « presque valide » est refusé, classe par classe.
+    # An "almost valid" PNG is refused, class by class.
     with tempfile.TemporaryDirectory() as tmp:
         bon = os.path.join(tmp, "bon.png")
         write_png(bon, SIDE, SIDE, bytes(SIDE * SIDE * 3))
@@ -363,17 +363,17 @@ def self_test(path):
         casses = {
             "CRC": octets[:-5] + bytes([octets[-5] ^ 0xFF]) + octets[-4:],
             "IEND": octets[:-12],
-            "tronqué": octets[:len(octets) - 20],
+            "truncated": octets[:len(octets) - 20],
         }
         for nom, corps in casses.items():
             chemin = os.path.join(tmp, f"{nom}.png")
             open(chemin, "wb").write(corps)
             try:
                 read_png(chemin)
-                raise AssertionError(f"PNG accepté malgré : {nom}")
+                raise AssertionError(f"PNG accepted despite: {nom}")
             except ValueError:
                 pass
-        # Un IDAT valide mais trop court pour la hauteur annoncée.
+        # A valid IDAT, but too short for the height it declares.
         court = bytearray(octets)
         entete = court.index(b"IHDR")
         struct.pack_into(">I", court, entete + 8, SIDE * 2)      # height x2
@@ -383,33 +383,33 @@ def self_test(path):
         open(chemin, "wb").write(bytes(court))
         try:
             read_png(chemin)
-            raise AssertionError("PNG accepté avec une hauteur incohérente")
+            raise AssertionError("PNG accepted with an inconsistent height")
         except ValueError:
             pass
 
-    # Un id hors table ne patche rien.
+    # An out-of-table id patches nothing.
     for refuse in (-1, 800):
         try:
             patch(lib, {refuse: solid("#000000")})
-            raise AssertionError(f"id accepté : {refuse}")
+            raise AssertionError(f"id accepted: {refuse}")
         except ValueError:
             pass
 
-    print(f"ok — {len(distinct)} icônes ré-encodées à l'octet près, "
-          f"patch confiné ({changed} octets sur l'icône {target}), "
-          "manifeste et PNG vérifiés")
+    print(f"ok — {len(distinct)} icons re-encoded byte for byte, patch "
+          f"confined ({changed} bytes on icon {target}), manifest and PNG "
+          "verified")
 
 
 def _parseur():
     import argparse
     parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parseur.add_argument("--flash", help="image flash source ; par defaut la "
-                                         "plus recente, ou $WOLFMIX_FLASH")
+    parseur.add_argument("--flash", help="source flash image; by default the "
+                                         "most recent, or $WOLFMIX_FLASH")
     commandes = parseur.add_subparsers(dest="commande")
-    commandes.add_parser("self-test", help="round-trip sur les 705 icones")
+    commandes.add_parser("self-test", help="round trip over the 705 icons")
     patch_cmd = commandes.add_parser(
-        "patch", help="ecrit une COPIE patchee du flash, plus son manifeste")
-    patch_cmd.add_argument("sortie", help="fichier neuf ; un existant est refuse")
+        "patch", help="writes a patched COPY of the flash, plus its manifest")
+    patch_cmd.add_argument("sortie", help="new file; an existing one is refused")
     patch_cmd.add_argument("edits", nargs="+", metavar="id=source",
                            help="id=#RRGGBB, id=image.png ou id=mask:image.png")
     return parseur
@@ -420,8 +420,8 @@ def main(argv=None):
     args = parseur.parse_args(argv)
     path = find_flash(args.flash or os.environ.get("WOLFMIX_FLASH"))
     if not path:
-        print("aucune image flash locale (WTOOLS n'a jamais téléchargé le "
-              "firmware) — rien à faire", file=sys.stderr)
+        print("no local flash image (WTOOLS never downloaded the firmware) — "
+              "nothing to do", file=sys.stderr)
         return 0
     if (args.commande or "self-test") == "self-test":
         self_test(path)
@@ -429,7 +429,7 @@ def main(argv=None):
 
     out = args.sortie
     if os.path.abspath(out) == os.path.abspath(path):
-        print("refus : la sortie écraserait l'image flash d'origine",
+        print("refused: the output would overwrite the original flash image",
               file=sys.stderr)
         return 2
     lib = Library(path)
@@ -438,8 +438,8 @@ def main(argv=None):
         for spec in args.edits:
             key, _, value = spec.partition("=")
             if not value:
-                raise ValueError(f"argument attendu en id=source, "
-                                 f"reçu « {spec} »")
+                raise ValueError("argument expected as id=source, got "
+                                 f"\"{spec}\"")
             edits[int(key)] = (solid(value) if value.startswith("#")
                                else load_mask(value[5:])
                                if value.startswith("mask:")
@@ -448,17 +448,17 @@ def main(argv=None):
         changed = verify(lib.data, data, lib, list(edits))
         contenu = manifeste(path, lib, out, data, edits, changed)
     except (ValueError, struct.error, zlib.error, OSError) as err:
-        print(f"refus : {err}", file=sys.stderr)
+        print(f"refused: {err}", file=sys.stderr)
         return 2
     try:
         ecrire(out, data, contenu)
     except FileExistsError as err:
-        print(f"refus : {err.filename} existe déjà", file=sys.stderr)
+        print(f"refused: {err.filename} already exists", file=sys.stderr)
         return 2
-    names = ", ".join(f"{i} (« {lib.name(i)} »)" for i in sorted(edits))
-    print(f"{out} — {len(data)} octets, {changed} modifiés sur {names}\n"
-          f"{out}.json — manifeste : {contenu['source']['bundle']}, "
-          f"{len(contenu['ids'])} icône(s), {changed} octets modifiés")
+    names = ", ".join(f"{i} (\"{lib.name(i)}\")" for i in sorted(edits))
+    print(f"{out} — {len(data)} bytes, {changed} changed on {names}\n"
+          f"{out}.json — manifest: {contenu['source']['bundle']}, "
+          f"{len(contenu['ids'])} icon(s), {changed} bytes changed")
     return 0
 
 

@@ -11,10 +11,11 @@ the whole method.
 ## Before you open anything
 
 - Run `make check` from the repository root — it runs every hardware-free
-  self-check, and the `Makefile` is the canonical list. They need a corpus of
-  your own ([`docs/corpus.md`](docs/corpus.md)).
-- If they abstain (`ignoré, aucun corpus`), nothing was verified. That is not a
-  pass.
+  self-check, and [`tools/check.py`](tools/check.py) is the canonical list.
+  Some of them need a corpus of your own ([`docs/corpus.md`](docs/corpus.md)).
+- Exit **0** = everything passed. Exit **3** = green, but something abstained:
+  the summary names it, and nothing it covers was verified. That is not a pass.
+  Exit **1** = something failed.
 
 ## Adding or correcting a format claim
 

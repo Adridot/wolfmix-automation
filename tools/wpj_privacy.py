@@ -26,6 +26,9 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from wpjlib import ABSTENTION
+
 LISTE = ".wpj-private-names"
 ENV = "WPJ_PRIVATE_NAMES"
 
@@ -131,8 +134,8 @@ def main(argv):
         return 1
     regles = motifs()
     if not regles:
-        print(f"wpj_privacy: {len(chemins)} tracked files, no forbidden "
-              f"extension or path — but ABSTAINING on names, no {LISTE} "
+        print(f"wpj_privacy: {ABSTENTION} on names — {len(chemins)} tracked "
+              f"files, no forbidden extension or path, but no {LISTE} "
               f"(see LEGAL.md): not one name was checked", file=sys.stderr)
         return 0
     trouves = controle(chemins, regles)

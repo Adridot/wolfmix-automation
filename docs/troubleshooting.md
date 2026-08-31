@@ -2,9 +2,11 @@
 
 ## Files
 
-**`… : ignoré, aucun corpus dans corpus/ (voir docs/corpus.md)`**
+**`… : ABSTAINED — no corpus in corpus/, nothing was verified`**, and
+`make check` exits 3
 Working as intended: no project file ships with this repository, and you have
-not supplied one. The self-check abstained rather than passing vacuously. Put
+not supplied one. The self-check abstained rather than passing vacuously, the
+summary at the end of the run names it, and 3 is the code that says so. Put
 `.wpj` files under `corpus/`, or set `WPJ_CORPUS` to where you keep them —
 [`corpus.md`](corpus.md).
 

@@ -101,23 +101,26 @@ make check
 ```
 
 ```text
-self-check ok : round-trip octet-identique sur N fichiers
-fidélité octet vérifiée sur N fichiers variante A
-… identités vérifiées sur N fichiers variante A (+ paires F30-04 / FLASH-09)
-self-check ok : 12/12 tilt, 11/12 pan, offsets et clamp
-wpj_privacy : … motifs, aucune occurrence dans les fichiers suivis
+--- wpjlib: python3 tools/wpjlib.py
+self-check ok: byte-identical round trip on N files
+…
+== check: 15 checks, 15 passed, 0 abstained, 0 failed
 ```
 
 The counts are your corpus's, not ours. What runs: byte-identical round-trip,
 codec fidelity per record type, wire parsing, the B/C reader's identity
 lattice, the show compiler, the show generator, the inspect API, the
 structural identities, the position model against four DMX captures, the
-anonymisation guard, and the gobo pipeline's gates. **The `Makefile` is the
-list** — it changes, this sentence should not have to.
+anonymisation guard, the cross-reference guard, the gobo pipeline's gates, and
+the boundary tests. **[`tools/check.py`](tools/check.py) is the list** — it
+changes, this sentence should not have to.
 
 > [!IMPORTANT]
-> With no project files present, the self-checks **abstain** — one line each,
-> exit code 0. Nothing was verified, and they will not pretend otherwise.
+> With no project files present, the corpus-dependent checks **abstain**. They
+> say `ABSTAINED`, the summary names every one of them, and the run exits **3**
+> rather than 0 — green with abstentions is not a pass, and the exit code is
+> where that becomes mechanical. Nothing was verified, and they will not
+> pretend otherwise.
 
 ### 4 · Look inside a project
 

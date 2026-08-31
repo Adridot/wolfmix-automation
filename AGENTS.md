@@ -21,13 +21,15 @@ code, `gobo_run.py`'s filesystem gates, `wolfmix_transaction.py`'s archive and
 rollback guards, which run against a fake link, and the `tests/` suite, which
 builds its own bytes and therefore proves the same thing on a bare clone**. No port is ever opened:
 `wolfmix.py` and `wolfmix_experiment.py` are deliberately absent from the
-Makefile. Their
-hardware-free checks are separate subcommands:
-`python3 tools/wolfmix.py self-test` and
-`python3 tools/wolfmix_experiment.py self-test`. **If it prints
-`ignoré, aucun corpus`, nothing was verified** — no project files ship with
-this repository (see below). Do not read an abstention as a pass, and do not
-"fix" it by inventing test data.
+list, which lives in [`tools/check.py`](tools/check.py). Their hardware-free
+checks are separate subcommands: `python3 tools/wolfmix.py self-test` and
+`python3 tools/wolfmix_experiment.py self-test`.
+
+The run ends with a summary, and the exit code carries the distinction: **0**
+every check passed, **3** green but at least one check verified nothing, **1**
+something failed. A check with no corpus prints `ABSTAINED` and is named in
+the summary — no project files ship with this repository (see below). Do not
+read an abstention as a pass, and do not "fix" it by inventing test data.
 
 ## Hard invariants — do not break these
 

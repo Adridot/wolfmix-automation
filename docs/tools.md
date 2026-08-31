@@ -11,9 +11,14 @@ Three conventions hold everywhere:
   `wpj_codec`, `wpj_bc`, `wpj_api`, `wpj_identities`, `wpj_show`,
   `wpj_generate`); the others prove it against frozen inputs in their own
   source (`wpj_inspect`, `wpj_position`), against a tree they build themselves
-  (`gobo_run`), or against the git index (`wpj_privacy`). **The canonical list
-  is the `Makefile`** — read `make check` rather than a count written here.
-  `wpj_diff.py` self-checks too but is not wired into it.
+  (`gobo_run`), or against the git index (`wpj_privacy`, `wpj_links`). **The
+  canonical list is `tools/check.py`** — read it rather than a count written
+  here. `wpj_diff.py` self-checks too but is not wired into it.
+- **`make check` runs `tools/check.py`, which aggregates.** It runs every check
+  even after one fails, then prints a summary naming each abstention. Exit 0 =
+  all passed, 3 = green with abstentions, 1 = a failure. `--abstentions-ok`
+  turns 3 into 0 for a context that expects them, such as the corpus-free CI
+  job.
 - **`wpj_links.py` checks the cross-references.** Every Markdown link in a
   tracked document must land on a tracked path; a renamed file that leaves a
   document pointing at nothing fails `make check`.

@@ -76,7 +76,7 @@ def demo():
     assert canal(0, 77, 45874 / DEMI_ECHELLE + signe(62585))[0] == 77, "clamp"
     assert dmx16(0, 77, 2.0) == round(borne16(77)) == 19789, "clamp 16 bits"
     assert rates == 1, f"pan: {rates} misses instead of the one known (Crowd, head 2)"
-    print("self-check ok : 12/12 tilt, 11/12 pan, offsets et clamp",
+    print("self-check ok: 12/12 tilt, 11/12 pan, offsets and clamp",
           file=sys.stderr)
 
 

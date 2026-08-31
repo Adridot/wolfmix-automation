@@ -56,16 +56,24 @@ variant-A file, and never write into it.
 Self-checks abstain rather than fail:
 
 ```
-wpjlib : ignoré, aucun corpus dans corpus/ (voir docs/corpus.md)
+wpjlib: ABSTAINED — no corpus in corpus/, nothing was verified (see docs/corpus.md)
 ```
 
-`make check` still exits 0. That is honest — it means nothing was verified, not
-that everything passed. With a corpus present you get the real thing:
+and the run ends by naming them all:
 
 ```
-self-check ok : round-trip octet-identique sur 45 fichiers
-fidélité octet vérifiée sur 45 fichiers variante A
-17 identités vérifiées sur 45 fichiers variante A (+ paires F30-04 / FLASH-09)
+== check: 15 checks, 7 passed, 8 abstained, 0 failed
+   abstained: wpjlib — ABSTAINED — no corpus in corpus/, nothing was verified
+   …
+   Nothing failed, but the checks named above verified nothing. Do not read
+   this as a pass (docs/corpus.md).
+```
+
+`make check` exits **3** there, not 0: green with abstentions is neither a
+failure nor a pass, and the exit code says which. With a corpus present:
+
+```
+== check: 15 checks, 15 passed, 0 abstained, 0 failed
 ```
 
 ## What makes a good corpus

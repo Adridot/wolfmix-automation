@@ -783,7 +783,7 @@ def main(argv=None):
         with open(args.spec, encoding="utf-8") as flux:
             spec = json.load(flux)
         _imprime(compiler(spec, args.sortie))
-        print(f"ok : {args.sortie}")
+        print(f"ok: {args.sortie}")
         return 0
     _imprime(verifier(args.base, args.sortie))
     return 0

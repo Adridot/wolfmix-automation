@@ -375,7 +375,7 @@ def main(argv=None):
         print(ligne)
     for t, occ, la, lb in diffs:
         print(f"record {t} occ {occ}: {la} -> {lb} bytes")
-    print(f"ok : {args.sortie}")
+    print(f"ok: {args.sortie}")
     return 0
 
 

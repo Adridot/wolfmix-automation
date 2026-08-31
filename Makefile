@@ -1,18 +1,9 @@
-# Tous les self-checks. Doit tourner depuis la racine du dépôt, stdlib seule.
+# The gate: every hardware-free self-check, then a summary that names every
+# abstention. The canonical list lives in tools/check.py, not here.
+#
+# Exit 0 = all passed. Exit 3 = green, but something verified nothing (a clone
+# with no corpus). Exit 1 = something failed. Must run from the repository
+# root, stdlib only.
 .PHONY: check
 check:
-	python3 tools/wpjlib.py
-	python3 tools/wpj_wire.py
-	python3 tools/wpj_codec.py
-	python3 tools/wpj_inspect.py
-	python3 tools/wpj_bc.py
-	python3 tools/wpj_show.py
-	python3 tools/wpj_generate.py
-	python3 tools/wpj_api.py
-	python3 tools/wpj_identities.py
-	python3 tools/wpj_position.py
-	python3 tools/wolfmix_transaction.py
-	python3 tools/wpj_privacy.py
-	python3 tools/wpj_links.py
-	python3 tools/gobo_run.py
-	python3 -m unittest discover -s tests -t .
+	python3 tools/check.py

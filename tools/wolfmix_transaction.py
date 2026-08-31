@@ -430,8 +430,8 @@ def self_check():
         except protocol.WolfmixError as erreur:
             assert "not a derived UUID" in str(erreur), erreur
 
-    print("self-check ok : archive transactionnelle, identite, rollback, "
-          "et l'UUID derive comme seule cible")
+    print("self-check ok: transactional archive, identity, rollback, and "
+          "the derived UUID as the only target")
 
 
 if __name__ == "__main__":

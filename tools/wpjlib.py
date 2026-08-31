@@ -34,10 +34,16 @@ def corpus_files(motif="**/*.wpj"):
     return sorted(glob.glob(os.path.join(racine, motif), recursive=True))
 
 
+# The word the runner in `tools/check.py` looks for. An abstention is not a
+# pass, and it must be impossible to read as one — in the line itself, in the
+# summary, and in the exit code.
+ABSTENTION = "ABSTAINED"
+
+
 def pas_de_corpus(outil):
-    print(f"{outil}: skipped, no corpus in "
-          f"{os.environ.get(CORPUS_ENV) or CORPUS_DEFAUT}/ "
-          f"(voir docs/corpus.md)", file=sys.stderr)
+    print(f"{outil}: {ABSTENTION} — no corpus in "
+          f"{os.environ.get(CORPUS_ENV) or CORPUS_DEFAUT}/, nothing was "
+          f"verified (see docs/corpus.md)", file=sys.stderr)
 
 
 class Wpj:

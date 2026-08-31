@@ -251,7 +251,7 @@ def demo():
             projet_vers_dict(path)
             nb[v] += 1
     if not nb["B"] and not nb["C"]:
-        print("wpj_bc: skipped, no B/C file in the corpus")
+        print(f"wpj_bc: {wpjlib.ABSTENTION} — no B/C file in the corpus")
         return
     print(f"identity lattice verified on {nb['B']} B files and "
           f"{nb['C']} C file(s)")

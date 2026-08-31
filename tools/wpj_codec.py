@@ -130,7 +130,14 @@ SCHEMAS = {
     160: {5: ("macros", {6: ("name", "str")})},
     165: {5: ("presets", _PRESET)},
 }
-# passthrough volontaire : 106, 110, 155, 161
+# Deliberate passthrough: a documented structure, no schema yet. Data rather
+# than a comment, because `tools/wpj_counts.py` checks the documents against it
+# — a record that moves from here to SCHEMAS must not need a doc edit to stay
+# true, it must make the gate fail until one happens.
+PASSTHROUGH = (106, 110, 155, 161)
+
+# Every record type the container is known to carry.
+TYPES = tuple(sorted(set(SCHEMAS) | set(PASSTHROUGH)))
 
 
 # --- wire protobuf -----------------------------------------------------------

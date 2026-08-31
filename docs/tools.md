@@ -22,6 +22,11 @@ Three conventions hold everywhere:
 - **`wpj_links.py` checks the cross-references.** Every Markdown link in a
   tracked document must land on a tracked path; a renamed file that leaves a
   document pointing at nothing fails `make check`.
+- **`wpj_counts.py` checks the figures.** Counts that move as the work moves
+  — decoded and passthrough records, identities, checks — are computed from
+  the code. A document that states one marks it with `<!--count:name-->` or
+  `<!--types:name-->`, and a marker the code no longer supports fails
+  `make check`. `python3 tools/wpj_counts.py --print` prints them all.
 - **`tests/` covers the refusals.** `python3 -m unittest discover -s tests -t .`
   (also the last line of `make check`) exercises what the tools reject:
   truncated files, impossible varints, an event outside the allowlist, an
@@ -90,13 +95,16 @@ Naming: a field whose meaning is proven gets a semantic key (`name`, `profile`,
 absent from the dict — never a synthesised `0`.
 
 Decoded today: 101, 102, 105, **111**, 115, 116, 120, 125, **130**, 135, 140,
-145, 150, **151**, 160, 165 — sixteen. `python3 tools/wpj_codec.py` prints the
-split, and is the source of truth for it.
+145, 150, **151**, 160, 165 <!--types:decoded--> — 16 <!--count:decoded-->.
+`python3 tools/wpj_counts.py --print` prints the split, and `wpj_codec.SCHEMAS`
+is the source of truth for it.
 
 Note on 105: the keys are `offset_106` and `entry_count_106`, not an address and a
 channel count — see `SPEC.md` §7. The old names were a misreading.
-Passthrough (round-tripped, undecoded): 106, 110, 155, 161 — several of these
-have a documented structure in `SPEC.md` without a codec schema yet.
+
+Passthrough (round-tripped, undecoded): 106, 110, 155, 161
+<!--types:passthrough--> — 4 <!--count:passthrough-->. Several of these have a
+documented structure in `SPEC.md` without a codec schema yet.
 
 The self-check reads only the corpus you supply. It does **not** scan your
 WTOOLS installation; copy what you want tested into the corpus root instead.

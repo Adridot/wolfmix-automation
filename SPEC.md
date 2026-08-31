@@ -937,8 +937,8 @@ The strongest structural result available. Eight identities hold **exactly,
 ```
 
 Three more, added once `105.f4` was corrected, and mechanically re-checked on
-**45/45** files by `tools/wpj_identities.py`, which now runs **seventeen** identities
-plus two before/after pair checks (F30-04, FLASH-09):
+**45/45** files by `tools/wpj_identities.py`, which now runs **18** identities
+<!--count:identities--> plus two before/after pair checks (F30-04, FLASH-09):
 
 ```
 9.  the [f4, f4+f7) intervals of 105, sorted by f4, tile [0, count(106))

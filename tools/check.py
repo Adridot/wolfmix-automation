@@ -46,6 +46,7 @@ CONTROLES = [
     ("wolfmix_transaction", ["python3", "tools/wolfmix_transaction.py"]),
     ("wpj_privacy", ["python3", "tools/wpj_privacy.py"]),
     ("wpj_links", ["python3", "tools/wpj_links.py"]),
+    ("wpj_counts", ["python3", "tools/wpj_counts.py"]),
     ("gobo_run", ["python3", "tools/gobo_run.py"]),
     ("boundaries", ["python3", "-m", "unittest", "discover", "-s", "tests",
                     "-t", "."]),

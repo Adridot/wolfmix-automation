@@ -120,6 +120,10 @@ itself worth recording rather than silently resolving.
 4. If the reading implies a count, an offset or a derivation, encode it in
    `tools/wpj_identities.py` — an arithmetic identity is checkable forever, by
    anyone, without hardware.
+   If it moves a record between decoded and passthrough, change
+   `wpj_codec.SCHEMAS` / `PASSTHROUGH` and let `make check` tell you which
+   documents now lie: figures marked `<!--count:…-->` are checked against the
+   code, never trusted.
 5. `make check` must still pass.
 
 A refutation is a result. `research/` contains several, and they are written up

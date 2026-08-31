@@ -234,6 +234,7 @@ Three properties hold at every stage:
 | [`wpj_position.py`](tools/wpj_position.py) | The position model, executable: the DMX a recalled position emits, computed from the project alone. |
 | [`wpj_privacy.py`](tools/wpj_privacy.py) | The anonymisation guard: fails `make check` if a real name reaches a tracked file. |
 | [`wpj_links.py`](tools/wpj_links.py) | The reference guard: fails `make check` if a tracked document links to a path that is not in the tree. |
+| [`wpj_counts.py`](tools/wpj_counts.py) | The figures that drift — decoded records, identities, checks — computed from the code and checked against what the documents claim. |
 
 Run any of them with **no arguments** to execute its self-check — except
 `wolfmix.py` and `wolfmix_experiment.py`, which take it as a subcommand
@@ -244,8 +245,8 @@ Run any of them with **no arguments** to execute its self-check — except
 | Area | State |
 |---|---|
 | Variant-A container, SHA-1 header, project name | 🟢 **device-confirmed** — our files are accepted and stored byte-identically |
-| Record inventory — 20 types | 🟢 16 decoded, 4 round-tripped verbatim (106, 110, 155, 161) — `python3 tools/wpj_codec.py` prints the current split |
-| Patch model (105/106/110/111/115/116/120/125) | 🟢 locked by arithmetic — **18 identities** re-checked on every file; the DMX address is `115.f2`, confirmed on live DMX |
+| Record inventory — 20 types <!--count:record_types--> | 🟢 16 decoded <!--count:decoded-->, 4 <!--count:passthrough--> round-tripped verbatim (106, 110, 155, 161) <!--types:passthrough--> — `python3 tools/wpj_counts.py --print` prints the current split |
+| Patch model (105/106/110/111/115/116/120/125) | 🟢 locked by arithmetic — **18 identities** <!--count:identities--> re-checked on every file; the DMX address is `115.f2`, confirmed on live DMX |
 | Static palettes — colour, gobo, position (140/145/150) | 🟢 **device-confirmed**, one record per group A–H — and record 140 is **device-confirmed in writing** too: one pad component changed, and the DMX followed the formula exactly |
 | Positions, end to end (150/151/106) | 🟢 **device-confirmed** — fan, per-fixture offsets, clamping and travel limits; the emitted DMX is computable from the file alone |
 | FX sequences (155) | 🟢 **device-confirmed in both engines** — 16 steps × 8 groups, step-major, packed varints, and `f2` says which sequencer: `1` = move (position indices), `2` = the three beam `FX Seq` (4-bit segment masks). Ticking two beam segments moved **one byte in 46414** |

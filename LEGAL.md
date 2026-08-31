@@ -59,6 +59,12 @@ The same applies to the manufacturer's manual, to WTOOLS itself, and to
 fixture profiles: get them from the manufacturer, on your own machine, under
 whatever terms the manufacturer sets.
 
+What you produce from them stays yours too: gobo photographs, the silhouettes
+generated from them and any patched `wolfmixFlash.bin` are your fixture's data
+and the manufacturer's icon work — they are never committed here, and both
+[`docs/gobo-icons.md`](docs/gobo-icons.md) and the `gobo-icons` skill refuse a
+working path inside this tree.
+
 ## Interoperability, and what we did not do
 
 The format was mapped by reading files we own, by changing one parameter at a

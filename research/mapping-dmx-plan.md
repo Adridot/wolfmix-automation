@@ -629,3 +629,64 @@ lecture majoritaire ne voyait pas.
 l'état d'usine, il reproduit la table de **19 entrées** que l'appareil venait
 d'écrire — mêmes fonctions, mêmes instances, mêmes canaux, `f7` et `f8`
 compris. Rien de l'écran `Mappings` n'échappe désormais au compilateur.
+
+---
+
+# La vérification qui a trouvé le défaut : comparer les OCTETS, pas la sémantique
+
+La validation de MAP-09 disait « cartes identiques, `f7` et `f8` compris ». Elle
+comparait des **cartes décodées**. En comparant les **octets** des entrées, deux
+défauts sortent du writer :
+
+```
+nous      1002 2052 3801 4001 2800 3064
+appareil  1002 2052 3064 3801 4001
+```
+
+1. **`28 00` — le champ 5 émis avec la valeur nulle.** Protobuf l'omet, et
+   l'appareil l'omet toujours. Notre encodeur le posait dès qu'un canal tenait
+   sous 256, c'est-à-dire **presque toujours**.
+2. **Champs hors de l'ordre numérique** : `f7 f8` avant `f5 f6`, parce qu'une
+   entrée neuve était bâtie puis complétée, et que l'encodeur suit l'ordre
+   d'insertion.
+
+## Pourquoi rien ne l'avait vu
+
+MAP-06 et MAP-08 ont déployé des fichiers acceptés par l'appareil, mais tous deux
+**modifiaient des entrées existantes** — ordre et omissions préservés par
+construction. Le chemin « entrée neuve » de `wpj_show.py` n'avait jamais été
+comparé aux octets, seulement au décodage. Une comparaison sémantique ne peut pas
+voir ça : les deux formes décodent vers la même carte.
+
+## Ce que ça aurait coûté
+
+Le fichier reste sémantiquement juste, donc l'appareil l'aurait sans doute lu.
+Mais dès qu'il l'aurait récrit, ses octets à lui auraient différé des nôtres, et
+**tout diff ultérieur serait devenu illisible** — sur un dépôt dont la méthode
+entière repose sur le diff à variable unique, c'est la panne la plus chère
+possible. Le genre de divergence silencieuse que ce projet a déjà payée deux fois.
+
+## Après correction
+
+`_normalise_mapping()` remet toute entrée touchée dans l'ordre des champs de
+l'appareil et laisse tomber les champs nuls. Résultat, depuis l'état d'usine et
+avec les dix mappings de MAP-09 :
+
+> **record 130 identique octet pour octet à celui de l'appareil — 229 octets.**
+
+Garde-fou permanent dans le self-check : aucune entrée ne contient `28 00`, et
+les numéros de champ de chaque entrée sont croissants. Vérifié rouge puis vert —
+en retirant le correctif, le self-check échoue sur
+`champs hors de l'ordre numérique`.
+
+## Ce qui reste non vérifié, et honnêtement
+
+- **Aucun fichier portant une entrée créée par NOUS n'a été déployé.** MAP-06
+  modifiait, MAP-08 supprimait et réordonnait. Maintenant que les octets sont
+  identiques à ceux de l'appareil, le risque est faible — mais il n'est pas nul,
+  et il est mesurable en un déploiement.
+- **`main` recréé de zéro.** Son entrée d'usine ne porte pas de `f7` ; nos
+  entrées neuves en posent un à 1. Retirer MAIN puis le remettre écrirait donc
+  une forme que l'appareil n'a jamais écrite. Non mesuré.
+- **Un index de preset au-delà de ce que le projet contient.** Le writer accepte
+  0–199 sans regarder combien de presets existent.

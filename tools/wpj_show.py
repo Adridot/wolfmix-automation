@@ -79,6 +79,24 @@ _MAP_FONCTIONS = {
 _MAP_CLES = ("cible", "groupe", "index", "page", "canal")
 PAGES_PRESET = 7             # Page 1 à 7, l'écran n'en propose pas d'autres
 PRESETS_MAX = 200            # 0–199, la borne du panneau
+# L'appareil écrit ses champs dans l'ordre numérique et OMET tout champ nul —
+# `28 00` n'apparaît jamais chez lui. Une entrée éditée doit être remise dans
+# cette forme, sinon le fichier diverge des octets de l'appareil alors même que
+# sa sémantique est juste : c'est invisible à une comparaison décodée, et ça
+# casserait tout diff ultérieur contre un fichier que l'appareil a récrit.
+_MAP_ORDRE = (("instance", 2), ("fonction", 4), ("canal_octet_haut", 5),
+              ("canal_octet_bas", 6), ("f7", 7), ("f8", 8))
+
+
+def _normalise_mapping(entree):
+    """Rend l'entrée dans l'ordre des champs de l'appareil, sans champ nul."""
+    connus = {nom for nom, _ in _MAP_ORDRE}
+    propre = {nom: entree[nom] for nom, _ in _MAP_ORDRE
+              if entree.get(nom)}
+    propre.update({k: v for k, v in entree.items() if k not in connus})
+    entree.clear()
+    entree.update(propre)
+    return entree
 CANAL_MAX = 512              # borne de l'encodeur du panneau, mesurée
 
 
@@ -388,11 +406,12 @@ def compiler(spec, sortie):
             haut, bas = divmod(canal - 1, 256)
             if trouve is None:
                 # forme d'une entrée créée par l'appareil : f7 = 1, f8 = 1,
-                # observée sur les trois qu'il a créées (preset, BPM Tap, Wolf).
+                # observée sur les treize qu'il a créées (MAP-02, MAP-09).
                 trouve = {"instance": instance, "fonction": fonction,
                           "f7": 1, "f8": 1}
                 entrees.append(trouve)
             trouve["canal_octet_haut"], trouve["canal_octet_bas"] = haut, bas
+            _normalise_mapping(trouve)
             attendu[(fonction, instance)] = canal
         d130["f1"] = len(entrees)             # device-confirmed : f1 = le compte
 
@@ -558,6 +577,8 @@ def _demo_sur(base):
                          {"cible": "smoke", "canal": 106},
                          {"cible": "select_preset", "canal": 107},
                          {"cible": "next_preset", "canal": 110},
+                         {"cible": "dimmer_groupe", "groupe": "D",
+                          "canal": 1},          # octet haut nul : doit être omis
                          {"cible": "dimmer_groupe", "groupe": "C",
                           "canal": None}]}        # retrait
     with tempfile.TemporaryDirectory() as tmp:
@@ -636,6 +657,22 @@ def _demo_sur(base):
         assert carte[(78, 2)] == 110, carte      # f4 partagé, instance fixe 2
         assert carte[(70, 4)] != carte[(70, 255)], "les deux f4=70 confondus"
         assert d130["f1"] == len(d130["mappings"]) == 9 - 1 + 6, d130["f1"]
+
+        # --- la forme des octets, pas seulement la sémantique ---
+        # L'appareil écrit ses champs dans l'ordre numérique et n'émet jamais
+        # un champ nul. Une divergence ici est invisible au décodage et rendrait
+        # tout diff futur illisible contre un fichier que l'appareil a récrit.
+        import tlv
+        brut = [x for x in tlv.load(out)[1] if x[1] == 130][0][3]
+        for e in tlv.walk(brut):
+            if e[0] != 5:
+                continue
+            octets = e[2]
+            assert b"\x28\x00" not in octets, \
+                f"champ 5 nul émis : {octets.hex()}"
+            numeros = [c[0] for c in e[3]]
+            assert numeros == sorted(numeros), \
+                f"champs hors de l'ordre numérique : {octets.hex()}"
 
         for mauvais in [{"base": base, "fondu": 1},
                         {"base": base, "presets": [{"id": 9999, "nom": "x"}]},

@@ -25,7 +25,8 @@ import tempfile
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import wolfmix
+import wolfmix_device as device
+import wolfmix_protocol as protocol
 import wpj_codec
 import wpjlib
 
@@ -66,7 +67,7 @@ def validate_project(path, project_name=None):
     if project_name is not None:
         metadata = wpj_codec.decode(101, project.get(101))
         if set(metadata) == {"raw"}:
-            raise wolfmix.WolfmixError("Project name record 101 is not decodable")
+            raise protocol.WolfmixError("Project name record 101 is not decodable")
         metadata["nom"] = project_name
         project.replace(101, wpj_codec.encode(101, metadata))
         body = project.body()
@@ -97,7 +98,7 @@ def warn_about_dimmers(data):
 
 
 def state_paths(state_root, label):
-    project_uuid, _ = wolfmix.experiment_identity(label)
+    project_uuid, _ = protocol.experiment_identity(label)
     root = Path(state_root).resolve() / project_uuid
     return root, root / "state.json"
 
@@ -105,37 +106,37 @@ def state_paths(state_root, label):
 def load_state(state_root, label):
     root, state_file = state_paths(state_root, label)
     if not state_file.exists():
-        raise wolfmix.WolfmixError(
+        raise protocol.WolfmixError(
             f"Experiment is not initialized: {label!r}; run init first"
         )
     state = read_json(state_file)
-    expected_uuid, expected_name = wolfmix.experiment_identity(label)
+    expected_uuid, expected_name = protocol.experiment_identity(label)
     if state.get("uuid") != expected_uuid or state.get("name") != expected_name:
-        raise wolfmix.WolfmixError("Experiment state identity mismatch")
+        raise protocol.WolfmixError("Experiment state identity mismatch")
     return root, state_file, state
 
 
 def connect(port=None, timeout=8.0):
-    return wolfmix.WolfmixConnection(port or wolfmix.discover_port(), timeout)
+    return device.WolfmixConnection(port or device.discover_port(), timeout)
 
 
 def preflight(connection):
-    settings = wolfmix.decode_settings(connection.request(wolfmix.GET_SETTINGS))
+    settings = protocol.decode_settings(connection.request(protocol.GET_SETTINGS))
     if settings["projectChanged"]:
-        raise wolfmix.WolfmixError(
+        raise protocol.WolfmixError(
             "The loaded project has unsaved changes; save it on the W1 first"
         )
     if settings["lockedState"] or settings["editLockedState"]:
-        raise wolfmix.WolfmixError("The controller is locked")
+        raise protocol.WolfmixError("The controller is locked")
     return settings
 
 
 def project_list(connection):
-    return wolfmix.decode_item_list(connection.request(wolfmix.GET_PROJECT_LIST))
+    return protocol.decode_item_list(connection.request(protocol.GET_PROJECT_LIST))
 
 
 def download_project(connection, project_uuid):
-    return wolfmix.fetch_project(connection, project_uuid)
+    return device.fetch_project(connection, project_uuid)
 
 
 def verify_project(connection, expected_uuid, expected_data):
@@ -145,7 +146,7 @@ def verify_project(connection, expected_uuid, expected_data):
         project["data"], "downloaded project"
     ).records
     if downloaded_records != expected_records:
-        raise wolfmix.ProtocolError(
+        raise protocol.ProtocolError(
             "Uploaded project records differ after download verification"
         )
     project["recordsIdentical"] = True
@@ -196,7 +197,7 @@ def publish_archive(target, manifest_path, item, data):
         os.fsync(stream.fileno())
     if sha256(temporary.read_bytes()) != sha256(data):
         temporary.unlink()
-        raise wolfmix.WolfmixError(
+        raise protocol.WolfmixError(
             f"Archived project did not read back identical: {target}"
         )
     os.replace(temporary, target)
@@ -228,7 +229,7 @@ def archive_projects(connection, root):
             data = target.read_bytes()
             if manifest_path.exists():
                 if read_json(manifest_path).get("sha256") != sha256(data):
-                    raise wolfmix.WolfmixError(
+                    raise protocol.WolfmixError(
                         f"Archived project does not match its manifest: {target}"
                     )
                 continue
@@ -246,7 +247,7 @@ def check_identity(settings, expected, moment):
     for key in ("serialNumber", "firmwareVer"):
         wanted = expected.get(key)
         if wanted is not None and settings.get(key) != wanted:
-            raise wolfmix.WolfmixError(
+            raise protocol.WolfmixError(
                 f"Controller identity changed {moment}: {key} was {wanted!r}, "
                 f"is now {settings.get(key)!r}"
             )
@@ -275,21 +276,21 @@ def mark_rollback_failed(state_dir, label, error, restore):
 
 
 def capture_dmx(connection):
-    settings = wolfmix.decode_settings(connection.request(wolfmix.GET_SETTINGS))
+    settings = protocol.decode_settings(connection.request(protocol.GET_SETTINGS))
     enabled_by_us = not settings["dmxUsbSendState"]
     try:
         if enabled_by_us:
-            wolfmix.require_success(
-                connection.request(wolfmix.ENABLE_USB_DMX), "Enabling USB DMX"
+            device.require_success(
+                connection.request(protocol.ENABLE_USB_DMX), "Enabling USB DMX"
             )
         while True:
             _, _, event, payload = connection.read_frame()
-            if event == wolfmix.DMX_PACKET:
-                return wolfmix.decode_dmx_packet(payload)
+            if event == protocol.DMX_PACKET:
+                return protocol.decode_dmx_packet(payload)
     finally:
         if enabled_by_us:
-            wolfmix.require_success(
-                connection.request(wolfmix.DISABLE_USB_DMX), "Disabling USB DMX"
+            device.require_success(
+                connection.request(protocol.DISABLE_USB_DMX), "Disabling USB DMX"
             )
 
 
@@ -297,7 +298,7 @@ def restart(connection):
     # The firmware resets its USB device immediately and cannot reliably return
     # a response. A successful complete write is the restart acknowledgement.
     device = os.fstat(connection.fd)
-    connection.send(wolfmix.RESTART)
+    connection.send(protocol.RESTART)
     return device.st_dev, device.st_ino, device.st_rdev
 
 
@@ -328,17 +329,17 @@ def wait_for_controller(port, timeout=20.0, disconnected_identity=None):
     while time.monotonic() < deadline:
         connection = None
         try:
-            candidate = port if Path(port).exists() else wolfmix.discover_port()
-            connection = wolfmix.WolfmixConnection(candidate, timeout=1.5)
+            candidate = port if Path(port).exists() else device.discover_port()
+            connection = device.WolfmixConnection(candidate, timeout=1.5)
             connection.__enter__()
-            wolfmix.decode_settings(connection.request(wolfmix.GET_SETTINGS))
+            protocol.decode_settings(connection.request(protocol.GET_SETTINGS))
             return connection
-        except wolfmix.WolfmixError as error:
+        except protocol.WolfmixError as error:
             if connection is not None:
                 connection.close()
             last_error = error
             time.sleep(0.25)
-    raise wolfmix.WolfmixError(
+    raise protocol.WolfmixError(
         f"Wolfmix did not reconnect after restart: {last_error}"
     )
 
@@ -352,13 +353,13 @@ def restore_previous(port, label, previous, disconnected_identity=None,
     try:
         if expected_identity:
             check_identity(
-                wolfmix.decode_settings(connection.request(wolfmix.GET_SETTINGS)),
+                protocol.decode_settings(connection.request(protocol.GET_SETTINGS)),
                 expected_identity, "before the rollback",
             )
         if previous is None:
-            wolfmix.remove_experiment_project(connection, label)
+            device.remove_experiment_project(connection, label)
         else:
-            wolfmix.store_experiment_project(
+            device.store_experiment_project(
                 connection,
                 label,
                 previous["data"],
@@ -374,15 +375,15 @@ def restore_previous(port, label, previous, disconnected_identity=None,
     try:
         if expected_identity:
             check_identity(
-                wolfmix.decode_settings(connection.request(wolfmix.GET_SETTINGS)),
+                protocol.decode_settings(connection.request(protocol.GET_SETTINGS)),
                 expected_identity, "after the rollback restart",
             )
         if previous is None:
             if any(
-                item.get("uuid") == wolfmix.experiment_identity(label)[0]
+                item.get("uuid") == protocol.experiment_identity(label)[0]
                 for item in project_list(connection)
             ):
-                raise wolfmix.ProtocolError(
+                raise protocol.ProtocolError(
                     "Experiment project still exists after rollback"
                 )
         else:
@@ -396,9 +397,9 @@ def record_fields(payload):
     try:
         return {
             number: (value.hex(" ") if isinstance(value, bytes) else value)
-            for number, _, value in wolfmix.protobuf_fields(payload)
+            for number, _, value in protocol.protobuf_fields(payload)
         }
-    except (wolfmix.ProtocolError, IndexError):
+    except (protocol.ProtocolError, IndexError):
         return None
 
 
@@ -466,7 +467,7 @@ def watch(args):
                 None,
             )
             if item is None:
-                raise wolfmix.WolfmixError("Experiment project is no longer on the W1")
+                raise protocol.WolfmixError("Experiment project is no longer on the W1")
             if item["version"] != previous_version:
                 data = download_project(connection, state["uuid"])["data"]
                 current = wpjlib.Wpj.from_bytes(data, "downloaded project")
@@ -488,17 +489,17 @@ def watch(args):
 
 
 def initialize(args):
-    project_uuid, name = wolfmix.experiment_identity(args.label)
+    project_uuid, name = protocol.experiment_identity(args.label)
     project_path, data = validate_project(args.project, name)
     root, state_file = state_paths(args.state_dir, args.label)
     if state_file.exists():
-        raise wolfmix.WolfmixError(
+        raise protocol.WolfmixError(
             f"Experiment already initialized: {state_file}"
         )
     root.mkdir(parents=True, exist_ok=True)
     previous = None
     stored_project = False
-    port = args.port or wolfmix.discover_port()
+    port = args.port or device.discover_port()
     try:
         with connect(port, args.timeout) as connection:
             settings = preflight(connection)
@@ -507,7 +508,7 @@ def initialize(args):
             )
             if any(item.get("uuid") == project_uuid for item in project_list(connection)):
                 previous = download_project(connection, project_uuid)
-            stored = wolfmix.store_experiment_project(connection, args.label, data)
+            stored = device.store_experiment_project(connection, args.label, data)
             stored_project = True
             verified = verify_project(connection, project_uuid, data)
         baseline = root / "baseline.wpj"
@@ -527,7 +528,7 @@ def initialize(args):
             "initialSnapshotProjectCount": len(snapshot["projects"]),
         }
         atomic_json(state_file, state)
-        wolfmix.print_json({
+        protocol.print_json({
             "stored": {**stored, "sha256": sha256(verified["data"])},
             "state": str(state_file),
             "manualBootstrapRequired": (
@@ -552,7 +553,7 @@ def initialize(args):
 def arm(args):
     _, state_file, state = load_state(args.state_dir, args.label)
     if not args.loaded_on_controller:
-        raise wolfmix.WolfmixError(
+        raise protocol.WolfmixError(
             "Arming requires --loaded-on-controller after opening the experiment "
             "project on the W1"
         )
@@ -563,25 +564,25 @@ def arm(args):
             None,
         )
         if item is None or item.get("name") != state["name"]:
-            raise wolfmix.WolfmixError("Experiment project is missing or renamed")
+            raise protocol.WolfmixError("Experiment project is missing or renamed")
     state["armed"] = True
     state["armedAt"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
     state["armedControllerMode"] = settings["wolfmixMode"]
     atomic_json(state_file, state)
-    wolfmix.print_json({"armed": True, "uuid": state["uuid"], "name": state["name"]})
+    protocol.print_json({"armed": True, "uuid": state["uuid"], "name": state["name"]})
 
 
 def deploy_one(args, candidate_path, case_id):
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", case_id):
-        raise wolfmix.WolfmixError(
+        raise protocol.WolfmixError(
             "Case IDs may only contain letters, digits, dots, underscores, and hyphens"
         )
     root, _, state = load_state(args.state_dir, args.label)
     if not state.get("armed"):
-        raise wolfmix.WolfmixError("Experiment is not armed; run arm first")
+        raise protocol.WolfmixError("Experiment is not armed; run arm first")
     pending = state.get("rollbackFailed")
     if pending:
-        raise wolfmix.WolfmixError(
+        raise protocol.WolfmixError(
             f"A rollback failed on {args.label!r} at {pending.get('at')}: "
             f"{pending.get('error')}. Restore {pending.get('restore')} on the "
             f"controller, then run clear-rollback --label {args.label!r}"
@@ -590,7 +591,7 @@ def deploy_one(args, candidate_path, case_id):
     warn_about_dimmers(data)
     run_dir = root / "runs" / f"{utc_id()}-{case_id}"
     run_dir.mkdir(parents=True, exist_ok=False)
-    port = args.port or wolfmix.discover_port()
+    port = args.port or device.discover_port()
     previous = None
     restart_identity = None
     try:
@@ -604,8 +605,8 @@ def deploy_one(args, candidate_path, case_id):
             # says which step failed rather than leaking a bare OSError.
             try:
                 archived = archive_projects(connection, root)
-            except (OSError, wolfmix.WolfmixError) as error:
-                raise wolfmix.WolfmixError(
+            except (OSError, protocol.WolfmixError) as error:
+                raise protocol.WolfmixError(
                     f"Pre-deploy archive failed, nothing was uploaded: {error}"
                 ) from error
             if archived:
@@ -614,7 +615,7 @@ def deploy_one(args, candidate_path, case_id):
             previous_data = previous["data"]
             with (run_dir / "before.wpj").open("xb") as stream:
                 stream.write(previous_data)
-            stored = wolfmix.store_experiment_project(connection, args.label, data)
+            stored = device.store_experiment_project(connection, args.label, data)
             verified = verify_project(connection, state["uuid"], data)
             restart_identity = restart(connection)
 
@@ -653,7 +654,7 @@ def deploy_one(args, candidate_path, case_id):
             },
         }
         atomic_json(run_dir / "journal.json", journal)
-        wolfmix.print_json({"run": str(run_dir), **journal})
+        protocol.print_json({"run": str(run_dir), **journal})
         return journal
     except Exception:
         if previous is not None:
@@ -677,10 +678,10 @@ def campaign(args):
     manifest = read_json(manifest_path)
     cases = manifest.get("cases")
     if not isinstance(cases, list) or not cases:
-        raise wolfmix.WolfmixError("Campaign manifest requires a non-empty cases list")
+        raise protocol.WolfmixError("Campaign manifest requires a non-empty cases list")
     for index, case in enumerate(cases):
         if not isinstance(case, dict) or not case.get("id") or not case.get("project"):
-            raise wolfmix.WolfmixError(f"Invalid campaign case at index {index}")
+            raise protocol.WolfmixError(f"Invalid campaign case at index {index}")
         project = (manifest_path.parent / case["project"]).resolve()
         deploy_one(args, project, case["id"])
 
@@ -689,22 +690,22 @@ def clear_rollback(args):
     _, state_file, state = load_state(args.state_dir, args.label)
     pending = state.pop("rollbackFailed", None)
     if pending is None:
-        raise wolfmix.WolfmixError(f"No failed rollback on {args.label!r}")
+        raise protocol.WolfmixError(f"No failed rollback on {args.label!r}")
     state["rollbackClearedAt"] = datetime.datetime.now(
         datetime.timezone.utc).isoformat()
     atomic_json(state_file, state)
-    wolfmix.print_json({"cleared": pending})
+    protocol.print_json({"cleared": pending})
 
 
 def status(args):
     root, state_file, state = load_state(args.state_dir, args.label)
     with connect(args.port, args.timeout) as connection:
-        settings = wolfmix.decode_settings(connection.request(wolfmix.GET_SETTINGS))
+        settings = protocol.decode_settings(connection.request(protocol.GET_SETTINGS))
         item = next(
             (item for item in project_list(connection) if item.get("uuid") == state["uuid"]),
             None,
         )
-    wolfmix.print_json({
+    protocol.print_json({
         "state": str(state_file),
         "armed": state.get("armed", False),
         "rollbackFailed": state.get("rollbackFailed"),
@@ -769,7 +770,7 @@ def self_test(_args):
             try:
                 archive_projects(None, directory)
                 raise AssertionError("a corrupted archive passed")
-            except wolfmix.WolfmixError as error:
+            except protocol.WolfmixError as error:
                 assert "manifest" in str(error), error
             (archive / f"{'a' * 8}-1.wpj").write_bytes(b"payload-" + b"a" * 8)
             # A fresh version of the same project is archived beside the old one.
@@ -787,14 +788,14 @@ def self_test(_args):
         try:
             check_identity(moved, reference, "after the restart")
             raise AssertionError(f"identity change accepted: {moved}")
-        except wolfmix.WolfmixError as error:
+        except protocol.WolfmixError as error:
             assert "after the restart" in str(error), error
 
     # A failed rollback survives the process and blocks the next deploy.
     with tempfile.TemporaryDirectory() as directory:
         _, state_file = state_paths(directory, "self-test")
         atomic_json(state_file, dict(zip(("label", "uuid", "name", "armed"), (
-            "self-test", *wolfmix.experiment_identity("self-test"), True))))
+            "self-test", *protocol.experiment_identity("self-test"), True))))
         errors = io.StringIO()
         stderr, sys.stderr = sys.stderr, errors
         try:
@@ -810,9 +811,9 @@ def self_test(_args):
     assert appeared == ["  type 102 field 5: absent -> 7"], appeared
     opaque = describe_change(99, b"\xff\x00", b"\xff\x01")
     assert opaque == ["  type 99: byte 1 00->01"], opaque
-    experiment_uuid, name = wolfmix.experiment_identity("self-test")
+    experiment_uuid, name = protocol.experiment_identity("self-test")
     assert experiment_uuid == "d1cd1fd9-2559-5692-be1c-6526d52f3123"
-    assert name.startswith(wolfmix.EXPERIMENT_NAME_PREFIX)
+    assert name.startswith(protocol.EXPERIMENT_NAME_PREFIX)
     print("self-test OK")
 
 
@@ -869,7 +870,7 @@ def parser():
 def main(argv=None):
     args = parser().parse_args(argv)
     if args.timeout <= 0 or args.restart_timeout <= 0:
-        raise wolfmix.WolfmixError("Timeouts must be greater than zero")
+        raise protocol.WolfmixError("Timeouts must be greater than zero")
     args.handler(args)
     return 0
 
@@ -880,6 +881,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\nStopped", file=sys.stderr)
         sys.exit(130)
-    except (wolfmix.WolfmixError, OSError, ValueError) as error:
+    except (protocol.WolfmixError, OSError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
         sys.exit(2)

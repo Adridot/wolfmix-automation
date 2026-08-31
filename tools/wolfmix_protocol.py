@@ -441,7 +441,7 @@ def index_payload(value):
     These events are NOT protobuf. Sending a protobuf-shaped ``[tag, value]``
     pair makes the controller read the *tag* byte as the index — the trap that
     produced a day of "the value is ignored" readings. See RAW-01 and RECALL-03
-    in ``research/wpj-format-registry.md``.
+    in ``research/evidence.md``.
 
     An id above the highest one present is a no-op (RECALL-04); interior gaps
     are unprobed. Nothing above 0x7f has produced anything but that no-op, which

@@ -5,25 +5,35 @@ reused under which terms. Anyone building on this needs to know which is which.
 
 ## Original work
 
-Everything in `tools/`, `SPEC.md` and `research/` is derived from two sources
-and nothing else:
+Every **byte-level** claim in `tools/`, `SPEC.md` and `research/` comes from
+two sources and nothing else:
 
 1. **Our own corpus** — `.wpj` files produced by our own WTOOLS installation and
    our own W1, hashed in `corpus/SHA256SUMS`.
 2. **Our own differential experiments** — single-variable changes made by the
    operator on our own device, downloaded before and after, compared record by
-   record. Each one is written up in `research/` with its serial, firmware,
-   file hashes and result.
+   record. Each one is a line in [`research/evidence.md`](research/evidence.md),
+   with its date, its status, and the snapshot directory whose hashes are in
+   `corpus/SHA256SUMS`.
 
 No byte of any third-party implementation was read, disassembled or inspected.
-This matters for one specific claim below.
+
+**Correction, 2026-08-31.** An earlier revision of this paragraph said
+*everything* came from those two sources "and nothing else", and then the
+section below listed four things reused from `wpj-toolkit`. Both cannot be
+true. What is true is the narrower claim above: the **wire format** is ours,
+and some **labels and one formula** are borrowed, with attribution, from a
+source that publishes no byte layout. The distinction is the whole point of
+this file, and the sweeping version quietly destroyed it.
 
 ## External sources
 
 ### `gitfeber/wpj-toolkit` — MIT
 
-<https://github.com/gitfeber/wpj-toolkit>, commit `2bd0ee3` (2026-08-14).
-Full digest in `research/wpj-toolkit-digest.md`.
+<https://github.com/gitfeber/wpj-toolkit>, commit `2bd0ee3` (2026-08-14), read
+on 2026-08-14 and re-checked on 2026-08-25: the HEAD tree was still the same 14
+files. **The pin has not been re-verified since**, and doing so needs a network
+fetch — a manual step, not something `make check` can do.
 
 **Reused here, with attribution:**
 
@@ -73,6 +83,79 @@ live-effect editing over MIDI are not supported. Its default MIDI map is that
 author's own learned assignment, **not** a factory map — do not publish it as
 one.
 
+### How external claims are graded
+
+An external source cannot be `device-confirmed` by us, so those findings carry
+their own scale, and it is deliberately weaker than the one in `SPEC.md`:
+
+| Tier | Meaning |
+|---|---|
+| `src-doc` | stated in a source we fetched ourselves — the fact is *that the source says it*, not that it is true of our hardware |
+| `src-tested` | the source claims it observed the behaviour on real Wolfmix hardware |
+| `snippet` | reachable only through a search-engine summary; the page itself refused automated fetch. Weakest tier, treat as a lead |
+| `ours-inferred` | our reading of the source, not something it says |
+
+`forum.wolfmix.com`, `qlcplus.org/forum` and some vendor pages sit behind a bot
+challenge that returns HTTP 403. **It was not bypassed**, so every forum fact
+here is `snippet`.
+
+### The survey — everything public, checked 2026-08-25
+
+| Source | Licence | Scope | Value to us |
+|---|---|---|---|
+| [`mseerig/wolfmix-web-remote`](https://github.com/mseerig/wolfmix-web-remote) | README says MIT, **no LICENSE file**, GitHub detects none | USB-MIDI gadget + web UI + OSC bridge. No serial, no protobuf, no `.wpj` | The only public project that drives a W1 live; two hardware-observed firmware behaviours |
+| [`gitfeber/wpj-toolkit`](https://github.com/gitfeber/wpj-toolkit) | MIT | `.wpj` inspect/validate, W1 Mk2 files | Labels for enums we already had the fields for |
+| [WPJ Studio](https://wpj-studio.com/) | proprietary | Hosted inspect/validate, private writer | Its research pages only link the four toolkit documents |
+| [Companion module request #1467](https://github.com/bitfocus/companion-module-requests/issues/1467) | n/a | Open since 2024, labelled *Missing documentation* | **A negative result**: nobody has published a Wolfmix control protocol |
+| OS2L ↔ Wolfmix (forum t=630, VirtualDJ) | n/a | OS2L into **WTOOLS on the host**, port 9996 | The OS2L endpoint is WTOOLS, not the W1 |
+| Wolfmix forum t=736 (staff) | n/a | Vendor position on remote control | "No communication protocols embedded beside MIDI" |
+| Magic 3D Easy View / MEVP | proprietary | A Windows **DLL** loaded in-process; ArtNet is the documented interop | Dead end for the UDP 3024 link we sniffed — MEVP is not a network protocol |
+| GitHub search `wolfmix` | n/a | 3 repositories total | Two are unrelated name collisions |
+
+Nothing on npm, no vendor SDK, no `.proto`, no published event list for the USB
+serial link: **the protocol work in `tools/wolfmix.py` has no public prior
+art.** Three second-order facts from the same survey are worth keeping because
+each one saves someone a search:
+
+- **OS2L reaches the device over the same USB link we speak.** The W1 honours
+  beat/BPM sync only — `os2l_button`, `os2l_cmd`, `os2l_info` and `os2l_scene`
+  are not acted on. So there is an unidentified beat event on our link, and
+  `Settings.extSyncState` is presumably its gate. `ours-inferred`, and a cheap
+  target.
+- **Nothing public documents the WTOOLS → Easy View link**, the UDP port 3024,
+  its frame format or its XOR. Easy View also ingests ArtNet, so a visualiser
+  fed by our own data does not need those frames reproduced.
+- **`wolfmix_project_v2` does not exist.** The only "v2" in this world is
+  cosmetic: converting a pre-2.0 project appends a `v2` suffix to the project
+  *name*. Do not go looking for a v2 container.
+
+### The `WM_MODE_*` identifiers — names read, values measured
+
+These are **interface constant names**, read as names, from software installed
+on our own machine. Nothing of that software is reproduced here beyond the
+identifiers themselves, and **every numeric value** in the measured map
+(`SPEC.md` §10.2) was measured on our own device rather than taken from a
+binary.
+
+- `src-doc` — the legacy WTOOLS 1.x SDK bundle ships the enum as plain
+  TypeScript **with** numeric values: 39 entries, `WM_MODE_HOME = 0` …
+  `WM_MODE_UNREGISTERED = 38`.
+- `src-doc` — WTOOLS 2.0.2 beta carries 45 distinct `WM_MODE_*` identifiers in
+  its string pool, **names only, no values**.
+- `src-doc` — that string pool is **not in declaration order** (`WM_MODE_HOME`
+  is the 41st string), so no numeric value can be read from the 2.0.2 binary by
+  string order. This is why the values were measured instead of read.
+
+Three names left the SDK and nine arrived. Measurement then showed the legacy
+0–38 numbering unchanged, the three departures being renames at their original
+values, and the new modes living at 39–44:
+
+| Only in the 1.x SDK | Only in 2.0.2 |
+|---|---|
+| `WM_MODE_STATIC_GOBO` | `WM_MODE_GOBO`, `WM_MODE_SEQ_POSITION_PICKER`, `WM_MODE_STATIC_POSITION_PICKER` |
+| `WM_MODE_POSITION_PICKER` | `WM_MODE_BPM`, `WM_MODE_FILE_BROWSER`, `WM_MODE_INTELLIGENT_PRESET` |
+| `WM_MODE_HUNGRY_WOLF` | `WM_MODE_LIVE_EDIT_MACRO_EDIT`, `WM_MODE_MAPPING`, `WM_MODE_USB_STICK` |
+
 ### `forum.wolfmix.com` and vendor guides — quoted facts
 
 Staff statements and user reports are quoted with their thread id (e.g. t=736
@@ -106,9 +189,11 @@ Full reasoning, including everything else that is deliberately absent, in
 [`LEGAL.md`](LEGAL.md). How to supply your own corpus:
 [`docs/corpus.md`](docs/corpus.md).
 
-Consequence, stated plainly: on a fresh clone the self-checks **abstain** and
-verify nothing. They report that, and `make check` still exits 0. Point
-`WPJ_CORPUS` at projects of your own and they become real again.
+Consequence, stated plainly: on a fresh clone the corpus-dependent checks
+**abstain** and verify nothing. They say `ABSTAINED`, the run names every one
+of them in its summary, and `make check` exits **3** rather than 0 — green with
+abstentions is not a pass. Point `WPJ_CORPUS` at projects of your own and they
+become real again.
 
 ## Trademarks
 

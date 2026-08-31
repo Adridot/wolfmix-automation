@@ -49,7 +49,6 @@ message.
 |---|---|
 | EXP-05, EXP-05bis, EXP-06, EXP-07 (2026-08-31) | The variant-B/C campaign: the Rosetta alignment, the FX **banks per effect**, the refuted base-0/base-1 discriminator, and the three single-variable differentials written by the device. §1 still describes B and C by their envelope only. |
 | GOBO-01 (2026-08-30) | Where the gobo icon library lives — 800 entries at the tail of the resource flash, the entry index being the id in `145.f2`. §3.4 describes the palette without it. |
-| SCREEN-02 (2026-08-31), SCREEN-03 | Which mode indexes actually move the panel: pushable {1, 3, 4, 26}, inert {0, 5, 16}. §10.2 states the asymmetry without the measured partition. |
 | GUARD-01 (2026-08-31) | The nine bench measures of the write-path guards. They constrain the tools, not the format, so this may end up belonging in `docs/` rather than here — that decision is itself pending. |
 
 **On file counts.** The measurement corpus holds **45 variant-A files**, but only
@@ -452,7 +451,7 @@ over three gives 2-2-1. Blended modes interpolate the same deal and **truncate**
 rather than round.
 
 Full experiment record, including the eight predictions published before each
-capture, in `research/wpj-format-registry.md`.
+capture, in [`research/evidence.md`](research/evidence.md).
 
 ### 5.3 The content mask is `f10`, not `f4` — **[device-confirmed]**
 
@@ -625,7 +624,7 @@ presets in one file of 42, which softens the "per-project constant" reading
 above without refuting it.
 
 The cheap discriminator is one preset and one save, no deploy:
-`research/wpj-format-registry.md`, FX2-01.
+[`research/evidence.md`](research/evidence.md), FX2-01.
 
 ### 5.5 `f18` = the Live Edit mask — **[correlated]**
 
@@ -1495,6 +1494,90 @@ that field, and not a position. Its **file-side** results are untouched: the
 not, `store` + `RESTART` under the same UUID does not, and only a manual open
 on the panel does. The screen that performs it — mode 26, *main menu → Open* —
 **is** reachable remotely, which is as close as the protocol gets.
+
+#### The mode map — firmware 2.0.18 — **[device-confirmed]**
+
+Measured by polling `GET_SETTINGS` while the operator walked the front panel,
+returning to HOME between steps so the capture self-synchronises on mode 0
+(MODE-01). **Zero writes.** Names are the vendor's own `WM_MODE_*` identifiers;
+where firmware 2.0's editor renamed one, both are given.
+
+| Value | Reached by | Name |
+|---|---|---|
+| 0 | idle, `HOME` | `HOME` |
+| 1 | `COLOR FX` | `COLOR` |
+| 3 | `MOVE FX` | `MOVE` |
+| 4 | `BEAM FX` | `BEAM` |
+| 5 | `PRESET` | `PRESETS` |
+| 7 | STATIC `COLOR` | `STATIC_COLOR` |
+| 8 | STATIC `GOBO` | `STATIC_GOBO` → **`GOBO`** |
+| 9 | STATIC `POSITION` | `STATIC_POSITION` |
+| 10 | STATIC `LIVE EDIT` | `LIVE_EDIT` |
+| 12 | SHIFT + a position pad | `POSITION_PICKER` → **`STATIC_POSITION_PICKER`** |
+| 14 | STATIC GOBO → SHIFT + a gobo pad | `GOBO_EDIT` |
+| 15 | LIVE EDIT → fixture grid → EDIT | `LIVE_EDIT_EDIT` |
+| 16 | gear icon | `SETUP` — the main menu, parent of 17/19/23/25/26/43 |
+| 17 | main menu → Fixtures | `FIXTURE_SETUP` |
+| 19 | main menu → New, or Fixtures → ADD | `FIXTURE_SELECTION` |
+| 21 | MOVE FX → sequence editor | `MOVE_SEQ` |
+| 23 | main menu → DMX VALUES | `DMX_LEVELS` |
+| 25 | main menu → Settings | `SETTINGS` |
+| 26 | main menu → Open | `PROJECTS` — **modal**, escape with index 1 |
+| 28 | `WOLF` key (chevrons) | `WOLF` |
+| 29 | `STROBE` | `STROBE` |
+| 30 | `SPEED` | `SPEED` |
+| 32 | `BLINDER` | `BLINDER` |
+| 33 | `BLACKOUT` | `BLACKOUT` |
+| 34 | PRESET → magic wand | `HUNGRY_WOLF` → **`INTELLIGENT_PRESET`** |
+| 36 | DMX VALUES → beam editor | `BEAM_EDITOR` |
+| 41 | LIVE EDIT → SHIFT + one of the first three encoders | `LIVE_EDIT_MACRO_EDIT` |
+| 43 | main menu → Mappings | `MAPPING` — **present on MK1**, operator-confirmed by toggling against the main menu with the back button |
+| 44 | HOME → touch the tempo readout | `BPM` |
+
+The legacy 0–38 numbering is **unchanged** in firmware 2.0.18: the three names
+that vanished from the older SDK are renames at their original values (8, 12,
+34), and the new modes live at 39–44.
+
+Three of those are reachable only by raw index, and the way they behave is why
+`wolfmix.py` puts raw indexes behind `--experimental`:
+
+| Value | Behaviour | Name |
+|---|---|---|
+| 39 | the **pads** light what the operator reads as the Move FX sequencer's position picker, and the **screen stays on HOME** | `SEQ_POSITION_PICKER`, **[hypothesized]** by elimination |
+| 40 | **redirects to 42**, three times out of three | `FILE_BROWSER`, **[hypothesized]** by elimination |
+| 42 | `USB STICK` — import/export of project, fixtures and full backup. **Attempts a read on entry**, and with no medium (MK1 has no USB-A socket) shows "error reading project" | `USB_STICK`, operator-identified on screen |
+
+Two consequences worth stating plainly. **An index probe is not a neutral
+act** — mode 42 starts an action on entry. And the index → mode identity is
+**not** universal: 0, 5, 16 and 26 are exact, 40 → 42 is not.
+
+`GROUPS` (24) was never reached: the A–D / E–H bank switch is SHIFT +
+`BPM TAP`, which changes no mode. `SMOKE` and a single `BPM TAP` change no mode
+either.
+
+#### The screen does not always follow — **[device-confirmed]**
+
+The reported mode takes the value asked for **every time**. The panel does not.
+Measured over nine sends, the operator reading the screen after each
+(SCREEN-01, SCREEN-02, SCREEN-03):
+
+| | Indexes |
+|---|---|
+| The screen follows | **1, 3, 4, 26** |
+| The screen ignores it | **0, 5, 16** |
+| Never tried | everything else |
+
+**The target decides, not the screen you start from**: index 5 was inert from
+HOME, from the modal Open, and from COLOR FX. Index 1 closes the modal Open
+*and* opens COLOR FX, which confirms the escape noted for 26 and refutes "only
+modals are pushable".
+
+No mechanism is named — all six pages have a dedicated key or icon on the
+panel, and the firmware moves **three** things independently: the reported
+mode, the pad LEDs, and the screen. Mode 39 moves the first two and leaves the
+third alone. Practical consequence: from the host you reach the three FX
+engines and the Open page, and **you cannot get back to HOME** — that needs a
+key.
 
 ---
 

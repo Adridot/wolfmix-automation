@@ -29,7 +29,7 @@ instead. If it is genuinely variant A, the file is corrupt.
 Same conclusion: not a variant-A file. The variants are described in
 [`../SPEC.md`](../SPEC.md) §1.
 
-**`wpj_inspect.py` exits 2 with `PAS du wire format protobuf`**
+**`wpj_inspect.py` exits 2 with `NOT the protobuf wire format`**
 The input is not protobuf from the offset tried. Small `.wpj` files (device
 dumps) do this. The tool refuses to guess rather than emit a plausible tree.
 
@@ -39,36 +39,75 @@ designed fallback, not a failure: the bytes still round-trip exactly. Types
 106, 110, 155 and 161 are passthrough today — `python3 tools/wpj_codec.py`
 prints the current list.
 
-**`<path> existe déjà — écrasement refusé`**
+**`<path> already exists — overwrite refused`**, or `refused: <path> already exists`
 Every writer opens output with mode `x`. Choose a new path; nothing is ever
 overwritten.
 
-**`clés hors périmètre [...]` from `wpj_show.py`**
+**`keys out of scope [...]` from `wpj_show.py`**
 The key is real in the format but not writable yet — its evidence status is
 below `correlated`. The accepted set is in [`show-format.md`](show-format.md).
 
-**`l'entrée doit exister dans le donneur`**
+**`must exist in the donor`**
 Creating a position or palette entry from scratch has never been validated on a
 device — this message only fires for those two. A **preset** may be created:
 appending an entry with an id above every id in the donor is device-confirmed
 (PRESET-01/06/07), so pass `template` instead. Otherwise pick a donor project that
 already has the slot.
 
-**`auto-verify : records modifiés hors édition`**
+**`self-verify: records changed outside the edit`**
 The compiler detected that an edit changed something it did not intend to. The
 output file is deleted. This is a bug worth reporting, with the spec and the
 donor.
 
-**`wpj_privacy : N occurrence(s) de nom réel dans des fichiers suivis`**
+**`wpj_privacy: N occurrence(s) of a real name in tracked files`**
 A real venue, client, project, group or device name reached a tracked file, and
 `make check` refuses to pass. Replace it with the neutral label the rest of the
 tree uses — `rig-a`/`rig-b`/`rig-c`, `<group-A name>`, serial withheld — and
 re-run. The message prints `file:line` and which pattern matched.
 
-**`wpj_privacy : ignoré, pas de .wpj-private-names`**
+**`wpj_privacy: ABSTAINED on names — … no .wpj-private-names`**
 Expected on a fresh clone: the pattern list is deliberately not distributed
 ([`../LEGAL.md`](../LEGAL.md)). Create one at the repository root, one regex per
-line, if you keep material that must never be published.
+line, if you keep material that must never be published. `make check` exits
+**3** rather than 0 while any check abstains, and names them all at the end.
+
+## Data loss, and one firmware bug worth recognising
+
+**The whole rig blacks out except the fixture at DMX 1** — after adding
+fixtures in the vendor editor. Record **120** has been emptied for every
+fixture but the first: 251 of 258 entries reduced to `2a 00`, a zero-length
+protobuf message, which reads back field by field as **0**. In healthy
+revisions of the same project the table is 73–78 % populated, with a block per
+fixture. Record 106 has no empty entry in either revision and record 111 is
+healthy, so the patch itself is intact — the DMX windows still do not overlap,
+which `patch_disjoint` checks mechanically on every corpus file including the
+broken one.
+
+This matches a documented 2.0.x bug family: adding several fixtures at once
+forces default channel values to 0, and firmware 2.0.18's own changelog fixes
+"default channel values sometimes not being saved correctly". The plausible
+trigger here is the patch table growing 215 → 258 entries when a 32-channel
+bar was added, rewriting the table and losing the values. The erasure is
+**[observed]**; the causal link to the blackout is **[hypothesized]**
+(BUG-01).
+
+The repair that does not need a writer, and that the vendor's support has used
+on neighbouring cases: delete the affected fixtures in `Fixture Setup` and
+re-patch them identically — presets are kept — or reload a healthy backup.
+
+**Projects have disappeared from the controller** without anyone deleting
+them. It happened here: four projects, between 2026-08-30 and 2026-08-31,
+**outside any run of this harness** (LOSS-01). `DELETE_PROJECT` is called from
+exactly one place in this repository — the rollback path of a failed deploy —
+and it is doubly bounded, by a derived UUID and by a name that must start with
+the managed prefix. Nothing here explains the loss, and no reading is offered.
+
+What made it recoverable is worth copying: **`init` snapshots every project on
+the controller, not only the experiment's**, and `deploy` archives every
+version it has not already seen before it uploads anything. The four projects
+from the 25 August snapshot were intact, with valid SHA-1 headers and the
+SHA-256 their manifest announced. If you use these tools on a controller that
+holds work you care about, run `init` first and keep `.wolfmix-state/`.
 
 ## Device
 

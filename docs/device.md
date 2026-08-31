@@ -52,7 +52,7 @@ panel's own, **0–199**. Bytes 200–255 are unprobed.
 For `mode`, the index is usually the mode reached, but not always —
 index 40 lands on 42 — and a raw index can open a screen the panel menu does
 not expose, some of which act on entry (mode 42 tries to read a USB medium).
-See `research/wpj-format-registry.md`, sections RAW-01 and RECALL-03.
+See [`research/evidence.md`](../research/evidence.md), RAW-01 and RECALL-03.
 
 A recall changes what the controller is playing, live. It writes nothing:
 `projectChanged` stays false. **Recalls sent close together can be swallowed**:
@@ -81,7 +81,7 @@ the screen. Do not send a modal index to a controller in service; if one is
 stuck, send `mode 1`.
 
 The first request after the port has been idle can time out; issue it again
-(`research/wpj-format-registry.md`, LINK-01 — observed five times, undiagnosed,
+([`research/evidence.md`](../research/evidence.md), LINK-01 — observed five times, undiagnosed,
 and deliberately not papered over with a retry in the tool).
 
 `GET_SETTINGS` returns 20 known fields, decoded by name: engine and USB-DMX

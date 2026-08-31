@@ -308,6 +308,17 @@ been made, not that there is none.
 | MAP-10 | 2026-08-31 | Ten entries **created** by our encoder, deployed → accepted **at the byte**, not merely "a file that loads". Deliberately using values the factory never writes, so a wrong field would be visible and refutable. | device-confirmed | §7.3 |
 | MAP-11 | 2026-08-31 | The return to factory, produced by the show compiler from the device's own state → record 130 identical byte for byte to the factory table. | device-confirmed | §7.3 |
 
+### Failures of the device, and of the data
+
+Two findings that carried no id until the ledger was written. They are numbered
+here for the first time — a new number for something previously unnumbered, not
+a renumbering of anything.
+
+| id | date | manipulation → result | status | SPEC § |
+|---|---|---|---|---|
+| BUG-01 | 2026-08-25 | A real blackout on the operator's rig, diagnosed from the file alone → record **120** emptied for every fixture but the first, 251 of 258 entries reduced to `2a 00`, which reads back as 0. Matches a documented 2.0.x bug family and the 2.0.18 changelog entry that fixes it. The patch itself is intact. | erasure observed, cause hypothesized | — |
+| LOSS-01 | 2026-08-31 | Four projects vanished from the controller between the 30th and the 31st, **outside any run of this harness**, with no delete command. The harness's own snapshots from 25 August gave them back, hashes intact. No reading is offered: the device is not perfectly healthy, and that is all the traces support. | observed | — |
+
 ### The USB protocol
 
 | id | date | manipulation → result | status | SPEC § |

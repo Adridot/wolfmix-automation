@@ -132,8 +132,25 @@ def projet_vers_dict(path):
     for b in blobs(12):
         d = _msg(b)
         patch.append({"profil": d.get(2, 0), "adresse_base0": d.get(3, 0),
-                      "f4": d.get(4), "f6": d.get(6)})
-    presets = [{"nom": _msg(b).get(1)} for b in blobs(3)]
+                      "groupe": d.get(4, 0), "f6": d.get(6)})
+    # Presets (EXP-06) : les tableaux de 81 o sont des banques PAR EFFET —
+    # ligne e = tuple de l'effet e : [vitesse, ?, phase, fade, size, ?, fan,
+    # bpm_division, link_order]. Les tableaux de 8 o sont par groupe A-H.
+    presets = []
+    for b in blobs(3):
+        d = _msg(b)
+        pr = {"nom": d.get(1)}
+        for f, nom in ((13, "banque_beam"), (5, "banque_color"), (9, "banque_move")):
+            v = d.get(f)
+            if isinstance(v, dict) and len(bytes.fromhex(v["hex"])) == 81:
+                raw = bytes.fromhex(v["hex"])
+                pr[nom] = [list(raw[i:i + 9]) for i in range(0, 81, 9)]
+        for f, nom in ((24, "positions"), (25, "gobos"), (21, "pattern_couleur"),
+                       (26, "gobo_rotate"), (8, "color_actif"), (12, "move_actif")):
+            v = d.get(f)
+            if isinstance(v, dict):
+                pr[nom] = list(bytes.fromhex(v["hex"]))
+        presets.append(pr)
     positions = []
     for b in blobs(6):
         d = _msg(b)

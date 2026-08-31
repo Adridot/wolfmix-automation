@@ -29,7 +29,8 @@ def _varints(hexa):
 
 
 def _items(w, typ, occurrence=0):
-    return wpj_codec._decode_msg(w.get(typ, occurrence), _ITEMS)["items"]
+    # une table vide (0 entrée) est légitime — vue sur 130 d'un projet importé
+    return wpj_codec._decode_msg(w.get(typ, occurrence), _ITEMS).get("items", [])
 
 
 def ranges_par_canal(w):
@@ -43,14 +44,22 @@ def ranges_par_canal(w):
 
 
 def palette_gobo(w):
-    """Les f2 du type 145 == les f4 des plages gobo de 111, dans l'ordre."""
-    ids = [e["f4"] for e in _items(w, 111)
-           if e.get("f3") == GOBO_FN and "f4" in e]
+    """Chaque f2 du type 145 est un f4 des plages gobo de 111.
+
+    L'égalité ordonnée (« la palette est dérivée du patch ») a tenu sur tous
+    les projets nés sur l'appareil — et a été RÉFUTÉE le 2026-08-31 par un
+    projet importé de WTOOLS (EXP-06) : sa palette est la sélection de 10
+    slots du côté B (f9 + f31), doublons compris. L'invariant qui survit est
+    l'appartenance : un id de palette qui n'est pas sur la roue reste
+    impossible. Registre, « EXP-06 — the Rosetta pair, measured »."""
+    ids = {e["f4"] for e in _items(w, 111)
+           if e.get("f3") == GOBO_FN and "f4" in e}
     palette = [it["f2"]
                for typ, payload in w.records if typ == 145
                for it in wpj_codec._decode_msg(payload, _ITEMS)["items"]
                if "f2" in it]
-    assert palette == ids, f"palette {palette} != ids gobo {ids}"
+    hors = [g for g in palette if g not in ids]
+    assert not hors, f"palette hors roue : {hors} (roue {sorted(ids)})"
 
 
 def tranches_106(w):
@@ -361,24 +370,12 @@ def tableaux_par_groupe_165(w):
 MOTEUR_VERS_F4 = {0: 3, 1: 2, 2: 4}
 
 
-def f4_autorise_les_moteurs(w):
-    """Un moteur actif dans f16 implique son bit dans le masque 165.f4.
-
-    L'implication est unilatérale : une page peut autoriser un moteur sans
-    qu'aucun preset ne l'emploie. C'est ce qui identifie la tranche 2 de f16
-    comme le Beam FX — elle n'est jamais active hors des presets dont le `f4`
-    porte le bit 4.
-    """
-    for pre in _items(w, 165):
-        h = pre.get("f16")
-        if not h:
-            continue
-        gros = int.from_bytes(bytes(_varints(h["hex"])), "little")
-        f4 = pre.get("f4", 0)
-        for m, bit in MOTEUR_VERS_F4.items():
-            if (gros >> (9 * m)) & 0x1FF:
-                assert f4 >> bit & 1, \
-                    f"165 : moteur {m} actif mais f4 = {f4} n'a pas le bit {bit}"
+# f4_autorise_les_moteurs (« un moteur actif dans f16 implique son bit dans
+# 165.f4 ») a été RETIRÉE le 2026-08-31 : l'implication était une corrélation
+# des sauvegardes nées sur l'appareil, réfutée par un projet importé de WTOOLS
+# (EXP-06 : moteur 2 actif, f4 = 12 sans le bit 4) que le W1 ouvre sans
+# broncher. Son acquis — identifier la tranche 2 de f16 comme le Beam FX —
+# reste au registre, avec la réfutation.
 
 
 def schema_du_prefixe(w):
@@ -595,7 +592,7 @@ IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
               groupe_fixture, moteurs_f16, tranche5_f16,
               plages_111, roles_106,
               ordre_fixtures_115, bornes_106, tranches_151,
-              tableaux_par_groupe_165, f4_autorise_les_moteurs,
+              tableaux_par_groupe_165,
               schema_du_prefixe, canal_principal_110, noms_de_preset_bornes,
               flavours_155, carte_dmx_130)
 

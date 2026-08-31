@@ -101,7 +101,7 @@ Checked today — seventeen, plus two before/after pair checks (F30-04, FLASH-09
 | Identity | What it kills |
 |---|---|
 | `110[c].f2 == len(111 slice of c)` | reading `110.f2` as a feature enum |
-| `[145 items].f2 == [111 gobo ranges].f4` | reading the gobo palette as stored content — it is derived from the patch |
+| every `[145 item].f2` ∈ `[111 gobo ranges].f4` | a palette id that is not on the wheel. The stronger ordered equality ("the palette is derived from the patch") held on device-born projects only — refuted 2026-08-31 by a WTOOLS-imported project whose palette is the B-side 10-slot selection (EXP-06) |
 | `105.f4`/`f7` tile `[0, count(106))` | reading `105.f4` as a DMX start address |
 | `115.f2` windows never overlap | any patch reading that lets two fixtures share a channel |
 | `115.f4 == 105.f6` == the group index | the "nine categories" reading of record 125 |
@@ -112,7 +112,6 @@ Checked today — seventeen, plus two before/after pair checks (F30-04, FLASH-09
 | `106.f1`/`f3` bound the range the role drives | an unbounded role |
 | `150[slot].f2`/`f1` tile record 151 | reading 151 as a flat list |
 | the preset's per-group fields are exactly 8 varints | reading any of the thirteen as a scalar |
-| an engine active in `f16` implies its bit in `f4` | reading `f4` as a content mask |
 | byte 50 is the schema version, and `165.f32`–`f35` arrive at 10 | treating the prefix as fully opaque |
 | `110.f5` points at the channel's principal | guessing 16-bit byte order or adjacency |
 | `155.f2` splits move (`1`, positions 0–19) from beam (`2`, 4-bit segment masks 0–15) | reading all four sequences as position indices |

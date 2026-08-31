@@ -8220,3 +8220,74 @@ Per-fixture is the wrong default: every sentinel-padded list here (`f9.f1`,
 `f10.f2`, `f26`, 50 slots) is per-**profile**, and reading it per-fixture
 collides with the demo file's 71 fixtures. The counters expose the mistake
 immediately — use the lattice before naming anything.
+
+### EXP-06 — the Rosetta pair, measured (2026-08-31)
+
+The B project `386fbb63` was imported onto the W1 by the operator (via the
+WTOOLS transfer; two transient errors on the way, logged in
+`corpus/experiments/EXP-05/prediction.md`) and downloaded back over USB as a
+**variant A** file (`corpus/experiments/EXP-06/exp06-device.wpj`, standard
+41-record inventory). Same show, both serializations — everything below is
+measured on that pair; one pair, so `correlated` here leans on it *plus* the
+six-file census, never on rank.
+
+- **Patch.** B `f12.f3` == A `115.f2` exactly — both 0-based; the off-by-one
+  prediction in EXP-06/prediction.md is **refuted**. **B `f12.f4` = the group
+  index** (== A `115.f4`, absent = group A). B `f12.f6` = 65535 == A `115.f5`.
+  `[correlated]`
+- **Profiles.** B `f13` == A `116` field for field: nom, 16-byte hash, channel
+  count, timestamp, and the unexplained 10/26 value (B `f13.f4` == A `116.f3`).
+  `[correlated]`
+- **Preset identity.** B slot index (0-based, in the ×100 array) == A `165.f19`
+  — 7/7 transferred presets. `[correlated]`
+- **The four 81-byte preset arrays are per-EFFECT banks, not per-group.** Row
+  `e` (0–8) of `f13`/`f5`/`f9` = the parameter tuple for **effect e** of
+  beam/color/move; A's single FX message equals row[`effet`] on **21/21**
+  engine×preset checks: `[0]` speed, `[2]` phase, `[3]` fade, `[4]` size,
+  `[6]` fan (`f3`), `[7]` bpm_division, `[8]` link_order. `[correlated]`
+  The earlier "9 slots = 8 groups + FX slot" reading in the map above is
+  **dead** — superseded by this one. Where B stores the *selected* effect per
+  engine is still open (candidates: the 135-byte `f4` blob, `f28`); `f16`
+  (the fourth array) is all-zero on every file seen — page-2 bank? open.
+- **Per-group preset arrays** (byte i = group i), 42/42 across the 7 presets:
+  `f21` = pattern_couleur (`165.f30`), `f24` = positions (`165.f28`, sentinel
+  255 kept), `f25` = gobos (`165.f29`, A's 255 becomes 0), `f26` = gobo_rotate
+  (`165.f14`), `f8` = color_fx_actif (bitmask → bytes), `f12` = move_fx_actif.
+  `[correlated]`
+- B preset `f34` == A `move_fx1.f5` (3/3 non-trivial values). `[observed]`
+- Dimmers change scale: A `165.f17` is 0–255, the B `f4` blob holds 0–100
+  (255↔100, 28↔11). `[hypothesized]` — one distinctive pair.
+- A-side bonus: duplicating a project **on the W1** rewrites record 101 and
+  **drops `115.f6`/`f7`** (81/183 — volatile, import-borne) from every fixture
+  while keeping the `f9` ordinals. `[observed]`
+
+**Version question, updated.** WTOOLS 2.0.2 beta refuses the v6 project with a
+"too old" dialog — the product itself gates projects by version, which
+strengthens "field 1 = format version" without naming the byte; the 6→x
+migration path is closed on this machine. What 2.0.2 *writes* is still
+unmeasured: WTOOLS has no duplicate-project function, so the next cheap probe
+is creating a **fresh** WTOOLS project (expected: field 1 = 8, digest, `f43`).
+
+**Two variant-A guards refined by the imported files** (the corpus now contains
+its first WTOOLS-born A files, and they broke correlations that device-born
+saves never could):
+- `palette_gobo` : ordered equality with the wheel ranges → **membership
+  only**. On an import the 145 palette is the B-side 10-slot selection
+  (`f9`+`f31` glyphs, duplicates included), not a derivation of the patch.
+- `f4_autorise_les_moteurs` : **removed**. The f16→f4 implication is a
+  property of device-born saves (engine 2 active with `f4` = 12 on the
+  import), and the W1 opens the file regardless. Its evidentiary role —
+  naming f16 slice 2 — stays acquired above.
+- record 130 with **zero mappings** exists (imports) ; the identity helper now
+  treats an empty table as legitimate.
+
+**WTOOLS 2.0.2 writes no B files.** Operator-checked (2026-08-31): the app has
+no create-project and no duplicate-project function — project authoring lives
+on the W1 now, WTOOLS 2.0.x only syncs and stores. The five B files and one C
+file are therefore writes of **earlier** WTOOLS generations ; with v6 already
+refused as "too old", variant B/C is a **legacy, frozen format**: nothing on
+this machine will ever write one again. `[observed]` Consequences: the
+version question keeps its ceiling (field 1 = version stays `hypothesized`,
+strengthened by the product's own version gating, with no write left to
+observe), and the B reader's purpose is exactly what the campaign assumed —
+inspecting the projects operators accumulated under old WTOOLS.

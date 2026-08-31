@@ -51,6 +51,7 @@ message.
 | EXP-05, EXP-05bis, EXP-06, EXP-07 (2026-08-31) | The variant-B/C campaign: the Rosetta alignment, the FX **banks per effect**, the refuted base-0/base-1 discriminator, and the three single-variable differentials written by the device. §1 still describes B and C by their envelope only. |
 | GOBO-01 (2026-08-30) | Where the gobo icon library lives — 800 entries at the tail of the resource flash, the entry index being the id in `145.f2`. §3.4 describes the palette without it. |
 | UPLOAD-01, UPLOAD-02, UPLOAD-03, UPLOAD-04 (2026-08-31) | The channel that writes the resource flash: a tty and not raw USB, the 1 + 179 message geometry inferred from the vendor's own log, the installed bundle verified against the manifest it ships with, and the contradiction between two sessions refused at their first message and an upload published `device-confirmed`. §10.2 describes the link without that upload on it; nothing here describes the flash bundle at all; and the question of whether executable firmware shares the message is open, which is why no write path follows. |
+| PROFILE-01 (2026-08-31), PROFILE-02, PROFILE-03, PROFILE-04 (2026-09-01) | Reading one fixture profile off the controller: `GET_PROFILE`'s reply layout, the sweep of 221 profiles that found no unnamed field and refuted three of the first pass's sub-readings, the preset `f4` axis settled against `ssl2.CIBLE_PRESET`, and the fact that the locally-authored profiles are served too. §10.2 describes the link without this read on it, and §7's record 116 now names the same key space (PROFILE-05, consolidated) without saying where the other side of it is read. |
 | GUARD-01 (2026-08-31) | The nine bench measures of the write-path guards. They constrain the tools, not the format, so this may end up belonging in `docs/` rather than here — that decision is itself pending. |
 
 **On file counts.** A figure like "45/45" below is **historical**: it names the
@@ -989,7 +990,10 @@ are what pins `115.f2` to a real DMX patch.
 
 - **116 = fixture profile catalogue.** `f2` = channel count of the profile;
   `f3` = index of its first channel in record 110; `f8` = UTF-8 name **truncated
-  to 19 characters** (`'LED PAR 56 Black RG'`); `f9` = 16-byte profile hash;
+  to 19 characters** (`'LED PAR 56 Black RG'`); `f9` = the profile
+  **UUID** (16 bytes), the identifier `GET_PROFILE` takes and
+  `wolfmix.py profiles` reports — the file and the controller share one key
+  space, and 293 of the corpus's 357 entries are RFC 4122 v5 (PROFILE-05);
   `f11` = epoch-ms timestamp (2021-02-16 … 2022-10-28).
 - **110 = concatenated channel lists of all profiles**, profile *p* occupying
   `[116[p].f3, 116[p].f3 + 116[p].f2)`. Per channel: `f2` = feature/type enum,

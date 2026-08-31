@@ -16,20 +16,25 @@ Representation:
 """
 import json
 import sys
+import uuid
 
 import wpj_wire
 import wpjlib
 
 # Schemas: field → (name, kind). kind: "v" varint, "str" UTF-8, "hex" raw
-# bytes, "packed" = packed varints (a list of ints), dict = sub-message
-# (repeated for lists of entries).
+# bytes, "uuid" 16 bytes as a dashed string, "packed" = packed varints (a
+# list of ints), dict = sub-message (repeated for lists of entries).
 # 105: f4/f7 delimit the slice of record 106 that belongs to the entry, NOT a
 # DMX address (the address is 115.f2). See the registry, "record 105".
 # f6 = the group index (0-7 = A-H, 8 = the effects slot), redundant with
 # 115.f4 — see the registry, "the fixture → group assignment".
 _PATCH = {1: ("profile", "v"), 4: ("offset_106", "v"), 5: ("fixture", "v"),
           6: ("group", "v"), 7: ("entry_count_106", "v")}
-_PROFIL = {2: ("channel_count", "v"), 8: ("name", "str"), 9: ("hash", "hex"),
+# f9 is the profile UUID, not a digest: it is the identifier `GET_PROFILE`
+# takes and `wolfmix.py profiles` reports — the file and the controller
+# share one key space. No version check: the locally-authored profiles
+# carry serial-derived identifiers that are not RFC 4122 v5.
+_PROFIL = {2: ("channel_count", "v"), 8: ("name", "str"), 9: ("uuid", "uuid"),
            11: ("timestamp", "v")}
 # The order of a pad's 7 channels: device-confirmed (the W1's RGB+ view, raw 0-255)
 _PAD = {1: ("red", "v"), 2: ("green", "v"), 3: ("blue", "v"),
@@ -242,6 +247,9 @@ def _decode_msg(buf, schema):
                     v = {"hex": chunk.hex()}
             elif genre == "hex":
                 v = chunk.hex()
+            elif genre == "uuid":
+                v = str(uuid.UUID(bytes=chunk)) if len(chunk) == 16 \
+                    else {"hex": chunk.hex()}
             elif isinstance(genre, dict):
                 try:
                     v = _decode_msg(chunk, genre)
@@ -303,6 +311,8 @@ def _emit(f, genre, v):
         return _wvarint(f << 3) + _wvarint(v)
     if isinstance(v, dict) and set(v) == {"hex"}:
         pl = bytes.fromhex(v["hex"])
+    elif genre == "uuid":                # before the str test below, which
+        pl = uuid.UUID(v).bytes          # would encode the 36 chars as UTF-8
     elif genre == "packed" and isinstance(v, list):
         pl = b"".join(_wvarint(x) for x in v)
     elif genre == "hex":

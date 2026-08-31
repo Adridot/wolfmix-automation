@@ -32,7 +32,9 @@ Events used: `GET_PROFILE_LIST` 2, `GET_PROFILE` 3, `GET_PROJECT_LIST` 4,
 `GET_PROJECT` 5, `DISABLE_ENGINE` 6, `ENABLE_ENGINE` 7, `DISABLE_USB_DMX` 8,
 `ENABLE_USB_DMX` 9, `DMX_PACKET` 12, `DELETE_PROJECT` 16, `SET_PROJECT` 18,
 `RETURN_STATUS` 19, `RETURN_PROGRESS` 20, `GET_SETTINGS` 21, `SET_MODE` 39,
-`SET_PRESET` 41, `SKIP_PRESET` 43, `RESTART` 44.
+`SET_PRESET` 41, `SKIP_PRESET` 43, `RESTART` 44. `GET_PROFILE` gained its
+first call site with the `profile` command; `SKIP_PRESET`, `ENABLE_ENGINE`
+and `DISABLE_ENGINE` are allowlisted and still have none.
 
 **`SET_PRESET` and `SET_MODE` do not carry protobuf.** Firmware 2.0.18 reads
 `payload[0]` as the index: one raw byte, nothing else. A protobuf-shaped
@@ -100,6 +102,7 @@ python3 tools/wolfmix.py [--port PATH] [--timeout SECONDS] <command>
 | `settings` | full decoded settings/state as JSON. Twenty fields are named; any field number the firmware sends that we cannot name appears under `unknownFields`, raw and unlabelled — that is how you would find a setting we have not mapped, by toggling it at the panel and diffing two reads. The twenty fields we have mapped do not carry `store group dimmers in preset`, and GEN-02 never located it in this message; until the decoder's `unknownFields` output is diffed across a toggle at the panel, whether the firmware sends it under a field number we cannot name is untested. Reading it stays a human check at the panel. |
 | `projects` | projects stored on the controller, with UUIDs |
 | `profiles` | fixture profiles on the controller |
+| `profile UUID` | one fixture profile as JSON on stdout: UUID, name, brand, version, the channel list, the preset bands and the mode table. Writes no file. Each channel and preset band carries its enumerated type as a **number**, plus the `ssl2.TYPE_CANAL` name when the table holds that number and nothing when it does not — the number is the measurement, the name is the reading. A field the repository has observed but not attributed keeps its `fN` key; a field number the decoder does not know appears under `unknownFields` (PROFILE-01, PROFILE-02) |
 | `project UUID out.wpj` | download one project; refuses an existing output path |
 | `experiment-uuid LABEL` | print the deterministic experiment UUID for a label |
 | `dmx [--seconds N]` | stream DMX output; first frame per universe is the full set of non-zero channels, then only changes |

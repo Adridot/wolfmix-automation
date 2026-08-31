@@ -15,6 +15,7 @@ import sys
 import uuid
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import ssl2
 import wpj_wire
 
 VERSION = 1
@@ -209,6 +210,62 @@ SETTINGS_FIELDS = {
     20: ("availableProjectMemory", "uint"),
 }
 
+# GET_PROFILE's reply — measured 2026-08-31 on fw 2.0.18 (PROFILE-01), from one
+# profile family read three times. Field → (name, kind); a kind wrapped in a
+# list is repeated. A field the repository has observed but not attributed
+# keeps its neutral `fN` name here; a field number absent from these tables
+# lands in `unknownFields`, the way `decode_settings` surfaces one.
+PROFILE_CHANNEL_FIELDS = {
+    1: ("index", "uint"),
+    2: ("type", "enum"),
+    3: ("default", "uint"),
+    4: ("name", "string"),
+}
+
+# `f4` is the axis the two readings disagree on: `research/versions.md` reads it
+# as the channel type of what the preset acts on, `ssl2.CIBLE_PRESET` points the
+# same preset type elsewhere. Unsettled, so the key stays neutral and no
+# equivalence with SSLPRESETTARGET is claimed. `f5` is a flag whose kind was
+# never established.
+PROFILE_PRESET_FIELDS = {
+    1: ("channel", "uint"),
+    2: ("dmxStart", "uint"),
+    3: ("dmxEnd", "uint"),
+    4: ("f4", "enum"),
+    5: ("f5", "uint"),
+    6: ("dmxDefault", "uint"),
+    7: ("red", "uint"),
+    8: ("green", "uint"),
+    9: ("blue", "uint"),
+    10: ("iconId", "uint"),
+    11: ("isDefault", "bool"),
+}
+
+PROFILE_MODE_FIELDS = {
+    1: ("index", "uint"),
+    2: ("channelCount", "uint"),
+    3: ("f3", "uint"),
+}
+
+PROFILE_BODY_FIELDS = {
+    1: ("channels", [PROFILE_CHANNEL_FIELDS]),
+    2: ("f2", ["hex"]),                   # a link table, undecoded; one
+                                          # entry per (mode, channel), not
+                                          # the ×16 versions.md read
+    3: ("presets", [PROFILE_PRESET_FIELDS]),
+    4: ("modes", [PROFILE_MODE_FIELDS]),
+    5: ("f5", "uint"),
+    6: ("f6", "uint"),
+}
+
+PROFILE_FIELDS = {
+    1: ("uuid", "uuid"),
+    2: ("name", "string"),
+    3: ("body", PROFILE_BODY_FIELDS),
+    4: ("version", "uint"),
+    5: ("brandName", "string"),
+}
+
 class WolfmixError(Exception):
     """Base error for direct Wolfmix communication."""
 
@@ -284,6 +341,55 @@ def format_uuid(value):
         (hex_value[:8], hex_value[8:12], hex_value[12:16],
          hex_value[16:20], hex_value[20:])
     )
+
+def _profile_value(kind, value):
+    """One field's value, plus the extra keys it carries (an enum's name)."""
+    if isinstance(kind, dict):
+        return _profile_fields(value, kind), {}
+    if kind == "uuid":
+        return format_uuid(value), {}
+    if kind == "string":
+        return value.decode("utf-8", "replace"), {}
+    if kind == "hex":
+        return value.hex(), {}
+    if kind == "bool":
+        return bool(value), {}
+    if kind == "enum":
+        # The number is the measurement and is always emitted; the name is the
+        # reading. `TYPE_CANAL` was checked against the firmware for eleven of
+        # its 47 values, so a number it does not hold gets no name rather than
+        # a guess.
+        libelle = ssl2.TYPE_CANAL.get(value)
+        return value, {"Name": libelle[0]} if libelle else {}
+    return value, {}
+
+
+def _profile_fields(data, table):
+    result = {}
+    inconnus = {}
+    for number, wire_type, value in protobuf_fields(data):
+        field = table.get(number)
+        if not field:
+            inconnus[number] = value.hex() if isinstance(value, bytes) else value
+            continue
+        name, kind = field
+        repete = isinstance(kind, list)
+        decoded, extra = _profile_value(kind[0] if repete else kind, value)
+        if repete:
+            result.setdefault(name, []).append(decoded)
+        else:
+            result[name] = decoded
+        for suffixe, supplement in extra.items():
+            result[name + suffixe] = supplement
+    if inconnus:
+        result["unknownFields"] = inconnus
+    return result
+
+
+def decode_profile(data):
+    """One fixture profile as the controller hands it over — GET_PROFILE."""
+    return _profile_fields(data, PROFILE_FIELDS)
+
 
 def decode_item(data, profile=False):
     result = {}

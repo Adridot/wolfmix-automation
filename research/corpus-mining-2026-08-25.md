@@ -105,7 +105,8 @@ Read out:
 - **116 = fixture profile catalogue.** `f2` = number of channels in the
   profile; `f3` = index of the profile's first channel inside record 110;
   `f8` = UTF-8 name truncated to 19 characters (`'LED PAR 56 Black RG'`,
-  `'LASERBAR 6x400RGB J'`); `f9` = 16-byte profile hash; `f11` = epoch-ms
+  `'LASERBAR 6x400RGB J'`); `f9` = the profile **UUID**, 16 bytes — read as
+  a hash here, corrected by PROFILE-05; `f11` = epoch-ms
   timestamp (values seen: 2021-02-16 … 2022-10-28).
 - **110 = the concatenated channel lists of all profiles**, profile *p*
   occupying `[116[p].f3, 116[p].f3 + 116[p].f2)`. Per channel: `f2` = channel

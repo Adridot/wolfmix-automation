@@ -22,3 +22,8 @@ research/vendor/
 
 # Vendor documents and binaries kept locally for reference, never committed.
 *.pdf
+
+# OpenSpec (npx @fission-ai/openspec init --tools claude) : outillage local
+# de développement piloté par spec, pas du contenu du dépôt.
+.claude/
+openspec/

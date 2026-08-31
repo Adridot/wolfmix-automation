@@ -88,7 +88,11 @@ tests/           boundary tests: what is refused, and what never reaches
 ```
 
 When `SPEC.md` and `research/` disagree, `research/` is newer — and that gap is
-itself worth recording rather than silently resolving.
+itself worth recording rather than silently resolving. `SPEC.md` declares an
+**evidence cutoff** and a **pending list** for exactly that, and
+`tools/wpj_evidence.py` refuses a tree where the specification has fallen
+behind without saying so, points at a section that does not exist, or leans on
+a finding the ledger has taken back.
 
 ## Conventions you will notice
 

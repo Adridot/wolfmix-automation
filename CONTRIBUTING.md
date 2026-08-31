@@ -21,6 +21,14 @@ the whole method.
   `--abstentions-ok` because that context expects them — the summary still
   names every one.
 
+## The ledger, and the spec
+
+Findings go in [`research/evidence.md`](research/evidence.md) — one line each,
+with the date of the **measurement**. `SPEC.md` is allowed to lag behind it and
+says so in its evidence cutoff; it is not allowed to contradict it. Adding a
+finding dated after the cutoff means either consolidating it into `SPEC.md` in
+the same change, or naming it in the pending list. `make check` decides.
+
 ## Adding or correcting a format claim
 
 Open an issue with the **Format finding** template, or a PR carrying the same

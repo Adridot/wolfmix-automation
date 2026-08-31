@@ -235,6 +235,7 @@ Three properties hold at every stage:
 | [`wpj_privacy.py`](tools/wpj_privacy.py) | The anonymisation guard: fails `make check` if a real name reaches a tracked file. |
 | [`wpj_links.py`](tools/wpj_links.py) | The reference guard: fails `make check` if a tracked document links to a path that is not in the tree. |
 | [`wpj_counts.py`](tools/wpj_counts.py) | The figures that drift — decoded records, identities, checks — computed from the code and checked against what the documents claim. |
+| [`wpj_evidence.py`](tools/wpj_evidence.py) | The gate between the ledger and the spec: `SPEC.md` may lag behind `research/evidence.md`, it may not contradict it. |
 
 Run any of them with **no arguments** to execute its self-check — except
 `wolfmix.py` and `wolfmix_experiment.py`, which take it as a subcommand

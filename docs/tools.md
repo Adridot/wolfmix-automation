@@ -29,6 +29,11 @@ Three conventions hold everywhere:
   the code. A document that states one marks it with `<!--count:name-->` or
   `<!--types:name-->`, and a marker the code no longer supports fails
   `make check`. `python3 tools/wpj_counts.py --print` prints them all.
+- **`wpj_evidence.py` keeps the spec honest.** `SPEC.md` declares an evidence
+  cutoff and a pending list; the gate fails when a finding in
+  [`research/evidence.md`](../research/evidence.md) is newer than the cutoff
+  and unlisted, when a `SPEC §` reference points at no section, or when the
+  specification leans on a finding the ledger has taken back.
 - **`tests/` covers the refusals.** `python3 -m unittest discover -s tests -t .`
   (also the last line of `make check`) exercises what the tools reject:
   truncated files, impossible varints, an event outside the allowlist, an
@@ -121,7 +126,8 @@ Each identity is an arithmetic constraint between two records — true on every
 file or false. A reading that breaks one is refuted without touching hardware,
 which is the cheapest kind of proof available here.
 
-Checked today — seventeen, plus two before/after pair checks (F30-04, FLASH-09):
+Checked today — 18 <!--count:identities-->, plus two before/after pair checks
+(F30-04, and the FLASH-09 pair — the files, not its retracted reading):
 
 | Identity | What it kills |
 |---|---|

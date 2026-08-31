@@ -31,6 +31,27 @@ later protocol work was read against.
 
 Corpus hashes in `corpus/SHA256SUMS` — 57 files, regenerated 2026-08-27.
 
+### Evidence cutoff — 2026-08-31
+
+Every claim below is consolidated from the ledger,
+[`research/evidence.md`](research/evidence.md), up to that date. The ledger is
+the newer of the two by construction: it is written next to the measurement,
+this document is written afterwards. **When they disagree, the ledger is
+right**, and `make check` refuses a tree in which this section's cutoff has
+fallen behind a finding that contradicts a statement here.
+
+**Pending consolidation.** These findings are in the ledger and have **no home
+in this document yet**. A gap that is listed is a known gap; an unlisted one is
+a lie of omission, which is why the list is here rather than in a commit
+message.
+
+| Finding | What is missing here |
+|---|---|
+| EXP-05, EXP-05bis, EXP-06, EXP-07 (2026-08-31) | The variant-B/C campaign: the Rosetta alignment, the FX **banks per effect**, the refuted base-0/base-1 discriminator, and the three single-variable differentials written by the device. §1 still describes B and C by their envelope only. |
+| GOBO-01 (2026-08-30) | Where the gobo icon library lives — 800 entries at the tail of the resource flash, the entry index being the id in `145.f2`. §3.4 describes the palette without it. |
+| SCREEN-02 (2026-08-31), SCREEN-03 | Which mode indexes actually move the panel: pushable {1, 3, 4, 26}, inert {0, 5, 16}. §10.2 states the asymmetry without the measured partition. |
+| GUARD-01 (2026-08-31) | The nine bench measures of the write-path guards. They constrain the tools, not the format, so this may end up belonging in `docs/` rather than here — that decision is itself pending. |
+
 **On file counts.** The measurement corpus holds **45 variant-A files**, but only
 **4 are independent rigs** (*rig-a* 10 fixtures, *rig-b* 15, *rig-c* 20,
 *rig-c-bug* 22 = a re-patched *rig-c*). The rest are derived: files written
@@ -938,7 +959,8 @@ The strongest structural result available. Eight identities hold **exactly,
 
 Three more, added once `105.f4` was corrected, and mechanically re-checked on
 **45/45** files by `tools/wpj_identities.py`, which now runs **18** identities
-<!--count:identities--> plus two before/after pair checks (F30-04, FLASH-09):
+<!--count:identities--> plus two before/after pair checks (F30-04, and the
+FLASH-09 pair — the files, not its retracted reading):
 
 ```
 9.  the [f4, f4+f7) intervals of 105, sorted by f4, tile [0, count(106))
@@ -1440,103 +1462,64 @@ retry. So a writer must verify in both directions: read the project back after
 storing it, and be prepared to retry a rejected store rather than treating the
 rejection as a verdict on the file.
 
----
+### 10.2 Driving the device over USB — **[device-confirmed]**
 
-## 11. Open leads
+`SET_PRESET` (41) and `SET_MODE` (39) **do not carry protobuf**. The firmware
+reads **`payload[0]` as the index**, and the second byte is not read at all
+(RAW-01, RAW-02).
 
-L1 and L2 existed only because our byte-level decoding was cross-referenced
-with the `wpj-toolkit` enumerations; neither source had them alone. Both are now
-closed — and L1 closed by **refuting the location we had inferred** while
-confirming the toolkit's value. The pairing was worth having; the inference
-drawn from it was not evidence.
+This is the single most expensive misreading in the project's history, and it
+is worth stating as a mechanism rather than a conclusion: every payload sent
+before it was `[tag, value]`, so the device was reading our **tag** byte —
+`f1` → 8, `f2` → 16, `f3` → 24. That is exactly why each "field" produced one
+appearance and never a reaction to the value. RECALL-01 and RECALL-02 measured
+correctly; their *reading* — "the event addresses nothing" — is replaced by "we
+had never sent the index".
 
-- ~~**L1 — Beam FX `feature`.**~~ **Closed** (§5, FX6-03) — **and the field was
-  wrong.** The `Feature` is `f3`, not `f5`. Two captures differing by one panel
-  gesture — the third encoder pushed to `Feature`, turned from `Dimmer` to
-  `Zoom` — produced two entries differing by **one payload field on thirty**:
-  `beam_fx1.f3` appearing with value **1**. The toolkit's enum (`0` Dimmer ·
-  `1` Zoom · `2` Iris · `3` Pan · `4` Tilt · `5` Effect) is right on the value
-  and had no wire location; this document had guessed the location and guessed
-  wrong. `beam_fx1.f5` stays **absent** on all 352 distinct presets *and* on
-  both fresh entries, and is now unattributed on beam with no candidate. Only
-  one enum value has been exercised.
+| Statement | Evidence |
+|---|---|
+| The byte is the **id**, not the entry position | RECALL-03 |
+| An **absent** id is a strict **no-op** — no floor, no clamp, no fall-back, no modulo. Proven above the highest id, inside an interior hole, and with bit 7 set | RECALL-04, RECALL-05, RECALL-06 |
+| A **present** id above 127 is recalled exactly, bit 7 and all | RECALL-06 |
+| The reachable domain is the panel's own, **0–199**; 200–255 is unprobed and is not sent | RECALL-06 |
+| `SET_MODE` sets the **reported** mode every time; the panel does not always follow | SCREEN-01, SCREEN-02 |
+| The longer events stay protobuf | throughout |
 
-- ~~**L2 — group-mask asymmetry.**~~ **Closed** (§5.4): `f16` is twelve **9-bit**
-  group masks, not complementary pairs. The stride is nine because record 125
-  has nine slots. Slice 0 equals `color_fx_active` and slice 1 `move_fx_active`
-  exactly; slice 2 is the Beam FX, slice 7 the strobe.
-- ~~**L3 — record 102 `f5`/`f6`/`f11`.**~~ **Closed** (§6): `f5` = SMOKE fan
-  speed and `f6` = SMOKE intensity (FX-07); BLINDER fade-out was not a 100 at
-  all but the new field `f2` (FX-08); and `f11` was chased to exhaustion and
-  recorded as unattributed and inert. Record 102 is closed but for that one
-  field, and the search on it is stopped.
-- ~~**L4 — static colour `f31`.**~~ **Closed** (§5.1): eight 20-bit masks, one
-  per group A–H, confirmed at the bit level by a save carrying three different
-  masks. The "4 repetitions" reading was cutting 160 bits into the wrong slices.
-- ~~**L4′ — the preset content mask.**~~ **Closed** (§5.3), and it was never
-  `f4`: the `PRESET EDIT` toggles live in **`f10`**, six bits, `1` = toggle
-  **off**, in screen order `COLOR MOVE BEAM GOBO LIVE EDIT OTHER`. `f11` is
-  `FADE` in milliseconds and `f15` is `HOLD`. `f4` turned out to be a
-  **permission mask over the FX engines** (§5.4).
-- ~~**L4″ — where the fixture → group assignment lives.**~~ **Closed** (§7.4):
-  `115[r].f4` is the group index, absent = 0 = group A, mirrored on every patch
-  entry as `105[e].f6`. It had been decoded all along under the name
-  *category*. Record 125 is the eight groups plus a ninth slot, not nine
-  categories.
-- ~~**L5 — the mapping record.**~~ **Closed** (§7.3, MAP-02→MAP-11) — and the
-  premise was reframed on the way. The `Mappings` screen (mode 43) exists on
-  this hardware, but the vendor manual scopes **MIDI to MK2 and higher**: on a
-  MK1 only the **DMX** side is mappable, so what to look for was never a MIDI
-  map. It is **record 130**, read and written, **device-confirmed**: `f4` is
-  the function, `f2` the instance (255 when there is none), and the channel is
-  two bytes, `f5 × 256 + f6`. It read as inert in 51 corpus files because the
-  factory table is the identity map and nobody had ever changed one.
-- ~~**L9 — the FX submessage's `f6`/`f9`.**~~ **Closed** (§5, FX6-02/03), and it
-  took a fourth field down with it. Nine screen readings matched nine fields
-  across two engines: `f6` = Phase, `f8` = Size, `f9` = **Speed**, `f2` =
-  **Fade**. The lead had been posed as a three-way permutation over
-  `f6`/`f8`/`f9`; `f2` was excluded from it because it already carried the name
-  "speed %" — `correlated`, never measured. It is the fade, and `FADE 0 %` made
-  it **vanish** from the entry, which is what a protobuf zero does and what no
-  rival reading predicted. Three corpus anomalies fall out at once: `f2` above
-  100 is move's `Flick`; `f9` present 352/352 because a speed is never 0; `f8`
-  absent on 330 Rainbow presets because those effects grey `SIZE` out. The
-  residual: colour also carries `f2` = 150 and 200, and the manual gives colour
-  no `Flick`.
+Two readings stay **refuted as written**, both describing a protobuf the
+firmware never parses: SETP-01's `f1` = id, and PRESET-07's `f2` = entry
+position clamped to the last entry. PRESET-07 was wrong on both halves — not
+that field, and not a position. Its **file-side** results are untouched: the
+`f19` id formula, gaps tolerated, and the manual open.
 
-- ~~**L10 — hands-off preset recall.**~~ **Closed** — and the way it closed is
-  the lesson. `SET_PRESET` (41) and `SET_MODE` (39) do **not carry protobuf**:
-  the firmware reads **`payload[0]` as the index**. Every payload we had sent
-  was `[tag, value]`, so the device read our *tag* byte — `f1` → 8, `f2` → 16,
-  `f3` → 24 — which is exactly why one appearance per "field" and never a
-  reaction to the value. With a one-byte payload, recall is addressed,
-  deterministic and reproducible, and `SET_MODE` sets the **reported** mode 5
-  times out of 5 — the panel itself does not always follow (RAW-01 and
-  SCREEN-01, **device-confirmed**, 2026-08-27). RECALL-01 and RECALL-02
-  measured correctly; their reading — "the event addresses nothing" — is
-  replaced by "we had never sent the index". Two readings stay **refuted as
-  written**, both describing a protobuf the firmware never parses: SETP-01's
-  `f1` = id, and PRESET-07's `f2` = entry position clamped to the last entry.
-  PRESET-07 was wrong on both halves — it is not `f2`, and it is not a
-  position; PRESET-07's *file-side* results (the `f19` formula, gaps tolerated,
-  the manual open) are untouched. The byte is the **id** (RECALL-03)
-  and a second byte is not read (RAW-02). An **absent** id is a **no-op** —
-  the live frame is left exactly as it was, with no floor, no clamp to the last
-  entry, no fall-back to the first and no modulo. Proven on **three** cases:
-  above the highest present id (RECALL-04, bytes 7, 50 and 200 on a 6-entry
-  copy), inside an **interior hole** (RECALL-05, byte 90 between ids 81 and
-  100, four rival readings each killed on a measured frame), and with bit 7 set
-  (RECALL-06, byte 228 — a strict no-op). A **present** id
-  above **127** is recalled **exactly**, bit 7 and all: byte 140 rendered its
-  own cue to the channel, byte 141 likewise, and byte 228 — no such preset —
-  stayed a no-op, which kills the 7-bit-truncation reading on two distinct
-  measured frames (RECALL-06). The reachable domain is the panel's own,
-  **0–199**; 200–255 is unprobed.
-  The long events stay protobuf.
-- **L8 — variants B and C.** Only the top level is mapped. A different
-  serialisation of the same show; needs its own campaign.
+**No reachable event reloads the live copy** (RELOAD-04). A WTOOLS push does
+not, `store` + `RESTART` under the same UUID does not, and only a manual open
+on the panel does. The screen that performs it — mode 26, *main menu → Open* —
+**is** reachable remotely, which is as close as the protocol gets.
 
 ---
+
+## 11. Open questions
+
+Only questions **nothing has answered**. A lead that closed is not listed here:
+its result lives in the section it belongs to, and its history in the ledger.
+Ten leads (L1–L5, L4′, L4″, L9, L10) were carried in this section long after
+they closed, which made the list read as a research agenda when it was a
+changelog.
+
+| # | Question | What would settle it |
+|---|---|---|
+| Q1 | **`165.f27`** — the fourth per-group array, zero on all 3697 corpus presets and on the three entries the device composed during the F7 series. It does not follow the engine quadruplet. | No cheap discriminator has emerged. That is the condition for going to the hardware, and it is not met. |
+| Q2 | **`f4` bit 0**, set on the move and beam pages, clear on the colour page; bits 1, 5, 6, 7 are never seen outside 255. Under the permission reading, bit 0 is a fourth capability that movement and beam need and colour does not. | A preset composed at the panel on a rig where the candidates separate. Nothing in this corpus does. |
+| Q3 | **`f16` slice 11** — non-zero and constant per project (2, 5 or 7), unmoved by every flash latch including the one that had `SMOKE` alone held. | It is not a flash key; nothing says what it is. |
+| Q4 | **`f16` slices 3 and 4** — zero in every file and every experiment, with no key left to assign. | Provably empty, or empty in everything reachable from this panel. |
+| Q5 | **`102.f11`** — unattributed and inert across idle static output and with the blinder active, no UI control, no manual entry, present before firmware 2.0. | The search is **stopped**, not open-ended. Untried conditions, for whoever picks it up: strobe or smoke active, effects running, a second universe, MK2/MK3 hardware. |
+| Q6 | **The `PRESET EDIT` screen's `COLOR` line.** It shows a named colour that is not the preset's `f31`, and no top-level scalar carries the pad index either. | Where that line reads from. |
+| Q7 | **`beam.f5`** — absent on all 352 distinct presets and on both entries written during FX6-03. Hypothesized inert: a slot the shared FX schema carries and the beam engine does not use. | One capture where a beam control writes it, or a reason it never can. |
+| Q8 | **Record 161** — three opaque blobs of ~190 bytes. FX6-05 removed the reason to look there for the beam sequencer, which is the only hypothesis it ever had. | Anything at all. It round-trips verbatim in the meantime. |
+| Q9 | **Which of the two paths the panel follows.** `SET_MODE` and the front-panel keys move the device differently (SCREEN-03), and nothing has measured which one the displayed screen tracks. | A capture where the two disagree and the panel is watched. |
+| Q10 | **The colour engine's `f2` at 150 and 200.** `f2` is the fade, and above 100 it is move's `Flick` — but the manual gives colour no `Flick`. | The residual of L9, and the only part of the FX submessage that does not read cleanly. |
+| Q11 | **Variants B and C below the top level.** EXP-06 aligned profiles, patch, preset names and the FX banks against a variant-A twin, which is far more than "only the top level is mapped" — but it is one pair, and the campaign was never run out. | Its own campaign, on more than one pair. |
+| Q12 | **Transposition off this rig.** §3.4's palette rule, and most of the static layer, were measured on **one** group of **one** profile. Nothing contradicts the general rule; nothing tests it either. | A second rig. |
 
 ## References
 

@@ -47,6 +47,7 @@ CONTROLES = [
     ("wpj_privacy", ["python3", "tools/wpj_privacy.py"]),
     ("wpj_links", ["python3", "tools/wpj_links.py"]),
     ("wpj_counts", ["python3", "tools/wpj_counts.py"]),
+    ("wpj_evidence", ["python3", "tools/wpj_evidence.py"]),
     ("gobo_run", ["python3", "tools/gobo_run.py"]),
     ("boundaries", ["python3", "-m", "unittest", "discover", "-s", "tests",
                     "-t", "."]),

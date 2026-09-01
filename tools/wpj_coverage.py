@@ -185,6 +185,7 @@ PROOF = {
     ("150", "focus_offset"): (DEVICE, "§3.2"),
     ("150", "pan"): (DEVICE, "§3.2"),
     ("150", "tilt"): (DEVICE, "POS-01"),
+    ("150", "cross"): (DEVICE, "COV-08"),
 
     ("151", "fixture"): (DEVICE, "POS-06"),
     ("151", "focus_offset"): (DEVICE, "POS-04"),

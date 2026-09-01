@@ -235,8 +235,16 @@ field 5 × 20                     one per slot
   f5  name           UTF-8, absent when the slot is empty
   f6  PAN            unsigned, percent × 65536
   f7  TILT           unsigned, percent × 65536, absent = 0
-  f8  CROSS          [hypothesized]
+  f8  CROSS          unsigned, percent × 65536 — device-confirmed (COV-08)
 ```
+
+**Two conventions live in this one sub-message.** `f3`, `f6`, `f7` and `f8` are
+**unsigned** — `percent = v / 65536`, 32768 = 50 %, and they cannot go negative.
+`f4` alone is **signed** — `percent = (v − 32768) / 32767`, 32768 = 0 %. Both
+halves are now read off the screen: on one slot `f4` = 32768 displays **0 %**,
+where the unsigned reading would have shown 50 %. A writer that applies one
+convention to the whole sub-message gets `FOCUS OFFSET` wrong by half its
+range.
 
 **The divisor is 65536, not 65535** — POS-02 measured it: 32768/65535 is
 0.500008, which pushes two predicted channels one unit off, while 32768/65536 is
@@ -246,6 +254,13 @@ you predict DMX, which is why the earlier reading survived so long.
 Read off the device's own edit screen (SHIFT + a position pad shows PAN, TILT,
 FOCUS OFFSET and FAN | CROSS as percentages), on slots where the four values
 disagree.
+
+**`f8` is `CROSS` — [device-confirmed] (COV-08).** The second half of the
+`FAN | CROSS` encoder, read off the POSITION screen on two slots with the
+prediction published first: 36044 showed **55 %** where the unsigned reading
+predicts 55 and the signed one 10, and 32767 showed **50 %** against 50 and 0.
+No write, no save, no deploy — the experiment project already held a slot where
+the five values disagree, which is the condition this section states.
 
 **An earlier reading of this document called `f3` pan and `f4` tilt. Both were
 wrong**, and the corpus alone could not catch it: in the rigs available, every
@@ -267,6 +282,15 @@ field 1 = 20 · field 2 = group 0…7 · field 5 × 20
 Settled by the picker's `RGB+` view, which prints the **raw 0–255 channel
 values** and names all seven channels in field order. The other four views are
 lossy: the display **truncates**, so 127/255 shows as 49 %, not 50 %.
+
+**That rule does not hold on every screen — [device-confirmed] (COV-09).** The
+POSITION screen **rounds**: 39976/65536 is 60.9985 % and shows **61**, 32767 is
+49.9985 % and shows **50**. Seven of eight readings discriminate and rounding
+takes all of them. Either the two screens format differently, or the colour
+measurement above needs redoing — one photograph of the picker would say which.
+**Predict with the right one.** COV-08's published prediction was wrong by one
+on six values for using truncation here; it survived only because its two
+rival readings sat 45 points apart.
 
 **A pad component drives its engine role, not only red/green/blue.** Recalling a
 cue on pad 16 = `(255, 105, 8, white 64)` put red 255, green 105 and blue 8 on

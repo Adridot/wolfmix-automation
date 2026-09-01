@@ -227,7 +227,8 @@ SCHEMAS = {
                             2: ("offset_151", "v"),
                             3: ("fan", "v"), 4: ("focus_offset", "v"),
                             5: ("name", "str"),
-                            6: ("pan", "v"), 7: ("tilt", "v")})},
+                            6: ("pan", "v"), 7: ("tilt", "v"),
+                            8: ("cross", "v")})},
     # 151: the positions of fixtures "detached" from a slot of 150, cut by
     # 150.f1/f2. Three signed offsets, value = (v - 32768) / 32767 —
     # device-confirmed on the POSITION screen. See the registry, "POS-04".

@@ -1865,6 +1865,30 @@ key.
 
 ---
 
+### The output stream is a 25 Hz clock — **[device-confirmed]** (COV-34)
+
+The controller ships one `DMX_PACKET` of **2048 channels** — the four universes
+in natural order — every **40 ms**. Measured over three windows: 25.04, 25.04
+and 25.01 fps, median arrival gaps of 40.023, 39.991 and 39.870 ms, and an
+interquartile spread of **0.65 to 1.3 ms**.
+
+**It is a clock and not an emission on change.** A 30 s window with the engine
+static and `animatedChannels = 0` shipped 751 frames, and a second window with
+a Move FX and a Colour FX running gave a rate **0.12 %** away from it. Nor is
+it a faster stream decimated: the gap counts are 100.16 % and 100.03 % of an
+exact 25.000 Hz clock, so no frame was lost, and the longest gap is twice the
+median rather than twice a half-median — one delivery slot missed on the
+**host** and caught up on the next.
+
+**This is the USB cadence, not the DMX line.** The outputs were physically
+unplugged and no receiver saw the wire. Whether the firmware clocks the line at
+the same rate is untested here and must not be read into the number.
+
+What it settles is the instrument: `dmx-envelope` is used as a differential
+oracle throughout `research/`, and a window of N seconds is 25 N frames
+whatever the engine is doing — which is what makes "did this change alter the
+output at all" a fair question rather than a race with an animation.
+
 ## 11. Open questions
 
 Only questions **nothing has answered**. A lead that closed is not listed here:

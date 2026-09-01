@@ -55,7 +55,7 @@ and a client for the controller's USB protocol.
 ## Quick start
 
 ```bash
-git clone https://github.com/<owner>/wolfmix-automation.git
+git clone https://github.com/Adridot/wolfmix-automation.git
 cd wolfmix-automation
 ```
 

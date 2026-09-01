@@ -1212,6 +1212,20 @@ four rigs, always `max(105.f5) + 1`); the "20" in earlier notes was a
 coincidence of one rig having 20 fixtures. Record 155 is *not* the DMX patch map
 (§8).
 
+### Record 120's count can outrun its content — **[observed]** (COV-32)
+
+`120.f1` is the entry count on every file but one, where the device trimmed the
+record from 221 entries to 215 and left `f1` at 221. Arithmetic says which side
+is stale: **215 is exactly `Σ channel_count` over each fixture's profile**, so
+the content was corrected and the counter was not. The surplus of six rode in
+on the WTOOLS 2.0.2 session of COV-23 and sat in the same **eight** files that
+carry the misplaced `116.f12` (§7.6) — one session, two artefacts, and a later
+save repaired one of them without touching the other.
+
+`comptes_de_tete` checks `f1 >= len` on record 120 and equality on the other
+fourteen. **A writer must not derive the entry list from `f1`**, and a reader
+that trusts it reads six entries that are not there.
+
 ### 7.1 The "115 arena" was a real DMX patch all along — **resolved**
 
 Identity 8 holds everywhere, but the stronger claim that `115.f2` offsets tile
@@ -1274,12 +1288,16 @@ without a preset being added, and it moves **back**, which no one-way flag does.
 An earlier reading tied it to record 151 being populated: also withdrawn, since
 15 of the 24 files at `0x30` carry a populated 151.
 
-What is new is a **coupling**: it moves in the same save as the shared tail of
-record 161 (COV-21), in both projects where more than one version exists. The
-pairing is not a bijection — `0x38` appears against tails 160 and 176 — so the
-two travel together without being derivable from one another. Two unattributed
-fields that move together are still two unattributed fields, but they are now
-one lead instead of two.
+A **coupling** was published here and is **refuted (COV-32)**: the byte was read
+as moving in the same save as the shared tail of record 161 (COV-21), on the
+strength of the two projects that had more than one version. A third save moved
+the tail — all three items, `176 → 240` — and left record 125 **byte-for-byte
+identical**, its 7th byte `0x38` on all nine slots before and after. Two
+coincidences were the whole basis and the third save separates them.
+
+Both fields are unattributed again, separately, and nothing else falls with the
+coupling because nothing was ever named on it. What survives from COV-22 is its
+own refutation: the byte does not track preset creation, and it moves back.
 
 ### 7.3 Record 130 is the DMX IN mapping table — **[device-confirmed]**
 
@@ -1546,8 +1564,17 @@ slot of record 150 points at its own slice:
 150[slot].f2 = offset into 151      150[slot].f1 = length
 ```
 
-The slices **tile** `[0, count(151))` — the same (offset, length) couple as
+The slices are contiguous from 0 — the same (offset, length) couple as
 `105.f4`/`f7` into 106 and `116.f3`/`f2` into 110.
+
+**They no longer tile `[0, count(151))` — [refuted] (COV-32).** That held on
+all 90 corpus files and fell to a save the device wrote on 2026-09-01: group
+A's slots claim **6** entries where record 151 holds **1**, the three slices
+still contiguous. **Which side is stale is not settled** — unlike record 120's
+surplus in the same file, no arithmetic decides it, and the discriminator is
+one photograph of the `ALL POSITIONS` page. `tranches_151` now checks only what
+survives, `referenced >= present`: no entry of 151 is orphaned. **A reader must
+clamp a slice to the record rather than trust its length.**
 
 | Field | Screen | Encoding |
 |---|---|---|
@@ -1855,7 +1882,7 @@ changelog.
 | Q5 | **`102.f11`** — unattributed and inert across idle static output and with the blinder active, no UI control, no manual entry, present before firmware 2.0. | The search is **stopped**, not open-ended. Untried conditions, for whoever picks it up: strobe or smoke active, effects running, a second universe, MK2/MK3 hardware. |
 | Q6 | **The `PRESET EDIT` screen's `COLOR` line.** It shows a named colour that is not the preset's `f31`, and no top-level scalar carries the pad index either. | Where that line reads from. |
 | Q7 | **`beam.f5`** — absent on all 352 distinct presets and on both entries written during FX6-03. Hypothesized inert: a slot the shared FX schema carries and the beam engine does not use. | One capture where a beam control writes it, or a reason it never can. |
-| Q8 | **Record 161** — three items, each a **packed array of exactly 188 varints** (COV-06). Not volatile, as this document long said: of the 564 values, exactly **6 ever differ**, and they are the same six in two unrelated projects (COV-21) — the **last value of each item**, which move together and to the same number (240 or 176), and the **first three of item 1**, which read as a little-endian **20-bit mask**, `0x0FFFFF` or `0`. The other 182 per item have not moved in 82 files, 13 projects, two authors. Its `f1` is 21, 15, 19 by item position; the record's own `f1` is 9 against 3 items, so it is not a count. FX6-05 removed the beam-sequencer hypothesis, the only one it ever had. | An attribution for any of the six. Two observed transitions (F30-04 on the tail, FX6-02 on the mask) are not one, and a 20-bit mask has too many candidates here — a palette page, a preset page and a Live Edit page are all 20. It has a **schema** since 2026-09-01 and that changes nothing here: the schema names `items` and types the three arrays as packed, so a diff points at which of the 564 values moved instead of at 190 bytes of hex. The values themselves keep neutral keys and count `partial`, not `read`. |
+| Q8 | **Record 161** — three items, each a **packed array of exactly 188 varints** (COV-06). Not volatile, as this document long said: of the 564 values, exactly **6 ever differ**, and they are the same six in two unrelated projects (COV-21) — the **last value of each item**, which move together and to the same number (240 or 176), and the **first three of item 1**, which read as a little-endian **20-bit mask**, `0x0FFFFF` or `0`. The other 182 per item have not moved in 82 files, 13 projects, two authors. Its `f1` is 21, 15, 19 by item position; the record's own `f1` is 9 against 3 items, so it is not a count. FX6-05 removed the beam-sequencer hypothesis, the only one it ever had. | An attribution for any of the six. Three observed transitions of the tail (F30-04, COV-22's pair, and COV-32's `176 → 240` on a save the operator could not attribute) and one of the mask (FX6-02) are not an attribution, and a 20-bit mask has too many candidates here — a palette page, a preset page and a Live Edit page are all 20. It has a **schema** since 2026-09-01 and that changes nothing here: the schema names `items` and types the three arrays as packed, so a diff points at which of the 564 values moved instead of at 190 bytes of hex. The values themselves keep neutral keys and count `partial`, not `read`. |
 | Q9 | **Which of the two paths the panel follows.** `SET_MODE` and the front-panel keys move the device differently (SCREEN-03), and nothing has measured which one the displayed screen tracks. | A capture where the two disagree and the panel is watched. |
 | Q10 | **The colour engine's `f2` at 150 and 200.** `f2` is the fade, and above 100 it is move's `Flick` — but the manual gives colour no `Flick`. | The residual of L9, and the only part of the FX submessage that does not read cleanly. |
 | Q11 | **Variants B and C below the top level.** EXP-06 aligned profiles, patch, preset names and the FX banks against a variant-A twin, which is far more than "only the top level is mapped" — but it is one pair, and the campaign was never run out. | Its own campaign, on more than one pair. |

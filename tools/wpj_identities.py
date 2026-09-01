@@ -330,11 +330,22 @@ def bornes_106(w):
 
 
 def tranches_151(w):
-    """150[slot].f2/f1 = a slice of record 151, and the slices tile it.
+    """150[slot].f2/f1 = a slice of record 151, contiguous, and nothing orphaned.
 
     The same construction as `105.f4/f7` inside 106 and `116.f3/f2` inside 110:
     an (offset, length) pair cutting a flat list. Position slots that use none
     of it carry neither `f1` nor `f2`. See the registry, "record 151".
+
+    **The exact tiling fell (COV-32).** This asserted `referenced == present`
+    on all 90 corpus files, and a save the device wrote on 2026-09-01 broke it:
+    group A's slots claim **6** entries of 151 where the record holds **1**,
+    the three slices themselves still contiguous from 0. Which side is stale is
+    **not settled** — 120's surplus in the same file is decided by arithmetic
+    and this is not, and the discriminator is the `ALL POSITIONS` page. What
+    survives is containment, `referenced >= present`: no entry of 151 is
+    orphaned, which is the half a reader needs. The half that fell is the one
+    that says nothing is referenced that is not there, and a reader must now
+    clamp a slice to the record instead of trusting it.
     """
     n151 = len(_items(w, 151)) if w.get(151) else 0
     vus = []
@@ -349,7 +360,8 @@ def tranches_151(w):
             f"150[{'ABCDEFGH'[g]}][{i + 1}]: slice at {debut} but " \
             f"{pos} entries of 151 consumed"
         pos += n
-    assert pos == n151, f"151: {pos} entries referenced, {n151} present"
+    assert pos >= n151, \
+        f"151: {pos} entries referenced, {n151} present — an orphaned entry"
     nfx = len(_items(w, 115))
     for k, e in enumerate(_items(w, 151) if w.get(151) else []):
         assert e.get("f1", 0) < nfx, \
@@ -619,6 +631,16 @@ def comptes_de_tete(w):
     19 corpus files — always low by exactly the entries a preset capture
     appended, 81 against 83 and 81 against 85 — so whatever it counts, it is
     not the entries present.
+
+    **Record 120 is now checked at containment, not equality (COV-32).** A save
+    the device wrote trimmed 120 from 221 entries to 215 and left `f1` at 221.
+    Arithmetic says which side is right: 215 is exactly the sum of the
+    `channel_count` of each fixture's profile, in that file and in the eight
+    that preceded it, so the **content** was corrected and the **counter** was
+    left behind. The surplus of 6 came from the WTOOLS 2.0.2 session of COV-23
+    and rode along in the same eight files that carry the misplaced `116.f12`
+    (COV-30) — one session, two artefacts. `f1 >= len` is what survives, and a
+    writer must not derive the entry list from `f1`.
     """
     for typ in COMPTES_DE_TETE:
         for occ in range(8 if typ in (140, 145, 150) else 1):
@@ -632,8 +654,11 @@ def comptes_de_tete(w):
                 assert not d.get("items"), \
                     f"{typ}: {len(d['items'])} entries and no field 1"
                 continue
-            assert f1 == len(d.get("items", [])), \
-                f"{typ}: field 1 = {f1} but {len(d.get('items', []))} entries"
+            n = len(d.get("items", []))
+            if typ == 120:
+                assert f1 >= n, f"120: field 1 = {f1} but {n} entries"
+            else:
+                assert f1 == n, f"{typ}: field 1 = {f1} but {n} entries"
 
 
 def boutons_live_edit(w):

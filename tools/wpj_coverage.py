@@ -141,6 +141,7 @@ PROOF = {
     ("116", "timestamp"): (CORRELATED, "§7"),
 
     ("120", "channels"): (CORRELATED, "§7"),
+    ("120", "value"): (DEVICE, "COV-16"),
 
     ("125", "groups"): (CORRELATED, "§7.4"),
     ("125", "name"): (CORRELATED, "§7.4"),

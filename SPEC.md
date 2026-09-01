@@ -1133,6 +1133,15 @@ are what pins `115.f2` to a real DMX patch.
 - **120 = flat per-fixture-channel value table**, one contiguous block per
   fixture in ascending `115.f2` order. Verified block by block on *rig-b*:
   six blocks of 10, then 7, then 11, then 2 — 134 entries, matching identity 8.
+  **`f1` is the channel's DMX value — [device-confirmed] (COV-16).** Emitted on
+  every channel no engine role claims: eight such channels were predicted from
+  the file and read back off the live frame exactly, and none moved while an
+  effect drove ten others. Read the blocks in **ascending DMX-address order** —
+  the item order of 115 is a different order and produces nonsense. The table
+  is constant per profile. Careful with the complement: "no entry in record
+  106" is **not** "not driven" — a 16-bit pair is driven on both halves while
+  only its principal appears in 106 (POS-05), which is how COV-16's second
+  prediction came out wrong.
   Its entries are **not** empty: 10 754 of 14 698 carry content (COV-03), and
   the one file where they are is *rig-c-bug*, which is BUG-01's erasure. Their
   four fields stay unnamed. `f4` is 1 everywhere; `f5` is 1 or 2 and pairs with

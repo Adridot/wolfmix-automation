@@ -199,7 +199,17 @@ SCHEMAS = {
                                       3: ("profile", "v"), 4: ("group", "v")}),
           6: ("display_order", "hex")},
     116: {1: _COUNT, 5: ("profiles", _PROFIL)},
-    120: {1: _COUNT, 5: ("channels", {})},                 # an empty {} entry = `2a 00` = all zero
+    # 120: one entry per (fixture, profile channel), the blocks in **ascending
+    # DMX address** order — not the item order of 115. `f1` is the channel's
+    # DMX value, emitted on every channel no engine role claims: eight such
+    # channels were predicted from the file and read back off the live frame
+    # exactly, and they stay put while an effect moves everything around them
+    # (COV-16). The table is constant per profile.
+    # `f4` (1 everywhere), `f5` (1 or 2, and only on the moving heads) and `f6`
+    # keep neutral keys: `f5`/`f6` have a shape — `f5` is 1 on offsets 0-1 and
+    # 2 on offsets 2-3, `f6` runs in consecutive quadruples 17 apart between
+    # two fixtures of one profile — and a shape is not a reading.
+    120: {1: _COUNT, 5: ("channels", {1: ("value", "v")})},                 # an empty {} entry = `2a 00` = all zero
     125: {1: _COUNT, 5: ("groups", {8: ("name", "str")})},
     135: {1: _COUNT, 5: ("pads", _PAD)},
     # f2 = the group index 0-7 (A-H), absent for A. SPEC §3.1 retracted the

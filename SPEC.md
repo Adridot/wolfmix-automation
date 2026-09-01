@@ -1570,11 +1570,19 @@ The slices are contiguous from 0 — the same (offset, length) couple as
 **They no longer tile `[0, count(151))` — [refuted] (COV-32).** That held on
 all 90 corpus files and fell to a save the device wrote on 2026-09-01: group
 A's slots claim **6** entries where record 151 holds **1**, the three slices
-still contiguous. **Which side is stale is not settled** — unlike record 120's
-surplus in the same file, no arithmetic decides it, and the discriminator is
-one photograph of the `ALL POSITIONS` page. `tranches_151` now checks only what
-survives, `referenced >= present`: no entry of 151 is orphaned. **A reader must
-clamp a slice to the record rather than trust its length.**
+still contiguous. `tranches_151` now checks only what survives,
+`referenced >= present`: no entry of 151 is orphaned. **A reader must clamp a
+slice to the record rather than trust its length.**
+
+**And the disagreement runs deeper than a count (COV-33).** Turned through all
+six heads of the group on the panel, every fixture reads `PAN OFFSET 0 %`,
+`TILT OFFSET 0 %`, `FOCUS OFFSET 0 %`, on **every** position pad — the device
+carries **no detached fixture at all**, while the file holds one entry at
+`+39.00 % / +9.00 %` and record 150 claims six slices of it. "Which side is
+stale" was the wrong question. **The measurement cannot attribute it either**:
+the panel shows the live copy and the capture is the stored file, and nothing
+reloaded the project between them — the trap §10 already records. One panel
+action settles it: reload, then look again.
 
 | Field | Screen | Encoding |
 |---|---|---|

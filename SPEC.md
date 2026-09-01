@@ -1437,7 +1437,7 @@ Each `106` entry targets a channel of its fixture's profile through
 | `f2` | absolute 0-based DMX channel |
 | `f4` | the channel's **role in the W1 engine** |
 | `f1`, `f3` | the **DMX window** the role drives — one of the channel's `111` ranges on 4188 of 6070 entries |
-| `f5`, `f6` | the fixture's **travel limits**, per fixture and per axis — the `MIN`/`MAX` of the `FIXTURE LIMITS` screen, as `v/255` (COV-24). **Invert pan swaps the two.** |
+| `f5`, `f6` | the fixture's **travel limits**, per fixture and per axis — the `MIN`/`MAX` of the `FIXTURE LIMITS` screen, as `v/255` (COV-24). **Invert pan swaps the two.** **Absent means 0, not "unset" (COV-35):** a fixture whose four limit fields are all absent reads `0 %` four times on that screen and is **pinned** — `min == max == 0` collapses the range, and it emits 0 on both axes whatever position is recalled. A reader must not fill an absent limit with the full range. |
 
 **`110.f4` is the channel type the `FIXTURE BUILDER` shows — [device-confirmed]
 (COV-25)**, name for name, 16 of 16 on a moving head, the two `Generic` values

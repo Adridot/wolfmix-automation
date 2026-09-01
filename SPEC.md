@@ -246,6 +246,11 @@ where the unsigned reading would have shown 50 %. A writer that applies one
 convention to the whole sub-message gets `FOCUS OFFSET` wrong by half its
 range.
 
+**Unnamed slots are named by the firmware — [device-confirmed] (COV-12).** A
+slot with no `f5` prints `Position N`, N being the 1-based slot index, the same
+synthesis record 145 applies to its unnamed gobo pads (§3.4). A writer must not
+expect to find those strings in the file.
+
 **The divisor is 65536, not 65535** — POS-02 measured it: 32768/65535 is
 0.500008, which pushes two predicted channels one unit off, while 32768/65536 is
 exactly 0.5 and every predicted channel lands. The difference only shows up once

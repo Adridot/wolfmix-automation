@@ -112,5 +112,24 @@ Listed because they may be related, and labelled as unverified.
 3. On that same project, a later save rewrote a record's slice table back to a
    state from **five versions earlier**, before an intervening editing session.
 
-Happy to supply the project files, byte-level diffs, or SHA-256 of any state on
-request.
+## The two files
+
+A minimal pair is ready: **one save apart, one change between them**, the file
+before structurally clean and the file after not.
+
+| | before | after |
+|---|---|---|
+| sha256 | `4064e36f859a4718192af833855e5191a7f793fb48b255a27a44a3857cb77b22` | `4db2b8a384922837c2552c49cfe551a80d21251f9150af8cae6df86a9ad348c5` |
+| bytes | 9846 | 10165 |
+| fixtures | 4, all in group A | 5, the new one in group B |
+| per-channel table | **64** = 4 × 16 ✓ | **79**, where 80 is required ✗ |
+
+The change between them is step 3 of the reproduction above and nothing else.
+
+Note on that pair: the *before* file carries a non-identity fixture display
+order, because the save preceding it moved a fixture in the list. That is not
+the variable — the same defect was reproduced on a project whose display order
+was the identity, and an add to the first group on that same project was clean.
+Both rows are in the measurement table.
+
+Byte-level diffs, or the SHA-256 of any of the nine states, on request.

@@ -189,9 +189,9 @@ yours will differ.
 
 | | corpus |
 |---|---|
-| **read** — a field a codec schema names | **92.8 %** |
-| **inert** — no name, and one value in the whole corpus | 4.2 % |
-| **partial** — a field inside a schema'd record that varies and that nothing names | 3.0 % |
+| **read** — a field a codec schema names | **93.1 %** |
+| **inert** — no name, and one value in the whole corpus | 4.1 % |
+| **partial** — a field inside a schema'd record that varies and that nothing names | 2.9 % |
 | **unknown** — a record with no schema, or one whose protobuf does not parse | 0.0 % |
 
 **`read` and `inert` are not added, and the distinction is the point.** `read`
@@ -205,9 +205,12 @@ one, and `102.f11` is 0 and 100; neither is in the table. So "100 %" here would
 mean `read + inert = 100` with nothing partial and nothing unknown, which is a
 weaker claim than it sounds like and is stated that way on purpose.
 
-Of the file, 54.0 % is named by a **device-confirmed** reading, 26.8 % by a
-`correlated` one and 11.9 % by a `validated` one; each name carries a ledger id
-the tool refuses to leave dangling. Read is a claim about *names*, not about
+Of the file, 56.6 % is named by a **device-confirmed** reading, 25.1 % by a
+`correlated` one and 11.4 % by a `validated` one; each name carries a ledger id
+the tool refuses to leave dangling. That split is the number that matters more
+than the total: `read` counts bytes a name covers, not bytes a name has been
+proved to cover, and moving a quarter of the file up one rung is a larger piece
+of work than closing what is left `partial` (COV-54). Read is a claim about *names*, not about
 *measurements*, which is why the split by status is printed next to it and why
 a field promoted without evidence fails the gate instead of raising the number
 (COV-01).
@@ -1121,7 +1124,7 @@ The strongest structural result available. Eight identities hold **exactly,
 ```
 
 Three more, added once `105.f4` was corrected, and mechanically re-checked on
-**45/45** files by `tools/wpj_identities.py`, which now runs **21** identities
+**45/45** files by `tools/wpj_identities.py`, which now runs **23** identities
 <!--count:identities--> plus two before/after pair checks (F30-04, and the
 FLASH-09 pair — the files, not its retracted reading):
 
@@ -1181,6 +1184,15 @@ are what pins `115.f2` to a real DMX patch.
 - **115 = fixture instances**, one per row of the fixture grid. `f3` = index into
   116; `f2` = start offset in an internal channel arena; `f6` (on the record,
   not the items) = display order, a permutation of 0…n−1.
+  **`f9` is `slot_id` — [device-confirmed] (COV-46)**: a per-fixture identifier
+  the panel allocates as the lowest free number, distinct within a file, and it
+  follows the fixture and not its rank — a deletion does not renumber the
+  survivors, a reorder does not move them, and a new row takes the number a
+  deleted one freed (COV-49) or the lowest unused one (COV-52, COV-53). It is
+  **not** a position index: a six-fixture project carries 20…25, which is the
+  reading COV-15 refuted. Absent is 0 **only where the other rows carry the
+  field**; twelve corpus files emit it on no row at all, and reading those as
+  ten fixtures all holding slot 0 is the absence trap, not a decode.
 - **120 = flat per-fixture-channel value table**, one contiguous block per
   fixture in ascending `115.f2` order. Verified block by block on *rig-b*:
   six blocks of 10, then 7, then 11, then 2 — 134 entries, matching identity 8.
@@ -1202,10 +1214,30 @@ are what pins `115.f2` to a real DMX patch.
   though, so a block that shifted would not show at this resolution. **Moving
   the address back restores every record byte for byte**, the record-level
   `f4` included: it is a pure function of the ordering, with no hysteresis —
-  unlike record 125's mask, which accumulates (§7.2). `f4` is 1 everywhere; `f5` is 1 or 2 and pairs with
-  an `f6` that comes as `(n, n−1)`, which looks like a coarse/fine couple and
-  matches `110.f5` on 954 of the 2081 entries carrying it — a shape, not a
-  reading.
+  unlike record 125's mask, which accumulates (§7.2).
+
+  **The record-level `f4` is the DMX occupancy map — [validated] (COV-55).**
+  Run-length encoded, one varint per run in channel order: under 128 a **free**
+  run of that length, at or above 128 an **occupied** run of `v − 128`. A run
+  therefore caps at 127 and a longer one is split, which is why four heads at
+  0/16/32/48 read `[192, 127, 127, 127, 67]` — 64 occupied, then 448 free. The
+  runs sum to exactly **512** on every corpus file, the occupied channels
+  number exactly as many as record 120 has entries, and the reading re-encodes
+  the stored bytes exactly, the firmware's own split points included. COV-29's
+  single-variable move of one fixture 500 → 300 takes channel 499 out of the
+  map and puts 299 in, one channel, base 0. **It maps the record, not the
+  patch**: the eight files carrying the surplus of six mark six channels the
+  patch does not justify (237–242), and the four captures of the COV-53 defect
+  are short by one.
+
+  Per entry, `f4` is 1 everywhere and `f5` is 1 or 2 — a shape, not a reading.
+  **`f6` is `dmx_channel`, an absolute DMX channel inside its own fixture's
+  span — [device-confirmed] (COV-50)**: a head at address 16 carries 18, 19,
+  16, 17 and the next, at 32, carries 34, 35, 32, 33, on 2731 of the corpus's
+  2762 entries, every exception belonging to a capture of the COV-53 defect.
+  The name says that and no more — the entries are positional in ascending DMX
+  address, so *which* channel of its own block an entry names is a second
+  question and it is not read.
 
 **Refuted**: record 115 does *not* have a fixed 20 slots (10/15/20/22 across the
 four rigs, always `max(105.f5) + 1`); the "20" in earlier notes was a

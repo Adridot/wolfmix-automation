@@ -138,7 +138,7 @@ Each identity is an arithmetic constraint between two records — true on every
 file or false. A reading that breaks one is refuted without touching hardware,
 which is the cheapest kind of proof available here.
 
-Checked today — 21 <!--count:identities-->, plus two before/after pair checks
+Checked today — 23 <!--count:identities-->, plus two before/after pair checks
 (F30-04, and the FLASH-09 pair — the files, not its retracted reading):
 
 | Identity | What it kills |

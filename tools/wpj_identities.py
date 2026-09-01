@@ -14,6 +14,7 @@ import wpjlib
 
 GOBO_FN = 14          # 111.f3 = the "gobo" function (registry, type 145)
 _ITEMS = {5: ("items", {})}
+_COMPTE_ET_F4 = {4: ("f4", "packed"), 5: ("items", {})}
 
 
 def _varints(hexa):
@@ -742,13 +743,68 @@ def boutons_live_edit(w):
                 f"165.f18 sets button {bit}, which no macro defines"
 
 
+def occupation_120(w):
+    """120.f4 is a run-length map of the 512 DMX channels, and it counts 120.
+
+    One varint per run, in channel order: under 128 a free run of that length,
+    at or above 128 an occupied run of `v - 128`. Two arithmetic consequences,
+    both exact on every corpus file:
+
+    - the runs sum to **512**, the size of a DMX universe;
+    - the occupied channels number exactly as many as record 120 has entries.
+
+    The second is what makes the field worth checking rather than merely
+    decoding: 120's entry list and its map are written by the same pass, so a
+    save that drops an entry drops a channel too, and the equality holds
+    through the COV-53 defect while `_anomalie_120_patch` fires. It says
+    nothing about *which* channels — the map follows the record, not the
+    patch, which is why the eight files carrying COV-32's surplus of six mark
+    six channels the patch does not justify and still satisfy this (COV-55).
+    """
+    d = wpj_codec._decode_msg(w.get(120), _COMPTE_ET_F4)
+    if "f4" not in d:
+        return
+    total = occupes = 0
+    for v in d["f4"]:
+        if v >= 128:
+            occupes += v - 128
+            total += v - 128
+        else:
+            total += v
+    assert total == 512, f"120.f4: the runs cover {total} channels, not 512"
+    n = len(d.get("items", []))
+    assert occupes == n, \
+        f"120.f4: {occupes} channels occupied against {n} entries"
+
+
+def identifiants_115(w):
+    """115.f9 = a per-fixture slot id, distinct within a file.
+
+    The panel allocates the lowest free number and never reuses one twice at
+    a time; deleting frees it (COV-46, COV-49). Distinctness is the part a
+    single file can check, and it refutes the reading COV-15 took down — a
+    position index, which cannot exceed its own count, where a six-fixture
+    project carries 20…25.
+
+    **Restricted to the files that carry the field at all.** Twelve corpus
+    files emit it on no row, and reading those as ten fixtures all holding
+    slot 0 would be the absence trap, not an identity.
+    """
+    fx = _items(w, 115)
+    if not any("f9" in f for f in fx):
+        return
+    ids = [f.get("f9", 0) for f in fx]
+    assert len(set(ids)) == len(ids), f"115.f9: two fixtures share a slot: {ids}"
+
+
 IDENTITES = (comptes_de_tete, boutons_live_edit, ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
               groupe_fixture, moteurs_f16, tranche5_f16,
               plages_111, roles_106,
               ordre_fixtures_115, bornes_106, tranches_151,
               tableaux_par_groupe_165,
               schema_du_prefixe, canal_principal_110, noms_de_preset_bornes,
-              flavours_155, carte_dmx_130, masque_fixtures_161)
+              flavours_155, carte_dmx_130, masque_fixtures_161,
+              occupation_120, identifiants_115)
 
 
 def _anomalie_comptes(w):

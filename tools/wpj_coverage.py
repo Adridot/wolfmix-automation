@@ -132,7 +132,7 @@ PROOF = {
     ("105", "group"): (CORRELATED, "§7.4"),
 
     ("106", "channel_roles"): (CORRELATED, "§7.5"),
-    ("106", "dmx_channel"): (CORRELATED, "§7.5"),
+    ("106", "dmx_channel"): (DEVICE, "COV-29"),
     ("106", "role"): (CORRELATED, "§7.5"),
     ("106", "range_start"): (CORRELATED, "§7.5"),
     ("106", "range_end"): (CORRELATED, "§7.5"),
@@ -142,7 +142,7 @@ PROOF = {
     ("110", "channels"): (CORRELATED, "§7.6"),
     ("110", "range_count"): (CORRELATED, "§3.4"),
     ("110", "offset_111"): (CORRELATED, "§7"),
-    ("110", "feature"): (CORRELATED, "§7.5"),
+    ("110", "feature"): (DEVICE, "COV-25"),
     ("110", "principal_channel"): (CORRELATED, "§7.6"),
 
     ("111", "ranges"): (CORRELATED, "§7.6"),
@@ -155,7 +155,8 @@ PROOF = {
     ("115", "dmx_address"): (DEVICE, "§3.4"),
     ("115", "profile"): (CORRELATED, "§7"),
     ("115", "group"): (CORRELATED, "§7.4"),
-    ("115", "display_order"): (CORRELATED, "§7"),
+    ("115", "display_order"): (DEVICE, "COV-47"),
+    ("115", "slot_id"): (DEVICE, "COV-46"),
 
     ("116", "profiles"): (CORRELATED, "§7"),
     ("116", "channel_count"): (CORRELATED, "§7"),
@@ -167,9 +168,11 @@ PROOF = {
 
     ("120", "channels"): (CORRELATED, "§7"),
     ("120", "value"): (DEVICE, "COV-16"),
+    ("120", "dmx_channel"): (DEVICE, "COV-50"),
+    ("120", "occupancy"): (VALIDATED, "COV-55"),
 
     ("125", "groups"): (CORRELATED, "§7.4"),
-    ("125", "name"): (CORRELATED, "§7.4"),
+    ("125", "name"): (DEVICE, "COV-08"),
     # The split: 6 of the 7 bytes are the profile mask, and byte 6 is not.
     # `mask` names the field COV-26 measured; `f4b6` stays neutral and lands
     # in `partial`, which is what the split is for.

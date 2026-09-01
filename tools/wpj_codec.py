@@ -213,15 +213,26 @@ SCHEMAS = {
     155: {1: _COUNT, 5: ("sequences", _SEQUENCE)},
     # 115.f6 (on the record, not the items) is the fixture display order: a
     # complete permutation of 0…n−1, checked as an identity on every corpus
-    # file. `f5` = 65535 on all 1381 fixture rows and `f9` is enumerative;
-    # neither has a reading, so neither has a name.
+    # file. `f5` = 65535 on all 1381 fixture rows and has no reading.
+    # `f9` is `slot_id`: a per-fixture identifier the panel allocates as the
+    # **lowest free number**, distinct within a file, and it follows the
+    # fixture rather than its rank — a deletion does not renumber the
+    # survivors (COV-46), a reorder does not move them (COV-47), and a new row
+    # takes the number a deleted one freed (COV-49) or the lowest unused one
+    # (COV-52 = 5, COV-53 = 6). It is **not** a position index, which is the
+    # reading COV-15 refuted: a six-fixture project carries 20…25.
+    # **Absent is 0 only where the rest of the rows carry the field** (COV-49).
+    # Twelve corpus files carry it on no row at all, and reading those as
+    # twenty fixtures all holding slot 0 is the trap — absence has no general
+    # rule here (COV-41 is the other direction).
     # The ITEMS' `f6`/`f7` are not per-fixture data: they are uniform within a
     # file when present, and a save **removes** them as readily as another save
     # adds them — COV-42 watched all four rows lose `177`/`124` on a save that
     # touched nothing about the patch. A writer must not synthesise them.
     # `f2` absent is DMX address **0**, not an unpatched fixture (COV-41).
     115: {1: _COUNT, 5: ("fixtures", {2: ("dmx_address", "v"),
-                                      3: ("profile", "v"), 4: ("group", "v")}),
+                                      3: ("profile", "v"), 4: ("group", "v"),
+                                      9: ("slot_id", "v")}),
           6: ("display_order", "hex")},
     116: {1: _COUNT, 5: ("profiles", _PROFIL)},
     # 120: one entry per (fixture, profile channel), the blocks in **ascending
@@ -232,15 +243,34 @@ SCHEMAS = {
     # (COV-16). The table is constant per profile.
     # `f4` (1 everywhere) and `f5` (1 or 2, and only on the moving heads) keep
     # neutral keys: `f5` is 1 on offsets 0-1 and 2 on offsets 2-3, and a shape
-    # is not a reading. **`f6` now has one** (COV-50): it is an absolute DMX
-    # channel inside its own fixture's span — a head at address 16 carries
-    # 18, 19, 16, 17 and the next, at 32, carries 34, 35, 32, 33. True on 2671
-    # entries of 2679; the eight exceptions are two captures where a device
-    # save dropped an entry at the head of the record. It stays a neutral key
-    # here because the *order* inside a fixture's quadruple is not read, and
-    # it is checked as an anomaly rather than an identity for the same reason
-    # those eight exist.
-    120: {1: _COUNT, 5: ("channels", {1: ("value", "v")})},                 # an empty {} entry = `2a 00` = all zero
+    # is not a reading.
+    # `f6` is `dmx_channel`: an absolute DMX channel inside its own fixture's
+    # span — a head at address 16 carries 18, 19, 16, 17 and the next, at 32,
+    # carries 34, 35, 32, 33 (COV-50, device-confirmed). The name says that and
+    # only that. **It is not this entry's own slot**: the entries are
+    # positional in ascending DMX address (COV-16) and the quadruple is a
+    # permutation of its block, so *which* channel of the block an entry names
+    # is a second question and it is not read. The out-of-span cases are
+    # checked as an anomaly rather than an identity — every one of them belongs
+    # to a capture where a device save dropped an entry at the head of the
+    # record (COV-53), which is what the anomaly exists to see.
+    # The record's own `f4` is `occupancy`: a **run-length encoded map of the
+    # 512 DMX channels**. One varint per run, in channel order — under 128 it
+    # is a free run of that length, at or above 128 an occupied run of v − 128.
+    # A run therefore caps at 127 and a longer one is split, which is why a
+    # patch of four heads reads `[192, 127, 127, 127, 67]`: 64 occupied, then
+    # 448 free. The runs sum to exactly **512** on all 104 corpus files, the
+    # occupied count equals record 120's entry count on all 104, and the
+    # reading re-encodes the stored bytes exactly on all 104 — including the
+    # firmware's own choice of where to split. Single-variable differential:
+    # COV-29 moved one fixture 500 → 300 and the map lost channel 499 and
+    # gained 299, one channel, base 0. It maps the **record's entries**, not
+    # the patch: on the eight files carrying COV-32's surplus of six it marks
+    # six channels the patch does not justify, and on the four captures of the
+    # COV-53 defect it is short by one. See COV-55.
+    120: {1: _COUNT, 4: ("occupancy", "packed"),
+          5: ("channels", {1: ("value", "v"),
+                           6: ("dmx_channel", "v")})},                      # an empty {} entry = `2a 00` = all zero
     # 125: the nine group slots. `f4` is read in two pieces, which is why it is
     # a split and not one name: bytes 0-5 are the little-endian **profile
     # mask**, and the identity `groupe_fixture` checks `stored ⊇ derived` on it

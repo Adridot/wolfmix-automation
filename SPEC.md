@@ -166,7 +166,7 @@ made visible by counting it.
 | 150 ×8 | 483–498 | **20** each | **static POSITION palette**, one per group A–H, `f2` = group 0…7 | **device-confirmed** (§3.2) |
 | 151 | 0–93 | 0 or **4–6** | **detached-fixture position offsets**, sliced by record 150 | **device-confirmed** (§8.1) |
 | 155 | 562–567 | **4** | **4 FX sequences**, 16 steps × 8 groups + step count | **device-confirmed** (§8) |
-| 160 | 393–542, **optional** | 7–9 | named macros | correlated |
+| 160 | 393–542, **optional** | 7–9 | **`LIVE EDIT` macros** — one per operator-defined Live Edit button (COV-18) | correlated |
 | 161 | 599–604 | **3** | 3 × ~190-byte blob, volatile | observed |
 | 165 | 26219–30882 | 80–85 | preset container | correlated (§5) |
 
@@ -723,7 +723,13 @@ The `LIVE EDIT` screen is 4 pages of 20 buttons; `f18` is 10 packed varints =
 top of page 1 — out of eighty possible.
 
 `f10`'s `LIVE EDIT` bit says *whether* a preset carries Live Edits; `f18` says
-*which*.
+*which*. **And record 160 is where those buttons are defined — [correlated]
+(COV-18).** The firmware's mode table names the screen itself
+(`live_edit_macro_edit`, mode 41), and the **9 corpus files with no record 160
+carry no `f18` bit anywhere**, 9/9, while every file that has the record has
+bits. The record's name arrived here as `correlated (pre-existing)` — inherited,
+never measured — and this is the first evidence under it. The bits do **not**
+index the macro list: 7 files of 71 set one past the macro count.
 
 ### 5.6 Thirteen per-group arrays — **[correlated 45/45]**
 

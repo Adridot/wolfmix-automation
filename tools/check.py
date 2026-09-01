@@ -44,6 +44,7 @@ CONTROLES = [
     ("wpj_generate", ["python3", "tools/wpj_generate.py"]),
     ("wpj_api", ["python3", "tools/wpj_api.py"]),
     ("wpj_identities", ["python3", "tools/wpj_identities.py"]),
+    ("wpj_coverage", ["python3", "tools/wpj_coverage.py"]),
     ("wpj_position", ["python3", "tools/wpj_position.py"]),
     ("wolfmix_transaction", ["python3", "tools/wolfmix_transaction.py"]),
     ("wpj_privacy", ["python3", "tools/wpj_privacy.py"]),

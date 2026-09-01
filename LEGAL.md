@@ -64,6 +64,24 @@ generated from them and any patched `wolfmixFlash.bin` are your fixture's data
 and the manufacturer's icon work — they are never committed here, and
 `tools/gobo_run.py` refuses a working directory inside this tree.
 
+## Reading is not publishing
+
+The rules above are about **distribution**, and they are the strict ones: what
+the manufacturer authored is theirs, and none of it ships here. Reading a file
+on your own machine is a different question with a different answer, and
+conflating the two is how a repository ends up refusing to open a file its
+author owns.
+
+Studying, observing and testing software you have the right to use is lawful
+and cannot be signed away — EU Directive 2009/24/EC art. 5(3), and
+decompilation for interoperability under art. 6; in France, CPI L122-6-1. That
+is the ground this project stands on, and it covers reading your own project
+files, your own fixture library and your own controller's output.
+
+So: **local analysis of a file you own is in scope by default.** What leaves
+your machine is what the rules govern. This is a description of the position
+taken here, not legal advice.
+
 ## Interoperability, and what we did not do
 
 The format was mapped by reading files we own, by changing one parameter at a
@@ -102,34 +120,46 @@ to interoperate with it, and that is the only use made of them here.
 Two things are deliberately absent, and if you are looking for them this is the
 answer:
 
-- **No circumvention of any protection measure.** The `.wm`/`.wmx` sidecars are
-  observed to be high-entropy and are recorded as opaque. We do not attempt to
-  decrypt them, and no key or key-recovery routine for any vendor format or
-  link is published here. The one obfuscated format this repository does read
-  is `.ssl2`, and the paragraph below says exactly why that is a different
-  question.
+- **No circumvention of a protection measure.** A protection measure is one
+  that *protects* something: a licence, an entitlement, an activation, paid
+  content, the authenticity of firmware. Nothing here touches one, and no key
+  or routine that would defeat one is published. Obfuscation that guards
+  nothing is not the same thing — it is answered per format by the test below,
+  and treating every scrambled container as a protection measure is as
+  inaccurate as ignoring a real one.
 - **No licence, activation or entitlement work.** Universe count, WLINK and
   3D Link are paid, per-controller entitlements. The research notes that they
   exist and that they are bound to the device and the vendor account; nothing
   here touches, emulates or bypasses them.
 
-### `.ssl2` fixture profiles, and why they are read here
+### The test an obfuscated format is put through
 
-`tools/ssl2.py` reads and writes `.ssl2` fixture profiles, which are XML under
-a stream cipher (AraCrypt). That is a narrower thing than it may look, and the
-four properties that make it so are the boundary — not one of them is optional:
+Some vendor formats are scrambled. Whether one may be read here is a question
+with an answer, not a door that stays shut: four conditions, all four required,
+recorded per format. `tools/ssl2.py` reads and writes `.ssl2` fixture profiles
+— XML under a stream cipher (AraCrypt) — and the table is both the test and
+`.ssl2`'s answer to it:
 
 | | |
 |---|---|
-| **No key was recovered here.** | The cipher and its key were published by third parties years before this repository existed — the Open Fixture Library discussion, HakanL's public gist, and the MIT-licensed `ssl2-tools` package on npm. We re-implement published knowledge in Python rather than take an npm dependency; we do not analyse a binary to obtain it. |
-| **It protects nothing.** | The obfuscation covers a fixture-profile description — channel names, DMX ranges, an icon id. It carries no licence, no entitlement and no activation, and reading it unlocks nothing that was locked. Contrast the `.wm`/`.wmx` sidecars, which stay opaque here. |
-| **The purpose is to write, not to read.** | The point is to produce **our own** fixture profiles for hardware we own, in a format our own software will load, without the vendor's web Profile Builder. The vendor's library is used as the round-trip oracle a writer needs, on our own machine, exactly as the `.wpj` corpus is. |
-| **Nothing of theirs is redistributed.** | No `.ssl2` from the vendor's library, and no XML decrypted from one, is committed here — the ciphertext and the plaintext are the same content, and the rule follows the content. The enum tables in `tools/ssl2.py` are counts measured over a local library, the same class of fact as the `WM_MODE_*` names: how to interoperate, not what the vendor authored. |
+| **Was a key recovered here?** No. | The cipher and its key were published by third parties years before this repository existed — the Open Fixture Library discussion, HakanL's public gist, and the MIT-licensed `ssl2-tools` package on npm. We re-implement published knowledge in Python rather than take an npm dependency; we do not analyse a binary to obtain it. |
+| **Does it protect anything?** No. | The obfuscation covers a fixture-profile description — channel names, DMX ranges, an icon id. It carries no licence, no entitlement and no activation, and reading it unlocks nothing that was locked. |
+| **Is the purpose interoperation?** Yes. | The point is to produce **our own** fixture profiles for hardware we own, in a format our own software will load, without the vendor's web Profile Builder. The vendor's library is used as the round-trip oracle a writer needs, on our own machine, exactly as the `.wpj` corpus is. |
+| **Is anything of theirs redistributed?** No. | No `.ssl2` from the vendor's library, and no XML decrypted from one, is committed here — the ciphertext and the plaintext are the same content, and the rule follows the content. The enum tables in `tools/ssl2.py` are counts measured over a local library, the same class of fact as the `WM_MODE_*` names: how to interoperate, not what the vendor authored. |
 
-If any of the four stops being true, the code goes. In particular, this is
-**not** a licence to decrypt the next vendor format that turns out to be
-scrambled: the first property is a fact about `.ssl2`, and it has to be
-established again, in public, before it is claimed again.
+If any of the four stops being true for a format, the code that reads it goes.
+The four are facts about a *format*, not a blanket permission: the next
+scrambled container gets the same four questions, and its answers go in the
+table below rather than being inherited from `.ssl2`. The first question is the
+one that most often ends it — a key nobody has published is a key this
+repository does not go looking for in a vendor binary.
+
+| Format | Verdict | Why |
+|---|---|---|
+| `.ssl2` fixture profiles | **read and written** | the four answers above |
+| `.wm` / `.wmx` sidecars | **container read, payload undecoded** | They hold the fixture library and the project index — interoperability facts, no entitlement — so opening one you own is in scope, and the container is described in [`research/versions.md`](research/versions.md). The payload is not obfuscation: 7.99+ bits per byte, a length that is always a multiple of 16, and a 16-byte field ahead of it that reads as an IV. That is a block cipher, and no key for it is published. This repository does not recover one from a vendor binary, so the payload stays undecoded — a statement about the key, not a reason to leave the file shut. |
+| firmware images | **out of scope**, in every direction | authenticity is a protection measure, and a bricked controller is not a research result |
+| licence / entitlement material | **out of scope** | universe count, WLINK, 3D Link — see above |
 
 ## Hardware safety
 

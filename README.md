@@ -69,7 +69,7 @@ keep them. Full guide: [`docs/corpus.md`](docs/corpus.md).
 make check
 ```
 
-It ends with a summary — 19 <!--count:checks--> checks, and a line naming
+It ends with a summary — 20 <!--count:checks--> checks, and a line naming
 every one that abstained.
 
 > [!IMPORTANT]

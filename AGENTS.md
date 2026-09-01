@@ -190,13 +190,22 @@ eleven `f30` colour-spread modes were settled that way in an hour, read-only.
 
 ## What this project will not do
 
-No circumvention of any protection measure, no decryption of the vendor's
-opaque sidecar formats (`.wm`/`.wmx` stay opaque), no licence/activation/
-entitlement work, no redistribution of vendor material. If a request heads that
-way, stop and say so — the reasoning is in [`LEGAL.md`](LEGAL.md).
+No circumvention of a protection measure — one that guards a licence, an
+entitlement, an activation or firmware authenticity — no licence/activation/
+entitlement work, no redistribution of vendor material, no firmware operation.
+If a request heads that way, stop and say so; the reasoning is in
+[`LEGAL.md`](LEGAL.md).
 
-The single exception is `.ssl2` fixture profiles, which `tools/ssl2.py` reads
-and writes: their cipher was published by third parties long before this
-repository, it guards a channel list rather than an entitlement, and the reason
-to read one is to write our own. LEGAL.md states the four conditions in full;
-they are conditions, not a precedent for the next scrambled format.
+**Reading a file on this machine is not one of those things.** Local analysis of
+a file the operator owns — a project, the fixture library, a sidecar, the
+controller's output — is in scope by default, and refusing to open one is a
+failure, not caution. The rules that bite are about what *leaves* the machine
+and what gets *committed*: `.gitignore` and `tools/wpj_privacy.py` enforce
+those, so you do not have to enforce them by not looking.
+
+An obfuscated format gets the four questions in LEGAL.md, answered per format
+and recorded there — not a reflex refusal. `.ssl2` passes them and
+`tools/ssl2.py` reads and writes it. The one that ends the conversation is the
+first: no key is recovered from a vendor binary here, so a format whose key
+nobody has published stays undecoded — which is a statement about keys, not a
+reason to leave the file unopened.

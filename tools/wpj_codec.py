@@ -28,7 +28,12 @@ import wpjlib
 # DMX address (the address is 115.f2). See the registry, "record 105".
 # f6 = the group index (0-7 = A-H, 8 = the effects slot), redundant with
 # 115.f4 — see the registry, "the fixture → group assignment".
-_PATCH = {1: ("profile", "v"), 4: ("offset_106", "v"), 5: ("fixture", "v"),
+# f1 is the **library** fixture id, stable across projects (1017 is the same
+# `6x18W 6in1 RGBAW UV` in two unrelated rigs) — NOT an index into record 116,
+# which is what `115.f3` holds. It was called "profile" until 2026-09-01, the
+# same name `115.f3` carries: the two never agree on a single one of the
+# corpus's 1394 patch entries, so one name for both was one name too few.
+_PATCH = {1: ("library_id", "v"), 4: ("offset_106", "v"), 5: ("fixture", "v"),
           6: ("group", "v"), 7: ("entry_count_106", "v")}
 # f9 is the profile UUID, not a digest: it is the identifier `GET_PROFILE`
 # takes and `wolfmix.py profiles` reports — the file and the controller
@@ -98,7 +103,10 @@ SCHEMAS = {
     120: {5: ("channels", {})},                 # an empty {} entry = `2a 00` = all zero
     125: {5: ("groups", {8: ("name", "str")})},
     135: {5: ("pads", _PAD)},
-    140: {2: ("page", "v"), 5: ("pads", _PAD)},
+    # f2 = the group index 0-7 (A-H), absent for A. SPEC §3.1 retracted the
+    # earlier "page" reading in prose on three device readings; the codec
+    # carried the retracted name until 2026-09-01.
+    140: {2: ("group", "v"), 5: ("pads", _PAD)},
     # 111: the value ranges of a channel (SPEC §7.6). f1/f2 = first and last
     # DMX value, f3 = function (14 = gobo wheel), f4 = the gobo image id of the
     # wheel ranges (= 145.f2, identity checked). The wire order is the pad
@@ -167,6 +175,12 @@ def _wvarint(v):
             return bytes(out)
 
 
+# Two 2026-09-01 renames are deliberately NOT in this table: `105.f1`
+# "profile" → "library_id" and `140.f2` "page" → "group". Both old names are
+# still live elsewhere — `115.f3` is a profile index, and a show spec addresses
+# record 150 by "page" — so an alias here would turn a correct key into a
+# guided error. They fail as plain unknown keys instead.
+#
 # The public keys were French until 2026-08-31. They are not accepted as
 # aliases: a retired key is an error, and the error names its replacement. The
 # repository had no tag, no release and no known consumer — the moment was

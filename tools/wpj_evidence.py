@@ -51,9 +51,15 @@ def entrees(chemin=REGISTRE):
                 continue
             colonne, date, _, statut, spec = trouve.groups()
             ids = IDENTIFIANT.findall(colonne)
-            if not ids or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
+            # A row measured over two days writes "2026-08-26 / 08-27". A
+            # `fullmatch` dropped that row entirely, and F7-01 — a validated
+            # reading three tools lean on — was invisible to all three checks
+            # below until 2026-09-01. Anchor at the start and take the ISO date
+            # that is there; the trailing note is prose.
+            debut = re.match(r"\d{4}-\d{2}-\d{2}", date)
+            if not ids or not debut:
                 continue
-            out.append((ids, date, statut, SECTION.findall(spec)))
+            out.append((ids, debut.group(0), statut, SECTION.findall(spec)))
     return out
 
 

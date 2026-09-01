@@ -154,6 +154,32 @@ Checked today — 18 <!--count:identities-->, plus two before/after pair checks
 
 Add one whenever a new reading implies a count, an offset or a derivation.
 
+## `wpj_coverage.py` — how much of a file a name explains
+
+```bash
+python3 tools/wpj_coverage.py project.wpj   # per-field coverage of one file
+python3 tools/wpj_coverage.py --corpus      # the aggregate, biggest gaps first
+python3 tools/wpj_coverage.py               # self-check, part of `make check`
+```
+
+Three buckets whose sum is asserted to be the file, byte for byte:
+
+| Bucket | What lands there |
+|---|---|
+| `read` | a field a `wpj_codec.SCHEMAS` entry **names**, tag and length included, plus the container bytes §2 and §9 identify |
+| `partial` | a field inside a schema'd record that no schema names, and the prefix spans §9 records as constants without saying what they say |
+| `unknown` | the payload of a record with no schema, and any record whose protobuf does not parse |
+
+Before this existed, "the format is mostly decoded" was an opinion. It is now a
+number the gate recomputes on whatever corpus is present.
+
+**The number is not a proof, and the tool says so itself.** `read` counts bytes
+a *name* covers, not bytes a *measurement* covers — so every named path carries
+a status and a ledger id in `PROOF`, the self-check refuses a name that has
+neither, and the report breaks `read` down by status. A field promoted into the
+codec without evidence makes `make check` fail rather than making the percentage
+go up, which is the only thing that keeps the figure worth quoting.
+
 ## `wpj_inspect.py` — variant B/C wire walk
 
 ```bash

@@ -977,7 +977,7 @@ The strongest structural result available. Eight identities hold **exactly,
 ```
 
 Three more, added once `105.f4` was corrected, and mechanically re-checked on
-**45/45** files by `tools/wpj_identities.py`, which now runs **18** identities
+**45/45** files by `tools/wpj_identities.py`, which now runs **19** identities
 <!--count:identities--> plus two before/after pair checks (F30-04, and the
 FLASH-09 pair — the files, not its retracted reading):
 

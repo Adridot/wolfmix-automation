@@ -71,12 +71,13 @@ _AMBIANCE_CLES = ("name", "energy", "color", "groups", "position",
 # --- reading the rig ---------------------------------------------------------
 
 def _moteurs(preset):
-    """The twelve 9-bit slices of `f16`, or None when the field is missing."""
-    h = preset.get("f16")
-    if not isinstance(h, dict) or "hex" not in h:
-        return None
-    octets = wpj_identities._varints(h["hex"])
-    if any(o > 255 for o in octets):
+    """The twelve 9-bit slices of `engine_masks`, or None when it is missing.
+
+    The packed varints are the **bytes** of a little-endian bit field, so the
+    codec hands back the byte list directly since `165.f16` was named.
+    """
+    octets = preset.get("engine_masks")
+    if not isinstance(octets, list) or any(o > 255 for o in octets):
         return None
     gros = int.from_bytes(bytes(octets), "little")
     return [(gros >> (9 * i)) & 0x1FF for i in range(12)]

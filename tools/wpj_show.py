@@ -46,7 +46,7 @@ PADS_PAR_GROUPE = 20         # one 20-bit mask per group in f31
 # f3 = FAN, f4 = FOCUS OFFSET. An earlier reading put pan/tilt on f3/f4; the
 # W1's own edit screen refuted it.
 _POS_CLES = ("page", "index", "name", "pan", "tilt", "fan")
-_POS_CHAMPS = {"pan": "f6", "tilt": "f7", "fan": "f3"}
+_POS_CHAMPS = ("pan", "tilt", "fan")   # codec keys since 2026-09-01
 _PAL_CLES = ("index", "red", "green", "blue")
 # Record 130 = the DMX IN mapping table (SPEC §7.3, MAP-01..09). `f4` is the
 # FUNCTION targeted, not the screen's category: the seven `Flash` functions
@@ -256,11 +256,11 @@ def compiler(spec, sortie):
             if not isinstance(pos["name"], str):
                 raise ValueError(f"{ctx}: the name must be a string")
             e["name"] = pos["name"]
-        for cle, champ in _POS_CHAMPS.items():
+        for cle in _POS_CHAMPS:
             if cle in pos:
-                e[champ] = borne(ctx, cle, pos[cle], 0, 65535)
-        attendu = {("name" if k == "name" else _POS_CHAMPS[k]): v
-                   for k, v in pos.items() if k in ("name",) + tuple(_POS_CHAMPS)}
+                e[cle] = borne(ctx, cle, pos[cle], 0, 65535)
+        attendu = {k: v for k, v in pos.items()
+                   if k in ("name",) + _POS_CHAMPS}
         verifs.append((150, page - 1, ctx, lambda d, i=idx, att=attendu:
                        all(d["positions"][i].get(k, 0) == v
                            for k, v in att.items())))
@@ -421,10 +421,10 @@ def compiler(spec, sortie):
             trouve["channel_high_byte"], trouve["channel_low_byte"] = haut, bas
             _normalise_mapping(trouve)
             attendu[(fonction, instance)] = canal
-        d130["f1"] = len(entrees)             # device-confirmed: f1 = the count
+        d130["entry_count"] = len(entrees)    # device-confirmed: f1 = the count
 
         def _verif_130(d, att=attendu):
-            if d.get("f1") != len(d.get("mappings", [])):
+            if d.get("entry_count") != len(d.get("mappings", [])):
                 return False
             for (fonction, instance), canal in att.items():
                 e = next((x for x in d["mappings"]
@@ -604,8 +604,8 @@ def _demo_sur(base):
         assert p["name"] == "demo" and p["dimmers"] == [200] * 8
         assert p["beam_fx1"][0]["effect"] == 1 and p["beam_fx1"][0]["speed"] == 80
         e = wpj_codec.decode(150, w.get(150, 0))["positions"][1]
-        assert e["name"] == "DemoPos" and e["f6"] == 12345 and e["f7"] == 54321
-        assert e["f3"] == 32768
+        assert e["name"] == "DemoPos" and e["pan"] == 12345 and e["tilt"] == 54321
+        assert e["fan"] == 32768
         assert wpj_codec.decode(135, w.get(135))["pads"][0] == \
             {"red": 10, "green": 20, "blue": 30}
         # the created preset: cloned, at the tail, read back field by field
@@ -665,7 +665,7 @@ def _demo_sur(base):
         assert carte[(70, 255)] == 107, carte    # same f4 as preset, inst. 255
         assert carte[(78, 2)] == 110, carte      # shared f4, fixed instance 2
         assert carte[(70, 4)] != carte[(70, 255)], "the two f4=70 were merged"
-        assert d130["f1"] == len(d130["mappings"]) == 9 - 1 + 6, d130["f1"]
+        assert d130["entry_count"] == len(d130["mappings"]) == 9 - 1 + 6
 
         # --- the shape of the bytes, not only the semantics ---
         # The device writes its fields in numeric order and never emits a zero

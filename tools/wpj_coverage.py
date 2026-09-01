@@ -76,6 +76,16 @@ CONTAINER_PROOF = {
 }
 
 PROOF = {
+    # Field 1 = the item count, on the 15 record types that carry one. The
+    # identity holds with no exception on the corpus and refutes nothing else,
+    # so it is `correlated`, not measured on a device.
+    **{(str(t), "entry_count"): (CORRELATED, "§3")
+       for t in (105, 106, 110, 111, 115, 116, 120, 125, 130, 135, 140, 150,
+                 151, 155, 160)},
+    # The group index of the three ×8 palette families, absent for group A —
+    # settled by three independent device readings (§3.1).
+    **{(str(t), "group"): (DEVICE, "§3.1") for t in (140, 145, 150)},
+
     ("101", "name"): (DEVICE, "ACC-01"),
 
     # 102 — every field but the inert `f11`, each written by the device in a
@@ -122,6 +132,7 @@ PROOF = {
     ("115", "dmx_address"): (DEVICE, "§3.4"),
     ("115", "profile"): (CORRELATED, "§7"),
     ("115", "group"): (CORRELATED, "§7.4"),
+    ("115", "display_order"): (CORRELATED, "§7"),
 
     ("116", "profiles"): (CORRELATED, "§7"),
     ("116", "channel_count"): (CORRELATED, "§7"),
@@ -147,7 +158,6 @@ PROOF = {
     # confirms the *write* direction, and for `red` alone.
     ("135", "pads"): (CORRELATED, "§3.3"),
     ("140", "pads"): (DEVICE, "PAL-01"),
-    ("140", "group"): (DEVICE, "§3.1"),
     **{("140", c): (DEVICE, "§3.3") for c in
        ("red", "green", "blue", "white", "amber", "lime", "uv")},
     **{("135", c): (CORRELATED, "§3.3") for c in
@@ -169,6 +179,12 @@ PROOF = {
     ("145", "name"): (DEVICE, "RENAME-01"),
 
     ("150", "name"): (DEVICE, "§3.2"),
+    ("150", "entry_count_151"): (DEVICE, "POS-03"),
+    ("150", "offset_151"): (DEVICE, "POS-03"),
+    ("150", "fan"): (DEVICE, "POS-02"),
+    ("150", "focus_offset"): (DEVICE, "§3.2"),
+    ("150", "pan"): (DEVICE, "§3.2"),
+    ("150", "tilt"): (DEVICE, "POS-01"),
 
     ("151", "fixture"): (DEVICE, "POS-06"),
     ("151", "focus_offset"): (DEVICE, "POS-04"),
@@ -180,6 +196,11 @@ PROOF = {
     ("165", "id"): (DEVICE, "PRESET-07"),
     ("165", "name"): (DEVICE, "PRESET-05"),
     ("165", "content_mask"): (DEVICE, "F4-02"),
+    ("165", "engine_masks"): (DEVICE, "§5.7"),
+    ("165", "live_edit_mask"): (CORRELATED, "§5.5"),
+    ("165", "fade_ms"): (DEVICE, "§5.3"),
+    ("165", "hold_ms"): (CORRELATED, "§5.3"),
+    ("165", "engine_permissions"): (CORRELATED, "§5.4"),
     ("165", "dimmers"): (DEVICE, "GEN-02"),
     ("165", "positions"): (CORRELATED, "§5.1"),
     ("165", "gobos"): (DEVICE, "F29-01"),
@@ -211,6 +232,10 @@ PROOF = {
     ("165", "phase"): (VALIDATED, "FX6-02"),
     ("165", "size"): (VALIDATED, "FX6-02"),
     ("165", "speed"): (VALIDATED, "FX6-02"),
+    ("165", "feature"): (VALIDATED, "FX6-03"),
+    ("165", "fan"): (VALIDATED, "FX6-04"),
+    ("165", "color_mask"): (CORRELATED, "§5"),
+    ("165", "effect_position"): (CORRELATED, "§5"),
 }
 
 

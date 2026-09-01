@@ -582,7 +582,41 @@ def carte_dmx_130(w):
                 f"130[{i}]: DMX IN channel {canal + 1} past the universe"
 
 
-IDENTITES = (ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
+# The 15 record types whose field 1 is the number of field-5 items. 145 has no
+# field 1 at all (its 20 slots are implicit) and 165's is something else.
+COMPTES_DE_TETE = (105, 106, 110, 111, 115, 116, 120, 125, 130, 135, 140, 150,
+                   151, 155, 160)
+
+
+def comptes_de_tete(w):
+    """Field 1 = the number of entries, on 15 of the 20 record types.
+
+    Free to check and it refutes something real: a reader that treats field 1
+    as a version, a flag or a capacity. An empty table writes **no** field 1
+    rather than a zero, so absence is accepted and a mismatch is not.
+
+    `165.f1` is deliberately outside the list. It disagrees with the count on
+    19 corpus files — always low by exactly the entries a preset capture
+    appended, 81 against 83 and 81 against 85 — so whatever it counts, it is
+    not the entries present.
+    """
+    for typ in COMPTES_DE_TETE:
+        for occ in range(8 if typ in (140, 145, 150) else 1):
+            try:
+                charge = w.get(typ, occ)
+            except KeyError:
+                break
+            d = wpj_codec._decode_msg(charge, _ITEMS)
+            f1 = d.get("f1")
+            if f1 is None:
+                assert not d.get("items"), \
+                    f"{typ}: {len(d['items'])} entries and no field 1"
+                continue
+            assert f1 == len(d.get("items", [])), \
+                f"{typ}: field 1 = {f1} but {len(d.get('items', []))} entries"
+
+
+IDENTITES = (comptes_de_tete, ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
               groupe_fixture, moteurs_f16, tranche5_f16,
               plages_111, roles_106,
               ordre_fixtures_115, bornes_106, tranches_151,

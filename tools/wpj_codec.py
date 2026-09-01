@@ -50,17 +50,29 @@ _PAD = {1: ("red", "v"), 2: ("green", "v"), 3: ("blue", "v"),
 # read on f2 since ACC-04; the screen says f9, and f2 follows the fade all the
 # way to vanishing when it reaches 0. "speed" stays the name of the speed: it
 # changes field, not meaning, and callers keep their intent.
-# f3 and f5 stay neutral keys: their meaning depends on the engine (f3 =
-# Feature on beam, measured; Fan on move, inferred), and one shared schema
-# cannot carry two names.
+# f3 and f5 mean different things per engine, so the schema stops being one:
+# `_FX` holds what the three share, and each engine extends it. One shared
+# schema could not carry two names, which is why both stayed neutral keys
+# until 2026-09-01 — the fix is three dicts, not a compromise name.
 _FX = {7: ("effect", "v"), 4: ("link_order", "v"), 10: ("speed_source", "v"),
        1: ("bpm_division", "v"), 2: ("fade", "v"),
        6: ("phase", "v"), 8: ("size", "v"), 9: ("speed", "v")}
+# f3 is the third encoder's second mode: `Feature` on beam (FX6-03, `1` = Zoom
+# measured, absent = 0 = Dimmer), `Fan` on move (FX6-04, a direct percentage,
+# default 50 — present on every preset because a centred fan is not a null
+# fan). Colour has no second mode and never carries f3.
+# f5: a 16-bit mask over record 135's pads on colour (two packed varints, pads
+# 1-8 then 9-16), the effect's position on move (one packed varint, 0/1/2/5/6
+# seen). On beam it is absent from every preset of the corpus — SPEC's Q7,
+# hypothesized inert, and nothing here names it.
+_FX_BEAM = {**_FX, 3: ("feature", "v")}
+_FX_COLOR = {**_FX, 5: ("color_mask", "packed")}
+_FX_MOVE = {**_FX, 3: ("fan", "v"), 5: ("effect_position", "packed")}
 _PRESET = {
     19: ("id", "v"), 25: ("name", "str"),
-    1: ("beam_fx1", _FX), 2: ("beam_fx2", _FX),
-    5: ("color_fx1", _FX), 6: ("color_fx2", _FX),
-    21: ("move_fx1", _FX), 22: ("move_fx2", _FX),
+    1: ("beam_fx1", _FX_BEAM), 2: ("beam_fx2", _FX_BEAM),
+    5: ("color_fx1", _FX_COLOR), 6: ("color_fx2", _FX_COLOR),
+    21: ("move_fx1", _FX_MOVE), 22: ("move_fx2", _FX_MOVE),
     28: ("positions", "packed"),          # position index per group A–H
     29: ("gobos", "packed"),              # gobo index (type 145) per group,
                                           # 0-based, 255 = none — device-confirmed
@@ -75,6 +87,26 @@ _PRESET = {
     # order — bit0 COLOR, 1 MOVE, 2 BEAM, 3 GOBO, 4 LIVE EDIT, 5 OTHER
     # (bit 5 predicted, not yet measured). See the registry, F4-02.
     10: ("content_mask", "v"),
+    # f16: the bytes of a little-endian bit field cut at a stride of **9** —
+    # nine because record 125 has nine slots. Twelve slices: 0 Color FX,
+    # 1 Move FX, 2 Beam FX, 5 the groups the preset addresses, 6-10 the WOLF /
+    # STROBE / BLACKOUT / BLINDER / SPEED flash keys (511 = latched, all nine
+    # bits), 3/4/11 unattributed. Confirmed in both directions on the five
+    # flash slices (§5.7). At a stride of 8, slice 1 would read 254 where
+    # `move_fx_active` says 255 — the alignment tests itself.
+    16: ("engine_masks", "packed"),
+    # f18: 10 packed varints = 80 bits, one per LIVE EDIT button (4 pages of
+    # 20). `f10`'s LIVE EDIT bit says *whether*, this says *which* (§5.5).
+    18: ("live_edit_mask", "packed"),
+    # The preset's own envelope, in milliseconds. `fade` on an FX sub-message
+    # is a percentage of the step time — a different quantity, hence the unit
+    # in the name here.
+    11: ("fade_ms", "v"), 15: ("hold_ms", "v"),
+    # f4: a permission mask over the three FX engines — engine 0 active in
+    # `f16` implies bit 3 here, engine 1 bit 2, engine 2 bit 4, on every preset
+    # of every file. One-directional: a page may permit an engine none of its
+    # presets uses. Bit 0 is SPEC's Q2 and is not resolved by the name.
+    4: ("engine_permissions", "v"),
     17: ("dimmers", "packed"),            # dimmer per group A–H
     # The five features of the STATIC GOBO screen, as a percentage per group
     # A–H — device-confirmed by a preset capture, see "GOBO-02".
@@ -135,39 +167,71 @@ _CHANNEL = {2: ("range_count", "v"), 3: ("offset_111", "v"),
 _SEQUENCE = {1: ("groups_per_step", "v"), 2: ("engine", "v"),
              3: ("step_count", "v"), 4: ("steps", "packed")}
 
+# Field 1 is the item count on 15 of the 20 record types — checked as an
+# identity (`comptes_de_tete`) with no exception on the corpus, an empty table
+# writing no field 1 at all rather than a zero. Record 145 carries none (its 20
+# slots are implicit, §3.4) and `165.f1` is NOT the count: it disagrees on 19
+# corpus files, always by exactly the presets a capture appended, which is why
+# SPEC leaves its meaning open.
+_COUNT = ("entry_count", "v")
+
 SCHEMAS = {
     101: {1: ("name", "str")},
     102: _FLASH_FX,
-    105: {5: ("patch", _PATCH)},
-    106: {5: ("channel_roles", _CHANNEL_ROLE)},
-    110: {5: ("channels", _CHANNEL)},
-    155: {5: ("sequences", _SEQUENCE)},
-    115: {5: ("fixtures", {2: ("dmx_address", "v"), 3: ("profile", "v"),
-                          4: ("group", "v")})},
-    116: {5: ("profiles", _PROFIL)},
-    120: {5: ("channels", {})},                 # an empty {} entry = `2a 00` = all zero
-    125: {5: ("groups", {8: ("name", "str")})},
-    135: {5: ("pads", _PAD)},
+    105: {1: _COUNT, 5: ("patch", _PATCH)},
+    106: {1: _COUNT, 5: ("channel_roles", _CHANNEL_ROLE)},
+    110: {1: _COUNT, 5: ("channels", _CHANNEL)},
+    155: {1: _COUNT, 5: ("sequences", _SEQUENCE)},
+    # 115.f6 (on the record, not the items) is the fixture display order: a
+    # complete permutation of 0…n−1, checked as an identity on every corpus
+    # file. `f5` = 65535 on all 1381 fixture rows and `f9` is enumerative;
+    # neither has a reading, so neither has a name.
+    115: {1: _COUNT, 5: ("fixtures", {2: ("dmx_address", "v"),
+                                      3: ("profile", "v"), 4: ("group", "v")}),
+          6: ("display_order", "hex")},
+    116: {1: _COUNT, 5: ("profiles", _PROFIL)},
+    120: {1: _COUNT, 5: ("channels", {})},                 # an empty {} entry = `2a 00` = all zero
+    125: {1: _COUNT, 5: ("groups", {8: ("name", "str")})},
+    135: {1: _COUNT, 5: ("pads", _PAD)},
     # f2 = the group index 0-7 (A-H), absent for A. SPEC §3.1 retracted the
     # earlier "page" reading in prose on three device readings; the codec
     # carried the retracted name until 2026-09-01.
-    140: {2: ("group", "v"), 5: ("pads", _PAD)},
+    140: {1: _COUNT, 2: ("group", "v"), 5: ("pads", _PAD)},
     # 111: the value ranges of a channel (SPEC §7.6). f1/f2 = first and last
     # DMX value, f3 = function (14 = gobo wheel), f4 = the gobo image id of the
     # wheel ranges (= 145.f2, identity checked). The wire order is the pad
     # order, and it is free — device-confirmed, SORT-01.
-    111: {5: ("ranges", {1: ("start", "v"), 2: ("end", "v"),
+    111: {1: _COUNT, 5: ("ranges", {1: ("start", "v"), 2: ("end", "v"),
                          3: ("function", "v"), 4: ("gobo_id", "v")})},
     # 145: the gobo palette. f1 = icon-font glyph (' ' = empty), f2 = gobo
     # image id (= 111[range].f4), f3 = an optional name, operator-assignable and
     # written off-device — device-confirmed, RENAME-01. See the registry.
-    145: {5: ("gobos", {1: ("glyph", "str"), 2: ("gobo_id", "v"),
+    145: {2: ("group", "v"),
+          5: ("gobos", {1: ("glyph", "str"), 2: ("gobo_id", "v"),
                         3: ("name", "str")})},
-    150: {5: ("positions", {5: ("name", "str")})},
+    # 150: the static POSITION palette of one group, 20 slots (SPEC §3.2).
+    # `f1`/`f2` cut this slot's slice of record 151, the same (length, offset)
+    # pair as 105 into 106 and 116 into 110 (§8.1, POS-03).
+    # The four values are percentages stored as **percent × 65536**, not 65535:
+    # 32768/65536 is exactly 0.5 and every predicted DMX channel lands, which
+    # 32768/65535 misses by one unit on two of them (POS-02). `f4` is signed
+    # around 32768.
+    # An earlier revision of SPEC read `f3` as pan and `f4` as tilt. Both were
+    # wrong, and the corpus could not catch it: every named slot of the group
+    # examined reads PAN 50 %, indistinguishable from the neutral fields. Only
+    # the device screen separated them.
+    # `f8` is the CROSS half of the FAN | CROSS encoder and stays a neutral
+    # key: SPEC §3.2 has it as [hypothesized], and a name is a claim.
+    150: {1: _COUNT, 2: ("group", "v"),
+          5: ("positions", {1: ("entry_count_151", "v"),
+                            2: ("offset_151", "v"),
+                            3: ("fan", "v"), 4: ("focus_offset", "v"),
+                            5: ("name", "str"),
+                            6: ("pan", "v"), 7: ("tilt", "v")})},
     # 151: the positions of fixtures "detached" from a slot of 150, cut by
     # 150.f1/f2. Three signed offsets, value = (v - 32768) / 32767 —
     # device-confirmed on the POSITION screen. See the registry, "POS-04".
-    151: {5: ("detached", {1: ("fixture", "v"), 2: ("focus_offset", "v"),
+    151: {1: _COUNT, 5: ("detached", {1: ("fixture", "v"), 2: ("focus_offset", "v"),
                             3: ("pan_offset", "v"), 4: ("tilt_offset", "v")})},
     # 130: the DMX IN mapping table (MAP-01..05, registry). f4 = the function
     # targeted — 20 = group dimmer, 27 = MAIN, 70 = preset, 17 = BPM Tap,
@@ -182,10 +246,10 @@ SCHEMAS = {
     # rank: the wire order moves without the content changing. f1 = the number
     # of entries. f7 and f8 are 1 everywhere, have never moved, and stay
     # unnamed.
-    130: {5: ("mappings", {2: ("instance", "v"), 4: ("function", "v"),
+    130: {1: _COUNT, 5: ("mappings", {2: ("instance", "v"), 4: ("function", "v"),
                            5: ("channel_high_byte", "v"),
                            6: ("channel_low_byte", "v")})},
-    160: {5: ("macros", {6: ("name", "str")})},
+    160: {1: _COUNT, 5: ("macros", {6: ("name", "str")})},
     165: {5: ("presets", _PRESET)},
 }
 # Deliberate passthrough: a documented structure, no schema yet. Data rather

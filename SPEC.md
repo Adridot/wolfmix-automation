@@ -1571,8 +1571,12 @@ Saving on the W1 re-serialises some records into the firmware's canonical form.
 Observed: type 115 shrank 329 → 287 bytes as its 20 items each lost `f6` and `f7`
 and gained a sequential `f9`; `f7` never came back. The same canonicalisation ran
 again on a file **our** writer produced (GEN-03): the twenty items dropped `f6` =
-94 and `f7` = 187 — identical on all twenty — for `f9` = the fixture's
-**sequential index** (0 omitted, then 1…19). **[observed]**; nothing is concluded
+94 and `f7` = 187 — identical on all twenty — for a sequential `f9`.
+**That `f9` is not a position index — [correlated] (COV-15).** It is a
+contiguous ascending run in 68 of 80 corpus files, but the run does not always
+start at 0: a six-fixture project carries **20…25**, which no index into six
+entries can do. A creation counter fits; nothing here establishes it, and the
+field keeps its neutral key. **[observed]**; nothing is concluded
 from it beyond "the firmware's writer migrates this record". Consequence: **a round-trip
 through the device cannot be verified by file hash.** Differential experiments
 must compare record by record and expect canonicalisation noise. Record 165 was

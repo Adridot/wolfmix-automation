@@ -40,9 +40,11 @@ it before the measurement.** This sheet read absent as the full range and
 predicted 84 on the control pad. The `FIXTURE LIMITS` screen reads **MIN PAN
 0 %, MAX PAN 0 %, MIN TILT 0 %, MAX TILT 0 %** — absent in the file is **0** on
 the screen, all four of them, and the head is **pinned at 0 / 0**. The
-identification does not rest on which pad was selected: the only fixtures in
-this file whose four limit fields are all absent are ranks 2-5, and ranks 0 and
-1 both carry a non-zero MAX PAN, so the screen cannot be showing either.
+identification did not rest on which pad was selected — the only fixtures in
+this file whose four limit fields are all absent are ranks 2-5 — and the
+operator then named it: the panel's **DMX 33**, the file's address **32** at
+base 0, **display rank 2**. That is the very rank the file's stored entry
+points at, so **the one fixture carrying an offset is a pinned one**.
 
 That is a device-confirmed reading, and it **guts the capture as designed**:
 ranks 2-5 emit 0 on pan and tilt whatever position is recalled and whatever

@@ -1200,6 +1200,16 @@ are what pins `115.f2` to a real DMX patch.
   `[0, count(106))` exactly, and two entries share offset 141 in *rig-c* because
   one has span 0 — which no DMX address could do. **The DMX start address is
   `115.f2`**, device-confirmed by the gobo capture in §3.4.
+- **`115.f6`/`f7` are not per-fixture data, and four readings are refuted — [observed] (COV-58).**
+  Every row of a file carries the *same* two values, and **67 of 86 versions carry
+  nothing at all**. It is not a checksum of the record or of the patch — `(231, 20)`
+  sits on two differing payloads and on two unrelated projects, one of 4 fixtures
+  and one of 20; not a monotone counter — read little-endian the experiment rig
+  **returns** to 29160 twice across days; and not a fragment of the save time. The
+  presence does not follow the operation either: written after a create, a delete,
+  two reorders and two adds, absent after a detach and two other adds. COV-38's
+  two no-op saves settle whether it is project data at all.
+
 - **115 = fixture instances**, one per row of the fixture grid. `f3` = index into
   116; `f2` = start offset in an internal channel arena; `f6` (on the record,
   not the items) = display order, a permutation of 0…n−1.

@@ -1212,6 +1212,24 @@ four rigs, always `max(105.f5) + 1`); the "20" in earlier notes was a
 coincidence of one rig having 20 fixtures. Record 155 is *not* the DMX patch map
 (§8).
 
+### Patching into a secondary group loses a channel entry — **[device-confirmed]** (COV-53)
+
+**Adding a fixture to a group other than the first removes one entry from the
+head of record 120**, and every fixture after it then carries its neighbour's
+channel data, one channel out of step. Measured on a project the controller
+created from nothing: two adds to **group A** wrote +16 entries each, two adds
+to **group B** wrote **+15** each, and the group-A add that followed a group-B
+one was still clean — so it is the target group, not the number of groups.
+
+It **accumulates**: after two group-B adds the table starts two entries late.
+And it hides — a later save restores the *count* by appending at the tail while
+leaving the shift, so `120.f1` agrees with the entry total and only the
+alignment is wrong (COV-50). `120.f6` is what exposes it: an absolute DMX
+channel inside its own fixture's span, which a shifted table cannot satisfy.
+
+Not observed on deletions, reorders, address changes, detach-with-offset, or
+adds to the first group — nine device saves, and only the two group-B adds.
+
 ### Record 120's count can outrun its content — **[observed]** (COV-32)
 
 `120.f1` is the entry count on every file but one, where the device trimmed the

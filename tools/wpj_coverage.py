@@ -195,6 +195,7 @@ PROOF = {
 
     ("160", "name"): (CORRELATED, "§3"),
     ("160", "button"): (DEVICE, "COV-19"),
+    ("160", "value_masks"): (CORRELATED, "COV-20"),
     ("160", "values"): (DEVICE, "COV-19"),
 
     ("165", "id"): (DEVICE, "PRESET-07"),

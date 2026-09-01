@@ -277,7 +277,14 @@ SCHEMAS = {
     # `f8` holds the values; the one set on screen, 200, is what came back.
     # Absent `f6` = the panel synthesises "Live Edit N", like `Position N`
     # and `Gobo N`. `f1` and `f7` stay neutral: no reading (COV-19).
-    160: {1: _COUNT, 5: ("macros", {5: ("button", "v"), 6: ("name", "str"),
+    # `f1` is a list of bit masks and `f8` gives **one value per set bit**, in
+    # order: `popcount(f1) == len(values)` on all 490 corpus macros, no
+    # exception. `len(f1)` never exceeds the fixture count, which fits one mask
+    # per targeted fixture — consistent, not measured, so the name says what
+    # the identity says and no more. `f7` stays neutral: its length is
+    # `2 × len(f1) + 4` on 489 of 490, which is a shape, not a reading.
+    160: {1: _COUNT, 5: ("macros", {1: ("value_masks", "packed"),
+                                    5: ("button", "v"), 6: ("name", "str"),
                                     8: ("values", "packed")})},
     165: {5: ("presets", _PRESET)},
 }

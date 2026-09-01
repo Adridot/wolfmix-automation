@@ -638,6 +638,11 @@ def boutons_live_edit(w):
 
     Their wire order is free: 65 of 71 files store the macros out of button
     order, the same freedom record 111 has for gobo pads (SORT-01).
+
+    A fourth thing, on the macro itself: `f1` is a list of bit masks and `f8`
+    gives **one value per set bit** — `popcount(f1) == len(f8)`, exact on all
+    490 corpus macros. It refutes any reading of `f8` as a per-group array,
+    which is what its `[50] × 8` shape invites.
     """
     try:
         charge = w.get(160)
@@ -649,6 +654,12 @@ def boutons_live_edit(w):
         f"160: two macros on one button: {boutons}"
     assert all(b < 80 for b in boutons), \
         f"160: a button outside the 4 x 20 grid: {boutons}"
+    for m in macros:
+        f1 = _varints(m.get("f1", {}).get("hex", ""))
+        f8 = _varints(m.get("f8", {}).get("hex", ""))
+        assert sum(bin(x).count("1") for x in f1) == len(f8), \
+            f"160: {sum(bin(x).count('1') for x in f1)} mask bits but " \
+            f"{len(f8)} values"
     for pre in _items(w, 165):
         masque = _varints(pre.get("f18", {}).get("hex", ""))
         if not masque or any(o > 255 for o in masque):

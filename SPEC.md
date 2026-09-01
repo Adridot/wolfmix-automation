@@ -732,6 +732,15 @@ bit any preset sets here lands on a button some macro defines** — a preset
 cannot carry a Live Edit that does not exist. Their wire order is free, 65 of
 71 files storing them out of button order.
 
+Inside a macro, `f1` is a list of **bit masks** and `f8` gives **one value per
+set bit** — `popcount(f1) == len(f8)`, exact on all 490 corpus macros and
+checked on every run. The measured macro shows it bare: one targeted fixture,
+`f1 = [17]` (two bits), `f8 = [200, 0]`. This **refutes** reading `f8` as a
+per-group array of eight, which its `[50] × 8` shape on the factory macros
+invites. `len(f1)` never exceeds the fixture count, which fits one mask per
+targeted fixture — consistent, not measured. `f7` has a shape and no reading:
+its length is `2 × len(f1) + 4` on 489 of 490.
+
 `f10`'s `LIVE EDIT` bit says *whether* a preset carries Live Edits; `f18` says
 *which*. **And record 160 is where those buttons are defined — [correlated]
 (COV-18).** The firmware's mode table names the screen itself

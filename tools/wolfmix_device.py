@@ -306,6 +306,7 @@ def dmx_envelope(connection, seconds):
         require_success(connection.request(ENABLE_USB_DMX), "Enabling USB DMX")
     low = high = None
     frames = 0
+    arrivals = []
     deadline = time.monotonic() + seconds
     try:
         while time.monotonic() < deadline:
@@ -321,6 +322,7 @@ def dmx_envelope(connection, seconds):
                 raise
             if event != DMX_PACKET:
                 continue
+            arrivals.append(time.monotonic())
             data = decode_dmx_packet(payload)["data"]
             if low is None:
                 low, high = list(data), list(data)
@@ -336,8 +338,23 @@ def dmx_envelope(connection, seconds):
             connection.request(DISABLE_USB_DMX)
     if not frames:
         raise WolfmixError("No DMX frame was received")
+    # The arrival cadence of the frames, not just how many. An average alone
+    # cannot separate "one frame every 40 ms" from "one every 20 ms with every
+    # other dropped", and that distinction is the whole point of asking.
+    # It measures the **USB** cadence: what the controller ships over the link
+    # is not proven to be what it clocks onto the DMX line.
+    gaps = sorted(round((b - a) * 1000, 3)
+                  for a, b in zip(arrivals, arrivals[1:]))
+    def q(f):
+        return gaps[min(len(gaps) - 1, int(f * len(gaps)))] if gaps else None
     return {
         "frames": frames,
+        "windowSeconds": round(arrivals[-1] - arrivals[0], 3) if gaps else 0.0,
+        "framesPerSecond": (round(len(gaps) / (arrivals[-1] - arrivals[0]), 2)
+                            if gaps and arrivals[-1] > arrivals[0] else None),
+        "gapMsMin": gaps[0] if gaps else None,
+        "gapMsP25": q(0.25), "gapMsMedian": q(0.5), "gapMsP75": q(0.75),
+        "gapMsP99": q(0.99), "gapMsMax": gaps[-1] if gaps else None,
         "channels": len(low),
         "wolfmixMode": settings["wolfmixMode"],
         "animatedChannels": sum(1 for a, b in zip(low, high) if a != b),

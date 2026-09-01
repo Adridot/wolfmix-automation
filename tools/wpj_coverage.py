@@ -204,6 +204,13 @@ PROOF = {
     ("160", "macros"): (CORRELATED, "§3"),
     ("165", "presets"): (CORRELATED, "§5"),
 
+    # The weakest name in this table, and deliberately so: `items` says that
+    # field 5 is the record's repeated entry list and nothing else — the
+    # container convention 15 record types already follow (§3), counted three
+    # times per record on the whole corpus (COV-06). Everything inside keeps a
+    # neutral key. Q8 is untouched by it.
+    ("161", "items"): (OBSERVED, "COV-06"),
+
     ("145", "glyph"): (DEVICE, "§3.4"),
     ("145", "gobo_id"): (DEVICE, "§3.4"),
     ("145", "name"): (DEVICE, "RENAME-01"),
@@ -319,6 +326,14 @@ INERT_FIELDS = {
     "160.macros.f3": (1, 78),
     "116.profiles.f13": (1, 18),
     "115.fixtures.f1": (1, 5),
+
+    # Record 161. Its own `f1` is **9** against 3 items, so it is not the count
+    # the other 15 record types put there (COV-06) — and it has never been
+    # anything else. `items.f2` is present on 69 of 270 items and 1 on all of
+    # them; `items.f1` (21/15/19 by position) and `items.f4` (1 or 2) vary and
+    # stay `partial`.
+    "161.f1": (9, 90),
+    "161.items.f2": (1, 69),
 }
 
 
@@ -423,8 +438,12 @@ def _walk(buf, schema, path, acc):
         f, wt = tag >> 3, tag & 7
         if f == 0:
             raise wpj_wire.WireError("field 0")
-        named = f in schema
         name, kind = schema.get(f, (f"f{f}", None))
+        # A schema entry may carry a wire kind under a NEUTRAL key, to type
+        # bytes it does not read (`161.items.f3`). A name is what licenses
+        # `read`, so `fN` never does, whether it came from the schema or from
+        # this field being absent from it.
+        named = f in schema and not (name[:1] == "f" and name[1:].isdigit())
         sub = f"{path}.{name}"
         value = None                     # only read for the inert check below
         if wt == 0:

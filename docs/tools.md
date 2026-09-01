@@ -105,17 +105,25 @@ Naming: a field whose meaning is proven gets a semantic key (`name`, `profile`,
 absent from the dict — never a synthesised `0`.
 
 Decoded today: 101, 102, 105, **106**, **110**, 111, 115, 116, 120, 125, 130,
-135, 140, 145, 150, 151, **155**, 160, 165 <!--types:decoded--> —
-19 <!--count:decoded-->.
+135, 140, 145, 150, 151, **155**, 160, **161**, 165 <!--types:decoded--> —
+20 <!--count:decoded-->.
 `python3 tools/wpj_counts.py --print` prints the split, and `wpj_codec.SCHEMAS`
 is the source of truth for it.
 
 Note on 105: the keys are `offset_106` and `entry_count_106`, not an address and a
 channel count — see `SPEC.md` §7. The old names were a misreading.
 
-Passthrough (round-tripped, undecoded): 161 <!--types:passthrough--> —
-1 <!--count:passthrough-->. That is SPEC.md's Q8, and it is the only record
-type left with no schema at all.
+Passthrough (round-tripped as opaque hex): 0 <!--count:passthrough--> record
+types. The `types:passthrough` list that stood here is gone with the last
+entry — a `types:` marker with nothing in front of it claims nothing, which
+`wpj_counts.py` refuses; the count above is what makes the gate react if a
+record ever moves back. Record 161 was the last one and got a schema on
+2026-09-01. **That did not answer SPEC.md's Q8.** The schema names one field,
+`items`, which says field 5 is the repeated entry list and nothing more; the
+three packed arrays of 188 varints inside keep neutral keys, so `wpj_coverage`
+counts them `partial` and not `read`. What it buys is a diff that can point at
+which of the 564 values moved instead of at 190 bytes of hex — a schema types
+bytes, it does not read them.
 
 The self-check reads only the corpus you supply. It does **not** scan your
 WTOOLS installation; copy what you want tested into the corpus root instead.

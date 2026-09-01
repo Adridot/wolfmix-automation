@@ -306,12 +306,22 @@ SCHEMAS = {
                                     5: ("button", "v"), 6: ("name", "str"),
                                     8: ("values", "packed")})},
     165: {5: ("presets", _PRESET)},
+    # 161 — SPEC's Q8. Three items, each a packed array of exactly **188**
+    # varints in all 270 corpus occurrences (COV-06); reading it as bytes works
+    # by accident, which is the trap record 155 sprang first. `f3` keeps a
+    # NEUTRAL key on purpose: the entry declares the wire kind and claims
+    # nothing, and `wpj_coverage` counts an `fN` name as unread wherever it
+    # comes from — the schema types these bytes, it does not read them. Of the
+    # 564 values exactly six ever move (COV-21) and none is attributed, so Q8
+    # is as open as it was. What changes is that a diff can now point at
+    # *which* value moved instead of at 190 bytes of hex.
+    161: {5: ("items", {3: ("f3", "packed")})},
 }
-# Deliberate passthrough: a documented structure, no schema yet. Data rather
-# than a comment, because `tools/wpj_counts.py` checks the documents against it
-# — a record that moves from here to SCHEMAS must not need a doc edit to stay
-# true, it must make the gate fail until one happens.
-PASSTHROUGH = (161,)
+# Nothing is a deliberate passthrough any more: every record type the container
+# carries has a schema, and 161's names nothing inside it. Data rather than a
+# comment, because `tools/wpj_counts.py` checks the documents against it — a
+# record that moves in or out must make the gate fail until the prose follows.
+PASSTHROUGH = ()
 
 # Every record type the container is known to carry.
 TYPES = tuple(sorted(set(SCHEMAS) | set(PASSTHROUGH)))

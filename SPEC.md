@@ -141,11 +141,13 @@ every run.
 
 ## 3. Record inventory — **[correlated 45/45]**
 
-20 record types <!--count:record_types-->, of which 19 <!--count:decoded-->
-have a codec schema and 1 <!--count:passthrough--> round-trips verbatim.
-The one is record 161 (Q8). Records 102, 106, 110 and 155 were documented here
-and undecoded in the codec until 2026-09-01 — a gap `tools/wpj_coverage.py`
-made visible by counting it.
+20 record types <!--count:record_types-->, of which 20 <!--count:decoded-->
+have a codec schema and 0 <!--count:passthrough--> round-trip verbatim as
+opaque hex. Records 102, 106, 110 and 155 were documented here and undecoded
+in the codec until 2026-09-01 — a gap `tools/wpj_coverage.py` made visible by
+counting it. Record **161** was the last one without a schema and got one the
+same day; it names **nothing** inside itself, and Q8 is exactly as open as it
+was. A schema is a claim about the wire, not about the meaning.
 
 | Type | Size (bytes) | Items | Identification | Status |
 |---|---|---|---|---|
@@ -167,7 +169,7 @@ made visible by counting it.
 | 151 | 0–93 | 0 or **4–6** | **detached-fixture position offsets**, sliced by record 150 | **device-confirmed** (§8.1) |
 | 155 | 562–567 | **4** | **4 FX sequences**, 16 steps × 8 groups + step count | **device-confirmed** (§8) |
 | 160 | 393–542, **optional** | 7–9 | **`LIVE EDIT` macros** — one per operator-defined Live Edit button (COV-18) | correlated |
-| 161 | 599–604 | **3** | 3 × ~190-byte blob, volatile | observed |
+| 161 | 599–604 | **3** | 3 packed arrays of **188** varints; of the 564 values, 6 ever move (COV-06, COV-21). **Not volatile** — that word was wrong. Named nowhere: Q8 | observed |
 | 165 | 26219–30882 | 80–85 | preset container | correlated (§5) |
 
 **Field 1 is the item count on 15 of these types** — 105, 106, 110, 111, 115,
@@ -189,8 +191,8 @@ yours will differ.
 |---|---|
 | **read** — a field a codec schema names | **92.8 %** |
 | **inert** — no name, and one value in the whole corpus | 4.2 % |
-| **partial** — a field inside a schema'd record that varies and that nothing names | 1.1 % |
-| **unknown** — a record with no schema (161 alone) | 2.0 % |
+| **partial** — a field inside a schema'd record that varies and that nothing names | 3.0 % |
+| **unknown** — a record with no schema, or one whose protobuf does not parse | 0.0 % |
 
 **`read` and `inert` are not added, and the distinction is the point.** `read`
 says what a field means. `inert` says only that the field never says anything
@@ -1853,7 +1855,7 @@ changelog.
 | Q5 | **`102.f11`** — unattributed and inert across idle static output and with the blinder active, no UI control, no manual entry, present before firmware 2.0. | The search is **stopped**, not open-ended. Untried conditions, for whoever picks it up: strobe or smoke active, effects running, a second universe, MK2/MK3 hardware. |
 | Q6 | **The `PRESET EDIT` screen's `COLOR` line.** It shows a named colour that is not the preset's `f31`, and no top-level scalar carries the pad index either. | Where that line reads from. |
 | Q7 | **`beam.f5`** — absent on all 352 distinct presets and on both entries written during FX6-03. Hypothesized inert: a slot the shared FX schema carries and the beam engine does not use. | One capture where a beam control writes it, or a reason it never can. |
-| Q8 | **Record 161** — three items, each a **packed array of exactly 188 varints** (COV-06). Not volatile, as this document long said: of the 564 values, exactly **6 ever differ**, and they are the same six in two unrelated projects (COV-21) — the **last value of each item**, which move together and to the same number (240 or 176), and the **first three of item 1**, which read as a little-endian **20-bit mask**, `0x0FFFFF` or `0`. The other 182 per item have not moved in 82 files, 13 projects, two authors. Its `f1` is 21, 15, 19 by item position; the record's own `f1` is 9 against 3 items, so it is not a count. FX6-05 removed the beam-sequencer hypothesis, the only one it ever had. | An attribution for any of the six. Two observed transitions (F30-04 on the tail, FX6-02 on the mask) are not one, and a 20-bit mask has too many candidates here — a palette page, a preset page and a Live Edit page are all 20. It round-trips verbatim in the meantime. |
+| Q8 | **Record 161** — three items, each a **packed array of exactly 188 varints** (COV-06). Not volatile, as this document long said: of the 564 values, exactly **6 ever differ**, and they are the same six in two unrelated projects (COV-21) — the **last value of each item**, which move together and to the same number (240 or 176), and the **first three of item 1**, which read as a little-endian **20-bit mask**, `0x0FFFFF` or `0`. The other 182 per item have not moved in 82 files, 13 projects, two authors. Its `f1` is 21, 15, 19 by item position; the record's own `f1` is 9 against 3 items, so it is not a count. FX6-05 removed the beam-sequencer hypothesis, the only one it ever had. | An attribution for any of the six. Two observed transitions (F30-04 on the tail, FX6-02 on the mask) are not one, and a 20-bit mask has too many candidates here — a palette page, a preset page and a Live Edit page are all 20. It has a **schema** since 2026-09-01 and that changes nothing here: the schema names `items` and types the three arrays as packed, so a diff points at which of the 564 values moved instead of at 190 bytes of hex. The values themselves keep neutral keys and count `partial`, not `read`. |
 | Q9 | **Which of the two paths the panel follows.** `SET_MODE` and the front-panel keys move the device differently (SCREEN-03), and nothing has measured which one the displayed screen tracks. | A capture where the two disagree and the panel is watched. |
 | Q10 | **The colour engine's `f2` at 150 and 200.** `f2` is the fade, and above 100 it is move's `Flick` — but the manual gives colour no `Flick`. | The residual of L9, and the only part of the FX submessage that does not read cleanly. |
 | Q11 | **Variants B and C below the top level.** EXP-06 aligned profiles, patch, preset names and the FX banks against a variant-A twin, which is far more than "only the top level is mapped" — but it is one pair, and the campaign was never run out. | Its own campaign, on more than one pair. |

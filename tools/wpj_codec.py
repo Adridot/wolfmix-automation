@@ -241,16 +241,19 @@ SCHEMAS = {
     # it is checked as an anomaly rather than an identity for the same reason
     # those eight exist.
     120: {1: _COUNT, 5: ("channels", {1: ("value", "v")})},                 # an empty {} entry = `2a 00` = all zero
-    # 125: the nine group slots. `f4` is 7 bytes read in two pieces, which is
-    # why it is a split and not one name: bytes 0-5 are the little-endian
-    # **profile mask**, and the identity `groupe_fixture` checks
-    # `stored ⊇ derived` on it — it accumulates, the firmware ORs a new profile
-    # index in without clearing the stale one, so a reader must not recompute
-    # it (COV-26). Byte 6 is `0x30` or `0x38` and keeps a neutral key: it moves
-    # in the same save as record 161's shared tail, without either deriving
-    # from the other, and COV-22 refuted the preset-count reading it had.
+    # 125: the nine group slots. `f4` is read in two pieces, which is why it is
+    # a split and not one name: bytes 0-5 are the little-endian **profile
+    # mask**, and the identity `groupe_fixture` checks `stored ⊇ derived` on it
+    # — it accumulates, the firmware ORs a new profile index in without
+    # clearing the stale one, so a reader must not recompute it (COV-26).
+    # What follows is a **varint**, not the fixed byte this schema first
+    # assumed: it read `0x30`/`0x38` on 891 corpus slots and grew to two bytes
+    # when its value crossed 128, reaching 184 (COV-51). It keeps a neutral
+    # key — it moves in the same save as record 161's shared tail without
+    # either deriving from the other, and COV-22 refuted the preset-count
+    # reading it had.
     125: {1: _COUNT, 5: ("groups", {
-        4: ("mask", ("split", ((6, "profile_mask"), (1, "f4b6")))),
+        4: ("mask", ("split", ((6, "profile_mask"), ("varint", "f4_tail")))),
         8: ("name", "str")})},
     135: {1: _COUNT, 5: ("pads", _PAD)},
     # f2 = the group index 0-7 (A-H), absent for A. SPEC §3.1 retracted the
@@ -428,20 +431,35 @@ def remplacante(cle):
 
 
 def _split(chunk, parts):
-    """A fixed-width blob → {part: little-endian int}, or {"hex": …}."""
-    if len(chunk) != sum(n for n, _ in parts):
-        return {"hex": chunk.hex()}
+    """A blob cut into named pieces → {part: int}, or {"hex": …}.
+
+    A piece is `(n, name)` for n little-endian bytes, or `("varint", name)` for
+    a varint, which may only be the last piece. The varint form is not
+    decoration: `125.f4`'s tail was a single byte on 891 corpus slots and grew
+    to **two** when its value crossed 128 (COV-51), so a fixed width was wrong
+    and the fallback below is what caught it.
+    """
     out, i = {}, 0
     for n, nom in parts:
-        out[nom] = int.from_bytes(chunk[i:i + n], "little"); i += n
-    return out
+        if n == "varint":
+            try:
+                out[nom], i = _rvarint(chunk, i)
+            except ValueError:
+                return {"hex": chunk.hex()}
+        else:
+            if i + n > len(chunk):
+                return {"hex": chunk.hex()}
+            out[nom] = int.from_bytes(chunk[i:i + n], "little"); i += n
+    return out if i == len(chunk) else {"hex": chunk.hex()}
 
 
 def _unsplit(v, parts):
     """The inverse. Raises rather than truncate — decode() re-checks anyway."""
     if set(v) != {nom for _, nom in parts}:
         raise ValueError(f"split: expected {[n for _, n in parts]}, got {list(v)}")
-    return b"".join(int(v[nom]).to_bytes(n, "little") for n, nom in parts)
+    return b"".join(_wvarint(int(v[nom])) if n == "varint"
+                    else int(v[nom]).to_bytes(n, "little")
+                    for n, nom in parts)
 
 
 def _decode_msg(buf, schema):

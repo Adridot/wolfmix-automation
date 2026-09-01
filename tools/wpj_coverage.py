@@ -420,11 +420,26 @@ def _walk_split(chunk, parts, path, acc):
     schema names and the ledger does not is counted `partial`. That
     undercounts rather than lies, which is the direction to fail in — and it
     is what lets one field carry a measured half and an unread one without
-    either borrowing the other's status."""
-    if len(chunk) != sum(n for n, _ in parts):
+    either borrowing the other's status.
+
+    A `varint` part is measured, not assumed: its width is what it encodes to,
+    which is the whole reason `125.f4`'s tail is one now and was two the day
+    its value passed 128 (COV-51)."""
+    spans, i = [], 0
+    for n, part in parts:
+        if n == "varint":
+            try:
+                _, apres = wpj_wire.read_varint(chunk, i)
+            except wpj_wire.WireError:
+                i = -1
+                break
+            spans.append((part, apres - i)); i = apres
+        else:
+            spans.append((part, n)); i += n
+    if i != len(chunk):
         _tally(acc, PARTIAL, path + ".<unsplit>", len(chunk))
         return
-    for n, part in parts:
+    for part, n in spans:
         sub = f"{path}.{part}"
         _tally(acc, READ if proof_of(sub) else PARTIAL, sub, n)
 

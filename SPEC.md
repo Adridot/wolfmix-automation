@@ -1279,6 +1279,8 @@ The fixture → group assignment itself is `115[r].f4`, mirrored on every patch
 entry as `105[e].f6`: 817/817 fixture rows agree across 45 files, checked by
 `groupe_fixture` in `tools/wpj_identities.py`.
 
+**[device-confirmed]** (COV-51) What follows `f4`'s six-byte mask is a **varint**, not a byte: it reads `0x30`/`0x38` on 891 corpus slots and **two bytes** on 18, where the value crossed 128 and reached **184**. A fixed-width field does not change length, and `0xb8` sets the continuation bit that requires the byte after it. The sentence below is the one-byte case.
+
 **[observed]** The 7th byte of `f4` is `0x30` or `0x38` — a per-project constant
 replicated on all 9 items. It flipped `0x30` → `0x38` **within one project** when
 the device added a preset (F30-04). **That attribution is refuted (COV-22):** a

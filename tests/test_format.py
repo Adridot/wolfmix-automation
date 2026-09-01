@@ -158,13 +158,25 @@ class InertAndSplit(unittest.TestCase):
         payload = bytes((8, 1)) + bytes((0x2a, len(item))) + item
         decoded = wpj_codec.decode(125, payload)
         self.assertEqual(decoded["groups"][0]["mask"],
-                         {"profile_mask": 14, "f4b6": 0x38})
+                         {"profile_mask": 14, "f4_tail": 0x38})
         self.assertEqual(wpj_codec.encode(125, decoded), payload)
         acc = wpj_coverage.coverage(self._project(125, payload))
         self.assertEqual(acc[(wpj_coverage.READ,
                               "125.groups.mask.profile_mask")], 6)
         self.assertEqual(acc[(wpj_coverage.PARTIAL,
-                              "125.groups.mask.f4b6")], 1)
+                              "125.groups.mask.f4_tail")], 1)
+
+    def test_a_split_tail_that_grew_past_one_byte(self):
+        """125.f4's tail is a varint: one byte under 128, two above (COV-51)."""
+        blob = bytes.fromhex("0e000000000038")
+        wide = bytes.fromhex("0e00000000000000") [:6] + bytes.fromhex("b801")
+        for payload_blob, expected in ((blob, 0x38), (wide, 184)):
+            item = bytes((0x22, len(payload_blob))) + payload_blob
+            payload = bytes((8, 1)) + bytes((0x2a, len(item))) + item
+            decoded = wpj_codec.decode(125, payload)
+            self.assertEqual(decoded["groups"][0]["mask"],
+                             {"profile_mask": 14, "f4_tail": expected})
+            self.assertEqual(wpj_codec.encode(125, decoded), payload)
 
     def test_a_split_of_the_wrong_length_stays_opaque(self):
         item = bytes((0x22, 3)) + b"\x01\x02\x03"

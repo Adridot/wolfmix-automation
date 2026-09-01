@@ -1619,7 +1619,7 @@ Two details a writer needs from that measurement: **an untouched offset stores
 
 | Field | Screen | Encoding |
 |---|---|---|
-| `151.f1` | — | **fixture index**, absent = 0 |
+| `151.f1` | — | **fixture index**, absent = 0 — and the firmware **remaps it** when the patch shrinks: deleting the fixture below it rewrote 1 to 0 on a device save (COV-46), so a stored offset keeps addressing the head it was set on |
 | `151.f2` | `FOCUS OFFSET` | signed, `(v − 32768) / 32767`; **[hypothesized]** relative to `165.f32` rather than absolute — see below |
 | `151.f3` | `PAN OFFSET` | signed, same |
 | `151.f4` | `TILT OFFSET` | signed, same |

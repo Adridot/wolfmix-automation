@@ -59,10 +59,17 @@ P7 partition it exactly: different sets, empty sets, identical sets — no diff
 can satisfy two of them. P1, P2 and P4 are statements about *which* records are
 in that set and are read from the same diff without competing with each other.
 
-P5 is the only numeric one: `f6`/`f7` are one value per file across all 16
-corpus files that carry them, spanning 231/20, 232/113, 44/41, 110/218, 81/183,
-94/187, 79/99, 57/6 — no two projects share a pair, so a repeat between two
-saves minutes apart would be the surprise, not the match.
+P5 is the only numeric one: `f6`/`f7` are one value per file across every
+corpus file that carries them, spanning 231/20, 232/113, 44/41, 110/218,
+81/183, 94/187, 79/99, 57/6.
+
+> **Corrected 2026-09-01, before this sheet was run.** It said "no two projects
+> share a pair". They do: **231/20** is carried by two unrelated projects on 4
+> fixtures and on 20, and 44/41 by two more (COV-46). So a repeat between the
+> two saves is **not** the surprise this sheet claimed, and P5 cannot be read
+> as "the pair identifies the writer". What it can still say is whether each
+> save writes the pair at all, which is the part COV-42 and COV-46 made
+> interesting.
 
 ## The hazard, and it is new
 

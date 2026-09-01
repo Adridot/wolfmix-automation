@@ -33,6 +33,10 @@ LIGNE = re.compile(r"^\|\s*([A-Z][^|]*?)\s*\|\s*(\d{4}-\d{2}-\d{2}|[^|]*?)\s*\|"
                    r"\s*(.*?)\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|\s*$")
 IDENTIFIANT = re.compile(r"\b([A-Z][A-Z0-9]{1,9}-[0-9]{2})\b")
 SECTION = re.compile(r"§(\d+(?:\.\d+[a-z]?)?)")
+# A row *declaring* a finding, wherever on the line it sits: the id, then the
+# date column. `orphelins` uses it to find rows `entrees` cannot parse.
+DECLARATION = re.compile(r"\|\s*([A-Z][A-Z0-9]{1,9}-[0-9]{2})[^|]*\|"
+                         r"\s*\d{4}-\d{2}-\d{2}")
 TITRE = re.compile(r"^#{2,3} (\d+(?:\.\d+[a-z]?)?)[.\s]", re.M)
 COUPURE = re.compile(r"Evidence cutoff\s*—\s*(\d{4}-\d{2}-\d{2})")
 REPRISE = ("retract", "refut", "withdraw", "réfut", "rétract")
@@ -148,6 +152,27 @@ def ecarts(registre=REGISTRE, spec=SPEC):
     return problemes
 
 
+def orphelins(chemin=REGISTRE):
+    """Finding ids in the register that no parsed **row** carries.
+
+    An id can be written into the file and still be invisible to `entrees()` —
+    a row that lost its line break is glued to the next one, the regex anchors
+    at `^|` and only the first of them is ever seen. Twelve rows sat like that
+    on 2026-09-01 while `make check` stayed green, because every other check
+    finds ids by regex over the raw text and never asks whether a row parses.
+    What counts as a row **declaration** is the shape `| <id> | <ISO date> |`,
+    wherever it sits on a line. That is precise in both directions: a glued row
+    keeps it, in a later column where a first-column scan would miss it, and
+    the two places that name ids on purpose never have it — the refutations
+    section writes prose headings (`### RECALL-01 — …`) and a row's body cites
+    other findings freely. Either would otherwise be reported as a missing
+    row."""
+    vus = {i for ids, *_ in entrees(chemin) for i in ids}
+    texte = open(chemin, encoding="utf-8").read()
+    declares = set(DECLARATION.findall(texte))
+    return sorted(declares - vus)
+
+
 def demo():
     import tempfile
     # The fixture ids are assembled rather than written out: a literal would
@@ -179,8 +204,19 @@ def demo():
         open(s, "w", encoding="utf-8").write(
             spec.replace(f"and {mort} too", f"and {mort}, retracted, too"))
         assert len(ecarts(r, s)) == 1, ecarts(r, s)
-    print("self-check ok: absent section, finding past the cutoff, and a "
-          "refuted finding cited as support", file=sys.stderr)
+        # A row glued to the next one: its id is on a table line and in no row.
+        open(r, "w", encoding="utf-8").write(
+            registre.replace(f"|\n| {mort}", f"|\\n| {mort}"))
+        assert orphelins(r) == [mort], orphelins(r)
+        # A prose heading naming an id is not a row, and neither is a citation
+        # inside another row's body. Reporting either would be a false alarm.
+        open(r, "w", encoding="utf-8").write(
+            registre.replace("did a thing", f"did a thing, unlike {mort}")
+            + f"\n### {mort} — undone\n")
+        assert orphelins(r) == [], orphelins(r)
+    print("self-check ok: absent section, finding past the cutoff, a refuted "
+          "finding cited as support, and a row glued to the next",
+          file=sys.stderr)
 
 
 def main(argv):
@@ -195,6 +231,12 @@ def main(argv):
               f"{REGISTRE} and {SPEC}:", file=sys.stderr)
         for probleme in problemes:
             print(f"  {probleme}", file=sys.stderr)
+        return 1
+    perdus = orphelins()
+    if perdus:
+        print(f"wpj_evidence: {len(perdus)} finding id(s) in {REGISTRE} that no "
+              f"row carries — a glued or malformed line: "
+              + ", ".join(perdus), file=sys.stderr)
         return 1
     lignes = entrees()
     print(f"wpj_evidence: {len(lignes)} dated findings, cutoff {coupure()}, "

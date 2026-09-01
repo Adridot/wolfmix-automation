@@ -48,8 +48,19 @@ _PATCH = {1: ("library_id", "v"), 4: ("offset_106", "v"), 5: ("fixture", "v"),
 # the (offset, length) pair that cuts 110, and identity 3 checks that the
 # offsets are the running sum of the counts. Documented in §7 since the corpus
 # mining and never named here.
+# f12 is the profile's **per-channel names**, one repeated string per channel of
+# this profile, empty where the channel type already names it — the labels the
+# FIXTURE BUILDER screen shows. Device-confirmed on a project the panel created
+# from scratch (COV-43): 16 entries for a 16-channel profile, aligned to its own
+# `110.f4` types, and the two `Generic` channels carry `Color Effect` and
+# `Reset`, name for name what that screen printed in COV-25.
+# **A reader must not trust the alignment blindly.** WTOOLS 2.0.2 cut one
+# profile-local array with each item's *global* offset into record 110, so in
+# the files of COV-30 those same 16 names are spread across three other
+# profiles and the profile they belong to carries none.
 _PROFIL = {2: ("channel_count", "v"), 3: ("offset_110", "v"),
-           8: ("name", "str"), 9: ("uuid", "uuid"), 11: ("timestamp", "v")}
+           8: ("name", "str"), 9: ("uuid", "uuid"), 11: ("timestamp", "v"),
+           12: ("channel_names", "str")}
 # The order of a pad's 7 channels: device-confirmed (the W1's RGB+ view, raw 0-255)
 _PAD = {1: ("red", "v"), 2: ("green", "v"), 3: ("blue", "v"),
         4: ("white", "v"), 5: ("amber", "v"), 6: ("lime", "v"), 7: ("uv", "v")}

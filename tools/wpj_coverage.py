@@ -163,6 +163,7 @@ PROOF = {
     ("116", "name"): (CORRELATED, "§7"),
     ("116", "uuid"): (CORRELATED, "PROFILE-05"),
     ("116", "timestamp"): (CORRELATED, "§7"),
+    ("116", "channel_names"): (DEVICE, "COV-43"),
 
     ("120", "channels"): (CORRELATED, "§7"),
     ("120", "value"): (DEVICE, "COV-16"),

@@ -31,7 +31,7 @@ carrying an offset lands on a different **tilt** channel value than its
 neighbours, and the position model is device-confirmed on tilt **12 of 12**
 (POS-01/02, `tools/wpj_position.py`).
 
-Group A is six `Lyre ZQ02244`. **Rank 0 has no DMX address and emits nothing.**
+Group A is six `Lyre ZQ02244`. **Rank 0 carries no `dmx_address` field, which this sheet read as unpatched. It is wrong: absent means address 0** (COV-41), and that fixture emits on channels 0-3 like any other.
 Rank 1 carries travel limits `0/77` on tilt and `151/204` on pan. **Ranks 2-5
 carry no travel limits at all** — neither `106.f5` nor `106.f6`, on either axis.
 

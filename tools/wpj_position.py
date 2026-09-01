@@ -47,10 +47,13 @@ def fraction_pan(pan, fan, rang, effectif):
     `etalement` exactly. That is the corpus-uniformity trap in its usual dress
     — a formula that held because nothing had exercised the other case.
 
-    `effectif` counts the group's fixtures, the **unpatched ones included**: at
-    n = 5 the same reading lands on 0.46999, a full point and some 136 DMX
-    units away from what was measured. One point, so it is a reading and not a
-    law.
+    `effectif` is the group's fixture count: at n = 5 instead of 6 the same
+    reading lands on 0.46999, a full point and some 136 DMX units away from
+    what was measured. (An earlier note here said "the unpatched ones
+    included". There was no unpatched fixture — an absent `115.f2` is **address
+    0**, COV-41, and that fixture is on channels 0-3 like any other.)
+
+    Two exact points, on two ranks and two kinds of travel limit.
     """
     return pan + etalement(fan, rang, effectif) - 0.5
 
@@ -102,6 +105,12 @@ def demo():
     assert abs(rival - mesure) > 100, "n = 5 should not fit"
     # The tilt of the same frame, to the unit, on the same head.
     assert dmx16(0, 77, 21626 / DEMI_ECHELLE) == 6530, "tilt 16-bit"
+    # COV-41: the second point, same frame, rank 0 of the same group — a
+    # different term of the ramp and **inverted** pan limits, 201 down to 133.
+    assert dmx16(201, 133, fraction_pan(34078 / DEMI_ECHELLE,
+                                        39321 / DEMI_ECHELLE, 0, 6)) == 44317, \
+        "pan with PAN, inverted limits"
+    assert abs(dmx16(0, 142, 21626 / DEMI_ECHELLE) - 12042) <= 1, "tilt rank 0"
     # COV-35: a fixture whose four travel limits are absent is pinned at 0.
     assert dmx16(0, 0, 0.42) == 0 and dmx16(0, 0, 1.0) == 0, "pinned head"
     # POS-05/07: the detached head, signed offsets from record 151.

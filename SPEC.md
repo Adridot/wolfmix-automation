@@ -1435,6 +1435,8 @@ Each `106` entry targets a channel of its fixture's profile through
 | Field | Meaning |
 |---|---|
 | `f2` | absolute 0-based DMX channel |
+
+And in record 115, **an absent `dmx_address` is address 0**, not an unpatched fixture — device-confirmed on the wire (COV-41): that fixture emits on channels 0-3 like any other, and the panel numbers it `001`. A freshly created project patches its first fixture exactly that way.
 | `f4` | the channel's **role in the W1 engine** |
 | `f1`, `f3` | the **DMX window** the role drives — one of the channel's `111` ranges on 4188 of 6070 entries |
 | `f5`, `f6` | the fixture's **travel limits**, per fixture and per axis — the `MIN`/`MAX` of the `FIXTURE LIMITS` screen, as `v/255` (COV-24). **Invert pan swaps the two.** **Absent means 0, not "unset" (COV-35):** a fixture whose four limit fields are all absent reads `0 %` four times on that screen and is **pinned** — `min == max == 0` collapses the range, and it emits 0 on both axes whatever position is recalled. A reader must not fill an absent limit with the full range. |
@@ -1616,8 +1618,10 @@ ignored the slot's own `PAN` and scored 11/12; the wire gives a fraction of
 at 16 bits. The old formula is the special case `PAN = 50 %`, which is where
 both measured captures sat — re-scored under the new rule they are unchanged,
 the one known miss included. Nothing had ever exercised a slot away from
-centre. **`n` counts the group's fixtures including any that are not
-patched**: at 5 instead of 6 the same reading misses by 136 DMX units.
+centre. **`n` is the group's fixture count**: at 5 instead of 6 the same
+reading misses by 136 DMX units. A second exact point followed on rank 0 of
+the same frame — a different term of the ramp and **inverted** travel limits,
+201 down to 133 — landing on the unit again (COV-41).
 
 Everything a recalled position emits is computable from the file:
 

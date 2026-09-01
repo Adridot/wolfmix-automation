@@ -100,9 +100,17 @@ def groupe_fixture(w):
     """115.f4 == 105.f6 == the fixture's group index, and 125 follows from it.
 
     Two records carry the assignment, redundantly: 115[r].f4 per fixture and
-    105[e].f6 per patch entry. The 125[i].f4 mask (6 bytes, LE) is the OR of
-    the 1 << 115[r].f3 of the fixtures in slot i — so a slot mixing two profiles
-    lights two bits there. Nine slots: A–H plus a ninth (index 8).
+    105[e].f6 per patch entry. The 125[i].f4 mask (6 bytes, LE) **contains** the
+    OR of the 1 << 115[r].f3 of the fixtures in slot i — so a slot mixing two
+    profiles lights two bits there. Nine slots: A–H plus a ninth (index 8).
+
+    **Containment, not equality (COV-26).** Equality held on 746 of 747 corpus
+    slots and is broken by a file the device wrote: reordering record 116
+    changes every profile index, and the firmware **ORs the new bit in without
+    clearing the stale one** — a slot whose two fixtures give 0x6 stores 0xe,
+    keeping a bit from the ordering before. So the mask is not recomputed from
+    the patch, it accumulates, and a reader must not treat it as derived.
+    Containment is exact on all 747.
     """
     p105, p115 = _items(w, 105), _items(w, 115)
     p125 = _items(w, 125)
@@ -118,8 +126,9 @@ def groupe_fixture(w):
             if f.get("f4", 0) == i:
                 attendu |= 1 << f.get("f3", 0)
         masque = int.from_bytes(bytes.fromhex(slot["f4"]["hex"])[:6], "little")
-        assert masque == attendu, \
-            f"125[{i}]: mask {masque:#x} != the group's profiles {attendu:#x}"
+        assert masque | attendu == masque, \
+            f"125[{i}]: mask {masque:#x} does not contain the group's " \
+            f"profiles {attendu:#x}"
 
 
 def moteurs_f16(w):

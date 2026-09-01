@@ -1219,10 +1219,14 @@ little-endian, are exactly:
 mask[i] = OR over fixture rows r of (1 << 115[r].f3)   where category(r) == i
 ```
 
-Verified bit for bit, 45/45, with four independent name↔content matches. So
-**125 is the 9 fixture categories, not the 8 groups A–H**, and its masks are
-recomputable from 105 + 115 + 116. Only `f8`, the user-editable category name,
-carries information a writer must preserve.
+Verified bit for bit, 45/45, with four independent name↔content matches.
+
+**The equality is refuted — [device-confirmed] (COV-26).** Reordering record
+116 changes every profile index, and the firmware **ORs the new bit in without
+clearing the stale one**: a slot whose two fixtures give `0x6` stores `0xe`.
+The mask **accumulates**; it is not recomputed. `stored ⊇ derived` is what
+holds, exact on all 747 corpus slots. A reader must not treat the mask as
+derived — it can claim a profile the group does not have.
 
 **Retracted 2026-08-26**: they are the **8 fixture groups A–H plus a ninth slot** for the fixtures that have no group pads. See the registry, *The fixture → group assignment*. `rig-b` groups two different profiles into slot 0, which a model-derived category could not do, and slots 0/1/2 are the DMX-measured groups A/B/C.
 

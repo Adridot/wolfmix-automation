@@ -127,10 +127,19 @@ def moteurs_f16(w):
 
     The packed varints are the bytes of a little-endian bit field cut into
     **9**-bit slices — 9 and not 8, because record 125 has nine slots: groups
-    A–H plus the effects one. The alignment tests itself: at 9 bits, engine 1
-    equals `move_fx_active` exactly across the whole corpus; at 8 bits it would
-    read 254 where `move_fx_active` reads 255. See the registry, "f16" and
-    "FLASH-01".
+    A–H plus the effects one.
+
+    The alignment still tests itself, but through a **containment** and no
+    longer an equality. Slice 1 was asserted equal to `move_fx_active` and that
+    held on 3697 presets; a preset the device composed on 2026-09-01 carries
+    slice 1 = 1 with `move_fx_active` = 0 (COV-14). What survives is
+    `slice 1 ⊇ move_fx_active`, exact on every preset of the corpus, and it
+    keeps the whole refuting power: at a stride of 8 slice 1 reads 254 where
+    `move_fx_active` reads 255, and 254 does not contain 255.
+
+    Slice 0 against `color_fx_active` is asserted **not at all**. Neither
+    containment holds on today's corpus — 6 presets one way, 18 the other —
+    so there is nothing here to check that would not be fitted.
     """
     for pre in _items(w, 165):
         h = pre.get("f16")
@@ -147,8 +156,10 @@ def moteurs_f16(w):
             assert not (gros >> (9 * m)) & 0x100, \
                 f"165.f16: engine {m} lights the 9th slot in {h['hex']}"
         actif = _varints(pre.get("f24", {}).get("hex", ""))
-        assert (gros >> 9) & 0x1FF == (actif[0] if actif else 0), \
-            f"165.f16: engine 1 = {(gros >> 9) & 0x1FF} != move_fx_active " \
+        a = actif[0] if actif else 0
+        tranche = (gros >> 9) & 0x1FF
+        assert tranche | a == tranche, \
+            f"165.f16: engine 1 = {tranche} does not contain move_fx_active " \
             f"{actif} in {h['hex']}"
 
 

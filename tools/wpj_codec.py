@@ -121,6 +121,15 @@ _PRESET = {
     # `f16` mask: a group keeps its pending page even when the engine is off.
     # A page 1 set by hand reads 0, like a page never set — the field encodes
     # the page, not the fact of having been set (F7-04's control).
+    # f27: the per-group position FADE, in **milliseconds** — the `FADE` the
+    # ALL POSITIONS page prints per group. Three points on one line: 0 ↔ 0s
+    # on a panel-composed project, 1000 ↔ 1s on recall, and 3000 ↔ 3s written
+    # by a capture (COV-10). It sits immediately before `f28`, the per-group
+    # position index — two per-group tables side by side, which is what the
+    # field numbering is good for. Measured on group A alone: this rig has no
+    # fixture on the other seven, so their slots are read by position in an
+    # array whose eight-element shape is correlated 45/45, not measured.
+    27: ("position_fade_ms", "packed"),
     3: ("page_beam_fx", "packed"),
     7: ("page_color_fx", "packed"), 23: ("page_move_fx", "packed"),
 }

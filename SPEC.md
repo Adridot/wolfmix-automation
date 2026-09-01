@@ -29,7 +29,7 @@ Measurement base: W1 Mk1 (serial withheld), firmware **2.0.18**, macOS. WTOOLS
 **2.0.2** build 248 — a **beta**, installed over the stable — which is what the
 later protocol work was read against.
 
-Corpus hashes in `corpus/SHA256SUMS` — 59 files, regenerated 2026-09-01; the
+Corpus hashes in `corpus/SHA256SUMS` — 61 files, regenerated 2026-09-01; the
 files themselves are not distributed ([`LEGAL.md`](LEGAL.md)).
 
 ### Evidence cutoff — 2026-09-01
@@ -623,8 +623,8 @@ the ninth bit is never set. The flash slices 6–10 do set it (§5.7).
 
 | Slice | Engine | Pinned by |
 |---|---|---|
-| 0 | **Color FX** | equals `color_fx_active`, 3696/3697 |
-| 1 | **Move FX** | equals `move_fx_active`, 3697/3697 |
+| 0 | **Color FX** | it *was* "equals `color_fx_active`, 3696/3697". On today's corpus neither containment holds — 6 presets one way, 18 the other — and `wpj_identities.py` asserts nothing here (COV-14) |
+| 1 | **Move FX** | `slice 1 ⊇ move_fx_active`, exact. The **equality** held on 3697 presets and is **refuted** by a preset the device composed on 2026-09-01: slice 1 = 1 against `move_fx_active` = 0 (COV-14) |
 | 2 | **Beam FX** | active only on beam-page presets |
 | **3** | **unattributed, and *not* the second Colour engine** | `0` even on a preset that really runs a second Colour page — **[validated]**, FX2-01 |
 | **4** | **unattributed, and *not* the second Move engine** | same shot, same reasoning |
@@ -656,9 +656,11 @@ exclusion mask in record 102 and having a slice here are **independent** —
 including the effects slot, where the FX engines stop at 255.
 
 The alignment tests itself: at a stride of 8, slice 1 would read 254 where
-`move_fx_active` says 255. Across 44364 slice extractions not one falls outside
-`{0, 1, 2, 5, 7, 255, 511}` — 511 being the five flash slices, which set all nine
-bits at once (§5.7).
+`move_fx_active` says 255, and the containment that replaced the equality still
+fails there on 1767 presets. The value domain once given here as
+`{0, 1, 2, 5, 7, 255, 511}` is **stale** — 3 and 4 both occur on the corpus as
+it stands (COV-14) — which is the same lesson twice: a set measured over a
+corpus describes the corpus.
 
 **A writer must set both carriers.** `color_fx_active` and `move_fx_active`
 duplicate slices 0 and 1; ACC-03b wrote one and not the other, and the firmware
@@ -788,6 +790,20 @@ measured, one shot each, and each shot left the other two byte-identical. `f4`
 occupies the Beam "active" slot but F4-03 read it as a permission mask over all
 three engines — the coincidence of position is noted, not read. `f27` does not
 follow the pattern (`f25` is the preset name) and stays unattributed.
+
+**`f27` is the per-group position FADE, in milliseconds — [device-confirmed]
+(COV-10).** The `FADE` the `ALL POSITIONS` page prints per group. Three points
+on one line: `0` ↔ `0s` on a panel-composed project, `1000` ↔ `1s` on recall,
+and `3000` ↔ `3s` written by a capture — the third published before the
+download, because one point cannot separate a unit from a table. Measured on
+**group A alone**: this rig has no fixture on the other seven, so their slots
+are read by position in an array whose eight-element shape is
+`correlated 45/45`, not measured. The save that wrote it created one preset and
+altered no existing one by a single field.
+
+Its neighbour is the reason it was found: `f27` sits immediately before `f28`,
+the per-group position **index**. Two per-group tables side by side, which is
+what §5.6 says the field numbering is good for.
 
 **`f27` is not zero everywhere — [observed] (COV-02).** This document said it
 was, on 3697 occurrences, and that was true of the corpus that existed when the
@@ -1710,7 +1726,7 @@ changelog.
 
 | # | Question | What would settle it |
 |---|---|---|
-| Q1 | **`165.f27`** — the fourth per-group array, which does not follow the engine quadruplet. Not zero everywhere after all: 26 presets carry `[1000] × 8`, and the split is by author — WTOOLS writes 1000, the panel writes 0 (COV-02). | **The stated blocker is gone.** "No cheap discriminator has emerged" was the reason not to go to the hardware; one has, and it needs neither a capture nor a deploy — open a WTOOLS project that carries 1000 and find the per-group control reading `1.00 s` or `1000`, or move one and save. The question itself is still open. |
+| ~~Q1~~ | **Closed 2026-09-01.** `165.f27` is the per-group position FADE in milliseconds (COV-10, §5.6). The route was COV-02 — the field is not zero everywhere, and the WTOOLS/panel split is what made a contrast reachable — then three points on one line. What remains is not this question but its **scope**: only group A is measured, because no fixture sits on the other seven. | — |
 | Q2 | **`f4` bit 0**, set on the move and beam pages, clear on the colour page; bits 1, 5, 6, 7 are never seen outside 255. Under the permission reading, bit 0 is a fourth capability that movement and beam need and colour does not. | A preset composed at the panel on a rig where the candidates separate. Nothing in this corpus does. |
 | Q3 | **`f16` slice 11** — non-zero and constant per project (2, 5 or 7), unmoved by every flash latch including the one that had `SMOKE` alone held. | It is not a flash key; nothing says what it is. |
 | Q4 | **`f16` slices 3 and 4** — zero in every file and every experiment, with no key left to assign. COV-07 tried COV-02's author split on them: a WTOOLS 2.0.2 project leaves them zero too. | Provably empty, or empty in everything reachable from this panel **and from WTOOLS**. The second author has now been checked and adds nothing. |

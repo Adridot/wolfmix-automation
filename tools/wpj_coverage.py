@@ -214,6 +214,7 @@ PROOF = {
     ("165", "gobo_iris"): (DEVICE, "GOBO-02"),
     ("165", "color_fx_active"): (CORRELATED, "§5.4"),
     ("165", "move_fx_active"): (CORRELATED, "§5.4"),
+    ("165", "position_fade_ms"): (DEVICE, "COV-10"),
     ("165", "page_beam_fx"): (VALIDATED, "F7-04"),
     ("165", "page_color_fx"): (VALIDATED, "F7-01"),
     ("165", "page_move_fx"): (VALIDATED, "F7-03"),

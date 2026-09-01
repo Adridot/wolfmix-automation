@@ -45,7 +45,37 @@ wpj_identities.py corpus/experiments/COV-49/stage0-groupB.wpj
 If S0-4 fails, stop and report: putting a fixture in a second group would then
 be the trigger on its own, which would be a far simpler answer than a session.
 
-## Stage 1 — the session
+## Stage 0 came back dirty — stage 1 is replaced
+
+S0-4 said stop and report if adding the group-B fixture alone dirtied the file.
+It did: record 120 came back **79** entries against the 80 the patch justifies,
+with the **first entry missing and the whole table shifted left by one**. There
+is a live defect now, so chasing a hypothetical session is the wrong next move.
+
+**Two variables separate this from rung 1's clean add**, and the sheet owns
+both: rung 1 added to **group A** on an identity `display_order`, this added to
+**group B** on the non-identity order rung 3 left behind. The mechanism worth
+testing rather than guessing: record 120 is laid out in ascending **DMX
+address** order (COV-16), so a writer that walks the **display** order to emit
+it would misplace exactly one block boundary — which is what a single dropped
+entry at the head looks like.
+
+### Stage 1′ — the discriminator, one change
+
+Restore the display order to the identity: move the last fixture in the list
+back to the front, so `display_order` returns to ascending. One move, one save.
+
+| # | Prediction | p |
+|---|---|---|
+| T1 | record 120 comes back to **80** entries with the leading `127 127` restored, and the anomaly clears | 0.5 |
+| T2 | it stays at 79, or loses another. Then the **second group** is the variable, not the order, and the next change is a fixture added to group B on an identity order | 0.35 |
+| T3 | it comes back to 80 but the values are still shifted — the count repaired, the content not. That is the worst of the three and the one a counter-only check would miss | 0.15 |
+
+Whatever it says, this is the first defect **reproduced on a project the device
+wrote from nothing**, and that is the thing worth reporting to the manufacturer
+regardless of which of the two variables carries it.
+
+## The session, kept for later
 
 **One visit to `FIXTURE SETUP`, no save in between**, then **one** save:
 

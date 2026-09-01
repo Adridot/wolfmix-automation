@@ -1230,9 +1230,19 @@ entry as `105[e].f6`: 817/817 fixture rows agree across 45 files, checked by
 
 **[observed]** The 7th byte of `f4` is `0x30` or `0x38` — a per-project constant
 replicated on all 9 items. It flipped `0x30` → `0x38` **within one project** when
-the device added a preset (F30-04), so it tracks something the device writes;
-what, is open. An earlier reading tied it to record 151 being populated: that is
-withdrawn, since 15 of the 24 files at `0x30` carry a populated 151.
+the device added a preset (F30-04). **That attribution is refuted (COV-22):** a
+later save created a preset and left the byte alone, and a second project runs
+`0x38` → `0x30` → `0x38` with its preset count constant at 82 — so it moves
+without a preset being added, and it moves **back**, which no one-way flag does.
+An earlier reading tied it to record 151 being populated: also withdrawn, since
+15 of the 24 files at `0x30` carry a populated 151.
+
+What is new is a **coupling**: it moves in the same save as the shared tail of
+record 161 (COV-21), in both projects where more than one version exists. The
+pairing is not a bijection — `0x38` appears against tails 160 and 176 — so the
+two travel together without being derivable from one another. Two unattributed
+fields that move together are still two unattributed fields, but they are now
+one lead instead of two.
 
 ### 7.3 Record 130 is the DMX IN mapping table — **[device-confirmed]**
 

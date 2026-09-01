@@ -204,6 +204,11 @@ SCHEMAS = {
     # complete permutation of 0…n−1, checked as an identity on every corpus
     # file. `f5` = 65535 on all 1381 fixture rows and `f9` is enumerative;
     # neither has a reading, so neither has a name.
+    # The ITEMS' `f6`/`f7` are not per-fixture data: they are uniform within a
+    # file when present, and a save **removes** them as readily as another save
+    # adds them — COV-42 watched all four rows lose `177`/`124` on a save that
+    # touched nothing about the patch. A writer must not synthesise them.
+    # `f2` absent is DMX address **0**, not an unpatched fixture (COV-41).
     115: {1: _COUNT, 5: ("fixtures", {2: ("dmx_address", "v"),
                                       3: ("profile", "v"), 4: ("group", "v")}),
           6: ("display_order", "hex")},

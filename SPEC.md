@@ -1596,6 +1596,18 @@ single entry under a consistent `A1:0+1` — is what would test it.
 five of the operator's six detached fixtures. A writer must not assume its own
 output survives an editing session unchanged, and a reader must clamp.
 
+**But the layer itself is sound — [device-confirmed] (COV-42).** On a project
+created fresh on the panel, detaching one fixture with `PAN OFFSET` at 40 % and
+saving writes exactly what it should: record 151 gains one entry at
+`pan_offset` **45874** (`+39.998 %`), the slot gains `entry_count_151 = 1`, and
+the file comes back **20/20 identities, 0 anomalies**. The damage above belongs
+to one project and one editing session, not to the feature.
+
+Two details a writer needs from that measurement: **an untouched offset stores
+32767**, not 32768 — that is what the device writes where the screen prints
+`0 %` — and the panel numbers fixtures **from 1** over `151.f1`, which stored
+`1` for the screen's second head.
+
 | Field | Screen | Encoding |
 |---|---|---|
 | `151.f1` | — | **fixture index**, absent = 0 |

@@ -241,19 +241,33 @@ SCHEMAS = {
     # channels were predicted from the file and read back off the live frame
     # exactly, and they stay put while an effect moves everything around them
     # (COV-16). The table is constant per profile.
-    # `f4` (1 everywhere) and `f5` (1 or 2, and only on the moving heads) keep
-    # neutral keys: `f5` is 1 on offsets 0-1 and 2 on offsets 2-3, and a shape
-    # is not a reading.
-    # `f6` is `dmx_channel`: an absolute DMX channel inside its own fixture's
-    # span — a head at address 16 carries 18, 19, 16, 17 and the next, at 32,
-    # carries 34, 35, 32, 33 (COV-50, device-confirmed). The name says that and
-    # only that. **It is not this entry's own slot**: the entries are
-    # positional in ascending DMX address (COV-16) and the quadruple is a
-    # permutation of its block, so *which* channel of the block an entry names
-    # is a second question and it is not read. The out-of-span cases are
-    # checked as an anomaly rather than an identity — every one of them belongs
-    # to a capture where a device save dropped an entry at the head of the
-    # record (COV-53), which is what the anomaly exists to see.
+    # `f4` is 1 everywhere and keeps a neutral key. `f5` and `f6` are the
+    # **16-bit pairing**, and they only ever appear together (COV-57):
+    # `partner_channel` is the absolute DMX channel of the other half of this
+    # entry's 16-bit pair, and `pair_half` says which half this entry is — 1
+    # the principal (coarse), 2 the fine. The relation is an **involution**:
+    # partner(partner(c)) == c with opposite halves, exact on every clean file,
+    # and `pair_half` follows the direction with no exception — 1 whenever the
+    # partner sits above, 2 whenever it sits below. An absent `partner_channel`
+    # is channel **0**, the same rule `115.dmx_address` follows (COV-41).
+    # Cross-record, and it is what makes this more than a shape: on the fine
+    # half, `partner_channel − dmx_address` equals `110.principal_channel`,
+    # 1392 of 1392 on the clean corpus — which is also why COV-03 saw `f6`
+    # match that field on 954 of 2081 entries and could not name it, since only
+    # the fine halves match.
+    # This **supersedes** COV-50's reading of `f6` as "an absolute DMX channel
+    # inside its own fixture's span", which is still true and was device-
+    # confirmed: a head at address 16 carries 18, 19, 16, 17, and the order
+    # COV-50 declined to read is the pairing — 16 and 17 are Pan and Tilt
+    # pointing at their fine halves, 18 and 19 are the fine halves pointing
+    # back. The sharper name carries the **weaker** status on purpose.
+    # The corpus denominator is three distinct block patterns, not 2849
+    # entries, and the two topologies differ — a 16-channel head pairs 0↔2 and
+    # 1↔3, an 8-channel fixture pairs 0↔1 and 2↔3 — which is what a rule
+    # fitted to one of them would fail.
+    # Violations are an anomaly and not an identity: every one belongs to a
+    # capture where a device save dropped an entry at the head of the record
+    # (COV-53), which is what the anomaly exists to see.
     # The record's own `f4` is `occupancy`: a **run-length encoded map of the
     # 512 DMX channels**. One varint per run, in channel order — under 128 it
     # is a free run of that length, at or above 128 an occupied run of v − 128.
@@ -270,7 +284,8 @@ SCHEMAS = {
     # COV-53 defect it is short by one. See COV-55.
     120: {1: _COUNT, 4: ("occupancy", "packed"),
           5: ("channels", {1: ("value", "v"),
-                           6: ("dmx_channel", "v")})},                      # an empty {} entry = `2a 00` = all zero
+                           5: ("pair_half", "v"),
+                           6: ("partner_channel", "v")})},                  # an empty {} entry = `2a 00` = all zero
     # 125: the nine group slots. `f4` is read in two pieces, which is why it is
     # a split and not one name: bytes 0-5 are the little-endian **profile
     # mask**, and the identity `groupe_fixture` checks `stored ⊇ derived` on it

@@ -927,22 +927,42 @@ def _anomalie_120_alignement(w):
     record's **count** by appending an entry at the end while leaving the head
     missing, so the length matched the patch and every block still carried the
     next channel's data. A counter is not an alignment."""
-    fx, prof = _items(w, 115), _items(w, 116)
+    fx, prof, c110 = _items(w, 115), _items(w, 116), _items(w, 110)
     try:
         ch = _items(w, 120)
     except KeyError:
         return
-    pos = 0
+    pos, par_canal = 0, {}
     for i in sorted(range(len(fx)), key=lambda k: fx[k].get("f2", 0)):
         pid = fx[i].get("f3", 0)
         if pid >= len(prof):
             return
         n, a = prof[pid].get("f2", 0), fx[i].get("f2", 0)
+        depart = prof[pid].get("f3", 0)
         for k, e in enumerate(ch[pos:pos + n]):
             if "f6" in e and not a <= e["f6"] < a + n:
                 return (f"120[{pos + k}] carries channel {e['f6']}, outside "
                         f"[{a}, {a + n}) — the block of the fixture at {a}")
+            par_canal[a + k] = (e, a, depart + k)
         pos += n
+    # The 16-bit pairing (COV-57), which sees the same shift from the other
+    # side: an entry's partner must point back at it, carry the opposite half,
+    # and sit on the side `pair_half` says it does.
+    for c, (e, a, ci) in par_canal.items():
+        if "f5" not in e:
+            continue
+        d = e.get("f6", 0)                       # absent is channel 0 (COV-41)
+        if (e["f5"] == 1) != (d > c):
+            return (f"120: channel {c} calls itself half {e['f5']} with its "
+                    f"partner at {d}")
+        autre = par_canal.get(d)
+        if autre is None or autre[0].get("f6", 0) != c \
+                or {e["f5"], autre[0].get("f5")} != {1, 2}:
+            return (f"120: channel {c} pairs with {d}, which does not pair back")
+        if e["f5"] == 2 and ci < len(c110) \
+                and d - a != c110[ci].get("f5", 0):
+            return (f"120: the fine channel {c} names principal {d - a}, "
+                    f"where record 110 says {c110[ci].get('f5', 0)}")
 
 
 # Equalities a **well-formed** project satisfies and the identities above no

@@ -1249,14 +1249,34 @@ are what pins `115.f2` to a real DMX patch.
   patch does not justify (237–242), and the four captures of the COV-53 defect
   are short by one.
 
-  Per entry, `f4` is 1 everywhere and `f5` is 1 or 2 — a shape, not a reading.
-  **`f6` is `dmx_channel`, an absolute DMX channel inside its own fixture's
-  span — [device-confirmed] (COV-50)**: a head at address 16 carries 18, 19,
-  16, 17 and the next, at 32, carries 34, 35, 32, 33, on 2731 of the corpus's
-  2762 entries, every exception belonging to a capture of the COV-53 defect.
-  The name says that and no more — the entries are positional in ascending DMX
-  address, so *which* channel of its own block an entry names is a second
-  question and it is not read.
+  Per entry, `f4` is 1 everywhere and keeps a neutral key. **`f5` and `f6` are
+  the 16-bit pairing — [correlated] (COV-57).** They appear only together:
+  `f6` is the absolute DMX channel of the **other half** of this entry's 16-bit
+  pair, and `f5` says which half this entry is — **1** the principal (coarse),
+  **2** the fine. The relation is an **involution** — the partner points back
+  and carries the opposite half — exact on every clean file, and `f5` follows
+  the direction with no exception at all: 1 whenever the partner sits above,
+  2 whenever it sits below. An absent `f6` is channel **0**, the rule
+  `115.dmx_address` follows (COV-41).
+
+  Cross-record, and it is what lifts this off a shape: on the **fine** half,
+  `f6 − dmx_address` equals `110.principal_channel`, 1392 of 1392 on the clean
+  corpus — which is also why COV-03 saw `f6` match that field on 954 of 2081
+  entries and rightly refused to name it, since only the fine halves match.
+
+  This **supersedes** COV-50's reading of `f6` as "an absolute DMX channel
+  inside its own fixture's span", which stays true and stays device-confirmed:
+  a head at address 16 carries 18, 19, 16, 17, and the intra-block order COV-50
+  declined to read **is** the pairing — 16 and 17 are Pan and Tilt pointing at
+  their fine halves, 18 and 19 the fine halves pointing back. The sharper name
+  carries the weaker status, which is the right way round.
+
+  **Count the denominator, not the entries.** The 2849 paired entries are
+  **three** distinct block patterns replicated, and the two topologies differ —
+  a 16-channel head pairs 0↔2 and 1↔3, an 8- or 14-channel fixture pairs 0↔1
+  and 2↔3 — so a rule fitted to one of them fails the other, and this one does
+  not. A fourth profile with a 16-bit pair at a new offset is what would move
+  it up.
 
 **Refuted**: record 115 does *not* have a fixed 20 slots (10/15/20/22 across the
 four rigs, always `max(105.f5) + 1`); the "20" in earlier notes was a

@@ -168,7 +168,11 @@ PROOF = {
 
     ("120", "channels"): (CORRELATED, "§7"),
     ("120", "value"): (DEVICE, "COV-16"),
-    ("120", "dmx_channel"): (DEVICE, "COV-50"),
+    # COV-50 device-confirmed a weaker reading of the same bytes — "a DMX
+    # channel inside the fixture's span". `partner_channel` says which one,
+    # and that is `correlated`: the sharper name carries the weaker status.
+    ("120", "partner_channel"): (CORRELATED, "COV-57"),
+    ("120", "pair_half"): (CORRELATED, "COV-57"),
     ("120", "occupancy"): (VALIDATED, "COV-55"),
 
     ("125", "groups"): (CORRELATED, "§7.4"),

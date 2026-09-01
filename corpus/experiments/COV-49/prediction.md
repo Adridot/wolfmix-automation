@@ -62,8 +62,17 @@ entry at the head looks like.
 
 ### Stage 1′ — the discriminator, one change
 
-Restore the display order to the identity: move the last fixture in the list
-back to the front, so `display_order` returns to ascending. One move, one save.
+Restore the display order to the identity. **Not the last fixture** — that is
+the group-B head at panel DMX 81, and moving it to the front would give
+`0401020300`, further from the identity than the state we are in. The list
+reads `33, 49, 65, 17, 81` and the identity is `17, 33, 49, 65, 81`, so exactly
+one head is out of place:
+
+**move panel DMX 17 from position 4 back to position 1.** One move, one save.
+
+It is also the head carrying the 40 %, which makes record 151 a second
+observable for free: `151.f1` must stay **0**, since it indexes record 115 and
+a display move does not touch that (COV-47).
 
 | # | Prediction | p |
 |---|---|---|

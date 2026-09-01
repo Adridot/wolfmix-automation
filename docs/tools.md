@@ -165,13 +165,30 @@ python3 tools/wpj_coverage.py --corpus      # the aggregate, biggest gaps first
 python3 tools/wpj_coverage.py               # self-check, part of `make check`
 ```
 
-Three buckets whose sum is asserted to be the file, byte for byte:
+Four buckets whose sum is asserted to be the file, byte for byte:
 
 | Bucket | What lands there |
 |---|---|
 | `read` | a field a `wpj_codec.SCHEMAS` entry **names**, tag and length included, plus the container bytes §2 and §9 identify |
-| `partial` | a field inside a schema'd record that no schema names, and the prefix spans §9 records as constants without saying what they say |
+| `inert` | a field with no name that carries **one value in the whole corpus**, declared in `INERT_FIELDS` with that value |
+| `partial` | a field inside a schema'd record that no schema names and that is not inert — it varies, and nothing reads it |
 | `unknown` | the payload of a record with no schema, and any record whose protobuf does not parse |
+
+**`read` and `inert` are printed separately and never added.** `read` says what
+a field means; `inert` says only that the field never says anything different,
+which is a statement about the *corpus* and not about the field — exactly what
+naming one `constant_1` would smuggle in. The difference is that this one is
+checked: the declared value is verified on every file, and a second value
+raises `InertBroken` and stops the run rather than quietly widening the bucket.
+`116.profiles.f6` is 1 on ninety occurrences and **3** on one; it is not in the
+table, and that is the line the table draws. "100 %" here would mean
+`read + inert = 100` with nothing partial and nothing unknown.
+
+A field whose bytes are understood in **pieces** is declared as a split in the
+schema — `("split", ((6, "profile_mask"), (1, "f4b6")))` on `125.f4` — and each
+piece is attributed on its own: six bytes `read`, one `partial`. Inside a split
+it is `PROOF` and not the schema that licenses `read`, so a piece named without
+a ledger id undercounts instead of lying.
 
 Before this existed, "the format is mostly decoded" was an opinion. It is now a
 number the gate recomputes on whatever corpus is present.

@@ -135,6 +135,11 @@ a finding the ledger has taken back.
    `wpj_codec.SCHEMAS` / `PASSTHROUGH` and let `make check` tell you which
    documents now lie: figures marked `<!--count:…-->` are checked against the
    code, never trusted.
+   If what you found is that a field **never varies**, that is not a name and
+   it does not go in a schema. Declare it in `wpj_coverage.INERT_FIELDS` with
+   its value: the gate then verifies that value on every file and stops the run
+   the day a second one appears, which is trap 1 armed instead of suffered.
+   Two values is not one — `116.profiles.f6` and `102.f11` stay out.
 5. `make check` must still pass.
 
 A refutation is a result. `research/` contains several, and they are written up

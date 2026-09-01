@@ -21,6 +21,18 @@ OPEN_FLAGS = b"\x00\x00\x00\x00\x00\x01"      # what ANCHOR matches on
 OTHER_FLAGS = b"\x00\x00\x00\x00\x00\x02"
 
 
+def prefix_bytes():
+    """The 44 bytes 20-63, with the four §9 constants where §9 puts them.
+
+    `tools/wpj_coverage.py` declares those four spans inert and checks them on
+    every file, so a test that feeds it zeros is testing the wrong refusal."""
+    out = bytearray(BODY_OFF - 20)
+    out[16:20] = bytes.fromhex("152b10c0")          # file offset 36
+    out[28:30] = bytes.fromhex("01f9")              # 48
+    out[32:44] = bytes.fromhex("02bee81ca26ccb546dc7b6ec")   # 52
+    return bytes(out)
+
+
 def project_bytes(records=((101, b"\x0a\x04demo"),), prefix=None):
     """A well-formed variant-A file: SHA-1 header, root container, records."""
     inner = b"".join(struct.pack("<IH", len(p), t) + p for t, p in records)

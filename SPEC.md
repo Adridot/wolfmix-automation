@@ -180,19 +180,31 @@ counts, it is not the entries present.
 
 ### How much of a file is read — **[correlated]**
 
-`tools/wpj_coverage.py` attributes every byte to a named field, an unnamed one,
-or a schemaless record, and asserts the three sum to the file. Run it; the
-figure below is the corpus this repository was written against and yours will
-differ.
+`tools/wpj_coverage.py` attributes every byte to a named field, an inert one, an
+unnamed one, or a schemaless record, and asserts the four sum to the file. Run
+it; the figure below is the corpus this repository was written against and
+yours will differ.
 
 | | corpus |
 |---|---|
-| **read** — a field a codec schema names | **87.6 %** |
-| **partial** — a field inside a schema'd record that nothing names | 10.6 % |
-| **unknown** — a record with no schema (161 alone) | 1.8 % |
+| **read** — a field a codec schema names | **92.8 %** |
+| **inert** — no name, and one value in the whole corpus | 4.2 % |
+| **partial** — a field inside a schema'd record that varies and that nothing names | 1.1 % |
+| **unknown** — a record with no schema (161 alone) | 2.0 % |
 
-Of the file, 48.4 % is named by a **device-confirmed** reading, 26.6 % by a
-`correlated` one and 12.7 % by a `validated` one; each name carries a ledger id
+**`read` and `inert` are not added, and the distinction is the point.** `read`
+says what a field means. `inert` says only that the field never says anything
+different — a statement about the *corpus*, not about the field, and exactly
+what calling one `constant_1` would smuggle in as a name. What makes it worth
+recording anyway is that it is **checked**: each entry declares its value, the
+value is verified on every file, and a second one stops the run instead of
+widening the bucket. `116.profiles.f6` is 1 on ninety occurrences and **3** on
+one, and `102.f11` is 0 and 100; neither is in the table. So "100 %" here would
+mean `read + inert = 100` with nothing partial and nothing unknown, which is a
+weaker claim than it sounds like and is stated that way on purpose.
+
+Of the file, 54.0 % is named by a **device-confirmed** reading, 26.8 % by a
+`correlated` one and 11.9 % by a `validated` one; each name carries a ledger id
 the tool refuses to leave dangling. Read is a claim about *names*, not about
 *measurements*, which is why the split by status is printed next to it and why
 a field promoted without evidence fails the gate instead of raising the number

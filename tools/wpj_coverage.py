@@ -1,19 +1,32 @@
 #!/usr/bin/env python3
 """Byte coverage of a variant-A `.wpj`: how much of the file a name explains.
 
-Three buckets, and their sum is the file — that assertion is the whole point:
+Four buckets, and their sum is the file — that assertion is the whole point:
 
   read     a field the codec schema NAMES (its tag, its length prefix and its
            payload), plus the container bytes §2/§9 identifies
-  partial  a field present inside a schema'd record that no schema names, and
-           the prefix bytes §9 records as constants without saying what they say
+  inert    a field with no name that carries ONE value in the whole corpus,
+           declared in `INERT_FIELDS` with that value
+  partial  a field present inside a schema'd record that no schema names and
+           that is not inert — it varies, and nothing reads it
   unknown  the payload of a record with no schema at all, and any record whose
            protobuf does not parse
 
-"100 % read" stops being an opinion once it is this number. Note what the
-number does NOT say: it counts bytes a name covers, not bytes a name has been
-*proved* to cover. Cross it with `tools/wpj_evidence.py` before believing it —
-a named field with no ledger entry is worse than an unknown one.
+`read` and `inert` are printed **separately and never added**, because they are
+not the same claim. `read` says what a field means. `inert` says only that the
+field never says anything different — a statement about the *corpus*, not the
+field, and exactly the statement `constant_1` would smuggle in as a name. The
+difference is that this one is checked: a declared value is verified on every
+file, and a second value raises `InertBroken` instead of quietly widening the
+bucket. `116.profiles.f6` (1 and, once, 3) and `102.f11` (0 and 100) are not in
+the table for that reason — one sample is all it takes to turn a "constant"
+into an "almost constant", and this is where that gets caught.
+
+So "100 %" here means `read + inert = 100`, `partial = 0`, `unknown = 0`, and
+it means less than it sounds like. What the read number does NOT say: it counts
+bytes a name covers, not bytes a name has been *proved* to cover. Cross it with
+`tools/wpj_evidence.py` before believing it — a named field with no ledger
+entry is worse than an unknown one.
 
 Rules worth knowing before reading a percentage:
 
@@ -35,18 +48,28 @@ import wpj_codec
 import wpj_wire
 import wpjlib
 
-READ, PARTIAL, UNKNOWN = "read", "partial", "unknown"
+READ, INERT, PARTIAL, UNKNOWN = "read", "inert", "partial", "unknown"
 
-# §9: what the 44 prefix bytes are. A span the section reports as a constant
-# with no meaning is `partial` — reproducible is not the same as understood.
+
+class InertBroken(Exception):
+    """A field declared inert carries a second value. NOT a ValueError: the
+    corpus walk catches those to skip variants B and C, and this must not be
+    skipped — it is the whole point of declaring the value."""
+
+
+# §9: what the 44 prefix bytes are. Offsets are **absolute in the file**, as
+# §9's own table gives them; bytes 0-19 are the SHA-1 and belong to the
+# container. A span the section reports as a constant with no meaning is
+# `inert` — reproducible is not the same as understood, and the value is
+# checked on every file rather than taken from the section.
 _PREFIX = [
-    (0, 16, READ, "prefix.project_uuid"),
-    (16, 4, PARTIAL, "prefix.magic"),
-    (20, 8, READ, "prefix.version"),
-    (28, 2, PARTIAL, "prefix.const_48_49"),
-    (30, 1, READ, "prefix.schema_version"),
-    (31, 1, PARTIAL, "prefix.const_51"),
-    (32, 12, PARTIAL, "prefix.const_52_63"),
+    (20, 16, READ, "prefix.project_uuid"),
+    (36, 4, INERT, "prefix.magic"),
+    (40, 8, READ, "prefix.version"),
+    (48, 2, INERT, "prefix.const_48_49"),
+    (50, 1, READ, "prefix.schema_version"),
+    (51, 1, INERT, "prefix.const_51"),
+    (52, 12, INERT, "prefix.const_52_63"),
 ]
 
 
@@ -146,6 +169,11 @@ PROOF = {
 
     ("125", "groups"): (CORRELATED, "§7.4"),
     ("125", "name"): (CORRELATED, "§7.4"),
+    # The split: 6 of the 7 bytes are the profile mask, and byte 6 is not.
+    # `mask` names the field COV-26 measured; `f4b6` stays neutral and lands
+    # in `partial`, which is what the split is for.
+    ("125", "mask"): (DEVICE, "COV-26"),
+    ("125", "profile_mask"): (DEVICE, "COV-26"),
 
     ("130", "mappings"): (DEVICE, "MAP-02"),
     ("130", "instance"): (DEVICE, "MAP-04"),
@@ -246,6 +274,67 @@ PROOF = {
 }
 
 
+# --- what licenses `inert` ---------------------------------------------------
+#
+# path -> (the only value ever seen, the occurrences counted the day it was
+# declared). Keyed by the **full path**, not by `_leaf` as PROOF is, and the
+# difference is deliberate: a reading is shared by every path that ends in the
+# same leaf, a constant is a property of one path and one only. `120.f4` and
+# `120.channels.f4` collide under `_leaf` and are not the same field — one
+# varies, the other does not.
+#
+# The VALUE is asserted on every file. The count is historical, like SPEC's
+# "45/45" figures: it says what was checked when the line was written, never
+# what your corpus holds, and a small one is a warning in plain sight
+# (`115.fixtures.f1` rests on five occurrences).
+#
+# Varints are the integer, length-delimited and fixed fields the payload hex.
+# What is NOT here, and why the table has a point: `116.profiles.f6` is 1 on 90
+# occurrences and **3** on one, and `102.f11` is 0 and 100. Both stay `partial`.
+INERT_FIELDS = {
+    "prefix.magic": ("152b10c0", 90),
+    "prefix.const_48_49": ("01f9", 90),
+    "prefix.const_51": ("00", 90),
+    "prefix.const_52_63": ("02bee81ca26ccb546dc7b6ec", 90),
+
+    "165.presets.f13": ("", 26394),      # a zero-length packed array, six per
+                                         # preset: 1.9 % of the corpus in pure
+                                         # protobuf framing
+    "120.channels.f4": (1, 9352),
+    "165.presets.f26": ("00", 4399),     # a one-element array holding a zero
+    "165.presets.f9": (1, 4399),
+    "115.fixtures.f5": (65535, 1633),    # a sentinel, on the face of it
+    "130.mappings.f8": (1, 830),
+    "130.mappings.f7": (1, 746),
+    "110.channels.f1": (1, 680),
+    "160.macros.f2": (1, 564),
+    "116.profiles.f1": (1, 272),
+    "125.groups.f1": (1, 265),
+    "116.profiles.f4": (1, 263),
+    "125.groups.f2": (1, 256),
+    "116.profiles.f7": (1, 171),
+    "125.groups.f7": (1, 165),
+    "116.profiles.f5": (1, 87),
+    "125.groups.f5": (1, 81),
+    "160.macros.f3": (1, 78),
+    "116.profiles.f13": (1, 18),
+    "115.fixtures.f1": (1, 5),
+}
+
+
+def _check_inert(path, value):
+    """INERT if the path is declared and carries its value, PARTIAL if it is
+    not declared. A declared path carrying anything else stops the run."""
+    declared = INERT_FIELDS.get(path)
+    if declared is None:
+        return PARTIAL
+    if value != declared[0]:
+        raise InertBroken(
+            f"{path} is declared inert at {declared[0]!r} and carries "
+            f"{value!r}: it is not inert, remove it from INERT_FIELDS")
+    return INERT
+
+
 def _leaf(path):
     """The PROOF key a coverage path answers to."""
     if path.startswith(("container.", "prefix.")):
@@ -308,6 +397,22 @@ def _tally(acc, bucket, path, n):
         acc[(bucket, path)] = acc.get((bucket, path), 0) + n
 
 
+def _walk_split(chunk, parts, path, acc):
+    """A split field's payload, part by part.
+
+    The one place where PROOF and not the schema decides `read`: a part the
+    schema names and the ledger does not is counted `partial`. That
+    undercounts rather than lies, which is the direction to fail in — and it
+    is what lets one field carry a measured half and an unread one without
+    either borrowing the other's status."""
+    if len(chunk) != sum(n for n, _ in parts):
+        _tally(acc, PARTIAL, path + ".<unsplit>", len(chunk))
+        return
+    for n, part in parts:
+        sub = f"{path}.{part}"
+        _tally(acc, READ if proof_of(sub) else PARTIAL, sub, n)
+
+
 def _walk(buf, schema, path, acc):
     """Attribute every byte of a protobuf message. Raises WireError if it is
     not one — the caller then charges the whole payload to `unknown`."""
@@ -321,29 +426,35 @@ def _walk(buf, schema, path, acc):
         named = f in schema
         name, kind = schema.get(f, (f"f{f}", None))
         sub = f"{path}.{name}"
+        value = None                     # only read for the inert check below
         if wt == 0:
-            _, i = wpj_wire.read_varint(buf, i)
+            value, i = wpj_wire.read_varint(buf, i)
         elif wt == 2:
             ln, i = wpj_wire.read_varint(buf, i)
             if i + ln > len(buf):
                 raise wpj_wire.WireError("length past the end")
-            if isinstance(kind, dict):
-                # the tag and length belong to the sub-message field itself;
-                # its content is attributed field by field below
+            if isinstance(kind, dict) or (isinstance(kind, tuple)
+                                          and kind[0] == "split"):
+                # the tag and length belong to the field itself; its content is
+                # attributed piece by piece below
                 _tally(acc, READ, sub, i - start)
-                _walk(buf[i:i + ln], kind, sub, acc)
+                if isinstance(kind, dict):
+                    _walk(buf[i:i + ln], kind, sub, acc)
+                else:
+                    _walk_split(buf[i:i + ln], kind[1], sub, acc)
                 i += ln
                 continue
+            value = buf[i:i + ln].hex()
             i += ln
         elif wt == 5:
-            i += 4
+            value = buf[i:i + 4].hex(); i += 4
         elif wt == 1:
-            i += 8
+            value = buf[i:i + 8].hex(); i += 8
         else:
             raise wpj_wire.WireError(f"wire type {wt}")
         if i > len(buf):
             raise wpj_wire.WireError("field past the end")
-        _tally(acc, READ if named else PARTIAL, sub, i - start)
+        _tally(acc, READ if named else _check_inert(sub, value), sub, i - start)
 
 
 def coverage(data, source="<bytes>"):
@@ -352,6 +463,8 @@ def coverage(data, source="<bytes>"):
     acc = {}
     _tally(acc, READ, "container.sha1", 20)
     for off, n, bucket, name in _PREFIX:
+        if bucket is INERT:
+            bucket = _check_inert(name, data[off:off + n].hex())
         _tally(acc, bucket, name, n)
     _tally(acc, READ, "container.root_header", wpj_wire.ROOT_HEADER)
     for typ, payload in w.records:
@@ -373,7 +486,7 @@ def coverage(data, source="<bytes>"):
 
 
 def totals(acc):
-    out = {READ: 0, PARTIAL: 0, UNKNOWN: 0}
+    out = {READ: 0, INERT: 0, PARTIAL: 0, UNKNOWN: 0}
     for (bucket, _), n in acc.items():
         out[bucket] += n
     return out
@@ -383,14 +496,22 @@ def report(acc, title, top=25):
     t = totals(acc)
     total = sum(t.values())
     print(f"{title}: {total} bytes")
-    for bucket in (READ, PARTIAL, UNKNOWN):
+    for bucket in (READ, INERT, PARTIAL, UNKNOWN):
         print(f"  {bucket:<8} {t[bucket]:>9}  {100.0 * t[bucket] / total:5.1f} %")
     for status, n in sorted(by_status(acc).items(), key=lambda x: -x[1]):
-        print(f"    of which {100.0 * n / total:5.1f} %  {status}")
-    gaps = sorted(((n, b, p) for (b, p), n in acc.items() if b != READ),
-                  reverse=True)
+        print(f"    of which {100.0 * n / total:5.1f} %  read, {status}")
+    inert = sorted(((n, p) for (b, p), n in acc.items() if b is INERT),
+                   reverse=True)
+    if inert:
+        print("  inert — one value, no name, checked on every file:")
+        for n, path in inert:
+            value, occ = INERT_FIELDS[path]
+            print(f"    {n:>9}  {100.0 * n / total:5.2f} %  {path:<22} "
+                  f"= {value!r}  ({occ} occurrences when declared)")
+    gaps = sorted(((n, b, p) for (b, p), n in acc.items()
+                   if b in (PARTIAL, UNKNOWN)), reverse=True)
     if gaps:
-        print(f"  what is not read, by weight (top {top}):")
+        print(f"  neither read nor inert, by weight (top {top}):")
         for n, bucket, path in gaps[:top]:
             print(f"    {n:>9}  {100.0 * n / total:5.2f} %  {bucket:<7} {path}")
 
@@ -418,13 +539,24 @@ def demo():
                          + ", ".join(f"{p} ({n} bytes)" for p, n in orphans))
     bad = dangling_evidence()
     assert not bad, "evidence that resolves to nothing: " + str(bad)
+    named = {_leaf(p) for (b, p), _ in acc.items() if b is READ}
+    both = [p for p in INERT_FIELDS if _leaf(p) in named]
+    assert not both, "declared inert AND named: " + ", ".join(both)
+    unseen = sorted(set(INERT_FIELDS) - {p for (b, p), _ in acc.items()
+                                         if b is INERT})
     t = totals(acc)
     total = sum(t.values())
     statuses = by_status(acc)
     print(f"coverage: {100.0 * t[READ] / total:.1f} % read, "
+          f"{100.0 * t[INERT] / total:.1f} % inert, "
           f"{100.0 * t[PARTIAL] / total:.1f} % partial, "
           f"{100.0 * t[UNKNOWN] / total:.1f} % unknown "
           f"on {files} variant-A files ({total} bytes)")
+    print("  read and inert are not added: the first says what a field means, "
+          "the second only that it never varies")
+    if unseen:
+        print(f"  {len(unseen)} declared inert and absent from this corpus, "
+              f"so unverified here: " + ", ".join(unseen))
     print("  read, by the status of what names it: "
           + ", ".join(f"{100.0 * n / total:.1f} % {s}"
                       for s, n in sorted(statuses.items(), key=lambda x: -x[1])))

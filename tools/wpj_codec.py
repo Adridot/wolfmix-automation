@@ -23,7 +23,12 @@ import wpjlib
 
 # Schemas: field → (name, kind). kind: "v" varint, "str" UTF-8, "hex" raw
 # bytes, "uuid" 16 bytes as a dashed string, "packed" = packed varints (a
-# list of ints), dict = sub-message (repeated for lists of entries).
+# list of ints), dict = sub-message (repeated for lists of entries), and
+# ("split", ((n, part), …)) = a fixed-width blob cut into little-endian
+# integers, one per named part. A split exists for one reason: a field whose
+# bytes are understood in *pieces* and not as a whole. Its value is a dict of
+# the parts, and a payload whose length is not the sum falls back to
+# {"hex": …} like any other blob, so the round trip cannot be lost.
 # 105: f4/f7 delimit the slice of record 106 that belongs to the entry, NOT a
 # DMX address (the address is 115.f2). See the registry, "record 105".
 # f6 = the group index (0-7 = A-H, 8 = the effects slot), redundant with
@@ -214,7 +219,17 @@ SCHEMAS = {
     # 2 on offsets 2-3, `f6` runs in consecutive quadruples 17 apart between
     # two fixtures of one profile — and a shape is not a reading.
     120: {1: _COUNT, 5: ("channels", {1: ("value", "v")})},                 # an empty {} entry = `2a 00` = all zero
-    125: {1: _COUNT, 5: ("groups", {8: ("name", "str")})},
+    # 125: the nine group slots. `f4` is 7 bytes read in two pieces, which is
+    # why it is a split and not one name: bytes 0-5 are the little-endian
+    # **profile mask**, and the identity `groupe_fixture` checks
+    # `stored ⊇ derived` on it — it accumulates, the firmware ORs a new profile
+    # index in without clearing the stale one, so a reader must not recompute
+    # it (COV-26). Byte 6 is `0x30` or `0x38` and keeps a neutral key: it moves
+    # in the same save as record 161's shared tail, without either deriving
+    # from the other, and COV-22 refuted the preset-count reading it had.
+    125: {1: _COUNT, 5: ("groups", {
+        4: ("mask", ("split", ((6, "profile_mask"), (1, "f4b6")))),
+        8: ("name", "str")})},
     135: {1: _COUNT, 5: ("pads", _PAD)},
     # f2 = the group index 0-7 (A-H), absent for A. SPEC §3.1 retracted the
     # earlier "page" reading in prose on three device readings; the codec
@@ -380,6 +395,23 @@ def remplacante(cle):
     return CLES_RETIREES.get(cle)
 
 
+def _split(chunk, parts):
+    """A fixed-width blob → {part: little-endian int}, or {"hex": …}."""
+    if len(chunk) != sum(n for n, _ in parts):
+        return {"hex": chunk.hex()}
+    out, i = {}, 0
+    for n, nom in parts:
+        out[nom] = int.from_bytes(chunk[i:i + n], "little"); i += n
+    return out
+
+
+def _unsplit(v, parts):
+    """The inverse. Raises rather than truncate — decode() re-checks anyway."""
+    if set(v) != {nom for _, nom in parts}:
+        raise ValueError(f"split: expected {[n for _, n in parts]}, got {list(v)}")
+    return b"".join(int(v[nom]).to_bytes(n, "little") for n, nom in parts)
+
+
 def _decode_msg(buf, schema):
     out, i = {}, 0
     while i < len(buf):
@@ -413,6 +445,8 @@ def _decode_msg(buf, schema):
             elif genre == "uuid":
                 v = str(uuid.UUID(bytes=chunk)) if len(chunk) == 16 \
                     else {"hex": chunk.hex()}
+            elif isinstance(genre, tuple) and genre[0] == "split":
+                v = _split(chunk, genre[1])
             elif isinstance(genre, dict):
                 try:
                     v = _decode_msg(chunk, genre)
@@ -482,6 +516,8 @@ def _emit(f, genre, v):
         pl = bytes.fromhex(v)
     elif genre == "str" or isinstance(v, str):
         pl = v.encode("utf-8")
+    elif isinstance(genre, tuple) and genre[0] == "split":
+        pl = _unsplit(v, genre[1])
     elif isinstance(v, dict):
         pl = _encode_msg(v, genre if isinstance(genre, dict) else {})
     else:

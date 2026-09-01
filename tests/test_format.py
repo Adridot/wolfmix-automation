@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 import wpj_codec
+import wpj_coverage
 import wpj_wire
 import wpjlib
 
@@ -112,6 +113,68 @@ class RefusedOverwrite(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 project.save(target)
             self.assertEqual(target.read_bytes(), before)
+
+
+class InertAndSplit(unittest.TestCase):
+    """The two claims `wpj_coverage` makes about bytes no name explains.
+
+    Corpus-free on purpose: `demo()` proves them on the corpus and abstains
+    without one, and an abstention is exactly where a rotted guard would go
+    unnoticed."""
+
+    def _project(self, typ, payload):
+        return fixtures.project_bytes(records=((typ, payload),),
+                                      prefix=fixtures.prefix_bytes())
+
+    def _record_110(self, f1):
+        """Record 110 with one channel whose f1 carries `f1`."""
+        item = bytes((8, f1))                        # field 1, varint
+        return bytes((8, 1)) + bytes((0x2a, len(item))) + item
+
+    def test_a_declared_inert_field_is_counted_inert(self):
+        acc = wpj_coverage.coverage(self._project(110, self._record_110(1)))
+        self.assertEqual(acc[(wpj_coverage.INERT, "110.channels.f1")], 2)
+        self.assertEqual(wpj_coverage.totals(acc)[wpj_coverage.PARTIAL], 0)
+
+    def test_a_second_value_stops_the_run(self):
+        with self.assertRaises(wpj_coverage.InertBroken):
+            wpj_coverage.coverage(self._project(110, self._record_110(2)))
+
+    def test_inert_broken_is_not_a_valueerror(self):
+        """The corpus walk catches ValueError to skip variants B and C. If this
+        were one, a field that stopped being inert would be skipped in silence
+        — the exact failure the bucket exists to prevent."""
+        self.assertNotIsInstance(wpj_coverage.InertBroken(""), ValueError)
+
+    def test_a_prefix_constant_that_moves_stops_the_run(self):
+        broken = bytearray(fixtures.prefix_bytes())
+        broken[16] ^= 1
+        with self.assertRaises(wpj_coverage.InertBroken):
+            wpj_coverage.coverage(fixtures.project_bytes(prefix=bytes(broken)))
+
+    def test_a_split_round_trips_and_is_attributed_in_pieces(self):
+        blob = bytes.fromhex("0e000000000038")
+        item = bytes((0x22, 7)) + blob               # field 4, 7 bytes
+        payload = bytes((8, 1)) + bytes((0x2a, len(item))) + item
+        decoded = wpj_codec.decode(125, payload)
+        self.assertEqual(decoded["groups"][0]["mask"],
+                         {"profile_mask": 14, "f4b6": 0x38})
+        self.assertEqual(wpj_codec.encode(125, decoded), payload)
+        acc = wpj_coverage.coverage(self._project(125, payload))
+        self.assertEqual(acc[(wpj_coverage.READ,
+                              "125.groups.mask.profile_mask")], 6)
+        self.assertEqual(acc[(wpj_coverage.PARTIAL,
+                              "125.groups.mask.f4b6")], 1)
+
+    def test_a_split_of_the_wrong_length_stays_opaque(self):
+        item = bytes((0x22, 3)) + b"\x01\x02\x03"
+        payload = bytes((8, 1)) + bytes((0x2a, len(item))) + item
+        decoded = wpj_codec.decode(125, payload)
+        self.assertEqual(decoded["groups"][0]["mask"], {"hex": "010203"})
+        self.assertEqual(wpj_codec.encode(125, decoded), payload)
+        acc = wpj_coverage.coverage(self._project(125, payload))
+        self.assertEqual(acc[(wpj_coverage.PARTIAL,
+                              "125.groups.mask.<unsplit>")], 3)
 
 
 if __name__ == "__main__":

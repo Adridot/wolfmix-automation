@@ -618,6 +618,30 @@ def report(acc, title, top=25):
             print(f"    {n:>9}  {100.0 * n / total:5.2f} %  {bucket:<7} {path}")
 
 
+def by_name(acc):
+    """[(bytes, status, citation, key)] for every `read` name, heaviest first.
+
+    The promotion worklist. `read` counts bytes a name covers, not bytes a name
+    has been *proved* to cover, so the useful question is not what is left
+    unread but which names sit on the weakest evidence and how much of the file
+    they carry. Printed rather than frozen in a document, because the answer
+    moves every time something is measured."""
+    poids = {}
+    for (bucket, path), n in acc.items():
+        if bucket != READ:
+            continue
+        key = _leaf(path)
+        poids[key] = poids.get(key, 0) + n
+    ordre = {DEVICE: 0, VALIDATED: 1, CORRELATED: 2, OBSERVED: 3,
+             HYPOTHESIZED: 4}
+    out = []
+    for key, n in poids.items():
+        table = CONTAINER_PROOF if isinstance(key, str) else PROOF
+        status, cite = table[key]
+        out.append((n, status, cite, key))
+    return sorted(out, key=lambda r: (ordre.get(r[1], 9), -r[0]))
+
+
 def _corpus_accumulated():
     acc, files = {}, 0
     for path in wpjlib.corpus_files():
@@ -671,7 +695,27 @@ def main(argv=None):
     p.add_argument("--corpus", action="store_true",
                    help="aggregate over the whole local corpus")
     p.add_argument("--top", type=int, default=25)
+    p.add_argument("--names", action="store_true",
+                   help="every read name by status and weight — the promotion "
+                        "worklist, weakest evidence last")
     args = p.parse_args(argv)
+    if args.names:
+        acc, files = _corpus_accumulated()
+        if not files:
+            wpjlib.pas_de_corpus("wpj_coverage")
+            return 0
+        total = sum(acc.values())
+        noms = by_name(acc)
+        vu = None
+        for n, status, cite, key in noms:
+            if status != vu:
+                vu = status
+                part = sum(r[0] for r in noms if r[1] == status)
+                print(f"\n== {status}: {100.0 * part / total:.1f} % of the "
+                      f"corpus")
+            nom = key if isinstance(key, str) else f"{key[0]}.{key[1]}"
+            print(f"  {n:>8}  {100.0 * n / total:5.2f} %  {nom:<32} {cite}")
+        return 0
     if args.corpus:
         acc, files = _corpus_accumulated()
         if not files:

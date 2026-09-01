@@ -221,7 +221,16 @@ Of the file, 56.6 % is named by a **device-confirmed** reading, 25.1 % by a
 the tool refuses to leave dangling. That split is the number that matters more
 than the total: `read` counts bytes a name covers, not bytes a name has been
 proved to cover, and moving a quarter of the file up one rung is a larger piece
-of work than closing what is left `partial` (COV-54). Read is a claim about *names*, not about
+of work than closing what is left `partial` (COV-54).
+
+`python3 tools/wpj_coverage.py --names` prints that quarter as a **worklist**,
+heaviest and weakest first. It is not reproduced here on purpose — it moves with
+every measurement — but its shape is worth stating once: the heaviest
+`correlated` names cluster in record 165, and **`bpm_division`, `link_order` and
+`speed_source` carry labels cross-referenced from an external project and have
+never been measured on this hardware** (§5, the FX submessage table). That is
+4 % of the corpus standing on trap 2, and FX6-02 already showed what it costs —
+`f2` had carried the name "speed %" for four days and was the fade. Read is a claim about *names*, not about
 *measurements*, which is why the split by status is printed next to it and why
 a field promoted without evidence fails the gate instead of raising the number
 (COV-01).

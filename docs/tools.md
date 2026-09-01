@@ -193,6 +193,7 @@ record the defect. Exit 1 if anything is reported.
 ```bash
 python3 tools/wpj_coverage.py project.wpj   # per-field coverage of one file
 python3 tools/wpj_coverage.py --corpus      # the aggregate, biggest gaps first
+python3 tools/wpj_coverage.py --names       # every read name by status and weight
 python3 tools/wpj_coverage.py               # self-check, part of `make check`
 ```
 
@@ -230,6 +231,17 @@ a status and a ledger id in `PROOF`, the self-check refuses a name that has
 neither, and the report breaks `read` down by status. A field promoted into the
 codec without evidence makes `make check` fail rather than making the percentage
 go up, which is the only thing that keeps the figure worth quoting.
+
+`--names` turns that into a **worklist**: every read name, grouped by the status
+of what names it and sorted by how much of the file it carries, weakest evidence
+last. It is the answer to "what is worth measuring next", and it is printed
+rather than written down because it moves every time something is measured — a
+document stating it would be stale by the following experiment. What it shows
+today is that the heaviest `correlated` names are not scattered: four of the top
+six are inside record 165, and three of those — `bpm_division`, `link_order`,
+`speed_source` — carry enum labels cross-referenced from an external project and
+have **never been measured here** (§5), which is trap 2 sitting in plain sight
+on 4 % of the corpus.
 
 ## `wpj_inspect.py` — variant B/C wire walk
 

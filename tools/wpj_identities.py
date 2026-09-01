@@ -777,6 +777,42 @@ def occupation_120(w):
         f"120.f4: {occupes} channels occupied against {n} entries"
 
 
+def cartes_de_macro_160(w):
+    """160.f7 is a 512-slot run-length map with one slot per targeted fixture.
+
+    The encoding record `120.f4` uses (COV-55): one varint per run, under 128 a
+    free run of that length, at or above 128 an occupied run of `v - 128`. Two
+    things hold on every corpus macro — the runs sum to **512**, and the
+    occupied slots number exactly `len(f1)`, which COV-20 established is one
+    mask per targeted fixture.
+
+    That is the encoding, not the meaning. **What a slot indexes is unread**
+    (COV-56): the two readings the corpus offers — a group of four DMX
+    channels, and a sixteen-channel window per display position — score 86 %
+    of bits and 12 of 30 distinct macros, and a name on either would be
+    COV-17's mistake with a bigger number.
+    """
+    try:
+        macros = _items(w, 160)
+    except KeyError:
+        return
+    for m in macros:
+        f7 = _varints(m.get("f7", {}).get("hex", ""))
+        if not f7:
+            continue
+        total = occupes = 0
+        for v in f7:
+            n = v - 128 if v >= 128 else v
+            total += n
+            if v >= 128:
+                occupes += n
+        assert total == 512, \
+            f"160.f7 on button {m.get('f5')}: the runs cover {total}, not 512"
+        n1 = len(_varints(m.get("f1", {}).get("hex", "")))
+        assert occupes == n1, \
+            f"160.f7 on button {m.get('f5')}: {occupes} slots against {n1} masks"
+
+
 def identifiants_115(w):
     """115.f9 = a per-fixture slot id, distinct within a file.
 
@@ -804,7 +840,8 @@ IDENTITES = (comptes_de_tete, boutons_live_edit, ranges_par_canal, palette_gobo,
               tableaux_par_groupe_165,
               schema_du_prefixe, canal_principal_110, noms_de_preset_bornes,
               flavours_155, carte_dmx_130, masque_fixtures_161,
-              occupation_120, identifiants_115)
+              occupation_120, identifiants_115,
+              cartes_de_macro_160)
 
 
 def _anomalie_comptes(w):

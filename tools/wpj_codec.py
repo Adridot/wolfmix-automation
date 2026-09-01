@@ -355,10 +355,18 @@ SCHEMAS = {
     # order: `popcount(f1) == len(values)` on all 490 corpus macros, no
     # exception. `len(f1)` never exceeds the fixture count, which fits one mask
     # per targeted fixture — consistent, not measured, so the name says what
-    # the identity says and no more. `f7` stays neutral: its length is
-    # `2 × len(f1) + 4` on 489 of 490, which is a shape, not a reading.
+    # the identity says and no more.
+    # `f7` keeps its NEUTRAL key and gains a wire kind, the same move record
+    # 161's `f3` got: it is the **run-length map** record `120.f4` uses — under
+    # 128 a free run, at or above 128 an occupied run of `v − 128` — its runs
+    # summing to exactly 512 and its occupied slots numbering exactly `len(f1)`
+    # on all 594 corpus macros, one slot per targeted fixture, the reading
+    # re-encoding the stored bytes on all 594. **What a slot indexes is not
+    # read** (COV-56), so `packed` types the bytes and claims nothing: a diff
+    # can now point at which slot moved instead of at six varints of hex.
     160: {1: _COUNT, 5: ("macros", {1: ("value_masks", "packed"),
                                     5: ("button", "v"), 6: ("name", "str"),
+                                    7: ("f7", "packed"),
                                     8: ("values", "packed")})},
     165: {5: ("presets", _PRESET)},
     # 161 — SPEC's Q8. Three items, each a packed array of exactly **188**

@@ -757,12 +757,31 @@ per-group array of eight, which its `[50] × 8` shape on the factory macros
 invites. `len(f1)` never exceeds the fixture count, which fits one mask per
 targeted fixture — consistent, not measured. **`f7` encodes the targeted fixture — [device-confirmed] (COV-27).** Two macros
 on the same fixture with different features come back with a byte-identical
-`f7`; its length is `2 × len(f1) + 4` on 489 of 490. What it *says* about the
-fixture is **not** any of the three identifiers the file already carries
-(COV-28): a second macro differing only in which of two identical moving heads
-it targets moves a leading `129 → 4` and a trailing `3 → 126`, matching
-neither the record-115 index (14 vs 15), nor the DMX address (1 vs 17), nor
-`f9` (20 vs absent). It keeps its neutral key.
+`f7`. What it *says* about the fixture is **not** any of the three identifiers
+the file already carries (COV-28): a second macro differing only in which of
+two identical moving heads it targets matches neither the record-115 index
+(14 vs 15), nor the DMX address (1 vs 17), nor `f9` (20 vs absent).
+
+**The encoding is the one record `120.f4` uses — [correlated] (COV-56).** A
+run-length map: one varint per run, under 128 a free run of that length, at or
+above 128 an **occupied** run of `v − 128`. On all **594** corpus macros the
+runs sum to exactly **512**, the occupied slots number exactly `len(f1)` — one
+slot per targeted fixture, which is what COV-20 read the masks as — and the
+reading re-encodes the stored bytes byte for byte. It also explains COV-28's
+diff without any new mechanism: `129 → 4` leading and `3 → 126` trailing is one
+occupied slot moving from **0 to 4**, and the factory macros' "eight `(x, 129)`
+pairs and a four-varint tail" is eight isolated occupied slots.
+
+**What a slot indexes is not read, and the field keeps its neutral key.** Two
+readings fit and neither holds: slot *p* as the DMX channels `[4p, 4p+4)`
+resolves 2998 of 3470 targeted bits, and slot *p* as a sixteen-channel window
+at display position `p // 4` holds on 12 of 30 **distinct** macros. Both fail
+on the same handful of macros — always on their non-moving-head entries — and
+86 % is what COV-17 refused to name `120.f5` on. The `f1` mask corroborates the
+grouping without settling it: bit `2k` is used and bit `2k+1` **never**, on all
+594, which is the four-slot stride COV-27 saw when `01 Pan` gave mask 17 and
+`02 Tilt` gave 68 = 17 ≪ 2. One macro on one fixture of a **clean** project at
+a known address settles it, and moving that address settles it twice.
 
 **The panel takes the fine channel with the coarse one.** A macro set on
 `01 Pan` alone stores two bits and two values, the second being `03 uPan` at 0;
@@ -1124,7 +1143,7 @@ The strongest structural result available. Eight identities hold **exactly,
 ```
 
 Three more, added once `105.f4` was corrected, and mechanically re-checked on
-**45/45** files by `tools/wpj_identities.py`, which now runs **23** identities
+**45/45** files by `tools/wpj_identities.py`, which now runs **24** identities
 <!--count:identities--> plus two before/after pair checks (F30-04, and the
 FLASH-09 pair — the files, not its retracted reading):
 

@@ -821,6 +821,37 @@ def _anomalie_151_groupe(w):
                             f"group {'ABCDEFGH'[g]}, slot {i + 1}")
 
 
+def _anomalie_120_alignement(w):
+    """Record 120's blocks misaligned against the patch (COV-50).
+
+    Laid out in ascending DMX address, one block of `channel_count` entries per
+    fixture, an entry's `f6` is an **absolute DMX channel inside its own
+    fixture's span** — 2671 entries of 2679 across the corpus, and the eight
+    that are not belong to the two captures where a save is known to have
+    dropped an entry.
+
+    This is the check `_anomalie_120_patch` cannot be: a save repaired that
+    record's **count** by appending an entry at the end while leaving the head
+    missing, so the length matched the patch and every block still carried the
+    next channel's data. A counter is not an alignment."""
+    fx, prof = _items(w, 115), _items(w, 116)
+    try:
+        ch = _items(w, 120)
+    except KeyError:
+        return
+    pos = 0
+    for i in sorted(range(len(fx)), key=lambda k: fx[k].get("f2", 0)):
+        pid = fx[i].get("f3", 0)
+        if pid >= len(prof):
+            return
+        n, a = prof[pid].get("f2", 0), fx[i].get("f2", 0)
+        for k, e in enumerate(ch[pos:pos + n]):
+            if "f6" in e and not a <= e["f6"] < a + n:
+                return (f"120[{pos + k}] carries channel {e['f6']}, outside "
+                        f"[{a}, {a + n}) — the block of the fixture at {a}")
+        pos += n
+
+
 # Equalities a **well-formed** project satisfies and the identities above no
 # longer assert, because a device-written file broke each of them and the
 # identity had to fall back to containment (COV-32, COV-37). They are not
@@ -828,7 +859,7 @@ def _anomalie_151_groupe(w):
 # so they belong to the per-file check and never to the corpus sweep, which
 # would fail on the very captures that record the defect.
 ANOMALIES = (_anomalie_comptes, _anomalie_tranches, _anomalie_120_patch,
-             _anomalie_151_groupe)
+             _anomalie_151_groupe, _anomalie_120_alignement)
 
 
 def controler(chemin):

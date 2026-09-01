@@ -179,8 +179,11 @@ It also reports **anomalies**: equalities a well-formed project satisfies that
 the identities no longer assert, because a device-written file broke each of
 them and the identity fell back to containment. `120.f1` above the entries it
 counts, a slice table of 150 that outruns record 151, record 120 holding
-more entries than the patch justifies, and a detached entry of 151 naming a
-fixture that is not in the group owning its slice. They are **not** format rules — they are
+more entries than the patch justifies, a detached entry of 151 naming a
+fixture that is not in the group owning its slice, and a record 120 whose
+blocks are misaligned against the patch — which a count cannot see, because
+one save repaired the count by appending an entry while the head stayed
+missing. They are **not** format rules — they are
 what a file looks like when nothing has gone wrong, which is why they live here
 and never in the corpus sweep, where they would fail on the very captures that
 record the defect. Exit 1 if anything is reported.

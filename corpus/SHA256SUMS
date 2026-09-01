@@ -76,3 +76,4 @@ df52d020c45e198ada7cdc867da22fc055f58f5b35335ca1d353d25c0981d7d0  corpus/wmx/wmP
 5395eea127b616e117a92783a39a1138d7f0ebc1a05d384212c6a74672d6c78e  corpus/experiments/COV-44/rung4-delete.wpj
 4064e36f859a4718192af833855e5191a7f793fb48b255a27a44a3857cb77b22  corpus/experiments/COV-44/rung3-reorder.wpj
 4db2b8a384922837c2552c49cfe551a80d21251f9150af8cae6df86a9ad348c5  corpus/experiments/COV-49/stage0-groupB.wpj
+cbc71cd4612249de6f71bd523589b5b98e9bb37aa029b8b074e8d2c2a910b739  corpus/experiments/COV-49/stage1-order.wpj

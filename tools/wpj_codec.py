@@ -230,10 +230,16 @@ SCHEMAS = {
     # channels were predicted from the file and read back off the live frame
     # exactly, and they stay put while an effect moves everything around them
     # (COV-16). The table is constant per profile.
-    # `f4` (1 everywhere), `f5` (1 or 2, and only on the moving heads) and `f6`
-    # keep neutral keys: `f5`/`f6` have a shape — `f5` is 1 on offsets 0-1 and
-    # 2 on offsets 2-3, `f6` runs in consecutive quadruples 17 apart between
-    # two fixtures of one profile — and a shape is not a reading.
+    # `f4` (1 everywhere) and `f5` (1 or 2, and only on the moving heads) keep
+    # neutral keys: `f5` is 1 on offsets 0-1 and 2 on offsets 2-3, and a shape
+    # is not a reading. **`f6` now has one** (COV-50): it is an absolute DMX
+    # channel inside its own fixture's span — a head at address 16 carries
+    # 18, 19, 16, 17 and the next, at 32, carries 34, 35, 32, 33. True on 2671
+    # entries of 2679; the eight exceptions are two captures where a device
+    # save dropped an entry at the head of the record. It stays a neutral key
+    # here because the *order* inside a fixture's quadruple is not read, and
+    # it is checked as an anomaly rather than an identity for the same reason
+    # those eight exist.
     120: {1: _COUNT, 5: ("channels", {1: ("value", "v")})},                 # an empty {} entry = `2a 00` = all zero
     # 125: the nine group slots. `f4` is 7 bytes read in two pieces, which is
     # why it is a split and not one name: bytes 0-5 are the little-endian

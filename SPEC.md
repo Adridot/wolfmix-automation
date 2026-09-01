@@ -29,7 +29,7 @@ Measurement base: W1 Mk1 (serial withheld), firmware **2.0.18**, macOS. WTOOLS
 **2.0.2** build 248 — a **beta**, installed over the stable — which is what the
 later protocol work was read against.
 
-Corpus hashes in `corpus/SHA256SUMS` — 66 files, regenerated 2026-09-01; the
+Corpus hashes in `corpus/SHA256SUMS` — 68 files, regenerated 2026-09-01; the
 files themselves are not distributed ([`LEGAL.md`](LEGAL.md)).
 
 ### Evidence cutoff — 2026-09-01
@@ -741,8 +741,11 @@ invites. `len(f1)` never exceeds the fixture count, which fits one mask per
 targeted fixture — consistent, not measured. **`f7` encodes the targeted fixture — [device-confirmed] (COV-27).** Two macros
 on the same fixture with different features come back with a byte-identical
 `f7`; its length is `2 × len(f1) + 4` on 489 of 490. What it *says* about the
-fixture is unmeasured — one fixture is not a mapping — so it keeps its neutral
-key.
+fixture is **not** any of the three identifiers the file already carries
+(COV-28): a second macro differing only in which of two identical moving heads
+it targets moves a leading `129 → 4` and a trailing `3 → 126`, matching
+neither the record-115 index (14 vs 15), nor the DMX address (1 vs 17), nor
+`f9` (20 vs absent). It keeps its neutral key.
 
 **The panel takes the fine channel with the coarse one.** A macro set on
 `01 Pan` alone stores two bits and two values, the second being `03 uPan` at 0;

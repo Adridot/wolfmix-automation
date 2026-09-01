@@ -32,7 +32,7 @@ later protocol work was read against.
 Corpus hashes in `corpus/SHA256SUMS` — 57 files, regenerated 2026-08-27; the
 files themselves are not distributed ([`LEGAL.md`](LEGAL.md)).
 
-### Evidence cutoff — 2026-08-31
+### Evidence cutoff — 2026-09-01
 
 Every claim below is consolidated from the ledger,
 [`research/evidence.md`](research/evidence.md), up to that date. The ledger is
@@ -169,6 +169,34 @@ made visible by counting it.
 | 160 | 393–542, **optional** | 7–9 | named macros | correlated |
 | 161 | 599–604 | **3** | 3 × ~190-byte blob, volatile | observed |
 | 165 | 26219–30882 | 80–85 | preset container | correlated (§5) |
+
+**Field 1 is the item count on 15 of these types** — 105, 106, 110, 111, 115,
+116, 120, 125, 130, 135, 140, 150, 151, 155, 160 — exact on the corpus with no
+exception, an empty table writing **no** field 1 rather than a zero (COV-04).
+Record 145 carries none: its 20 slots are implicit (§3.4). And `165.f1` is
+**not** the count — it disagrees on 19 files, always low by exactly the entries
+a preset capture appended (81 against 83, 81 against 85), so whatever it
+counts, it is not the entries present.
+
+### How much of a file is read — **[correlated]**
+
+`tools/wpj_coverage.py` attributes every byte to a named field, an unnamed one,
+or a schemaless record, and asserts the three sum to the file. Run it; the
+figure below is the corpus this repository was written against and yours will
+differ.
+
+| | corpus |
+|---|---|
+| **read** — a field a codec schema names | **87.6 %** |
+| **partial** — a field inside a schema'd record that nothing names | 10.6 % |
+| **unknown** — a record with no schema (161 alone) | 1.8 % |
+
+Of the file, 48.4 % is named by a **device-confirmed** reading, 26.6 % by a
+`correlated` one and 12.7 % by a `validated` one; each name carries a ledger id
+the tool refuses to leave dangling. Read is a claim about *names*, not about
+*measurements*, which is why the split by status is printed next to it and why
+a field promoted without evidence fails the gate instead of raising the number
+(COV-01).
 
 160 is the only record ever absent outright: **9** files without it, **36** with.
 Record 151 is present in all 45 but carries a **zero-length payload** in exactly
@@ -720,8 +748,19 @@ A selector is a per-group array of eight: `0` = `FX1`, `1` = `FX2`. All three ar
 measured, one shot each, and each shot left the other two byte-identical. `f4`
 occupies the Beam "active" slot but F4-03 read it as a permission mask over all
 three engines — the coincidence of position is noted, not read. `f27` does not
-follow the pattern (`f25` is the preset name), is zero on all 3697 occurrences
-and on all three fresh entries, and stays unattributed.
+follow the pattern (`f25` is the preset name) and stays unattributed.
+
+**`f27` is not zero everywhere — [observed] (COV-02).** This document said it
+was, on 3697 occurrences, and that was true of the corpus that existed when the
+sentence was written. On today's 4312 presets, **26 carry `[1000] × 8`**, and
+the split is by **author**: every preset of a project a WTOOLS 2.0.2 duplicate
+produced carries 1000 on all eight groups, every preset composed at the panel
+carries eight explicit zeros. Neither side omits the field. One preset crosses
+the line inside the corpus — the device recaptured it during EXP-07 and it came
+back `[0] × 8` while its six untouched neighbours kept 1000 — but that
+recapture rewrote seventeen fields at once, so it names the author and not the
+meaning. 1000 is the shape of a millisecond default, beside `f11` FADE and
+`f15` HOLD; that is a **hypothesis** and nothing here tests it.
 
 **A hand-set page 1 is indistinguishable from a page never set.** A group put on
 `BEAM FX1` explicitly came back as `0`, exactly like the six groups nobody
@@ -761,8 +800,9 @@ and died on the fifth. And the guessed split `f3` = Colour / `f7` = Beam /
 
 The live-state rule above matters here: that value was captured off the panel by
 a `SHIFT` + tap, so it records what the operator had selected, not what a project
-author typed. `f3`, `f23` and `f27` are `0` on all 3697 occurrences — corpus
-uniformity, not field uniformity.
+author typed. `f3` and `f23` are `0` on all 3697 occurrences — corpus
+uniformity, not field uniformity, as `f27` then went on to demonstrate the hard
+way (COV-02).
 
 ### 5.7 The flash keys live in `f16` — **[device-confirmed]**
 
@@ -999,13 +1039,23 @@ are what pins `115.f2` to a real DMX patch.
   space, and 293 of the corpus's 357 entries are RFC 4122 v5 (PROFILE-05);
   `f11` = epoch-ms timestamp (2021-02-16 … 2022-10-28).
 - **110 = concatenated channel lists of all profiles**, profile *p* occupying
-  `[116[p].f3, 116[p].f3 + 116[p].f2)`. Per channel: `f2` = feature/type enum,
-  `f3` = index of its first entry in 111, `f4` = default value, `f5` = ordinal.
+  `[116[p].f3, 116[p].f3 + 116[p].f2)`. Per channel: `f2` = the **number of
+  ranges** this channel owns in 111, `f3` = index of its first entry in 111,
+  `f4` = the **feature**, `f5` = the index of the channel this one belongs to
+  (§7.6). **This corrects two names an earlier revision of this bullet carried**
+  — `f2` as a feature enum and `f4` as a default value. The identity
+  `110[c].f2 == len(111 slice of c)` kills the first (§3.4) and `roles_106`
+  puts the second in bijection with the engine role `106.f4` (§7.5). Both
+  checks have been running in `wpj_identities.py` the whole time; the prose
+  simply never caught up.
 - **111 = concatenated range/capability lists**, indexed from 110. Entries read
   `{f1 = from, f2 = to, f3 = function id}`; *rig-a* holds clean 8-way
   splits `1–50 / 51–100 / … / 241–255` and 31-wide splits `0–31 / … / 224–255`,
   i.e. gobo or colour-wheel slots.
-- **105 = the patch index into 106.** `f1` = library fixture id, **stable across
+- **105 = the patch index into 106.** `f1` = library fixture id (`library_id`
+  in the codec since 2026-09-01: it had been called "profile", the name
+  `115.f3` also carries, and the two never agree on a single one of the
+  corpus's 1394 patch entries — COV-05), **stable across
   projects** (`1017` is the same `6x18W 6in1 RGBAW UV` in two unrelated rigs);
   `f5` = index of the fixture row in 115; `f6` = category 0…8. **`f4` is the
   running offset into record 106 and `f7` is that slice's length** — *not* a DMX
@@ -1028,6 +1078,12 @@ are what pins `115.f2` to a real DMX patch.
 - **120 = flat per-fixture-channel value table**, one contiguous block per
   fixture in ascending `115.f2` order. Verified block by block on *rig-b*:
   six blocks of 10, then 7, then 11, then 2 — 134 entries, matching identity 8.
+  Its entries are **not** empty: 10 754 of 14 698 carry content (COV-03), and
+  the one file where they are is *rig-c-bug*, which is BUG-01's erasure. Their
+  four fields stay unnamed. `f4` is 1 everywhere; `f5` is 1 or 2 and pairs with
+  an `f6` that comes as `(n, n−1)`, which looks like a coarse/fine couple and
+  matches `110.f5` on 954 of the 2081 entries carrying it — a shape, not a
+  reading.
 
 **Refuted**: record 115 does *not* have a fixed 20 slots (10/15/20/22 across the
 four rigs, always `max(105.f5) + 1`); the "20" in earlier notes was a
@@ -1615,7 +1671,7 @@ changelog.
 
 | # | Question | What would settle it |
 |---|---|---|
-| Q1 | **`165.f27`** — the fourth per-group array, zero on all 3697 corpus presets and on the three entries the device composed during the F7 series. It does not follow the engine quadruplet. | No cheap discriminator has emerged. That is the condition for going to the hardware, and it is not met. |
+| Q1 | **`165.f27`** — the fourth per-group array, which does not follow the engine quadruplet. Not zero everywhere after all: 26 presets carry `[1000] × 8`, and the split is by author — WTOOLS writes 1000, the panel writes 0 (COV-02). | **The stated blocker is gone.** "No cheap discriminator has emerged" was the reason not to go to the hardware; one has, and it needs neither a capture nor a deploy — open a WTOOLS project that carries 1000 and find the per-group control reading `1.00 s` or `1000`, or move one and save. The question itself is still open. |
 | Q2 | **`f4` bit 0**, set on the move and beam pages, clear on the colour page; bits 1, 5, 6, 7 are never seen outside 255. Under the permission reading, bit 0 is a fourth capability that movement and beam need and colour does not. | A preset composed at the panel on a rig where the candidates separate. Nothing in this corpus does. |
 | Q3 | **`f16` slice 11** — non-zero and constant per project (2, 5 or 7), unmoved by every flash latch including the one that had `SMOKE` alone held. | It is not a flash key; nothing says what it is. |
 | Q4 | **`f16` slices 3 and 4** — zero in every file and every experiment, with no key left to assign. | Provably empty, or empty in everything reachable from this panel. |

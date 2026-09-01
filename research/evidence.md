@@ -160,6 +160,54 @@ The pre-deploy archive failure surfaced a bare `PermissionError` instead of the
 named refusal the prediction claimed. Fixed in the same session — the message
 now reads "Pre-deploy archive failed, nothing was uploaded: …" — and re-measured.
 
+### COV-02 — `165.f27` is not zero everywhere (2026-09-01)
+
+SPEC §5.6 and Q1 both stand on "`f27` is zero on all 3697 corpus presets".
+On the corpus as it is today — 4312 presets over 76 variant-A files — **26 of
+them carry `[1000] × 8`**, and the statement was true when it was written: the
+files that carry it were added on 2026-08-31, after the sentence.
+
+The split is by author, not by content. Every preset of the three projects a
+**WTOOLS 2.0.2 duplicate** produced (`WMX EXP05`, `2 Lyres-v2`) carries 1000 on
+all eight groups; every preset of the projects composed **at the panel**
+(`WMX EXP format-lab`, the four rigs) carries eight explicit zeros. Neither
+side omits the field.
+
+One preset crosses the line inside the corpus. In EXP-07 the device recaptured
+`WMX EXP05`'s preset 0, and its `f27` came back `[0] × 8` while the six
+untouched presets kept 1000. That is not a single-variable differential —
+the recapture rewrote seventeen fields of that preset at once, `gobo_focus`
+`50 → 0`, `gobo_zoom` and `gobo_iris` `100 → 0` among them — so it names the
+author and not the meaning.
+
+What it does buy is the **cheap discriminator Q1 says has not emerged**: the
+contrast is reachable in WTOOLS, on a project already on this machine, with no
+preset capture and no deploy. 1000 is the shape of a millisecond default, next
+to `f11` FADE and `f15` HOLD which are milliseconds — and it sits in the same
+group of per-group tables whose WTOOLS defaults this same diff shows written
+out explicitly (`50 / 0 / 100 / 100` on `f32`–`f35`, §5.6). **Hypothesis, not a
+reading**: a sixth per-group table whose WTOOLS default is 1000 and which this
+firmware writes as 0.
+
+Q1 is not answered. Its stated blocker is.
+
+### COV-03 — record 120's entries are not empty (2026-09-01)
+
+The unnamed-field inventory read `120.channels` as "`2a 00` entries, all
+empty", which would have made it structurally empty on this rig rather than
+undecoded. Measured: **10 754 of 14 698 entries carry content** — 73.2 %. The
+fields are `f1` (9680 occurrences, DMX-shaped values), `f4` (7876, always 1),
+`f5` (2148, only 1 or 2) and `f6` (2081).
+
+The one file where the entries really are empty is *rig-c-bug*: 251 of 258, which
+is **BUG-01**, the firmware erasure — not a property of the record. Reading the
+corpus-wide shape off that file is the mistake the erasure invites.
+
+No identity fell out. `f6` comes in pairs `(n, n−1)` whose `f5` reads 1 then 2,
+which looks like a coarse/fine couple, and `f6` matches `110.principal_channel`
+on 954 of the 2081 entries that carry it — enough to notice, nowhere near
+enough to name. It stays unread, with a shape.
+
 ### The unnumbered ones, for completeness
 
 - **ACC-03's "closed vocabulary"** reading of `f4`: retracted by F4-01, which is
@@ -384,6 +432,16 @@ its own.
 | FW-01 | 2026-08-27 | The vendor's own changelog, read on this machine → `165.f10` bit 5 was called **`DIMMER`** until 2.0.15 and `OTHER` since. The measuring firmware (2.0.18) is later than the rename. | observed | §5.3 |
 | FW-02 | 2026-08-27 | Same source → `f32`–`f35` are dated to firmware 2.0.5, which dates schema 10. Three corroborations in one line, on a reading already device-confirmed. | observed | §5.3 |
 | FW-03 | 2026-08-27 | The discriminator FW-01 left planned: write bit 5 **and nothing else** → `OTHER` gates the dimmer of a static cue and nothing more, on this scope. It is what lifts GEN-02's bit back from `hypothesized`. | validated | §5.3 |
+
+### Read coverage
+
+| id | date | manipulation → result | status | SPEC § |
+|---|---|---|---|---|
+| COV-01 | 2026-09-01 | Every byte of a variant-A project attributed to a named field, an unnamed one, or a schemaless record, with the three asserted to sum to the file → the corpus reads **62.4 % / 27.8 % / 9.8 %**. Most of the gap was not undiscovered but **unpromoted**: records 102, 106, 110 and 155 had full field tables in SPEC.md and no codec schema, and so did `150.f3`/`f4`/`f6`/`f7`, `165.f4`/`f11`/`f15`/`f16`/`f18` and the engine-specific `f3`/`f5` of the FX sub-message. Promoting only what the ledger already supported, with a byte-exact round trip throughout, takes it to **87.6 % / 10.6 % / 1.8 %** — 48.4 % of the file named by a device-confirmed reading, 26.6 % correlated, 12.7 % validated, and nothing named without an entry in the ledger. | correlated | §3 |
+| COV-02 | 2026-09-01 | Whether `165.f27` is really zero everywhere → **refuted**, see above: 26 presets carry `[1000] × 8`, split by author (WTOOLS writes 1000, the panel writes 0). Q1's blocker — "no cheap discriminator has emerged" — no longer holds. | observed | §5.6 |
+| COV-03 | 2026-09-01 | Whether record 120's entries are structurally empty on this rig → **no**: 10 754 of 14 698 carry content. The all-empty file is *rig-c-bug*, which is BUG-01's erasure. | correlated | §7 |
+| COV-04 | 2026-09-01 | Field 1 as the item count, swept over every record type → exact on **15** of them, with an empty table writing no field 1 at all rather than a zero. `165.f1` is **not** the count: it disagrees on 19 files, always low by exactly the entries a preset capture appended (81 against 83, 81 against 85). Whatever it counts, it is not the entries present. Now `comptes_de_tete` in `wpj_identities.py`. | correlated | §3 |
+| COV-05 | 2026-09-01 | `105.f1` against `115[f5].f3`, both named "profile" by the codec → **they never agree**, on any of the 1394 patch entries. `105.f1` is the library fixture id, `115.f3` an index into record 116: one name covered two key spaces. Renamed `library_id`. | correlated | §7 |
 
 ### The FX sub-message
 

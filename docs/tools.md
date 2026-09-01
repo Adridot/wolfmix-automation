@@ -130,7 +130,7 @@ Each identity is an arithmetic constraint between two records — true on every
 file or false. A reading that breaks one is refuted without touching hardware,
 which is the cheapest kind of proof available here.
 
-Checked today — 19 <!--count:identities-->, plus two before/after pair checks
+Checked today — 20 <!--count:identities-->, plus two before/after pair checks
 (F30-04, and the FLASH-09 pair — the files, not its retracted reading):
 
 | Identity | What it kills |
@@ -149,6 +149,7 @@ Checked today — 19 <!--count:identities-->, plus two before/after pair checks
 | the preset's per-group fields are exactly 8 varints | reading any of the thirteen as a scalar |
 | byte 50 is the schema version, and `165.f32`–`f35` arrive at 10 | treating the prefix as fully opaque |
 | `110.f5` points at the channel's principal | guessing 16-bit byte order or adjacency |
+| every `165.f18` bit lands on a button record 160 defines, and the buttons are distinct and inside the 80-button grid | a preset carrying a Live Edit nobody defined, and any reading of `160.f5` that is not the button |
 | field 1 is the item count on 15 record types | reading it as a version, a flag or a capacity — and it is why `165.f1`, which disagrees on 19 files, is not named |
 | `155.f2` splits move (`1`, positions 0–19) from beam (`2`, 4-bit segment masks 0–15) | reading all four sequences as position indices |
 | no preset name exceeds 19 UTF-8 bytes | a generator that writes a longer one and bricks the open |

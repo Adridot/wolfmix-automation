@@ -29,7 +29,7 @@ Measurement base: W1 Mk1 (serial withheld), firmware **2.0.18**, macOS. WTOOLS
 **2.0.2** build 248 — a **beta**, installed over the stable — which is what the
 later protocol work was read against.
 
-Corpus hashes in `corpus/SHA256SUMS` — 61 files, regenerated 2026-09-01; the
+Corpus hashes in `corpus/SHA256SUMS` — 63 files, regenerated 2026-09-01; the
 files themselves are not distributed ([`LEGAL.md`](LEGAL.md)).
 
 ### Evidence cutoff — 2026-09-01
@@ -722,6 +722,16 @@ The `LIVE EDIT` screen is 4 pages of 20 buttons; `f18` is 10 packed varints =
 `f31`. Across the corpus only buttons **1, 2, 4, 5 and 20** are ever set — the
 top of page 1 — out of eighty possible.
 
+**Each button is defined in record 160 — [device-confirmed] (COV-19).** A macro
+created at the panel on the button labelled `Live Edit 6`, feature `01 Pan`,
+value 200, changed **one record and one only**: `160.f5` = **5**, the button
+index 0-based, and `160.f8` = `[200, 0]`, the values. Three identities hold on
+all 71 files that carry the record and are checked by `wpj_identities.py`: the
+buttons in a file are distinct, all fall inside the 80-button grid, and **every
+bit any preset sets here lands on a button some macro defines** — a preset
+cannot carry a Live Edit that does not exist. Their wire order is free, 65 of
+71 files storing them out of button order.
+
 `f10`'s `LIVE EDIT` bit says *whether* a preset carries Live Edits; `f18` says
 *which*. **And record 160 is where those buttons are defined — [correlated]
 (COV-18).** The firmware's mode table names the screen itself
@@ -1078,7 +1088,7 @@ The strongest structural result available. Eight identities hold **exactly,
 ```
 
 Three more, added once `105.f4` was corrected, and mechanically re-checked on
-**45/45** files by `tools/wpj_identities.py`, which now runs **19** identities
+**45/45** files by `tools/wpj_identities.py`, which now runs **20** identities
 <!--count:identities--> plus two before/after pair checks (F30-04, and the
 FLASH-09 pair — the files, not its retracted reading):
 

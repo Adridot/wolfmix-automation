@@ -194,6 +194,8 @@ PROOF = {
     ("151", "tilt_offset"): (DEVICE, "POS-04"),
 
     ("160", "name"): (CORRELATED, "§3"),
+    ("160", "button"): (DEVICE, "COV-19"),
+    ("160", "values"): (DEVICE, "COV-19"),
 
     ("165", "id"): (DEVICE, "PRESET-07"),
     ("165", "name"): (DEVICE, "PRESET-05"),

@@ -269,7 +269,16 @@ SCHEMAS = {
     130: {1: _COUNT, 5: ("mappings", {2: ("instance", "v"), 4: ("function", "v"),
                            5: ("channel_high_byte", "v"),
                            6: ("channel_low_byte", "v")})},
-    160: {1: _COUNT, 5: ("macros", {6: ("name", "str")})},
+    # 160: the LIVE EDIT macros, one per operator-defined button (COV-18).
+    # `f5` is the **button index**, 0-based in a grid of 4 pages × 20 = 80 —
+    # the same 80 the preset's `live_edit_mask` addresses, and every bit any
+    # preset sets falls on a button a macro occupies (71/71 files). Measured:
+    # a macro created on the button the panel labels "Live Edit 6" stores 5.
+    # `f8` holds the values; the one set on screen, 200, is what came back.
+    # Absent `f6` = the panel synthesises "Live Edit N", like `Position N`
+    # and `Gobo N`. `f1` and `f7` stay neutral: no reading (COV-19).
+    160: {1: _COUNT, 5: ("macros", {5: ("button", "v"), 6: ("name", "str"),
+                                    8: ("values", "packed")})},
     165: {5: ("presets", _PRESET)},
 }
 # Deliberate passthrough: a documented structure, no schema yet. Data rather

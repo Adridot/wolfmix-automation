@@ -627,7 +627,39 @@ def comptes_de_tete(w):
                 f"{typ}: field 1 = {f1} but {len(d.get('items', []))} entries"
 
 
-IDENTITES = (comptes_de_tete, ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
+def boutons_live_edit(w):
+    """160.f5 = the LIVE EDIT button, and 165.f18 addresses the same 80.
+
+    Three things at once, exact on every corpus file that has record 160:
+    the buttons a file's macros occupy are **distinct**, they all fall inside
+    the 4 pages × 20 grid, and **every bit any preset sets in `f18` lands on a
+    button some macro occupies**. The last one is what ties the two records
+    together — a preset cannot carry a Live Edit that is not defined.
+
+    Their wire order is free: 65 of 71 files store the macros out of button
+    order, the same freedom record 111 has for gobo pads (SORT-01).
+    """
+    try:
+        charge = w.get(160)
+    except KeyError:
+        return                            # 9 corpus files have no macros at all
+    macros = wpj_codec._decode_msg(charge, _ITEMS).get("items", [])
+    boutons = [m.get("f5", 0) for m in macros]
+    assert len(set(boutons)) == len(boutons), \
+        f"160: two macros on one button: {boutons}"
+    assert all(b < 80 for b in boutons), \
+        f"160: a button outside the 4 x 20 grid: {boutons}"
+    for pre in _items(w, 165):
+        masque = _varints(pre.get("f18", {}).get("hex", ""))
+        if not masque or any(o > 255 for o in masque):
+            continue
+        gros = int.from_bytes(bytes(masque), "little")
+        for bit in range(80):
+            assert not (gros >> bit) & 1 or bit in boutons, \
+                f"165.f18 sets button {bit}, which no macro defines"
+
+
+IDENTITES = (comptes_de_tete, boutons_live_edit, ranges_par_canal, palette_gobo, tranches_106, patch_disjoint,
               groupe_fixture, moteurs_f16, tranche5_f16,
               plages_111, roles_106,
               ordre_fixtures_115, bornes_106, tranches_151,

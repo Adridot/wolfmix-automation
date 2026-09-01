@@ -189,9 +189,9 @@ yours will differ.
 
 | | corpus |
 |---|---|
-| **read** — a field a codec schema names | **93.1 %** |
-| **inert** — no name, and one value in the whole corpus | 4.1 % |
-| **partial** — a field inside a schema'd record that varies and that nothing names | 2.9 % |
+| **read** — a field a codec schema names | **93.3 %** |
+| **inert** — no name, and one value in the whole corpus | 6.0 % |
+| **partial** — a field inside a schema'd record that varies and that nothing names | 0.7 % |
 | **unknown** — a record with no schema, or one whose protobuf does not parse | 0.0 % |
 
 **`read` and `inert` are not added, and the distinction is the point.** `read`
@@ -204,6 +204,17 @@ widening the bucket. `116.profiles.f6` is 1 on ninety occurrences and **3** on
 one, and `102.f11` is 0 and 100; neither is in the table. So "100 %" here would
 mean `read + inert = 100` with nothing partial and nothing unknown, which is a
 weaker claim than it sounds like and is stated that way on purpose.
+
+**Inertia is declared per field, and for one array per position — [correlated]
+(COV-59).** 552 of record 161's 564 packed values are zero in every item of
+every corpus file; counting them as "varying, and nothing reads them" was
+false in the walker's own terms, and it hid the size of the question. They are
+declared at position range 3–186 with the same contract as any other inert
+entry: the value is asserted on every file and a second one stops the run.
+Q8 is untouched — the four positions that **do** move (0, 1, 2 and 187, where
+COV-45 and COV-21 read the two masks and the shared tail) stay `partial`, and
+they are **0.05 %** of the corpus. That, and not 2.05 %, is what record 161
+still asks.
 
 Of the file, 56.6 % is named by a **device-confirmed** reading, 25.1 % by a
 `correlated` one and 11.4 % by a `validated` one; each name carries a ledger id

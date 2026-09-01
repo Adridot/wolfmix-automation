@@ -8,7 +8,10 @@ Four buckets, and their sum is the file — that assertion is the whole point:
   inert    a field with no name that carries ONE value in the whole corpus,
            declared in `INERT_FIELDS` with that value
   partial  a field present inside a schema'd record that no schema names and
-           that is not inert — it varies, and nothing reads it
+           that is not inert — it varies, and nothing reads it. Inertia is
+           declared per field, and for one packed array per POSITION: 552 of
+           record 161's 564 values are zero in every file, and calling those
+           "varying" is as false as naming them would be
   unknown  the payload of a record with no schema at all, and any record whose
            protobuf does not parse
 
@@ -342,7 +345,59 @@ INERT_FIELDS = {
     # stay `partial`.
     "161.f1": (9, 90),
     "161.items.f2": (1, 69),
+
+    # Record 161's array, by POSITION — see INERT_PACKED below for why a
+    # position and not a path.
+    "161.items.f3[3:187]": (0, 32448),
 }
+
+
+# --- what licenses `inert` INSIDE a packed array -----------------------------
+#
+# `partial` means "it varies, and nothing reads it". For 552 of record 161's
+# 564 values that first half is **false**: they are zero in every item of every
+# corpus file, and counting them as varying is as wrong as naming them would
+# be. So the same declaration the table above makes for a whole field is made
+# here for a RANGE OF POSITIONS inside one packed array, with the same
+# contract — the value is asserted on every file and a second one raises
+# `InertBroken` and stops the run.
+#
+# This does NOT touch Q8 and it reads nothing. The positions that actually move
+# stay `partial`: 0, 1 and 2, where COV-45 read item 0's fixture mask and
+# COV-21 item 1's 20-bit one, and 187, the shared tail. Those are 0.05 % of the
+# corpus and they are the whole question; the 1.97 % declared here is the part
+# that has never said anything in 82 files, 13 projects and two authors.
+#
+# field path -> (the path it is reported under, the positions, the only value)
+INERT_PACKED = {
+    "161.items.f3": ("161.items.f3[3:187]", range(3, 187), 0),
+}
+
+
+def _walk_packed_inert(chunk, path, acc):
+    """A packed array whose middle is declared inert, value by value.
+
+    The widths are **measured**, not assumed: a varint that grew past 127 must
+    move bytes from the inert count to the varying one rather than silently
+    keep the old width, which is the mistake `125.f4`'s split made (COV-51)."""
+    nom, positions, valeur = INERT_PACKED[path]
+    i = k = 0
+    while i < len(chunk):
+        try:
+            v, apres = wpj_wire.read_varint(chunk, i)
+        except wpj_wire.WireError:
+            _tally(acc, PARTIAL, path, len(chunk) - i)
+            return
+        if k in positions:
+            if v != valeur:
+                raise InertBroken(
+                    f"{nom} is declared inert at {valeur!r} and position {k} "
+                    f"carries {v!r}: it is not inert, remove it from "
+                    f"INERT_PACKED")
+            _tally(acc, INERT, nom, apres - i)
+        else:
+            _tally(acc, PARTIAL, path, apres - i)
+        i, k = apres, k + 1
 
 
 def _check_inert(path, value):
@@ -484,6 +539,11 @@ def _walk(buf, schema, path, acc):
                     _walk(buf[i:i + ln], kind, sub, acc)
                 else:
                     _walk_split(buf[i:i + ln], kind[1], sub, acc)
+                i += ln
+                continue
+            if not named and sub in INERT_PACKED:
+                _tally(acc, PARTIAL, sub, i - start)      # tag and length
+                _walk_packed_inert(buf[i:i + ln], sub, acc)
                 i += ln
                 continue
             value = buf[i:i + ln].hex()

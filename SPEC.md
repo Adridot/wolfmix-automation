@@ -1574,15 +1574,25 @@ still contiguous. `tranches_151` now checks only what survives,
 `referenced >= present`: no entry of 151 is orphaned. **A reader must clamp a
 slice to the record rather than trust its length.**
 
-**And the disagreement runs deeper than a count (COV-33).** Turned through all
-six heads of the group on the panel, every fixture reads `PAN OFFSET 0 %`,
-`TILT OFFSET 0 %`, `FOCUS OFFSET 0 %`, on **every** position pad — the device
-carries **no detached fixture at all**, while the file holds one entry at
-`+39.00 % / +9.00 %` and record 150 claims six slices of it. "Which side is
-stale" was the wrong question. **The measurement cannot attribute it either**:
-the panel shows the live copy and the capture is the stored file, and nothing
-reloaded the project between them — the trap §10 already records. One panel
-action settles it: reload, then look again.
+**150's side is the stale one, and the cause is a regression (COV-37).** Read
+by version across that project's 73 files carrying a record 151: the record
+held **6** entries under `A1:0+4 A4:5+1 A5:4+1`; the `FIXTURE SETUP` session of
+COV-23/24 cut it to **1** and **150 followed correctly** to `A1:0+1`; five
+versions later a save wrote 150's slice table back to the pre-session one, byte
+for byte, while 151 stayed at 1. No hardware was needed to settle it.
+
+**And the device surfaces none of it (COV-33).** Turned through all six heads of
+the group on the panel, every fixture reads `PAN OFFSET 0 %`, `TILT OFFSET 0 %`,
+`FOCUS OFFSET 0 %`, on **every** position pad — not even the one entry the file
+still holds. `GET_SETTINGS` reports `projectChanged: false`, so the panel was
+showing the stored file and the comparison is valid. The reading is that the
+firmware refuses a slice table that outruns its record rather than surfacing
+what it can; that step is **hypothesized**, and version `…326` — the same
+single entry under a consistent `A1:0+1` — is what would test it.
+
+**A device-written project lost show data here.** The COV-23/24 session dropped
+five of the operator's six detached fixtures. A writer must not assume its own
+output survives an editing session unchanged, and a reader must clamp.
 
 | Field | Screen | Encoding |
 |---|---|---|

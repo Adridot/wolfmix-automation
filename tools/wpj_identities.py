@@ -336,16 +336,21 @@ def tranches_151(w):
     an (offset, length) pair cutting a flat list. Position slots that use none
     of it carry neither `f1` nor `f2`. See the registry, "record 151".
 
-    **The exact tiling fell (COV-32).** This asserted `referenced == present`
-    on all 90 corpus files, and a save the device wrote on 2026-09-01 broke it:
-    group A's slots claim **6** entries of 151 where the record holds **1**,
-    the three slices themselves still contiguous from 0. Which side is stale is
-    **not settled** — 120's surplus in the same file is decided by arithmetic
-    and this is not, and the discriminator is the `ALL POSITIONS` page. What
-    survives is containment, `referenced >= present`: no entry of 151 is
-    orphaned, which is the half a reader needs. The half that fell is the one
-    that says nothing is referenced that is not there, and a reader must now
-    clamp a slice to the record instead of trusting it.
+    **The exact tiling fell (COV-32), and COV-37 says why.** This asserted
+    `referenced == present` on all 90 corpus files and a save the device wrote
+    broke it: group A's slots claim **6** entries of 151 where the record holds
+    **1**, the slices still contiguous from 0. Read by version across that
+    project's 73 files, the cause is a **regression, not a stale counter**: the
+    record fell from 6 entries to 1 in an earlier session and record 150
+    followed correctly to `A1:0+1`, then five versions later a save wrote 150's
+    slice table back to `A1:0+4 A4:5+1 A5:4+1` — byte for byte the table from
+    before that session — while 151 stayed at 1.
+
+    So **150's side is the stale one**, settled from the corpus with no
+    hardware. What survives here is containment, `referenced >= present`: no
+    entry of 151 is orphaned, which is the half a reader needs. A reader must
+    clamp a slice to the record instead of trusting its length, because a
+    device-written file can carry a slice table that outruns its record.
     """
     n151 = len(_items(w, 151)) if w.get(151) else 0
     vus = []

@@ -19,7 +19,11 @@ Same profile, same feature, same value: the **only** variable is which fixture.
 | 4 | it differs in a way that names it: the fixture's **index** in record 115, its **DMX address**, or its `f9` | 0.5 |
 | 5 | rival: `f7` is identical → it does not encode the fixture either, and COV-27's reading was a coincidence of two macros sharing more than the fixture | 0.1 |
 
-The reference values, so the comparison cannot drift: fixture `001` is item 14
-of record 115 at DMX 1 with `f9` = 20; fixture `002` is item 15 at DMX 17 with
-`f9` = 21. A difference of **1** in the index, **16** in the address, **1** in
-`f9` — three candidates that a single byte of `f7` can tell apart.
+The reference values, so the comparison cannot drift — read off the controller
+before the measurement, and **one of them was written wrong here first**:
+fixture `001` is item **14** of record 115 at DMX **1** with `f9` = **20**;
+fixture `002` is item **15** at DMX **17** with `f9` **absent** (0), not 21 as
+this sheet claimed until it was checked. A difference of **1** in the index,
+**16** in the address and **20** in `f9` — three candidates a single byte of
+`f7` can tell apart, and the corrected `f9` separates them further rather than
+less.

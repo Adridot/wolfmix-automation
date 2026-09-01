@@ -29,7 +29,7 @@ Measurement base: W1 Mk1 (serial withheld), firmware **2.0.18**, macOS. WTOOLS
 **2.0.2** build 248 — a **beta**, installed over the stable — which is what the
 later protocol work was read against.
 
-Corpus hashes in `corpus/SHA256SUMS` — 68 files, regenerated 2026-09-01; the
+Corpus hashes in `corpus/SHA256SUMS` — 70 files, regenerated 2026-09-01; the
 files themselves are not distributed ([`LEGAL.md`](LEGAL.md)).
 
 ### Evidence cutoff — 2026-09-01
@@ -1181,7 +1181,11 @@ are what pins `115.f2` to a real DMX patch.
   prediction came out wrong.
   Its entries are **not** empty: 10 754 of 14 698 carry content (COV-03), and
   the one file where they are is *rig-c-bug*, which is BUG-01's erasure. Their
-  four fields stay unnamed. `f4` is 1 everywhere; `f5` is 1 or 2 and pairs with
+  four fields stay unnamed. **Moving one fixture's DMX address changes exactly
+  three records — 115, 106 and 120 — and inside 120 it changes nothing but the
+  record-level `f4` (COV-29).** No entry moves, so the per-entry fields belong
+  to the profile and not to the patch; the moved fixture's entry is empty,
+  though, so a block that shifted would not show at this resolution. `f4` is 1 everywhere; `f5` is 1 or 2 and pairs with
   an `f6` that comes as `(n, n−1)`, which looks like a coarse/fine couple and
   matches `110.f5` on 954 of the 2081 entries carrying it — a shape, not a
   reading.

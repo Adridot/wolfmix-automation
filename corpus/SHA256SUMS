@@ -74,3 +74,4 @@ df52d020c45e198ada7cdc867da22fc055f58f5b35335ca1d353d25c0981d7d0  corpus/wmx/wmP
 806fef9a1f61711575a1e6bb894e6d98b76941289bdac72a9dcb1e1b82bbf7ce  corpus/experiments/COV-40/after-offset-40.wpj
 6cd7df554b4b6b683a7519eac8895451f782e0c454efc99fa81f8cdba1422bbc  corpus/experiments/COV-44/rung1-add.wpj
 5395eea127b616e117a92783a39a1138d7f0ebc1a05d384212c6a74672d6c78e  corpus/experiments/COV-44/rung4-delete.wpj
+4064e36f859a4718192af833855e5191a7f793fb48b255a27a44a3857cb77b22  corpus/experiments/COV-44/rung3-reorder.wpj

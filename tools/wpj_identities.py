@@ -787,13 +787,48 @@ def _anomalie_120_patch(w):
         return f"120: {n} entries against {somme} the patch justifies"
 
 
+def _anomalie_151_groupe(w):
+    """A detached entry naming a fixture of another group (COV-48).
+
+    Record 150 has one copy per group, so a slice of 151 belongs to the group
+    whose copy cuts it, and `151.f1` is an index into record 115 whose `f4` is
+    that fixture's group. The two must agree.
+
+    **This could not be written before 2026-09-01.** `151.f1` was an index into
+    an ambiguous list — display rank or record 115 — and COV-47's reorder is
+    what settled it. The rung-4 sheet said an offset landing on the wrong
+    fixture had "no file-internal way to define it"; that was wrong, and this
+    is the definition."""
+    try:
+        det = _items(w, 151) if w.get(151) else []
+    except KeyError:
+        return
+    if not det:
+        return
+    fx = _items(w, 115)
+    for g in range(8):
+        try:
+            slots = _items(w, 150, g)
+        except KeyError:
+            break
+        for i, slot in enumerate(slots):
+            debut, n = slot.get("f2", 0), slot.get("f1", 0)
+            for k in range(debut, min(debut + n, len(det))):
+                cible = det[k].get("f1", 0)
+                if cible < len(fx) and fx[cible].get("f4", 0) != g:
+                    return (f"151[{k}] names fixture {cible} of group "
+                            f"{fx[cible].get('f4', 0)} on a slice owned by "
+                            f"group {'ABCDEFGH'[g]}, slot {i + 1}")
+
+
 # Equalities a **well-formed** project satisfies and the identities above no
 # longer assert, because a device-written file broke each of them and the
 # identity had to fall back to containment (COV-32, COV-37). They are not
 # format rules — they are what a file looks like when nothing has gone wrong,
 # so they belong to the per-file check and never to the corpus sweep, which
 # would fail on the very captures that record the defect.
-ANOMALIES = (_anomalie_comptes, _anomalie_tranches, _anomalie_120_patch)
+ANOMALIES = (_anomalie_comptes, _anomalie_tranches, _anomalie_120_patch,
+             _anomalie_151_groupe)
 
 
 def controler(chemin):

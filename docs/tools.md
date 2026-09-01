@@ -178,8 +178,9 @@ internally consistent" needs the whole list, and one save broke two at once.
 It also reports **anomalies**: equalities a well-formed project satisfies that
 the identities no longer assert, because a device-written file broke each of
 them and the identity fell back to containment. `120.f1` above the entries it
-counts, a slice table of 150 that outruns record 151, and record 120 holding
-more entries than the patch justifies. They are **not** format rules — they are
+counts, a slice table of 150 that outruns record 151, record 120 holding
+more entries than the patch justifies, and a detached entry of 151 naming a
+fixture that is not in the group owning its slice. They are **not** format rules — they are
 what a file looks like when nothing has gone wrong, which is why they live here
 and never in the corpus sweep, where they would fail on the very captures that
 record the defect. Exit 1 if anything is reported.

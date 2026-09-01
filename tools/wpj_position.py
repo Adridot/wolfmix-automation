@@ -3,7 +3,8 @@
 
 The model was measured channel by channel (registry, POS-01…07):
 
-    pct_groupe(k) = (1 - FAN) + k * (2*FAN - 1) / (n - 1)   pan, k = rang
+    pct_groupe(k) = PAN + etalement(FAN, k, n) - 0.5        pan, k = rang
+    etalement     = (1 - FAN) + k * (2*FAN - 1) / (n - 1)   the FAN ramp
     pct_groupe    = TILT                                    tilt
     pct           = clamp(pct_groupe + offset, 0, 1)        offset = record 151
     borne16(f)    = f / 255 * 65535                         f = 106.f5 ou f6
@@ -28,10 +29,30 @@ def borne16(octet):
 
 
 def etalement(fan, rang, effectif):
-    """The pan fraction of rank k under FAN — the ramp from (1-FAN) to FAN."""
+    """The FAN ramp of rank k — from (1-FAN) to FAN, centred on 0.5."""
     if effectif < 2:
         return 0.5
     return (1 - fan) + rang * (2 * fan - 1) / (effectif - 1)
+
+
+def fraction_pan(pan, fan, rang, effectif):
+    """The pan fraction of rank k: the FAN ramp **offset by the slot's PAN**.
+
+    The ramp is centred on 0.5, so the slot's own PAN shifts it: a group at
+    PAN 52 % with FAN 60 % puts its second head at 0.52 + 0.44 - 0.5 = 0.45999,
+    and the wire reads 0.45995 — under half a DMX unit at 16 bits (COV-36).
+
+    **The PAN term was missing until 2026-09-01** and nothing had caught it:
+    both frozen captures below sit at PAN 50 %, where this reduces to
+    `etalement` exactly. That is the corpus-uniformity trap in its usual dress
+    — a formula that held because nothing had exercised the other case.
+
+    `effectif` counts the group's fixtures, the **unpatched ones included**: at
+    n = 5 the same reading lands on 0.46999, a full point and some 136 DMX
+    units away from what was measured. One point, so it is a reading and not a
+    law.
+    """
+    return pan + etalement(fan, rang, effectif) - 0.5
 
 
 def dmx16(f5, f6, pct):
@@ -67,6 +88,22 @@ def demo():
                 f"{nom}: tilt of head {k} = {attendu}, measured {mes_tilt[k]}"
             if canal(p5, p6, etalement(fan, k, len(lyres)))[0] != mes_pan[k]:
                 rates += 1
+    # COV-36: the PAN term, on a 16-bit pan read off the wire. Group A of the
+    # experiment rig, pad `Center`: PAN 52 %, FAN 60 %, six fixtures of which
+    # the first is unpatched, and the head of rank 1 sits at limits 151/204.
+    mesure = 45072                                    # coarse 176, fine 16
+    attendu = dmx16(151, 204, fraction_pan(34078 / DEMI_ECHELLE,
+                                           39321 / DEMI_ECHELLE, 1, 6))
+    assert abs(attendu - mesure) <= 1, f"pan with PAN: {attendu} vs {mesure}"
+    # and the rival that the same reading kills: the ramp over the *patched*
+    # fixtures only, which misses by more than a hundred DMX units.
+    rival = dmx16(151, 204, fraction_pan(34078 / DEMI_ECHELLE,
+                                         39321 / DEMI_ECHELLE, 1, 5))
+    assert abs(rival - mesure) > 100, "n = 5 should not fit"
+    # The tilt of the same frame, to the unit, on the same head.
+    assert dmx16(0, 77, 21626 / DEMI_ECHELLE) == 6530, "tilt 16-bit"
+    # COV-35: a fixture whose four travel limits are absent is pinned at 0.
+    assert dmx16(0, 0, 0.42) == 0 and dmx16(0, 0, 1.0) == 0, "pinned head"
     # POS-05/07: the detached head, signed offsets from record 151.
     signe = lambda v: (v - 32768) / 32767
     pan_off, tilt_off = signe(37027), signe(16383)      # +13 %, -50 %
@@ -76,7 +113,8 @@ def demo():
     assert canal(0, 77, 45874 / DEMI_ECHELLE + signe(62585))[0] == 77, "clamp"
     assert dmx16(0, 77, 2.0) == round(borne16(77)) == 19789, "clamp 16 bits"
     assert rates == 1, f"pan: {rates} misses instead of the one known (Crowd, head 2)"
-    print("self-check ok: 12/12 tilt, 11/12 pan, offsets and clamp",
+    print("self-check ok: 12/12 tilt, 11/12 pan, the PAN term, a pinned head, "
+          "offsets and clamp",
           file=sys.stderr)
 
 

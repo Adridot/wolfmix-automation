@@ -1592,10 +1592,20 @@ offset has no DMX capture behind it.
 
 ### The position model, end to end — **[device-confirmed]**
 
+**The `PAN` term was missing until 2026-09-01 (COV-36).** The pan line above
+ignored the slot's own `PAN` and scored 11/12; the wire gives a fraction of
+**0.45995** where `PAN + ramp − 0.5` gives **0.45999**, under half a DMX unit
+at 16 bits. The old formula is the special case `PAN = 50 %`, which is where
+both measured captures sat — re-scored under the new rule they are unchanged,
+the one known miss included. Nothing had ever exercised a slot away from
+centre. **`n` counts the group's fixtures including any that are not
+patched**: at 5 instead of 6 the same reading misses by 136 DMX units.
+
 Everything a recalled position emits is computable from the file:
 
 ```
-pct_group(k) = (1 − FAN) + k × (2·FAN − 1) / (n − 1)     pan; k = rank in group
+pct_group(k) = PAN + ramp(FAN, k, n) − 0.5               pan; k = rank in group
+ramp(FAN,k,n)= (1 − FAN) + k × (2·FAN − 1) / (n − 1)     the FAN spread
 pct_group    = TILT                                       tilt
 pct          = clamp(pct_group + offset, 0, 1)            offset from 151
 borne16(f)   = f / 255 × 65535                            f = 106.f5 or f6

@@ -78,12 +78,39 @@ CONTAINER_PROOF = {
 PROOF = {
     ("101", "name"): (DEVICE, "ACC-01"),
 
+    # 102 — every field but the inert `f11`, each written by the device in a
+    # single-variable save and read back off the Settings screen (§6).
+    ("102", "blackout_excluded_groups"): (DEVICE, "FX-09"),
+    ("102", "blinder_fade_out"): (DEVICE, "FX-08"),
+    ("102", "blinder_excluded_groups"): (DEVICE, "FX-08"),
+    ("102", "release_modes"): (DEVICE, "FX-02"),
+    ("102", "smoke_fan_speed"): (DEVICE, "FX-07"),
+    ("102", "smoke_intensity"): (DEVICE, "FX-07"),
+    ("102", "speed_multiplier"): (DEVICE, "FX-06"),
+    ("102", "strobe_excluded_groups"): (DEVICE, "FX-09"),
+    ("102", "strobe_speed"): (DEVICE, "§6"),
+    ("102", "wolf_excluded_groups"): (DEVICE, "FX-10"),
+
     ("105", "patch"): (CORRELATED, "§7"),
     ("105", "library_id"): (CORRELATED, "§7"),
     ("105", "offset_106"): (CORRELATED, "§7"),
     ("105", "entry_count_106"): (CORRELATED, "§7"),
     ("105", "fixture"): (CORRELATED, "§7"),
     ("105", "group"): (CORRELATED, "§7.4"),
+
+    ("106", "channel_roles"): (CORRELATED, "§7.5"),
+    ("106", "dmx_channel"): (CORRELATED, "§7.5"),
+    ("106", "role"): (CORRELATED, "§7.5"),
+    ("106", "range_start"): (CORRELATED, "§7.5"),
+    ("106", "range_end"): (CORRELATED, "§7.5"),
+    ("106", "limit_low"): (DEVICE, "POS-01"),
+    ("106", "limit_high"): (DEVICE, "POS-01"),
+
+    ("110", "channels"): (CORRELATED, "§7.6"),
+    ("110", "range_count"): (CORRELATED, "§3.4"),
+    ("110", "offset_111"): (CORRELATED, "§7"),
+    ("110", "feature"): (CORRELATED, "§7.5"),
+    ("110", "principal_channel"): (CORRELATED, "§7.6"),
 
     ("111", "ranges"): (CORRELATED, "§7.6"),
     ("111", "start"): (CORRELATED, "§7.6"),
@@ -128,6 +155,12 @@ PROOF = {
     ("145", "gobos"): (DEVICE, "§3.4"),
     ("150", "positions"): (DEVICE, "§3.2"),
     ("151", "detached"): (DEVICE, "POS-03"),
+    ("155", "sequences"): (DEVICE, "§8"),
+    ("155", "groups_per_step"): (DEVICE, "§8"),
+    ("155", "engine"): (VALIDATED, "FX6-05"),
+    ("155", "step_count"): (DEVICE, "§8"),
+    ("155", "steps"): (DEVICE, "§8"),
+
     ("160", "macros"): (CORRELATED, "§3"),
     ("165", "presets"): (CORRELATED, "§5"),
 

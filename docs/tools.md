@@ -104,17 +104,18 @@ Naming: a field whose meaning is proven gets a semantic key (`name`, `profile`,
 `effect`, …); an unidentified field keeps a neutral `fN` key. An absent field is
 absent from the dict — never a synthesised `0`.
 
-Decoded today: 101, 102, 105, **111**, 115, 116, 120, 125, **130**, 135, 140,
-145, 150, **151**, 160, 165 <!--types:decoded--> — 16 <!--count:decoded-->.
+Decoded today: 101, 102, 105, **106**, **110**, 111, 115, 116, 120, 125, 130,
+135, 140, 145, 150, 151, **155**, 160, 165 <!--types:decoded--> —
+19 <!--count:decoded-->.
 `python3 tools/wpj_counts.py --print` prints the split, and `wpj_codec.SCHEMAS`
 is the source of truth for it.
 
 Note on 105: the keys are `offset_106` and `entry_count_106`, not an address and a
 channel count — see `SPEC.md` §7. The old names were a misreading.
 
-Passthrough (round-tripped, undecoded): 106, 110, 155, 161
-<!--types:passthrough--> — 4 <!--count:passthrough-->. Several of these have a
-documented structure in `SPEC.md` without a codec schema yet.
+Passthrough (round-tripped, undecoded): 161 <!--types:passthrough--> —
+1 <!--count:passthrough-->. That is SPEC.md's Q8, and it is the only record
+type left with no schema at all.
 
 The self-check reads only the corpus you supply. It does **not** scan your
 WTOOLS installation; copy what you want tested into the corpus root instead.

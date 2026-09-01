@@ -93,10 +93,55 @@ _PRESET = {
     7: ("page_color_fx", "packed"), 23: ("page_move_fx", "packed"),
 }
 
+# 102: the flash-FX settings, SPEC §6. Every field but `f11` was written by
+# the device in a single-variable save and read back off the Settings screen.
+# `f4` is packed rather than "hex": the release mode is an enumeration of five
+# values, so no element can reach the two-byte varint that would change the
+# length. `f11` stays a neutral key — it is `correlated` as *inert*, which is
+# not a meaning, and naming it would be the exact lie this codec avoids.
+_FLASH_FX = {1: ("blackout_excluded_groups", "v"),
+             2: ("blinder_fade_out", "v"),
+             3: ("blinder_excluded_groups", "v"),
+             4: ("release_modes", "packed"),
+             5: ("smoke_fan_speed", "v"), 6: ("smoke_intensity", "v"),
+             7: ("speed_multiplier", "v"),
+             8: ("strobe_excluded_groups", "v"), 9: ("strobe_speed", "v"),
+             10: ("wolf_excluded_groups", "v")}
+
+# 106: one entry per mapped channel, SPEC §7.5. `f1`/`f3` are the DMX window
+# the role drives and `f5`/`f6` the fixture's travel limits — two pairs that
+# read alike and mean different things, which is why both carry their axis in
+# the name. `bornes_106` and `roles_106` in wpj_identities check f1/f3 and f4.
+_CHANNEL_ROLE = {1: ("range_start", "v"), 2: ("dmx_channel", "v"),
+                 3: ("range_end", "v"), 4: ("role", "v"),
+                 5: ("limit_low", "v"), 6: ("limit_high", "v")}
+
+# 110: the flattened channel table of every profile, SPEC §7.6.
+# `f2` is the **range count** — the size of this channel's slice of 111 — not
+# a feature enum: the identity `110[c].f2 == len(111 slice of c)` holds on the
+# whole corpus and is what killed the enum reading. The feature is `f4`, in
+# bijection with the engine role `106.f4` (`roles_106`). SPEC §7's bullet still
+# says "f2 = feature enum, f4 = default value"; the identities are what run.
+# `f1` = 1 on 568 of the corpus's channels and absent on the rest — a flag with
+# no reading, left as a neutral key.
+_CHANNEL = {2: ("range_count", "v"), 3: ("offset_111", "v"),
+            4: ("feature", "v"), 5: ("principal_channel", "v")}
+
+# 155: the four FX sequences, SPEC §8. `f2` says which engine owns the sequence
+# and that sets the domain of `f4`: move (1) stores a position index per step
+# and group, beam (2) a 4-bit segment mask. `f4` is 128 PACKED varints —
+# 16 steps × 8 groups, step-major — and reading it as a byte array works by
+# accident until one value exceeds 127 (FX6-05).
+_SEQUENCE = {1: ("groups_per_step", "v"), 2: ("engine", "v"),
+             3: ("step_count", "v"), 4: ("steps", "packed")}
+
 SCHEMAS = {
     101: {1: ("name", "str")},
-    102: {},                                  # 16 bytes, unidentified fields
+    102: _FLASH_FX,
     105: {5: ("patch", _PATCH)},
+    106: {5: ("channel_roles", _CHANNEL_ROLE)},
+    110: {5: ("channels", _CHANNEL)},
+    155: {5: ("sequences", _SEQUENCE)},
     115: {5: ("fixtures", {2: ("dmx_address", "v"), 3: ("profile", "v"),
                           4: ("group", "v")})},
     116: {5: ("profiles", _PROFIL)},
@@ -147,7 +192,7 @@ SCHEMAS = {
 # than a comment, because `tools/wpj_counts.py` checks the documents against it
 # — a record that moves from here to SCHEMAS must not need a doc edit to stay
 # true, it must make the gate fail until one happens.
-PASSTHROUGH = (106, 110, 155, 161)
+PASSTHROUGH = (161,)
 
 # Every record type the container is known to carry.
 TYPES = tuple(sorted(set(SCHEMAS) | set(PASSTHROUGH)))

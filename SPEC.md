@@ -141,8 +141,11 @@ every run.
 
 ## 3. Record inventory — **[correlated 45/45]**
 
-20 record types <!--count:record_types-->, of which 16 <!--count:decoded-->
-have a codec schema and 4 <!--count:passthrough--> round-trip verbatim.
+20 record types <!--count:record_types-->, of which 19 <!--count:decoded-->
+have a codec schema and 1 <!--count:passthrough--> round-trips verbatim.
+The one is record 161 (Q8). Records 102, 106, 110 and 155 were documented here
+and undecoded in the codec until 2026-09-01 — a gap `tools/wpj_coverage.py`
+made visible by counting it.
 
 | Type | Size (bytes) | Items | Identification | Status |
 |---|---|---|---|---|

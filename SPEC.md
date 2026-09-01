@@ -1220,7 +1220,15 @@ are what pins `115.f2` to a real DMX patch.
   `[0, count(106))` exactly, and two entries share offset 141 in *rig-c* because
   one has span 0 — which no DMX address could do. **The DMX start address is
   `115.f2`**, device-confirmed by the gobo capture in §3.4.
-- **`115.f6`/`f7` are not per-fixture data, and four readings are refuted — [observed] (COV-58).**
+- **`115.f6`/`f7` is not project data — [device-confirmed] (COV-63).** A save whose
+  only operator input was a **live-state** gesture — and record 165 came back
+  byte-identical, so nothing that gesture touched reached the file — deleted the
+  pair from **all twenty rows**, `(231, 20)` → absent, 379 → 279 bytes. A field
+  that vanishes on a save with no file-level variable is not a property of the
+  fixtures it is written on. It keeps its neutral keys: knowing what it is not is
+  not knowing what it is, and **a writer must never synthesise it**.
+
+- **Four readings of it are refuted — [observed] (COV-58).**
   Every row of a file carries the *same* two values, and **67 of 86 versions carry
   nothing at all**. It is not a checksum of the record or of the patch — `(231, 20)`
   sits on two differing payloads and on two unrelated projects, one of 4 fixtures

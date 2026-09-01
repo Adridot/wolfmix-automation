@@ -225,10 +225,13 @@ SCHEMAS = {
     # Twelve corpus files carry it on no row at all, and reading those as
     # twenty fixtures all holding slot 0 is the trap — absence has no general
     # rule here (COV-41 is the other direction).
-    # The ITEMS' `f6`/`f7` are not per-fixture data: they are uniform within a
-    # file when present, and a save **removes** them as readily as another save
-    # adds them — COV-42 watched all four rows lose `177`/`124` on a save that
-    # touched nothing about the patch. A writer must not synthesise them.
+    # The ITEMS' `f6`/`f7` are **not project data** (COV-63, device-confirmed):
+    # a save whose only operator input was a live-state gesture — record 165
+    # byte-identical, so nothing that gesture touched reached the file — deleted
+    # the pair from all twenty rows, `(231, 20)` → absent. They are uniform
+    # within a file when present, and a save removes them as readily as another
+    # adds them (COV-42, four rows losing `177`/`124`). Four further readings
+    # are refuted in COV-58. A writer must not synthesise them.
     # `f2` absent is DMX address **0**, not an unpatched fixture (COV-41).
     115: {1: _COUNT, 5: ("fixtures", {2: ("dmx_address", "v"),
                                       3: ("profile", "v"), 4: ("group", "v"),

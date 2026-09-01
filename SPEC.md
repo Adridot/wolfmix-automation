@@ -1442,6 +1442,33 @@ carries this fixture's red" without inferring anything from channel order.
   non-monotonic gobo-wheel list and used it as the pad order (SORT-01,
   §3.4). Device-written files happen to be DMX-sorted; nothing requires it.
 
+### `116.f12` carries channel labels — of the wrong profile — **[observed]**
+
+`116.f12` is a repeated **UTF-8 string**, and the only text in the file that
+had never been opened: `Pan`, `Tilt`, `Pan/Tilt Speed`, `Strobe`,
+`Color Effect`, `Reset` — labels of the `FIXTURE BUILDER` kind. It exists in 8
+corpus files, one save lineage, and holds two arrays.
+
+**They are not the channel names of the profile that carries them.** The array
+on a 10-channel par — whose own `110.f4` types are *Dimmer, Red, Green, Blue,
+extra1, extra2, extra3, Shutter, Generic, Speed* — names `Pan` at index 2.
+Of the 28 offsets into record 110, **exactly one** fits all five non-empty
+entries: **21**, the `116.f3` of the 16-channel moving head COV-25 measured.
+`Color Effect` and `Reset` are name for name the two labels that screen prints
+on its two `Generic` channels, which anchors the identification on a
+device-confirmed reading.
+
+The rule closes all five profile items with no exception: item *i*'s `f12[k]`
+names the **moving head's** own channel `offset_110(i) + k`. WTOOLS 2.0.2 cut
+one profile-local array with each item's **global** offset into record 110 —
+§7.5's own warning, committed by the vendor's editor in the other direction,
+which is why the profile the names belong to carries none of them.
+
+**Nothing is named.** The one established fact is the negative: `f12` is not
+the carrying profile's channel names, and a reader that trusts it gets
+another profile's labels. Eight derived files of one project and one session
+cannot take this past `observed` (COV-30).
+
 ## 8. Type 155 — the 4 FX sequences — **[device-confirmed]**
 
 `field 1` = 4, then four `field 5` items:

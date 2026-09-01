@@ -136,6 +136,7 @@ PROOF = {
 
     ("116", "profiles"): (CORRELATED, "§7"),
     ("116", "channel_count"): (CORRELATED, "§7"),
+    ("116", "offset_110"): (CORRELATED, "§7"),
     ("116", "name"): (CORRELATED, "§7"),
     ("116", "uuid"): (CORRELATED, "PROFILE-05"),
     ("116", "timestamp"): (CORRELATED, "§7"),

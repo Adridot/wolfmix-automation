@@ -29,7 +29,7 @@ Measurement base: W1 Mk1 (serial withheld), firmware **2.0.18**, macOS. WTOOLS
 **2.0.2** build 248 — a **beta**, installed over the stable — which is what the
 later protocol work was read against.
 
-Corpus hashes in `corpus/SHA256SUMS` — 63 files, regenerated 2026-09-01; the
+Corpus hashes in `corpus/SHA256SUMS` — 64 files, regenerated 2026-09-01; the
 files themselves are not distributed ([`LEGAL.md`](LEGAL.md)).
 
 ### Evidence cutoff — 2026-09-01
@@ -1112,7 +1112,9 @@ identity 11 has no reason to hold for an internal arena index — together they
 are what pins `115.f2` to a real DMX patch.
 
 - **116 = fixture profile catalogue.** `f2` = channel count of the profile;
-  `f3` = index of its first channel in record 110; `f8` = UTF-8 name **truncated
+  `f3` = index of its first channel in record 110 (`offset_110` in the codec
+  since 2026-09-01 — it was documented here from the start and never named,
+  and a reader that defaults it to 0 decodes every profile as the first one); `f8` = UTF-8 name **truncated
   to 19 characters** (`'LED PAR 56 Black RG'`); `f9` = the profile
   **UUID** (16 bytes), the identifier `GET_PROFILE` takes and
   `wolfmix.py profiles` reports — the file and the controller share one key
@@ -1382,7 +1384,17 @@ Each `106` entry targets a channel of its fixture's profile through
 | `f2` | absolute 0-based DMX channel |
 | `f4` | the channel's **role in the W1 engine** |
 | `f1`, `f3` | the **DMX window** the role drives — one of the channel's `111` ranges on 4188 of 6070 entries |
-| `f5`, `f6` | the fixture's **travel limits**, per fixture and per axis |
+| `f5`, `f6` | the fixture's **travel limits**, per fixture and per axis — the `MIN`/`MAX` of the `FIXTURE LIMITS` screen, as `v/255` (COV-24). **Invert pan swaps the two.** |
+
+**`110.f4` is the channel type the `FIXTURE BUILDER` shows — [device-confirmed]
+(COV-25)**, name for name, 16 of 16 on a moving head, the two `Generic` values
+landing on the entries the W1 labels `Color Effect` and `Reset`. **Do not cross
+it with `ssl2.TYPE_CANAL`:** the two agree up to 27 and diverge after — a
+`RGBAW UV` par's three extra colours are 31, 32, 33 here, where the `.ssl2`
+table reads 31 White, 32 Gobo Bounce, 33 Framing Rotation. PROFILE-02
+established that table for profiles read off the **controller**; it does not
+transfer to the file. `extra1/2/3` below stays the right name until something
+measures them.
 
 Seventeen roles, in bijection with the profile feature `110.f4`:
 

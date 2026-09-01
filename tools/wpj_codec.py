@@ -39,8 +39,12 @@ _PATCH = {1: ("library_id", "v"), 4: ("offset_106", "v"), 5: ("fixture", "v"),
 # takes and `wolfmix.py profiles` reports — the file and the controller
 # share one key space. No version check: the locally-authored profiles
 # carry serial-derived identifiers that are not RFC 4122 v5.
-_PROFIL = {2: ("channel_count", "v"), 8: ("name", "str"), 9: ("uuid", "uuid"),
-           11: ("timestamp", "v")}
+# f3 = the index of this profile's first channel in record 110; with f2 it is
+# the (offset, length) pair that cuts 110, and identity 3 checks that the
+# offsets are the running sum of the counts. Documented in §7 since the corpus
+# mining and never named here.
+_PROFIL = {2: ("channel_count", "v"), 3: ("offset_110", "v"),
+           8: ("name", "str"), 9: ("uuid", "uuid"), 11: ("timestamp", "v")}
 # The order of a pad's 7 channels: device-confirmed (the W1's RGB+ view, raw 0-255)
 _PAD = {1: ("red", "v"), 2: ("green", "v"), 3: ("blue", "v"),
         4: ("white", "v"), 5: ("amber", "v"), 6: ("lime", "v"), 7: ("uv", "v")}

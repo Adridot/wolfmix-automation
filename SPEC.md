@@ -29,7 +29,7 @@ Measurement base: W1 Mk1 (serial withheld), firmware **2.0.18**, macOS. WTOOLS
 **2.0.2** build 248 — a **beta**, installed over the stable — which is what the
 later protocol work was read against.
 
-Corpus hashes in `corpus/SHA256SUMS` — 57 files, regenerated 2026-08-27; the
+Corpus hashes in `corpus/SHA256SUMS` — 59 files, regenerated 2026-09-01; the
 files themselves are not distributed ([`LEGAL.md`](LEGAL.md)).
 
 ### Evidence cutoff — 2026-09-01
@@ -282,6 +282,16 @@ field 1 = 20 · field 2 = group 0…7 · field 5 × 20
 Settled by the picker's `RGB+` view, which prints the **raw 0–255 channel
 values** and names all seven channels in field order. The other four views are
 lossy: the display **truncates**, so 127/255 shows as 49 %, not 50 %.
+
+**`SHIFT` + an encoder prints two decimals — [device-confirmed] (COV-11).**
+On the POSITION screen the same gesture is a fine adjust *and* a
+high-resolution read: `53.55 %`, `99.94 %`. **Measure positions this way.** A
+whole-percent reading cannot separate `v/65536` from `v/65535`, nor rounding
+from truncation, nor — as COV-08 nearly learned the hard way — two candidate
+scales that happen to land one unit apart. Four two-decimal points settle the
+sub-message on their own: PAN, TILT and FAN on unsigned `v/65536`, FOCUS
+OFFSET on signed `(v−32768)/32767` where the unsigned reading would have
+printed `99.97` against the screen's `99.94`.
 
 **That rule does not hold on every screen — [device-confirmed] (COV-09).** The
 POSITION screen **rounds**: 39976/65536 is 60.9985 % and shows **61**, 32767 is

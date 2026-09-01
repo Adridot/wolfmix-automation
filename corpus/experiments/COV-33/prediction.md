@@ -45,6 +45,37 @@ address**; ranks 1–5 are at DMX **16, 32, 48, 64, 80**.
 | 4 `Crowd` | 1 entry | 5 | nothing — the record ends at 1 |
 | 5 `Ceiling` | 1 entry | 4 | nothing — the record ends at 1 |
 
+## What the vendor manual says, and what the photograph then shows
+
+The manual's `Fixture Offset Mode` page lists, among the displayed data, the
+offset of the **currently selected** fixture, shown as a *white dot*. That is
+the marker at the centre of the green target in the photograph — white, because
+the selected fixture is at 0 / 0 / 0 and sits on the group position. The
+`Position Picker` page one section earlier lists no such dot, and the
+photograph of that page has none. So the manual accounts for **one** marker.
+
+The photograph carries **three**. Isolating the UI green on the raw pixels and
+clustering it gives, inside the grid and away from the text: the target at
+(1370, 654) and two small round markers of 25 × 25 and 22 × 23 pixels, at
+(2041, 623) and (430, 854). Nothing else above noise.
+
+Calibrating on the two axis lines — the local dips at x = 1313 and y = 549 —
+against the group's own device-confirmed `PAN 53.55 %` / `TILT 35.11 %` places
+them roughly at **(+42 %, +5 %)** and **(−58 %, −28 %)** of offset. **Treat the
+magnitudes as indicative and the signs as solid**: the photograph is taken at
+an angle, a linear map strains on it, and the second marker's absolute pan
+comes out below 0, which cannot be. What survives the angle is the **quadrant**
+and the **count**.
+
+The first marker is in the `(+pan, +tilt)` quadrant with pan far larger than
+tilt — the signature of the file's only stored entry, `+39 % / +9 %`. **The
+second is deep in `(−pan, −tilt)`, and the file holds no entry with a negative
+offset at all.**
+
+Naming the small markers "the other fixtures' offsets" is an **inference**: the
+manual documents the white dot and not these. The rival is that they are drawn
+for some other reason, and one encoder turn separates the two.
+
 ## Predictions
 
 | # | Prediction | p |
@@ -55,6 +86,7 @@ address**; ranks 1–5 are at DMX **16, 32, 48, 64, 80**.
 | 4 | slots 4 and 5 show **0 / 0 / 0 on all six fixtures** — they claim entries at offsets 5 and 4 of a one-entry record, so there is nothing to show | 0.75 |
 | 5 | if 2 and 4 hold: the **counters are stale** and record 151 is right. `tranches_151` fell the same way `comptes_de_tete` did in the same save — a count left behind — and a reader must clamp a slice to the record | 0.7 |
 | 6 | rival, and the one that matters: **four** fixtures carry offsets on the first slot, or slots 4/5 show any. Then record **151 was truncated on write**, the counters are right, and a device save can lose detached positions | 0.2 |
+| 6b | sharpened by the photograph: **one** fixture reads clearly **negative** `PAN OFFSET` and `TILT OFFSET`, and it is the entry the file lost — the count of markers already exceeds the count of stored entries, and only the encoder can say by how much | 0.6 |
 | 7 | rival: no fixture anywhere reads 39/9 → the stored entry is not reachable from this screen at all, and `151.f1` indexes something neither candidate covers | 0.1 |
 
 ## Collision check

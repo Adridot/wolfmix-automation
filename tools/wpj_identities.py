@@ -718,6 +718,73 @@ IDENTITES = (comptes_de_tete, boutons_live_edit, ranges_par_canal, palette_gobo,
               flavours_155, carte_dmx_130)
 
 
+def _anomalie_comptes(w):
+    """`120.f1` above the entries it counts (COV-32/COV-37)."""
+    d = wpj_codec._decode_msg(w.get(120), _ITEMS)
+    f1, n = d.get("f1"), len(d.get("items", []))
+    if f1 is not None and f1 != n:
+        return f"120: field 1 = {f1} against {n} entries"
+
+
+def _anomalie_tranches(w):
+    """A slice table of 150 that outruns record 151 (COV-32/COV-37)."""
+    n151 = len(_items(w, 151)) if w.get(151) else 0
+    vus = 0
+    for g in range(8):
+        for slot in _items(w, 150, g):
+            if "f1" in slot or "f2" in slot:
+                vus += slot.get("f1", 0)
+    if vus != n151:
+        return f"150/151: {vus} entries referenced, {n151} present"
+
+
+def _anomalie_120_patch(w):
+    """Record 120 holding more entries than the patch justifies (COV-32).
+
+    One entry per (fixture, profile channel), so the length is the sum of each
+    fixture's profile channel count. A `FIXTURE SETUP` session left six extra
+    on this rig and they rode along in eight files."""
+    profils = _items(w, 116)
+    n = len(_items(w, 120))
+    try:
+        somme = sum(profils[f.get("f3", 0)].get("f2", 0) for f in _items(w, 115))
+    except IndexError:
+        return
+    if somme and n != somme:
+        return f"120: {n} entries against {somme} the patch justifies"
+
+
+# Equalities a **well-formed** project satisfies and the identities above no
+# longer assert, because a device-written file broke each of them and the
+# identity had to fall back to containment (COV-32, COV-37). They are not
+# format rules — they are what a file looks like when nothing has gone wrong,
+# so they belong to the per-file check and never to the corpus sweep, which
+# would fail on the very captures that record the defect.
+ANOMALIES = (_anomalie_comptes, _anomalie_tranches, _anomalie_120_patch)
+
+
+def controler(chemin):
+    """Every identity against one project, and **all** the failures, not the
+    first. `demo()` stops at the first because a corpus sweep only has to say
+    that something is wrong; asking "is this capture internally consistent"
+    needs the whole list — COV-32 broke two at once and the sweep showed one.
+    Returns the failures as (name, message)."""
+    w = wpjlib.Wpj.load(chemin)
+    echecs = []
+    for verif in IDENTITES:
+        try:
+            verif(w)
+        except AssertionError as e:
+            echecs.append((verif.__name__, str(e)))
+    return echecs
+
+
+def anomalies(chemin):
+    """Well-formedness equalities this project fails. Never a format claim."""
+    w = wpjlib.Wpj.load(chemin)
+    return [(f.__name__, m) for f in ANOMALIES for m in (f(w),) if m]
+
+
 def demo():
     files = wpjlib.corpus_files()
     if not files:
@@ -741,5 +808,27 @@ def demo():
           " (+ the F30-04 / FLASH-09 pairs)", file=sys.stderr)
 
 
+def main(argv=None):
+    import argparse
+    p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    p.add_argument("project", nargs="?",
+                   help="check one variant-A .wpj; with no argument, the "
+                        "corpus self-check")
+    args = p.parse_args(argv)
+    if args.project is None:
+        demo()
+        return 0
+    echecs = controler(args.project)
+    for nom, message in echecs:
+        print(f"BROKEN   {nom}: {message}", file=sys.stderr)
+    anos = anomalies(args.project)
+    for nom, message in anos:
+        print(f"ANOMALY  {nom}: {message}", file=sys.stderr)
+    print(f"{args.project}: {len(IDENTITES) - len(echecs)}/{len(IDENTITES)} "
+          f"identities hold, {len(anos)} anomal{'y' if len(anos) == 1 else 'ies'}"
+          f" — a well-formed project has none", file=sys.stderr)
+    return 1 if echecs or anos else 0
+
+
 if __name__ == "__main__":
-    demo()
+    sys.exit(main())

@@ -29,7 +29,7 @@ Measurement base: W1 Mk1 (serial withheld), firmware **2.0.18**, macOS. WTOOLS
 **2.0.2** build 248 — a **beta**, installed over the stable — which is what the
 later protocol work was read against.
 
-Corpus hashes in `corpus/SHA256SUMS` — 64 files, regenerated 2026-09-01; the
+Corpus hashes in `corpus/SHA256SUMS` — 66 files, regenerated 2026-09-01; the
 files themselves are not distributed ([`LEGAL.md`](LEGAL.md)).
 
 ### Evidence cutoff — 2026-09-01
@@ -738,8 +738,15 @@ checked on every run. The measured macro shows it bare: one targeted fixture,
 `f1 = [17]` (two bits), `f8 = [200, 0]`. This **refutes** reading `f8` as a
 per-group array of eight, which its `[50] × 8` shape on the factory macros
 invites. `len(f1)` never exceeds the fixture count, which fits one mask per
-targeted fixture — consistent, not measured. `f7` has a shape and no reading:
-its length is `2 × len(f1) + 4` on 489 of 490.
+targeted fixture — consistent, not measured. **`f7` encodes the targeted fixture — [device-confirmed] (COV-27).** Two macros
+on the same fixture with different features come back with a byte-identical
+`f7`; its length is `2 × len(f1) + 4` on 489 of 490. What it *says* about the
+fixture is unmeasured — one fixture is not a mapping — so it keeps its neutral
+key.
+
+**The panel takes the fine channel with the coarse one.** A macro set on
+`01 Pan` alone stores two bits and two values, the second being `03 uPan` at 0;
+`02 Tilt` likewise drags `04 uTilt`. A writer asking for one feature gets two.
 
 `f10`'s `LIVE EDIT` bit says *whether* a preset carries Live Edits; `f18` says
 *which*. **And record 160 is where those buttons are defined — [correlated]

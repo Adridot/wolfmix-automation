@@ -131,6 +131,39 @@ def groupe_fixture(w):
             f"profiles {attendu:#x}"
 
 
+def masque_fixtures_161(w):
+    """Record 161's leading value is a bit mask over the **fixtures**.
+
+    Read the leading packed values of each item as the little-endian bytes of
+    one integer: its highest set bit never addresses a fixture that is not in
+    record 115 — 288 items, no exception (COV-45). And it follows the patch: a
+    save whose only change was adding a fifth fixture took item 0 from **15**
+    to **31**, all-ones over four fixtures then over five.
+
+    That is the first thing anyone has pinned on this record's content, and it
+    settles what COV-21 could not: the "20-bit mask" it found is not a palette
+    page, a preset page or a Live Edit page, all of which are also 20 — those
+    files carry **20 fixtures**. What the mask *selects* is still unread, and
+    SPEC's Q8 is open on everything else in the 188 values.
+
+    The byte reading is guarded, not assumed: a value above 255 means the
+    packed array is not a byte string there and the item is skipped, which is
+    the trap record 155 sprang and COV-06 recorded."""
+    try:
+        items = _items(w, 161)
+    except KeyError:
+        return
+    nfx = len(_items(w, 115))
+    for i, item in enumerate(items):
+        vals = _varints(item.get("f3", {}).get("hex", ""))[:8]
+        if not vals or any(v > 255 for v in vals):
+            continue
+        masque = sum(v << (8 * k) for k, v in enumerate(vals))
+        assert masque.bit_length() <= nfx, \
+            f"161[{i}]: mask {masque:#x} addresses fixture " \
+            f"{masque.bit_length() - 1} of {nfx}"
+
+
 def moteurs_f16(w):
     """165.f16 = twelve 9-bit group masks, one per "engine".
 
@@ -715,7 +748,7 @@ IDENTITES = (comptes_de_tete, boutons_live_edit, ranges_par_canal, palette_gobo,
               ordre_fixtures_115, bornes_106, tranches_151,
               tableaux_par_groupe_165,
               schema_du_prefixe, canal_principal_110, noms_de_preset_bornes,
-              flavours_155, carte_dmx_130)
+              flavours_155, carte_dmx_130, masque_fixtures_161)
 
 
 def _anomalie_comptes(w):

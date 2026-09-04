@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """The other guard: no tracked document may point at a file that is not there.
 
+Module group: Verification. Reference: docs/tools.md.
+
 `wpj_privacy.py` says what must never leave. This says what must still be
 found: the tree is dense with cross-references — README to SPEC, SPEC to
 research, every doc to a tool — and a file renamed in one commit leaves them
@@ -21,6 +23,10 @@ Usage:
   wpj_links.py            check the tracked documents
   wpj_links.py file…      check those documents
 """
+
+from __future__ import annotations
+from os import PathLike
+from collections.abc import Iterable
 import os
 import re
 import sys
@@ -36,7 +42,7 @@ DEFINITION = re.compile(r"^\s{0,3}\[[^\]]+\]:\s*<?([^>\s]+)>?")
 EXTERNES = ("http://", "https://", "mailto:", "ftp://", "//")
 
 
-def cibles(texte):
+def cibles(texte: str) -> list[tuple[int, str]]:
     """(line, target) of every local link — fenced blocks left out."""
     trouves, fence = [], None
     for numero, ligne in enumerate(texte.splitlines(), 1):
@@ -60,7 +66,7 @@ def cibles(texte):
     return trouves
 
 
-def resoudre(document, cible):
+def resoudre(document: str | PathLike[str], cible: str) -> str | None:
     """The target as a repository path, without its anchor or its query."""
     chemin = cible.split("#", 1)[0].split("?", 1)[0]
     if not chemin:
@@ -68,7 +74,10 @@ def resoudre(document, cible):
     return os.path.normpath(os.path.join(os.path.dirname(document), chemin))
 
 
-def casses(documents, suivis):
+def casses(
+    documents: Iterable[str | PathLike[str]],
+    suivis: Iterable[str],
+) -> list[tuple[str | PathLike[str], int, str]]:
     """(document, line, target) for every link that lands nowhere."""
     connus, dossiers = set(suivis), set()
     for fichier in suivis:                    # a link may name a directory
@@ -91,7 +100,7 @@ def casses(documents, suivis):
     return trouves
 
 
-def identifiants(chemin=REGISTRE):
+def identifiants(chemin: str | PathLike[str] = REGISTRE) -> set[str]:
     """The finding ids the evidence registry defines."""
     try:
         with open(chemin, encoding="utf-8") as flux:
@@ -100,7 +109,10 @@ def identifiants(chemin=REGISTRE):
         return set()
 
 
-def orphelins(suivis, connus):
+def orphelins(
+    suivis: Iterable[str | PathLike[str]],
+    connus: set[str],
+) -> list[tuple[str | PathLike[str], int, str]]:
     """(file, line, id) for every finding id with no entry in the registry.
 
     A citation that resolves to nothing is the same failure as a dead link, and
@@ -124,7 +136,7 @@ def orphelins(suivis, connus):
     return trouves
 
 
-def demo():
+def demo() -> None:
     import tempfile
     texte = (
         "[a](docs/tools.md) and [b](absent.md)\n"
@@ -184,7 +196,7 @@ def demo():
           file=sys.stderr)
 
 
-def main(argv):
+def main(argv: list[str] | None) -> int:
     suivis = fichiers_suivis()
     documents = argv or [f for f in suivis if f.endswith(".md")]
     trouves = casses(documents, suivis)

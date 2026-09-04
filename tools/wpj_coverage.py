@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Byte coverage of a variant-A `.wpj`: how much of the file a name explains.
 
+Module group: Verification. Reference: docs/tools.md.
+
 Four buckets, and their sum is the file — that assertion is the whole point:
 
   read     a field the codec schema NAMES (its tag, its length prefix and its
@@ -45,6 +47,9 @@ Usage:
   wpj_coverage.py --corpus         the corpus aggregate, biggest gaps first
   wpj_coverage.py                  self-check
 """
+
+from __future__ import annotations
+from collections.abc import Mapping
 import sys
 
 import wpj_codec
@@ -421,7 +426,7 @@ def _leaf(path):
     return (parts[0], parts[-1])
 
 
-def unproven(acc):
+def unproven(acc: Mapping[tuple[str, str], int]) -> list[tuple[str, int]]:
     """[(path, bytes)] for every `read` path with no entry in PROOF."""
     out = []
     for (bucket, path), n in acc.items():
@@ -433,12 +438,12 @@ def unproven(acc):
     return sorted(out, key=lambda x: -x[1])
 
 
-def proof_of(path):
+def proof_of(path: str) -> tuple[str, str] | None:
     key = _leaf(path)
     return (CONTAINER_PROOF if isinstance(key, str) else PROOF).get(key)
 
 
-def by_status(acc):
+def by_status(acc: Mapping[tuple[str, str], int]) -> dict[str, int]:
     """{status: bytes} over the `read` bucket."""
     out = {}
     for (bucket, path), n in acc.items():
@@ -450,7 +455,7 @@ def by_status(acc):
     return out
 
 
-def dangling_evidence():
+def dangling_evidence() -> list[tuple[str | tuple[str, str], str, str]]:
     """Evidence citations that resolve to nothing, or to a retracted finding."""
     import wpj_evidence
     live, taken_back = set(), set()
@@ -559,7 +564,7 @@ def _walk(buf, schema, path, acc):
         _tally(acc, READ if named else _check_inert(sub, value), sub, i - start)
 
 
-def coverage(data, source="<bytes>"):
+def coverage(data: bytes, source: str = '<bytes>') -> dict[tuple[str, str], int]:
     """{(bucket, path): bytes} for one variant-A file. Sums to len(data)."""
     w = wpjlib.Wpj.from_bytes(data, source)
     acc = {}
@@ -587,14 +592,14 @@ def coverage(data, source="<bytes>"):
     return acc
 
 
-def totals(acc):
+def totals(acc: Mapping[tuple[str, str], int]) -> dict[str, int]:
     out = {READ: 0, INERT: 0, PARTIAL: 0, UNKNOWN: 0}
     for (bucket, _), n in acc.items():
         out[bucket] += n
     return out
 
 
-def report(acc, title, top=25):
+def report(acc: Mapping[tuple[str, str], int], title: str, top: int = 25) -> None:
     t = totals(acc)
     total = sum(t.values())
     print(f"{title}: {total} bytes")
@@ -618,7 +623,9 @@ def report(acc, title, top=25):
             print(f"    {n:>9}  {100.0 * n / total:5.2f} %  {bucket:<7} {path}")
 
 
-def by_name(acc):
+def by_name(
+    acc: Mapping[tuple[str, str], int],
+) -> list[tuple[int, str, str, str | tuple[str, str]]]:
     """[(bytes, status, citation, key)] for every `read` name, heaviest first.
 
     The promotion worklist. `read` counts bytes a name covers, not bytes a name
@@ -656,7 +663,7 @@ def _corpus_accumulated():
     return acc, files
 
 
-def demo():
+def demo() -> None:
     acc, files = _corpus_accumulated()
     if not files:
         return wpjlib.pas_de_corpus("wpj_coverage")
@@ -688,7 +695,7 @@ def demo():
                       for s, n in sorted(statuses.items(), key=lambda x: -x[1])))
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     import argparse
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("project", nargs="?", help="a variant-A .wpj")

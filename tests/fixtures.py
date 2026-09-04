@@ -6,6 +6,8 @@ is the *shape*, and the shape is public: it is written down in `SPEC.md` and in
 `tools/gobo_library.py`. So the tests build their own, and a wrong shape is a
 failing test rather than a missing file.
 """
+from collections.abc import Sequence
+
 import hashlib
 import struct
 
@@ -21,7 +23,7 @@ OPEN_FLAGS = b"\x00\x00\x00\x00\x00\x01"      # what ANCHOR matches on
 OTHER_FLAGS = b"\x00\x00\x00\x00\x00\x02"
 
 
-def prefix_bytes():
+def prefix_bytes() -> bytes:
     """The 44 bytes 20-63, with the four §9 constants where §9 puts them.
 
     `tools/wpj_coverage.py` declares those four spans inert and checks them on
@@ -33,7 +35,10 @@ def prefix_bytes():
     return bytes(out)
 
 
-def project_bytes(records=((101, b"\x0a\x04demo"),), prefix=None):
+def project_bytes(
+    records: Sequence[tuple[int, bytes]] = ((101, b"\x0a\x04demo"),),
+    prefix: bytes | None = None,
+) -> bytes:
     """A well-formed variant-A file: SHA-1 header, root container, records."""
     inner = b"".join(struct.pack("<IH", len(p), t) + p for t, p in records)
     body = (prefix if prefix is not None else b"\x00" * (BODY_OFF - 20))
@@ -41,7 +46,7 @@ def project_bytes(records=((101, b"\x0a\x04demo"),), prefix=None):
     return hashlib.sha1(body).digest() + body
 
 
-def flash_bytes(distinct=4):
+def flash_bytes(distinct: int = 4) -> bytes:
     """A flash image with `distinct` own icons and 796 sharing one pointer.
 
     The shared pointer is the point: on the device "Open" serves 96 entries at
@@ -77,5 +82,7 @@ def flash_bytes(distinct=4):
     return data
 
 
-def solid_icon(colour=(255, 0, 255, 255)):
+def solid_icon(
+    colour: tuple[int, int, int, int] = (255, 0, 255, 255),
+) -> list[tuple[int, int, int, int]]:
     return [colour] * (24 * 24)

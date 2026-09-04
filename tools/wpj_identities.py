@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """Structural identities of the variant-A .wpj, checked over the whole corpus.
 
+Module group: Verification. Reference: docs/tools.md.
+
 Each identity is an arithmetic constraint between two records. It is either
 true everywhere or false — so a reading that breaks one is refuted without
 touching hardware. Proof: demo() over the corpus.
 
 Usage: python3 tools/wpj_identities.py   (from the repository root)
 """
+
+from __future__ import annotations
+from os import PathLike
 import sys
 
 import wpj_codec
@@ -34,7 +39,7 @@ def _items(w, typ, occurrence=0):
     return wpj_codec._decode_msg(w.get(typ, occurrence), _ITEMS).get("items", [])
 
 
-def ranges_par_canal(w):
+def ranges_par_canal(w: wpjlib.Wpj) -> None:
     """110[c].f2 == the size of the slice of 111 that belongs to channel c."""
     c110, c111 = _items(w, 110), _items(w, 111)
     debuts = [c.get("f3", 0) for c in c110] + [len(c111)]
@@ -44,7 +49,7 @@ def ranges_par_canal(w):
             f"{debuts[i + 1] - debuts[i]}"
 
 
-def palette_gobo(w):
+def palette_gobo(w: wpjlib.Wpj) -> None:
     """Every f2 of type 145 is an f4 of the gobo ranges of 111.
 
     The ordered equality ("the palette is derived from the patch") held on
@@ -63,7 +68,7 @@ def palette_gobo(w):
     assert not hors, f"palette off the wheel: {hors} (wheel {sorted(ids)})"
 
 
-def tranches_106(w):
+def tranches_106(w: wpjlib.Wpj) -> None:
     """105.f4/f7 = a slice of record 106, not a DMX address.
 
     The intervals [f4, f4+f7) tile [0, count(106)) exactly, and every entry of
@@ -89,7 +94,7 @@ def tranches_106(w):
                 f"[{base}, {base + span}) of fixture {e.get('f5', 0)}"
 
 
-def patch_disjoint(w):
+def patch_disjoint(w: wpjlib.Wpj) -> None:
     """115.f2 = the starting DMX address: the windows never overlap."""
     p115, p116 = _items(w, 115), _items(w, 116)
     fen = sorted((f.get("f2", 0), p116[f.get("f3", 0)].get("f2", 0)) for f in p115)
@@ -97,7 +102,7 @@ def patch_disjoint(w):
         assert a + n <= b, f"overlapping DMX windows: {a}+{n} > {b}"
 
 
-def groupe_fixture(w):
+def groupe_fixture(w: wpjlib.Wpj) -> None:
     """115.f4 == 105.f6 == the fixture's group index, and 125 follows from it.
 
     Two records carry the assignment, redundantly: 115[r].f4 per fixture and
@@ -132,7 +137,7 @@ def groupe_fixture(w):
             f"profiles {attendu:#x}"
 
 
-def masque_fixtures_161(w):
+def masque_fixtures_161(w: wpjlib.Wpj) -> None:
     """Record 161's leading value is a bit mask over the **fixtures**.
 
     Read the leading packed values of each item as the little-endian bytes of
@@ -165,7 +170,7 @@ def masque_fixtures_161(w):
             f"{masque.bit_length() - 1} of {nfx}"
 
 
-def moteurs_f16(w):
+def moteurs_f16(w: wpjlib.Wpj) -> None:
     """165.f16 = twelve 9-bit group masks, one per "engine".
 
     The packed varints are the bytes of a little-endian bit field cut into
@@ -206,7 +211,7 @@ def moteurs_f16(w):
             f"{actif} in {h['hex']}"
 
 
-def tranche5_f16(w):
+def tranche5_f16(w: wpjlib.Wpj) -> None:
     """165.f16 slice 5 == the mask of the groups whose f17 dimmer is non-zero.
 
     The registry read "slice 5 = always 255" over 2446 presets. That was the
@@ -239,7 +244,7 @@ def tranche5_f16(w):
             f"{attendu} ({dimmers})"
 
 
-def plages_111(w):
+def plages_111(w: wpjlib.Wpj) -> None:
     """111.f1/f2 = the DMX bounds of a range, and every channel falls in a case.
 
     An exhaustive trichotomy over the corpus: a channel of 110 is either
@@ -282,7 +287,7 @@ ROLES_106 = {0: 7, 1: 1, 2: 2, 3: 25, 4: 26, 5: 27, 6: 31, 7: 32, 8: 33,
              9: 15, 10: 15, 11: 5, 12: 8, 14: 22, 15: 16, 21: 20, 22: 19}
 
 
-def roles_106(w):
+def roles_106(w: wpjlib.Wpj) -> None:
     """106.f4 = the channel's engine role; it determines the feature 110.f4.
 
     Every entry of 106 targets a channel of its fixture's profile, through
@@ -306,7 +311,7 @@ def roles_106(w):
                 f"expected {ROLES_106[role]}"
 
 
-def ordre_fixtures_115(w):
+def ordre_fixtures_115(w: wpjlib.Wpj) -> None:
     """115.f6 = a complete permutation of the fixture indexes.
 
     One byte per fixture, each index exactly once. It is neither the sort by
@@ -330,7 +335,7 @@ PLAGE_DU_ROLE = {0: 12, 3: 50, 4: 51, 5: 52, 6: 56, 7: 57, 8: 58,
                  9: 34, 14: 48, 15: 38}
 
 
-def bornes_106(w):
+def bornes_106(w: wpjlib.Wpj) -> None:
     """106.f1/f3 = the DMX bounds of the range the role drives.
 
     When `[f1, f3]` coincides with a range of the channel's 111 — 2643 corpus
@@ -363,7 +368,7 @@ def bornes_106(w):
                 break
 
 
-def tranches_151(w):
+def tranches_151(w: wpjlib.Wpj) -> None:
     """150[slot].f2/f1 = a slice of record 151, contiguous, and nothing orphaned.
 
     The same construction as `105.f4/f7` inside 106 and `116.f3/f2` inside 110:
@@ -413,7 +418,7 @@ def tranches_151(w):
 TABLEAUX_PAR_GROUPE = (3, 7, 14, 17, 23, 27, 28, 29, 30, 32, 33, 34, 35)
 
 
-def tableaux_par_groupe_165(w):
+def tableaux_par_groupe_165(w: wpjlib.Wpj) -> None:
     """The preset's per-group fields are exactly 8 varints.
 
     A non-trivial constraint: a wrong varint split, or a field taken for a
@@ -447,7 +452,7 @@ MOTEUR_VERS_F4 = {0: 3, 1: 2, 2: 4}
 # registry, together with the refutation.
 
 
-def schema_du_prefixe(w):
+def schema_du_prefixe(w: wpjlib.Wpj) -> None:
     """Byte 50 is the schema version, and 165.f32–f35 arrive at 10.
 
     The prefix is constant except for the UUID (20–35), the version counter
@@ -465,7 +470,7 @@ def schema_du_prefixe(w):
         f"prefix: schema {schema} but f32 {'present' if a32 else 'absent'}"
 
 
-def canal_principal_110(w):
+def canal_principal_110(w: wpjlib.Wpj) -> None:
     """110.f5 = the profile index of this channel's principal channel.
 
     A principal channel points at itself; a **fine** channel points at its
@@ -485,7 +490,7 @@ def canal_principal_110(w):
                 f"{p110[off + m].get('f4')}, not {c.get('f4')}"
 
 
-def flavours_155(w):
+def flavours_155(w: wpjlib.Wpj) -> None:
     """155.f2 = the sequence's engine, and it determines the value domain.
 
     The record holds four sequencers: item 0 is the **move** one (`f2` = 1),
@@ -534,7 +539,7 @@ def _entrees_165(payload):
     return f1, entrees
 
 
-def noms_de_preset_bornes(w):
+def noms_de_preset_bornes(w: wpjlib.Wpj) -> None:
     """No preset name exceeds 19 UTF-8 bytes.
 
     A device-confirmed limit (PRESET-05, 2026-08-26): the W1's rename UI caps
@@ -552,7 +557,7 @@ def noms_de_preset_bornes(w):
             f"165: a {len(octets)}-byte name: {octets!r}"
 
 
-def ajout_de_preset():
+def ajout_de_preset() -> None:
     """Adding a preset: what the device writes, and what it discards.
 
     Two pairs of experiments (registry, "F30-04" and "FLASH-09"):
@@ -622,7 +627,7 @@ def ajout_de_preset():
             "FLASH-09: the size difference is not \"the two additions, exactly\""
 
 
-def carte_dmx_130(w):
+def carte_dmx_130(w: wpjlib.Wpj) -> None:
     """130 = the DMX IN mapping table, and `f1` counts its entries.
 
     Measured on the device (MAP-01..05, registry). `f4` is the **function**
@@ -659,7 +664,7 @@ COMPTES_DE_TETE = (105, 106, 110, 111, 115, 116, 120, 125, 130, 135, 140, 150,
                    151, 155, 160)
 
 
-def comptes_de_tete(w):
+def comptes_de_tete(w: wpjlib.Wpj) -> None:
     """Field 1 = the number of entries, on 15 of the 20 record types.
 
     Free to check and it refutes something real: a reader that treats field 1
@@ -700,7 +705,7 @@ def comptes_de_tete(w):
                 assert f1 == n, f"{typ}: field 1 = {f1} but {n} entries"
 
 
-def boutons_live_edit(w):
+def boutons_live_edit(w: wpjlib.Wpj) -> None:
     """160.f5 = the LIVE EDIT button, and 165.f18 addresses the same 80.
 
     Three things at once, exact on every corpus file that has record 160:
@@ -743,7 +748,7 @@ def boutons_live_edit(w):
                 f"165.f18 sets button {bit}, which no macro defines"
 
 
-def occupation_120(w):
+def occupation_120(w: wpjlib.Wpj) -> None:
     """120.f4 is a run-length map of the 512 DMX channels, and it counts 120.
 
     One varint per run, in channel order: under 128 a free run of that length,
@@ -777,7 +782,7 @@ def occupation_120(w):
         f"120.f4: {occupes} channels occupied against {n} entries"
 
 
-def cartes_de_macro_160(w):
+def cartes_de_macro_160(w: wpjlib.Wpj) -> None:
     """160.f7 is a 512-slot run-length map with one slot per targeted fixture.
 
     The encoding record `120.f4` uses (COV-55): one varint per run, under 128 a
@@ -813,7 +818,7 @@ def cartes_de_macro_160(w):
             f"160.f7 on button {m.get('f5')}: {occupes} slots against {n1} masks"
 
 
-def identifiants_115(w):
+def identifiants_115(w: wpjlib.Wpj) -> None:
     """115.f9 = a per-fixture slot id, distinct within a file.
 
     The panel allocates the lowest free number and never reuses one twice at
@@ -1069,7 +1074,7 @@ ANOMALIES = (_anomalie_comptes, _anomalie_tranches, _anomalie_120_patch,
              _anomalie_125_drapeaux)
 
 
-def controler(chemin):
+def controler(chemin: str | PathLike[str]) -> list[tuple[str, str]]:
     """Every identity against one project, and **all** the failures, not the
     first. `demo()` stops at the first because a corpus sweep only has to say
     that something is wrong; asking "is this capture internally consistent"
@@ -1085,13 +1090,13 @@ def controler(chemin):
     return echecs
 
 
-def anomalies(chemin):
+def anomalies(chemin: str | PathLike[str]) -> list[tuple[str, str]]:
     """Well-formedness equalities this project fails. Never a format claim."""
     w = wpjlib.Wpj.load(chemin)
     return [(f.__name__, m) for f in ANOMALIES for m in (f(w),) if m]
 
 
-def demo():
+def demo() -> None:
     files = wpjlib.corpus_files()
     if not files:
         return wpjlib.pas_de_corpus("wpj_identities")
@@ -1114,7 +1119,7 @@ def demo():
           " (+ the F30-04 / FLASH-09 pairs)", file=sys.stderr)
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     import argparse
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("project", nargs="?",

@@ -22,7 +22,7 @@ from . import fixtures
 
 
 class Flash(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.path = os.path.join(self.directory.name, "wolfmixFlash.bin")
@@ -35,36 +35,36 @@ class IconIdRange(Flash):
     """Python would index -1 onto the last entry and raise past 800. Both are
     refusals here, with the range spelled out."""
 
-    def test_an_id_outside_the_table_is_refused(self):
+    def test_an_id_outside_the_table_is_refused(self) -> None:
         for bad in (-1, gobo_library.TABLE_LEN, 10 ** 6):
             with self.assertRaises(ValueError) as caught:
                 self.lib.check_id(bad)
             self.assertIn("out of table", str(caught.exception))
 
-    def test_a_non_integer_id_is_refused(self):
+    def test_a_non_integer_id_is_refused(self) -> None:
         for bad in ("3", 3.0, True, None):
             with self.assertRaises(ValueError):
                 self.lib.check_id(bad)
 
-    def test_patching_an_out_of_range_id_writes_nothing(self):
+    def test_patching_an_out_of_range_id_writes_nothing(self) -> None:
         for bad in (-1, gobo_library.TABLE_LEN):
             with self.assertRaises(ValueError):
                 gobo_write.patch(self.lib, {bad: fixtures.solid_icon()})
 
-    def test_a_shared_pointer_is_refused_by_name(self):
+    def test_a_shared_pointer_is_refused_by_name(self) -> None:
         """"Open" serves 796 entries in the fixture and 96 on the device:
         rewriting it would repaint them all."""
         with self.assertRaises(ValueError) as caught:
             gobo_write.patch(self.lib, {700: fixtures.solid_icon()})
         self.assertIn("shares its pointer", str(caught.exception))
 
-    def test_a_patch_stays_inside_its_own_window(self):
+    def test_a_patch_stays_inside_its_own_window(self) -> None:
         after = gobo_write.patch(self.lib, {0: fixtures.solid_icon()})
         self.assertEqual(len(after), len(self.lib.data))
         changed = gobo_write.verify(self.lib.data, after, self.lib, [0])
         self.assertGreater(changed, 0, "the patch wrote nothing")
 
-    def test_a_byte_outside_the_window_is_a_refusal(self):
+    def test_a_byte_outside_the_window_is_a_refusal(self) -> None:
         after = bytearray(gobo_write.patch(self.lib, {0: fixtures.solid_icon()}))
         start = self.lib.ptrs[0] - self.lib.base
         after[start + gobo_library.ICON] ^= 0xFF
@@ -76,7 +76,7 @@ class IconIdRange(Flash):
 class InvalidImage(unittest.TestCase):
     """An almost-valid PNG is refused class by class, not read half-way."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.good = os.path.join(self.directory.name, "good.png")
@@ -89,17 +89,17 @@ class InvalidImage(unittest.TestCase):
         Path(path).write_bytes(body)
         return path
 
-    def test_a_good_png_reads_back(self):
+    def test_a_good_png_reads_back(self) -> None:
         width, height, pixels = gobo_write.read_png(self.good)
         self.assertEqual((width, height), (gobo_library.SIDE, gobo_library.SIDE))
         self.assertEqual(len(pixels), gobo_library.SIDE ** 2)
 
-    def test_not_a_png_at_all(self):
+    def test_not_a_png_at_all(self) -> None:
         with self.assertRaises(ValueError) as caught:
             gobo_write.read_png(self._write("text.png", b"not a png at all"))
         self.assertIn("not a PNG", str(caught.exception))
 
-    def test_a_broken_crc(self):
+    def test_a_broken_crc(self) -> None:
         # The IHDR checksum, at 8 (signature) + 8 (size and tag) + 13 (body).
         body = bytearray(self.bytes)
         body[8 + 8 + 13] ^= 0xFF
@@ -107,16 +107,16 @@ class InvalidImage(unittest.TestCase):
             gobo_write.read_png(self._write("crc.png", bytes(body)))
         self.assertIn("CRC", str(caught.exception))
 
-    def test_a_missing_iend(self):
+    def test_a_missing_iend(self) -> None:
         with self.assertRaises(ValueError) as caught:
             gobo_write.read_png(self._write("iend.png", self.bytes[:-12]))
         self.assertIn("IEND", str(caught.exception))
 
-    def test_a_truncated_file(self):
+    def test_a_truncated_file(self) -> None:
         with self.assertRaises(ValueError):
             gobo_write.read_png(self._write("cut.png", self.bytes[:-20]))
 
-    def test_a_height_the_data_does_not_cover(self):
+    def test_a_height_the_data_does_not_cover(self) -> None:
         body = bytearray(self.bytes)
         header = body.index(b"IHDR")
         struct.pack_into(">I", body, header + 8, gobo_library.SIDE * 2)
@@ -125,14 +125,14 @@ class InvalidImage(unittest.TestCase):
         with self.assertRaises(ValueError):
             gobo_write.read_png(self._write("short.png", bytes(body)))
 
-    def test_an_image_smaller_than_an_icon(self):
+    def test_an_image_smaller_than_an_icon(self) -> None:
         small = os.path.join(self.directory.name, "small.png")
         gobo_library.write_png(small, 8, 8, bytes(8 * 8 * 3))
         with self.assertRaises(ValueError) as caught:
             gobo_write.load_image(small)
         self.assertIn("24x24", str(caught.exception))
 
-    def test_a_colour_that_is_not_rrggbb(self):
+    def test_a_colour_that_is_not_rrggbb(self) -> None:
         for bad in ("ff00ff", "#f0f", "#ff00ff00"):
             with self.assertRaises(ValueError):
                 gobo_write.solid(bad)
@@ -142,7 +142,7 @@ class RefusedOverwrite(Flash):
     """The patched file and its manifest live or die together, and neither
     lands on top of something that is already there."""
 
-    def test_the_pair_is_written_then_refused_a_second_time(self):
+    def test_the_pair_is_written_then_refused_a_second_time(self) -> None:
         after = gobo_write.patch(self.lib, {0: fixtures.solid_icon()})
         changed = gobo_write.verify(self.lib.data, after, self.lib, [0])
         output = os.path.join(self.directory.name, "flash-custom.bin")
@@ -167,7 +167,7 @@ class RefusedOverwrite(Flash):
 class UploadPlan(unittest.TestCase):
     """Only a manifest-bound gobo diff with a verified backup can be sent."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.work = Path(self.directory.name)
@@ -189,13 +189,13 @@ class UploadPlan(unittest.TestCase):
         gobo_write.ecrire(str(self.patched), after, manifest)
         (self.work / gobo_run.SHEET).write_bytes(b"reviewed sheet")
 
-    def test_verified_gobo_patch_is_returned(self):
+    def test_verified_gobo_patch_is_returned(self) -> None:
         data, summary = gobo_run.upload_plan(str(self.work))
         self.assertEqual(data, self.patched.read_bytes())
         self.assertEqual(summary["ids"], [0])
         self.assertGreater(summary["bytesChanged"], 0)
 
-    def test_change_outside_the_icon_window_is_refused(self):
+    def test_change_outside_the_icon_window_is_refused(self) -> None:
         data = bytearray(self.patched.read_bytes())
         data[-1] ^= 0xFF
         self.patched.write_bytes(data)
@@ -207,7 +207,7 @@ class UploadPlan(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "outside"):
             gobo_run.upload_plan(str(self.work))
 
-    def test_backup_without_vendor_manifest_is_refused(self):
+    def test_backup_without_vendor_manifest_is_refused(self) -> None:
         (self.backup / gobo_run.MANIFEST).unlink()
         with self.assertRaisesRegex(ValueError, "not verified"):
             gobo_run.upload_plan(str(self.work))
@@ -224,7 +224,7 @@ class WrongBundle(unittest.TestCase):
     """Which flash the patch came from is a hash, not a length. Selecting one
     is by parsed version, because lexical order puts 2.0.9 after 2.0.18."""
 
-    def test_versions_are_compared_as_numbers(self):
+    def test_versions_are_compared_as_numbers(self) -> None:
         newer = "wm-fw-bundle-2.0.18/wolfmixFlash.bin"
         older = "wm-fw-bundle-2.0.9/wolfmixFlash.bin"
         self.assertGreater(gobo_library.version_tuple(newer),
@@ -232,10 +232,10 @@ class WrongBundle(unittest.TestCase):
         self.assertLess(gobo_library.version_tuple("wm-fw-bundle/x.bin"),
                         gobo_library.version_tuple(older))
 
-    def test_an_absent_version_selects_nothing_rather_than_the_newest(self):
+    def test_an_absent_version_selects_nothing_rather_than_the_newest(self) -> None:
         self.assertIsNone(gobo_library.find_flash(version="99.99.99"))
 
-    def test_a_patch_from_another_bundle_is_a_red_gate(self):
+    def test_a_patch_from_another_bundle_is_a_red_gate(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             work = Path(directory)
             flash = work / "wolfmixFlash.bin"
@@ -251,7 +251,7 @@ class WrongBundle(unittest.TestCase):
             self.assertFalse(green)
             self.assertIn("no longer the one the patch came from", detail)
 
-    def test_the_same_length_with_other_content_is_a_red_gate(self):
+    def test_the_same_length_with_other_content_is_a_red_gate(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             work = Path(directory)
             flash = work / "wolfmixFlash.bin"
@@ -268,7 +268,7 @@ class WrongBundle(unittest.TestCase):
             self.assertFalse(green)
             self.assertIn("does not match its manifest", detail)
 
-    def test_a_missing_manifest_is_a_red_gate(self):
+    def test_a_missing_manifest_is_a_red_gate(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             work = Path(directory)
             flash = work / "wolfmixFlash.bin"

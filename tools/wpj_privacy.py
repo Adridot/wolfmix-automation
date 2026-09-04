@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """The guard: no real name may enter a tracked file.
 
+Module group: Verification. Reference: docs/tools.md.
+
 This repository publishes research, not the operator's venues, clients or gear
 (LEGAL.md). Names are replaced by neutral labels (rig-a/b/c, `<group-A name>`,
 serial withheld) — but nothing stopped anyone from reintroducing one by writing
@@ -21,6 +23,10 @@ Usage:
   wpj_privacy.py          check the files git tracks
   wpj_privacy.py file…    check those files
 """
+
+from __future__ import annotations
+from os import PathLike
+from collections.abc import Iterable
 import os
 import re
 import subprocess
@@ -42,7 +48,7 @@ MOTIFS_CHEMIN = ("research/vendor/", ".wolfmix-state/", "/dmx/",
                  "serial_rx_capture.bin", ".wpj-private-names")
 
 
-def motifs(chemin=None):
+def motifs(chemin: str | PathLike[str] | None = None) -> list[re.Pattern[str]]:
     """Loads the forbidden patterns, or returns [] when the list is absent."""
     chemin = chemin or os.environ.get(ENV) or LISTE
     try:
@@ -61,20 +67,23 @@ def motifs(chemin=None):
     return regles
 
 
-def fichiers_suivis():
+def fichiers_suivis() -> list[str]:
     sortie = subprocess.run(["git", "ls-files"], capture_output=True, text=True,
                             check=True).stdout
     return [f for f in sortie.splitlines() if f]
 
 
-def fichiers_interdits(chemins):
+def fichiers_interdits(chemins: Iterable[str]) -> list[str]:
     """Tracked files that should never have been — by extension or by path."""
     return [c for c in chemins
             if c.lower().endswith(EXTENSIONS_INTERDITES)
             or any(m in c for m in MOTIFS_CHEMIN)]
 
 
-def controle(chemins, regles):
+def controle(
+    chemins: Iterable[str | PathLike[str]],
+    regles: Iterable[re.Pattern[str]],
+) -> list[tuple[str | PathLike[str], int, str]]:
     """Returns the (file, line, pattern) triples that violate the list."""
     trouves = []
     for chemin in chemins:
@@ -89,7 +98,7 @@ def controle(chemins, regles):
     return trouves
 
 
-def demo():
+def demo() -> None:
     import tempfile
     regles = [re.compile("forbidden", re.I), re.compile(r"\b12345\b")]
     with tempfile.TemporaryDirectory() as tmp:
@@ -126,7 +135,7 @@ def demo():
           "forbidden extensions and paths refused", file=sys.stderr)
 
 
-def main(argv):
+def main(argv: list[str] | None) -> int:
     chemins = argv or fichiers_suivis()
     interdits = fichiers_interdits(chemins)
     if interdits:

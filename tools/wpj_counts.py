@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Counts that drift: produced here, and checked against the documents.
 
+Module group: Verification. Reference: docs/tools.md.
+
 "16 decoded, 4 passthrough", "18 identities", "15 checks" — every one of those
 moves as the work moves, and every one was written by hand in three places. On
 2026-08-31 `SPEC.md` still said seventeen identities while the code ran
@@ -21,6 +23,10 @@ Usage:
   wpj_counts.py            check the tracked documents
   wpj_counts.py --print    the counts themselves, for pasting or scripting
 """
+
+from __future__ import annotations
+from os import PathLike
+from collections.abc import Iterable
 import os
 import re
 import sys
@@ -36,7 +42,7 @@ MARQUEUR = re.compile(r"<!--\s*(count|types):(\w+)\s*-->")
 ENTIER = re.compile(r"\d+")
 
 
-def compter():
+def compter() -> dict[str, int]:
     """Every drifting figure, from the code that defines it."""
     return {
         "checks": check.NOMBRE_DE_CONTROLES,
@@ -47,7 +53,7 @@ def compter():
     }
 
 
-def listes():
+def listes() -> dict[str, list[int]]:
     return {
         "decoded": sorted(wpj_codec.SCHEMAS),
         "passthrough": sorted(wpj_codec.PASSTHROUGH),
@@ -58,7 +64,7 @@ def listes():
 PARAGRAPHE = re.compile(r"\n[ \t]*\n")
 
 
-def revendications(texte):
+def revendications(texte: str) -> list[tuple[int, str, str, int | list[int] | None]]:
     """(line, kind, name, claimed) for every marker, with what precedes it.
 
     The stretch a marker claims runs back to the previous marker, or to the
@@ -85,7 +91,11 @@ def revendications(texte):
     return trouves
 
 
-def ecarts(documents, comptes, tables):
+def ecarts(
+    documents: Iterable[str | PathLike[str]],
+    comptes: dict[str, int],
+    tables: dict[str, list[int]],
+) -> list[tuple[str | PathLike[str], int, str, object, object]]:
     """(document, line, name, claimed, actual) for every marker that lies."""
     trouves = []
     for document in documents:
@@ -105,7 +115,7 @@ def ecarts(documents, comptes, tables):
     return trouves
 
 
-def demo():
+def demo() -> None:
     ligne = ("| 20 types <!--count:record_types--> | 16 decoded "
              "<!--count:decoded-->, 4 <!--count:passthrough--> verbatim "
              "(106, 110, 155, 161) <!--types:passthrough--> |")
@@ -141,7 +151,7 @@ def demo():
           "both caught, a matching list left alone", file=sys.stderr)
 
 
-def main(argv):
+def main(argv: list[str] | None) -> int:
     comptes, tables = compter(), listes()
     if "--print" in argv:
         for nom, valeur in comptes.items():

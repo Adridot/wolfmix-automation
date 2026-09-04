@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """The gate: every hardware-free check, then a summary that names abstentions.
 
+Module group: Verification. Reference: docs/tools.md.
+
 `make check` runs this. It exists because `make` cannot do the one thing that
 matters here — a check that verified nothing for want of a corpus must not be
 readable as a check that passed. `make` stops at the first failure and
@@ -21,6 +23,9 @@ expects it — the corpus-free CI job, which is exactly that context.
 No port is opened: `wolfmix.py` and `wolfmix_experiment.py` are deliberately
 absent, and their hardware-free checks are separate `self-test` subcommands.
 """
+
+from __future__ import annotations
+from collections.abc import Sequence
 import argparse
 import os
 import subprocess
@@ -69,7 +74,7 @@ PASSE, ABSTENU, ECHEC = "passed", "abstained", "failed"
 NOTRES = ("tools", "tests")
 
 
-def imports_hors_stdlib():
+def imports_hors_stdlib() -> list[tuple[Path, int, str]]:
     """Every module imported by our own code that the standard library lacks.
 
     Parsed, not executed: a dependency that only appears at run time under a
@@ -99,7 +104,7 @@ def imports_hors_stdlib():
     return trouves
 
 
-def executer(commande):
+def executer(commande: Sequence[str]) -> tuple[int, str]:
     """(exit code, combined output). The output is echoed as it is captured."""
     resultat = subprocess.run(commande, cwd=RACINE, text=True,
                               stdout=subprocess.PIPE,
@@ -109,7 +114,7 @@ def executer(commande):
     return resultat.returncode, resultat.stdout
 
 
-def classer(code, sortie):
+def classer(code: int, sortie: str) -> tuple[str, str]:
     """A non-zero code is a failure; the marker word is an abstention."""
     if code != 0:
         return ECHEC, ""
@@ -120,7 +125,7 @@ def classer(code, sortie):
     return PASSE, ""
 
 
-def resume(resultats):
+def resume(resultats: list[tuple[str, str, str]]) -> dict[str, list[str]]:
     """The last thing the reader sees. Abstentions are named, one per line."""
     comptes = {etat: [n for n, e, _ in resultats if e == etat]
                for etat in (PASSE, ABSTENU, ECHEC)}
@@ -141,7 +146,7 @@ def resume(resultats):
     return comptes
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parseur.add_argument("--abstentions-ok", action="store_true",
                          help="exit 0 instead of 3 when checks abstained; for "
@@ -172,7 +177,7 @@ def main(argv=None):
     return 0
 
 
-def demo():
+def demo() -> None:
     """The classifier is the whole load-bearing part: prove it separately."""
     assert classer(0, "self-check ok: 76 files") == (PASSE, "")
     etat, ligne = classer(0, f"wpjlib: {ABSTENTION} — no corpus in corpus/")

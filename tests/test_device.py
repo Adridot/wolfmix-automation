@@ -11,14 +11,16 @@ class Recorder(device.WolfmixConnection):
     """A connection that records instead of writing. `__enter__` is never
     called, so no file descriptor exists at any point."""
 
-    def __init__(self, firmware="2.0.18", allow=False, allow_flash=False):
+    def __init__(
+        self, firmware: str = "2.0.18", allow: bool = False, allow_flash: bool = False,
+    ) -> None:
         super().__init__("/dev/null", timeout=0.1,
                          allow_untested_firmware=allow,
                          allow_resource_flash=allow_flash)
         self.firmware = firmware
         self.written = []
 
-    def write_all(self, data):
+    def write_all(self, data: bytes) -> None:
         self.written.append(data)
 
 
@@ -26,22 +28,22 @@ class Allowlist(unittest.TestCase):
     """One send function, one list (AGENTS.md: no executable-firmware
     operations, ever). An event outside it cannot be framed at all."""
 
-    def test_an_event_outside_the_list_is_refused_by_name(self):
+    def test_an_event_outside_the_list_is_refused_by_name(self) -> None:
         with self.assertRaises(protocol.WolfmixError) as caught:
             protocol.build_frame(1, protocol.DMX_PACKET, b"")
         self.assertIn("not allowlisted", str(caught.exception))
 
-    def test_nothing_reaches_the_wire_on_refusal(self):
+    def test_nothing_reaches_the_wire_on_refusal(self) -> None:
         link = Recorder()
         with self.assertRaises(protocol.WolfmixError):
             link.send(protocol.DMX_PACKET)
         self.assertEqual(link.written, [])
 
-    def test_mutating_events_are_a_subset_of_the_allowlist(self):
+    def test_mutating_events_are_a_subset_of_the_allowlist(self) -> None:
         self.assertLessEqual(protocol.MUTATING_EVENTS,
                              protocol.ALLOWED_OUTGOING_EVENTS)
 
-    def test_an_allowlisted_event_goes_through(self):
+    def test_an_allowlisted_event_goes_through(self) -> None:
         link = Recorder()
         link.send(protocol.GET_SETTINGS)
         self.assertEqual(len(link.written), 1)
@@ -50,7 +52,7 @@ class Allowlist(unittest.TestCase):
 class FirmwareGate(unittest.TestCase):
     """Reads unconditional, mutations refused on a version nobody measured."""
 
-    def test_a_mutation_is_refused_and_names_both_versions(self):
+    def test_a_mutation_is_refused_and_names_both_versions(self) -> None:
         link = Recorder(firmware="9.9.9")
         with self.assertRaises(protocol.WolfmixError) as caught:
             link.send(protocol.SET_MODE, b"\x00")
@@ -59,17 +61,17 @@ class FirmwareGate(unittest.TestCase):
         self.assertIn(protocol.TESTED_FIRMWARE[0], message)
         self.assertEqual(link.written, [], "an event reached the wire anyway")
 
-    def test_a_read_is_untouched_by_the_gate(self):
+    def test_a_read_is_untouched_by_the_gate(self) -> None:
         link = Recorder(firmware="9.9.9")
         link.send(protocol.GET_PROJECT_LIST)
         self.assertEqual(len(link.written), 1)
 
-    def test_the_flag_lets_the_mutation_through(self):
+    def test_the_flag_lets_the_mutation_through(self) -> None:
         link = Recorder(firmware="9.9.9", allow=True)
         link.send(protocol.SET_MODE, b"\x00")
         self.assertEqual(len(link.written), 1)
 
-    def test_a_tested_firmware_needs_no_flag(self):
+    def test_a_tested_firmware_needs_no_flag(self) -> None:
         link = Recorder(firmware=protocol.TESTED_FIRMWARE[0])
         link.send(protocol.SET_MODE, b"\x00")
         self.assertEqual(len(link.written), 1)
@@ -78,7 +80,7 @@ class FirmwareGate(unittest.TestCase):
 class ResourceFlash(unittest.TestCase):
     """The flash event is narrower than the general outgoing allowlist."""
 
-    def test_chunk_metadata_is_big_endian_and_bounded(self):
+    def test_chunk_metadata_is_big_endian_and_bounded(self) -> None:
         payload = protocol.flash_chunk_payload(b"abcd", 100, 32)
         self.assertEqual(payload, b"\x00\x00\x00\x04\x00\x00\x00d"
                                   b"\x00\x00\x00 abcd")
@@ -86,26 +88,26 @@ class ResourceFlash(unittest.TestCase):
             protocol.flash_chunk_payload(b"x" * (protocol.FLASH_CHUNK_SIZE + 1),
                                          100_000, 0)
 
-    def test_generic_connection_cannot_send_the_flash_event(self):
+    def test_generic_connection_cannot_send_the_flash_event(self) -> None:
         link = Recorder()
         with self.assertRaisesRegex(protocol.WolfmixError, "gobo-upload"):
             link.send(protocol.SET_FLASH_DATA, b"payload")
         self.assertEqual(link.written, [])
 
-    def test_explicit_resource_connection_can_send_the_flash_event(self):
+    def test_explicit_resource_connection_can_send_the_flash_event(self) -> None:
         link = Recorder(allow_flash=True)
         payload = protocol.flash_chunk_payload(b"x", 1, 0)
         link.send(protocol.SET_FLASH_DATA, payload)
         self.assertEqual(len(link.written), 1)
 
-    def test_firmware_override_never_enables_resource_flash(self):
+    def test_firmware_override_never_enables_resource_flash(self) -> None:
         link = Recorder(firmware="9.9.9", allow=True, allow_flash=True)
         payload = protocol.flash_chunk_payload(b"x", 1, 0)
         with self.assertRaisesRegex(protocol.WolfmixError, "never enables"):
             link.send(protocol.SET_FLASH_DATA, payload)
         self.assertEqual(link.written, [])
 
-    def test_uploader_chunks_and_waits_for_each_status(self):
+    def test_uploader_chunks_and_waits_for_each_status(self) -> None:
         class Link:
             def __init__(self):
                 self.requests = []
@@ -134,7 +136,7 @@ class ResourceFlash(unittest.TestCase):
                          + protocol.FLASH_CHUNK_SIZE.to_bytes(4, "big"))
         self.assertEqual(progress[-1], (len(data), len(data)))
 
-    def test_controller_preflight_checks_save_wlink_and_profile_count(self):
+    def test_controller_preflight_checks_save_wlink_and_profile_count(self) -> None:
         class Link:
             def __init__(self, changed=0, wlink=0, profiles=2):
                 self.changed = changed
@@ -170,32 +172,32 @@ class ResourceFlash(unittest.TestCase):
 class RawMode(unittest.TestCase):
     """A measured mode by name; a raw index only behind --experimental."""
 
-    def test_a_named_mode_resolves(self):
+    def test_a_named_mode_resolves(self) -> None:
         self.assertEqual(protocol.resolve_mode("home"), 0)
         self.assertEqual(protocol.resolve_mode("Static Color"), 7)
         self.assertEqual(protocol.resolve_mode("static-color"), 7)
 
-    def test_a_raw_index_needs_the_flag(self):
+    def test_a_raw_index_needs_the_flag(self) -> None:
         with self.assertRaises(protocol.WolfmixError) as caught:
             protocol.resolve_mode("28")
         self.assertIn("--experimental", str(caught.exception))
 
-    def test_an_acting_mode_is_not_reachable_by_name(self):
+    def test_an_acting_mode_is_not_reachable_by_name(self) -> None:
         for index in protocol.ACTING_MODES:
             self.assertNotIn(index, protocol.NAMED_MODES.values())
             with self.assertRaises(protocol.WolfmixError):
                 protocol.resolve_mode(str(index))
 
-    def test_the_flag_opens_the_raw_index(self):
+    def test_the_flag_opens_the_raw_index(self) -> None:
         self.assertEqual(protocol.resolve_mode("26", experimental=True), 26)
         self.assertEqual(protocol.resolve_mode("0x10", experimental=True), 16)
 
-    def test_an_index_out_of_a_byte_is_refused_even_with_the_flag(self):
+    def test_an_index_out_of_a_byte_is_refused_even_with_the_flag(self) -> None:
         for value in ("-1", "256"):
             with self.assertRaises(protocol.WolfmixError):
                 protocol.resolve_mode(value, experimental=True)
 
-    def test_a_nonsense_name_is_refused_with_the_flag_too(self):
+    def test_a_nonsense_name_is_refused_with_the_flag_too(self) -> None:
         with self.assertRaises(protocol.WolfmixError) as caught:
             protocol.resolve_mode("wolfish", experimental=True)
         self.assertIn("not an index", str(caught.exception))
@@ -204,18 +206,18 @@ class RawMode(unittest.TestCase):
 class PresetBounds(unittest.TestCase):
     """The panel's own range, and a raw byte — not a protobuf pair."""
 
-    def test_the_panel_range_is_sent_as_one_raw_byte(self):
+    def test_the_panel_range_is_sent_as_one_raw_byte(self) -> None:
         self.assertEqual(protocol.preset_payload(0), b"\x00")
         self.assertEqual(protocol.preset_payload(protocol.PRESET_ID_MAX),
                          bytes([protocol.PRESET_ID_MAX]))
 
-    def test_above_the_range_is_refused_as_unprobed(self):
+    def test_above_the_range_is_refused_as_unprobed(self) -> None:
         for value in (protocol.PRESET_ID_MAX + 1, 255):
             with self.assertRaises(protocol.WolfmixError) as caught:
                 protocol.preset_payload(value)
             self.assertIn("unprobed", str(caught.exception))
 
-    def test_a_negative_id_is_refused(self):
+    def test_a_negative_id_is_refused(self) -> None:
         with self.assertRaises(protocol.WolfmixError):
             protocol.preset_payload(-1)
 

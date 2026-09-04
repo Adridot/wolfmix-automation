@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """The gate between the ledger and the specification.
 
+Module group: Verification. Reference: docs/tools.md.
+
 `research/evidence.md` is written next to the measurement; `SPEC.md` is written
 afterwards. The second is allowed to **lag** — it says so, with an evidence
 cutoff — but it is not allowed to **contradict**. Three things are checked, and
@@ -22,6 +24,9 @@ Usage:
   wpj_evidence.py          check the ledger against the specification
   wpj_evidence.py --list   the ledger as parsed, one line per finding
 """
+
+from __future__ import annotations
+from os import PathLike
 import os
 import re
 import sys
@@ -45,7 +50,7 @@ REPRISE = ("retract", "refut", "withdraw", "réfut", "rétract")
 DEBOUT = ("device-confirmed", "validated", "correlated", "observed")
 
 
-def entrees(chemin=REGISTRE):
+def entrees(chemin: str | PathLike[str] = REGISTRE) -> list[tuple[list[str], str, str, list[str]]]:
     """[(ids, date, status, sections)] — one per row of the register."""
     out = []
     with open(chemin, encoding="utf-8") as flux:
@@ -67,19 +72,19 @@ def entrees(chemin=REGISTRE):
     return out
 
 
-def sections(chemin=SPEC):
+def sections(chemin: str | PathLike[str] = SPEC) -> set[str]:
     with open(chemin, encoding="utf-8") as flux:
         return set(TITRE.findall(flux.read()))
 
 
-def coupure(chemin=SPEC):
+def coupure(chemin: str | PathLike[str] = SPEC) -> str | None:
     """The declared evidence cutoff, or None when there is none."""
     with open(chemin, encoding="utf-8") as flux:
         trouve = COUPURE.search(flux.read())
     return trouve.group(1) if trouve else None
 
 
-def en_attente(chemin=SPEC):
+def en_attente(chemin: str | PathLike[str] = SPEC) -> set[str]:
     """The ids the specification declares pending, under its cutoff heading."""
     with open(chemin, encoding="utf-8") as flux:
         texte = flux.read()
@@ -90,14 +95,14 @@ def en_attente(chemin=SPEC):
     return set(IDENTIFIANT.findall(texte[debut:fin if fin > 0 else len(texte)]))
 
 
-def reprise(statut):
+def reprise(statut: str) -> bool:
     """True when the status takes the finding back and leaves nothing."""
     bas = statut.lower()
     return (any(mot in bas for mot in REPRISE)
             and not any(mot in bas for mot in DEBOUT))
 
 
-def cites_par_spec(chemin=SPEC):
+def cites_par_spec(chemin: str | PathLike[str] = SPEC) -> dict[str, list[tuple[int, str]]]:
     """{id: [(line, paragraph)]} for every finding id the spec names.
 
     The paragraph, not the line: a sentence that says "refuted as written"
@@ -116,7 +121,7 @@ def cites_par_spec(chemin=SPEC):
     return trouves
 
 
-def ecarts(registre=REGISTRE, spec=SPEC):
+def ecarts(registre: str | PathLike[str] = REGISTRE, spec: str | PathLike[str] = SPEC) -> list[str]:
     """Every disagreement, as readable lines."""
     problemes = []
     lignes, connues = entrees(registre), sections(spec)
@@ -152,7 +157,7 @@ def ecarts(registre=REGISTRE, spec=SPEC):
     return problemes
 
 
-def orphelins(chemin=REGISTRE):
+def orphelins(chemin: str | PathLike[str] = REGISTRE) -> list[str]:
     """Finding ids in the register that no parsed **row** carries.
 
     An id can be written into the file and still be invisible to `entrees()` —
@@ -173,7 +178,7 @@ def orphelins(chemin=REGISTRE):
     return sorted(declares - vus)
 
 
-def demo():
+def demo() -> None:
     import tempfile
     # The fixture ids are assembled rather than written out: a literal would
     # be a citation, and `wpj_links.py` reads this file like any other.
@@ -219,7 +224,7 @@ def demo():
           file=sys.stderr)
 
 
-def main(argv):
+def main(argv: list[str] | None) -> int:
     if "--list" in argv:
         for ids, date, statut, refs in entrees():
             spec = ", ".join(f"§{r}" for r in refs) or "—"

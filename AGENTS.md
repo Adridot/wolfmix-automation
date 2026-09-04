@@ -87,6 +87,39 @@ a finding the ledger has taken back.
 
 ## Conventions you will notice
 
+### Architecture to preserve on every change
+
+- Keep existing `tools/*.py` command paths and import names stable: frozen
+  experiment recipes depend on them. Use the five [module groups](docs/tools.md#module-groups),
+  and declare the owning group and reference near the module's opening.
+- Put shared wire operations in `wpj_wire`, schema operations in `wpj_codec`,
+  and project IO in `wpjlib`. Trace callers before extracting a duplicate;
+  preserve their validation, error types, encoding order and unknown bytes.
+  Keep `wpj_inspect` independent. Do not create a third reader, generic utility
+  package, wrapper CLI or dependency without an actual need.
+- Annotate public module functions and class methods, including magic methods,
+  using Python 3.10-compatible types. Preserve missing values explicitly.
+  An annotation is documentation, not runtime validation or proof of correctness.
+- Give maintained documentation a `Reader:` and `Question:` introduction and a
+  direct README link. Put the current measured WPJ claim in `SPEC.md` and link
+  to its stable anchor from guides. Keep command/input contracts in their own
+  references; preserve historical measurements and their proof statuses.
+- After a change, run `make check`; for parsing, validation or guard changes,
+  also run `python3 -O -m unittest discover -s tests -t .`. Exercise changed
+  USB clients only with their explicit hardware-free `self-test` commands.
+  A final refactor check also runs `tools/check.py --abstentions-ok` in a local
+  clone without private corpus or names. Keep abstentions visible.
+- Review the diff for unintended behavior, evidence promotions and changed
+  corpus/prediction files. Stage named source/document paths, inspect the staged
+  diff and privacy result, then make a small thematic commit. Push only when
+  the operator has authorized publishing; never add ignored artifacts.
+- Keep task notes outside tracked documentation, including the baseline,
+  decisions, preserved contract differences and claim-to-source moves. Re-read
+  them at each stage; do not turn an implementation log into a new source of
+  format facts.
+
+### Existing conventions
+
 - **Language:** mixed on purpose. Tool output strings are French. `SPEC.md`,
   `LEGAL.md`, `PROVENANCE.md`, `docs/` and `README.md` are English. `research/`
   is both — English since the type-102 entry, French before it and in the newest

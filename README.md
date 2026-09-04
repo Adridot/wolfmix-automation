@@ -102,7 +102,7 @@ honest — plus every flag and exit code: [`docs/tools.md`](docs/tools.md).
 | [`wpj_show.py`](tools/wpj_show.py) | The show compiler: an edit spec applied to a donor, auto-verified. |
 | [`wpj_generate.py`](tools/wpj_generate.py) | The show generator: moods, energy and groups in, a preset bank out — the rig read from the donor. |
 | [`wpj_patch.py`](tools/wpj_patch.py) | The patch compiler: profiles, addresses and groups in, the eight patch records out — no donor carries the patch. |
-| [`wolfmix.py`](tools/wolfmix.py) | The device: settings, projects, download, live DMX, envelopes, mode watch, preset recall. |
+| [`wolfmix.py`](tools/wolfmix.py) | The device: settings, projects, download, live DMX, envelopes, mode watch, preset recall and guarded gobo-resource upload. |
 | [`wolfmix_experiment.py`](tools/wolfmix_experiment.py) | Transactional experiments: snapshot → deploy → verify → restore on failure. |
 | [`gobo_run.py`](tools/gobo_run.py) | The gobo-icon pipeline's gates — four of them, each red until its step is really done. |
 
@@ -114,14 +114,14 @@ These five explain both what is here and what is deliberately missing.
 |---|---|---|
 | 1 | **Experimental truth** | Every claim carries a status: `observed → hypothesized → correlated → validated → device-confirmed` |
 | 2 | **Read before write** | A field becomes writable only after a byte-identical round trip *and* a differential validation *and* acceptance downstream |
-| 3 | **Hardware is sacred** | No firmware operations, no fuzzing a connected device, dangerous functions off by default |
+| 3 | **Hardware is sacred** | No executable-firmware operations, no fuzzing; the resource uploader accepts only a manifest-verified gobo diff and is off by default |
 | 4 | **Local only** | Nothing leaves the machine — no upload, no third-party API, ever |
 | 5 | **Honest compatibility** | "Compatible" means a tested cell in [`research/versions.md`](research/versions.md), nothing more |
 
 Three properties hold at every stage of a write: unknown bytes **pass through
 verbatim**, outputs open with mode `x` so a write **never overwrites**, and
-nothing is stored on the controller except by the experiment runner, under its
-own derived UUIDs, verified by reading it back.
+nothing is stored on the controller except by the experiment runner under its
+own derived UUIDs, or by the guarded gobo-resource uploader described above.
 
 ## Repository map
 

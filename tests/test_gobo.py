@@ -2,9 +2,9 @@
 and a patch that cannot land on top of an existing file.
 
 A resource flash is not firmware (`AGENTS.md`, `LEGAL.md`): it is read here,
-patched into a **copy**, and uploaded by WTOOLS. The guards below are what
-make that copy accountable — the image built by `tests/fixtures.py` stands in
-for the manufacturer's, which never enters this repository.
+patched into a **copy**, and may be uploaded only after the guards below make
+that copy accountable. The image built by `tests/fixtures.py` stands in for
+the manufacturer's, which never enters this repository.
 """
 import json
 import os
@@ -162,6 +162,55 @@ class RefusedOverwrite(Flash):
         # file would take the earlier one with it.
         self.assertTrue(Path(output).exists(), "the earlier patch was removed")
         self.assertEqual(Path(output).read_bytes(), before)
+
+
+class UploadPlan(unittest.TestCase):
+    """Only a manifest-bound gobo diff with a verified backup can be sent."""
+
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.work = Path(self.directory.name)
+        self.backup = self.work / gobo_run.BACKUP
+        self.backup.mkdir()
+        self.source = self.backup / "wolfmixFlash.bin"
+        self.source.write_bytes(fixtures.flash_bytes())
+        source_hash = gobo_run.sha256(str(self.source))
+        (self.backup / gobo_run.MANIFEST).write_text(json.dumps({
+            "files": [{"file": self.source.name, "sha256": source_hash}],
+        }), encoding="utf-8")
+        lib = gobo_library.Library(str(self.source))
+        after = gobo_write.patch(lib, {0: fixtures.solid_icon()})
+        changed = gobo_write.verify(lib.data, after, lib, [0])
+        self.patched = self.work / gobo_run.PATCHED
+        manifest = gobo_write.manifeste(
+            str(self.source), lib, str(self.patched), after, {0: None}, changed
+        )
+        gobo_write.ecrire(str(self.patched), after, manifest)
+        (self.work / gobo_run.SHEET).write_bytes(b"reviewed sheet")
+
+    def test_verified_gobo_patch_is_returned(self):
+        data, summary = gobo_run.upload_plan(str(self.work))
+        self.assertEqual(data, self.patched.read_bytes())
+        self.assertEqual(summary["ids"], [0])
+        self.assertGreater(summary["bytesChanged"], 0)
+
+    def test_change_outside_the_icon_window_is_refused(self):
+        data = bytearray(self.patched.read_bytes())
+        data[-1] ^= 0xFF
+        self.patched.write_bytes(data)
+        manifest_path = Path(str(self.patched) + ".json")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["result"]["sha256"] = gobo_write.sha256(bytes(data))
+        manifest["bytesChanged"] += 1
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "outside"):
+            gobo_run.upload_plan(str(self.work))
+
+    def test_backup_without_vendor_manifest_is_refused(self):
+        (self.backup / gobo_run.MANIFEST).unlink()
+        with self.assertRaisesRegex(ValueError, "not verified"):
+            gobo_run.upload_plan(str(self.work))
 
 
 def _one_byte_apart(data):

@@ -22,12 +22,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from wolfmix_protocol import (
     ALLOWED_OUTGOING_EVENTS, DELETE_PROJECT, DISABLE_USB_DMX, DMX_PACKET,
     ENABLE_USB_DMX, EVENT_NAMES, GET_PROJECT,
-    GET_PROJECT_LIST, GET_SETTINGS, HEADER_SIZE, MAX_MESSAGE_SIZE,
-    MUTATING_EVENTS, RETURN_PROGRESS, RETURN_STATUS, SET_PROJECT,
+    GET_PROFILE_LIST, GET_PROJECT_LIST, GET_SETTINGS, HEADER_SIZE, MAX_MESSAGE_SIZE,
+    MUTATING_EVENTS, RETURN_PROGRESS, RETURN_STATUS, SET_FLASH_DATA, SET_PROJECT,
     TESTED_FIRMWARE, VERSION, ProtocolError, WolfmixError, build_frame,
     decode_dmx_packet, decode_item_list, decode_project, decode_settings,
-    decode_status, encode_project, encode_request_uuid, is_managed_name,
-    managed_identity, print_json,
+    decode_status, encode_project, encode_request_uuid, flash_chunk_payload,
+    FLASH_CHUNK_SIZE, is_managed_name, managed_identity, print_json,
 )
 
 def discover_port():
@@ -59,13 +59,15 @@ def port_holders(path):
     return holders
 
 class WolfmixConnection:
-    def __init__(self, path, timeout=5.0, allow_untested_firmware=False):
+    def __init__(self, path, timeout=5.0, allow_untested_firmware=False,
+                 allow_resource_flash=False):
         self.path = path
         self.timeout = timeout
         self.fd = None
         self.buffer = bytearray()
         self.next_message_id = 1
         self.allow_untested_firmware = allow_untested_firmware
+        self.allow_resource_flash = allow_resource_flash
         self.firmware = None
 
     def __enter__(self):
@@ -194,8 +196,18 @@ class WolfmixConnection:
 
     def send(self, event, payload=b""):
         """Write one complete request without waiting for its response."""
+        if event == SET_FLASH_DATA and not self.allow_resource_flash:
+            raise WolfmixError(
+                "Resource-flash writes are available only through the "
+                "verified gobo-upload command"
+            )
         if event in MUTATING_EVENTS:
-            self.check_firmware()
+            firmware = self.check_firmware()
+            if event == SET_FLASH_DATA and firmware not in TESTED_FIRMWARE:
+                raise WolfmixError(
+                    "--allow-untested-firmware never enables resource-flash "
+                    f"writes; controller reports {firmware!r}"
+                )
         message_id = self.next_message_id
         self.next_message_id = 1 if message_id == 65535 else message_id + 1
         self.write_all(build_frame(message_id, event, payload))
@@ -399,6 +411,55 @@ def require_success(payload, operation):
             status["description"] or f"{operation} failed with code {status.get('code')}"
         )
     return status
+
+def resource_flash_state(connection):
+    """Verify the controller-side preconditions and return their baseline."""
+    settings = decode_settings(connection.request(GET_SETTINGS))
+    firmware = settings.get("firmwareVer")
+    if firmware not in TESTED_FIRMWARE:
+        raise WolfmixError(
+            f"Resource-flash upload requires tested firmware "
+            f"{', '.join(TESTED_FIRMWARE)}; controller reports {firmware!r}"
+        )
+    if settings.get("wlinkActivated"):
+        raise WolfmixError("Resource-flash upload requires WLINK to be disabled")
+    if settings.get("projectChanged"):
+        raise WolfmixError("Save the current project before updating the resource flash")
+    profiles = decode_item_list(
+        connection.request(GET_PROFILE_LIST), profile=True
+    )
+    if len(profiles) != settings.get("fixtureProfileCount"):
+        raise WolfmixError(
+            "Fixture-profile inventory is incomplete: "
+            f"received {len(profiles)}, expected "
+            f"{settings.get('fixtureProfileCount')}"
+        )
+    return {
+        "firmwareVer": firmware,
+        "fixtureProfileCount": len(profiles),
+        "projectCount": settings.get("projectCount"),
+    }
+
+def upload_resource_flash(connection, data, progress=None):
+    """Write one verified resource image, one acknowledged chunk at a time."""
+    if not isinstance(data, bytes) or not data:
+        raise WolfmixError("Refusing to upload an empty resource flash")
+    if len(data) > 0xFFFFFFFF:
+        raise WolfmixError("Resource flash is too large for the wire format")
+    chunks = 0
+    for offset in range(0, len(data), FLASH_CHUNK_SIZE):
+        chunk = data[offset:offset + FLASH_CHUNK_SIZE]
+        require_success(
+            connection.request(
+                SET_FLASH_DATA,
+                flash_chunk_payload(chunk, len(data), offset),
+            ),
+            f"Writing resource flash at offset {offset}",
+        )
+        chunks += 1
+        if progress:
+            progress(offset + len(chunk), len(data))
+    return chunks
 
 def store_managed_project(connection, label, data, version=None, attempts=3,
                           kind="exp"):

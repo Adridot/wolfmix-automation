@@ -525,9 +525,10 @@ installed bundle: source SHA-256 and size, result SHA-256 and size, bundle
 version, patched ids, allowed byte windows, and the number of bytes that
 actually differ. `gobo_run.py` verifies that chain before naming the upload.
 
-Uploading the result is a separate, device-side act performed by WTOOLS; see
+`wolfmix.py gobo-upload` performs the separate device-side act after rechecking
+the manifest, backup, byte windows and contact sheet; see
 [`gobo-icons.md`](gobo-icons.md) §5 for the order of operations and the way
-back.
+back. No general flash or executable-firmware input is accepted.
 
 ## `gobo_run.py` — the gates between the gobo steps
 

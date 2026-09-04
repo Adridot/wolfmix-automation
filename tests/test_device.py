@@ -11,8 +11,10 @@ class Recorder(device.WolfmixConnection):
     """A connection that records instead of writing. `__enter__` is never
     called, so no file descriptor exists at any point."""
 
-    def __init__(self, firmware="2.0.18", allow=False):
-        super().__init__("/dev/null", timeout=0.1, allow_untested_firmware=allow)
+    def __init__(self, firmware="2.0.18", allow=False, allow_flash=False):
+        super().__init__("/dev/null", timeout=0.1,
+                         allow_untested_firmware=allow,
+                         allow_resource_flash=allow_flash)
         self.firmware = firmware
         self.written = []
 
@@ -71,6 +73,98 @@ class FirmwareGate(unittest.TestCase):
         link = Recorder(firmware=protocol.TESTED_FIRMWARE[0])
         link.send(protocol.SET_MODE, b"\x00")
         self.assertEqual(len(link.written), 1)
+
+
+class ResourceFlash(unittest.TestCase):
+    """The flash event is narrower than the general outgoing allowlist."""
+
+    def test_chunk_metadata_is_big_endian_and_bounded(self):
+        payload = protocol.flash_chunk_payload(b"abcd", 100, 32)
+        self.assertEqual(payload, b"\x00\x00\x00\x04\x00\x00\x00d"
+                                  b"\x00\x00\x00 abcd")
+        with self.assertRaises(protocol.WolfmixError):
+            protocol.flash_chunk_payload(b"x" * (protocol.FLASH_CHUNK_SIZE + 1),
+                                         100_000, 0)
+
+    def test_generic_connection_cannot_send_the_flash_event(self):
+        link = Recorder()
+        with self.assertRaisesRegex(protocol.WolfmixError, "gobo-upload"):
+            link.send(protocol.SET_FLASH_DATA, b"payload")
+        self.assertEqual(link.written, [])
+
+    def test_explicit_resource_connection_can_send_the_flash_event(self):
+        link = Recorder(allow_flash=True)
+        payload = protocol.flash_chunk_payload(b"x", 1, 0)
+        link.send(protocol.SET_FLASH_DATA, payload)
+        self.assertEqual(len(link.written), 1)
+
+    def test_firmware_override_never_enables_resource_flash(self):
+        link = Recorder(firmware="9.9.9", allow=True, allow_flash=True)
+        payload = protocol.flash_chunk_payload(b"x", 1, 0)
+        with self.assertRaisesRegex(protocol.WolfmixError, "never enables"):
+            link.send(protocol.SET_FLASH_DATA, payload)
+        self.assertEqual(link.written, [])
+
+    def test_uploader_chunks_and_waits_for_each_status(self):
+        class Link:
+            def __init__(self):
+                self.requests = []
+
+            def request(self, event, payload=b""):
+                self.requests.append((event, payload))
+                return protocol.encode_protobuf_field(2, 0, 1)
+
+        link = Link()
+        data = b"a" * protocol.FLASH_CHUNK_SIZE + b"xyz"
+        progress = []
+        chunks = device.upload_resource_flash(
+            link, data, lambda done, total: progress.append((done, total))
+        )
+        self.assertEqual(chunks, 2)
+        self.assertEqual([event for event, _ in link.requests],
+                         [protocol.SET_FLASH_DATA, protocol.SET_FLASH_DATA])
+        first, second = (payload for _, payload in link.requests)
+        self.assertEqual(first[:12],
+                         protocol.FLASH_CHUNK_SIZE.to_bytes(4, "big")
+                         + len(data).to_bytes(4, "big")
+                         + (0).to_bytes(4, "big"))
+        self.assertEqual(second[:12],
+                         (3).to_bytes(4, "big")
+                         + len(data).to_bytes(4, "big")
+                         + protocol.FLASH_CHUNK_SIZE.to_bytes(4, "big"))
+        self.assertEqual(progress[-1], (len(data), len(data)))
+
+    def test_controller_preflight_checks_save_wlink_and_profile_count(self):
+        class Link:
+            def __init__(self, changed=0, wlink=0, profiles=2):
+                self.changed = changed
+                self.wlink = wlink
+                self.profiles = profiles
+
+            def request(self, event, payload=b""):
+                if event == protocol.GET_SETTINGS:
+                    field = protocol.encode_protobuf_field
+                    return b"".join((
+                        field(6, 0, 2), field(7, 0, 3),
+                        field(14, 2, b"2.0.18"), field(16, 0, self.wlink),
+                        field(19, 0, self.changed),
+                    ))
+                return b"".join(
+                    protocol.encode_protobuf_field(1, 2, b"")
+                    for _ in range(self.profiles)
+                )
+
+        self.assertEqual(device.resource_flash_state(Link()), {
+            "firmwareVer": "2.0.18",
+            "fixtureProfileCount": 2,
+            "projectCount": 3,
+        })
+        for link, message in ((Link(changed=1), "Save"),
+                              (Link(wlink=1), "WLINK"),
+                              (Link(profiles=1), "incomplete")):
+            with self.subTest(message=message):
+                with self.assertRaisesRegex(protocol.WolfmixError, message):
+                    device.resource_flash_state(link)
 
 
 class RawMode(unittest.TestCase):

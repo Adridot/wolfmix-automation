@@ -12,9 +12,10 @@ a Mk2.
   (via `lsof`) and tells you.
 - The port is auto-detected as the single `/dev/cu.usbmodem*`. With several
   devices attached, pass `--port`.
-- No firmware operation is implemented, anywhere. The outgoing event allowlist
+- No executable-firmware operation is implemented. The outgoing event allowlist
   is a literal in the source (`ALLOWED_OUTGOING_EVENTS`) and `build_frame`
-  refuses anything outside it.
+  refuses anything outside it. The separate resource-flash event is locked
+  behind the manifest-verified `gobo-upload` command.
 
 ## Protocol
 
@@ -32,7 +33,8 @@ Events used: `GET_PROFILE_LIST` 2, `GET_PROFILE` 3, `GET_PROJECT_LIST` 4,
 `GET_PROJECT` 5, `DISABLE_ENGINE` 6, `ENABLE_ENGINE` 7, `DISABLE_USB_DMX` 8,
 `ENABLE_USB_DMX` 9, `DMX_PACKET` 12, `DELETE_PROJECT` 16, `SET_PROJECT` 18,
 `RETURN_STATUS` 19, `RETURN_PROGRESS` 20, `GET_SETTINGS` 21, `SET_MODE` 39,
-`SET_PRESET` 41, `SKIP_PRESET` 43, `RESTART` 44. `GET_PROFILE` gained its
+`SET_FLASH_DATA` 36, `SET_PRESET` 41, `SKIP_PRESET` 43, `RESTART` 44.
+Executable-firmware event 25 (`0x19`) is deliberately absent. `GET_PROFILE` gained its
 first call site with the `profile` command; `SKIP_PRESET`, `ENABLE_ENGINE`
 and `DISABLE_ENGINE` are allowlisted and still have none.
 
@@ -110,6 +112,7 @@ python3 tools/wolfmix.py [--port PATH] [--timeout SECONDS] <command>
 | `watch-mode [--interval S] [--seconds N]` | print every change of `wolfmixMode` |
 | `preset ID` | recall a preset by its id, hands-off |
 | `mode NAME` | set the reported mode by name; raw indexes need `--experimental`. The panel follows for `color`, `move`, `beam` and raw 26 (Open) and stays put for `home`, `presets`, `setup` — `screenFollows` in the output says which, `null` when never measured (SCREEN-02) |
+| `gobo-upload DIR --confirm-mains-power` | upload `DIR/flash-custom.bin` through resource event `0x24`, only after the backup manifest, source/result hashes, gobo byte windows, contact sheet and controller preconditions all verify; executable firmware and arbitrary flash images are refused |
 | `self-test` | protocol checks, no hardware needed |
 
 `dmx` enables USB DMX only if it was off, and disables it again on exit.
@@ -144,6 +147,22 @@ visible in the envelope.
 `watch-mode` is the ground truth for the `WM_MODE_*` enum: it polls
 `GET_SETTINGS` (read-only) while the operator walks the controller through its
 screens. The measured map: [`../SPEC.md`](../SPEC.md) §10.2.
+
+### Resource-flash chunks
+
+UPLOAD-07 establishes the external-flash request independently of the firmware
+path. Each event-36 payload is raw bytes, not protobuf:
+
+```text
+uint32be chunk_size | uint32be total_size | uint32be offset | chunk bytes
+```
+
+Chunks are at most 16,384 bytes and each one must receive a successful status
+before the next is sent. `gobo-upload` cannot be enabled through
+`--allow-untested-firmware`; it requires a firmware in `TESTED_FIRMWARE`, a
+saved project, WLINK off and a complete profile list. After the final status it
+re-reads firmware version and both project/profile counts. Power-cycle the W1
+normally to clear its update overlay and load the new resource image.
 
 ## `wolfmix_experiment.py`
 

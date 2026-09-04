@@ -100,22 +100,30 @@ kept apart on purpose:
 
 - reading the installed image, extracting icons locally, patching a **copy**,
   verifying the patch and previewing it are supported here;
-- the copy is uploaded by WTOOLS, by the operator, with a verified backup of
-  the original taken first — this repository never writes it;
+- a copy containing only declared gobo-window changes may be uploaded by the
+  dedicated `gobo-upload` path, with a manifest-verified backup of the original
+  taken first, exact source/result hashes and an operator-reviewed preview;
 - **executable firmware updates stay out of scope**, in every direction;
 - no vendor image, extracted resource or patched copy is ever distributed, and
   `.gitignore` plus `tools/wpj_privacy.py` refuse them.
 
-Revealing the editor's own `Upload Flash` control by setting a documented
-application preference is use of software we hold a licence for, on our own
-machine, to interoperate with our own device.
+The direct resource uploader reproduces only the independently measured host
+interface needed to interoperate with our own device. WTOOLS 2.0.2 uses a
+dedicated external-flash event (`0x24`) with 16 KiB chunks and a 12-byte
+big-endian metadata prefix; its executable-firmware path uses a different
+event (`0x19`). The selected function ranges are bound to the exact installed
+application image by SHA-256 and verified without redistributing vendor code.
+EU Directive 2009/24/EC articles 5(3) and 6 are the interoperability basis for
+observing and studying that interface. This is a description of the project's
+position, not legal advice.
 
-Where the work touches vendor software, it stays on the interface: the
-`WM_MODE_*` names in [`PROVENANCE.md`](PROVENANCE.md) are
-constant names read out of strings in software installed on our own machine,
-and every **numeric value** in that map was measured on our own device rather
-than taken from a binary. Names and numbers of an interface are facts about how
-to interoperate with it, and that is the only use made of them here.
+Where the work touches vendor software, it stays on the interface. Names,
+numbers and framing required for interoperability are recorded as facts; no
+vendor implementation or decompiler output is distributed. The `WM_MODE_*`
+map in [`PROVENANCE.md`](PROVENANCE.md) remains device-measured. The resource
+uploader additionally relies on a targeted offline reconstruction whose exact
+function-byte hashes and independent disassembly checks are preserved in the
+local research archive.
 
 Two things are deliberately absent, and if you are looking for them this is the
 answer:
@@ -163,11 +171,15 @@ repository does not go looking for in a vendor binary.
 
 ## Hardware safety
 
-No firmware operation is implemented. The device client's outgoing event list
-is an explicit allowlist in the source, and anything outside it is refused
-before a byte reaches the port. The experiment runner writes only project UUIDs
-derived from its own experiment label, verifies each upload by reading it back,
-and restores the previous state on failure. See [`docs/device.md`](docs/device.md).
+No executable-firmware operation is implemented. The device client's outgoing
+event list is an explicit allowlist in the source, and anything outside it is
+refused before a byte reaches the port. The resource-flash event is additionally
+locked behind `gobo-upload`; that command accepts only a manifest-bound diff
+inside known gobo icon windows, requires a verified backup and complete device
+preflight, and never accepts a firmware file. The experiment runner writes only
+project UUIDs derived from its own experiment label, verifies each upload by
+reading it back, and restores the previous state on failure. See
+[`docs/device.md`](docs/device.md).
 
 ## Your files, your risk
 

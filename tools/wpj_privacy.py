@@ -34,10 +34,12 @@ ENV = "WPJ_PRIVATE_NAMES"
 
 # What a tracked file may never be, whatever the name list says: projects and
 # vendor sidecars, DMX captures, extractions, flash images.
-EXTENSIONS_INTERDITES = (".wpj", ".wm", ".wmx", ".pdf")
+EXTENSIONS_INTERDITES = (".wpj", ".wm", ".wmx", ".pdf", ".pcap", ".pcapng",
+                         ".usbmon")
 MOTIFS_CHEMIN = ("research/vendor/", ".wolfmix-state/", "/dmx/",
                  "wm-fw-bundle", "wolfmixFlash", "wolfmixFirmware",
-                 "flash-custom.bin", ".wpj-private-names")
+                 "flash-custom.bin", "serial_tx_capture.bin",
+                 "serial_rx_capture.bin", ".wpj-private-names")
 
 
 def motifs(chemin=None):
@@ -116,6 +118,7 @@ def demo():
     assert fichiers_interdits(["docs/tools.md", "README.md"]) == []
     for interdit in ("corpus/x.wpj", "a/b.WMX", "research/vendor/blob.txt",
                      "corpus/EXP/dmx/capture.bin", "manual.pdf",
+                     "capture.pcapng", "serial_tx_capture.bin",
                      "x/wm-fw-bundle-2.0.18/wolfmixFlash.bin",
                      "flash-custom.bin", ".wpj-private-names"):
         assert fichiers_interdits([interdit]) == [interdit], interdit

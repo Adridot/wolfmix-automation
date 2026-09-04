@@ -5,7 +5,8 @@ The six steps of `docs/gobo-icons.md` each belong to a tool of this repository.
 What belonged to nobody were the gates *between* them — and on real hardware a
 skipped step is expensive. This tool patches nothing, talks to no device and
 writes no file: it reads a working directory and refuses to name the next step
-while a gate is red.
+while a gate is red. Its `upload_plan` function is the final local proof used
+by `wolfmix.py` before the device port opens.
 
   gobo_run.py DIRECTORY   the state of the job, then the next command
   gobo_run.py             self-check
@@ -40,7 +41,8 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from gobo_library import find_flash
+from gobo_library import ICON, Library, find_flash
+import gobo_write
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BACKUP, PATCHED, SHEET = "backup", "flash-custom.bin", "sheet.png"
@@ -151,6 +153,73 @@ def gate_patched(patched, flash):
                   f"{len(manifest.get('ids', []))} icon(s), chain verified")
 
 
+def upload_plan(work):
+    """Return a flash image only after the complete local upload proof passes."""
+    if os.path.realpath(work) == os.path.realpath(REPO) or under(work, REPO):
+        raise ValueError("the gobo working directory must be outside the repository")
+    backup = os.path.join(work, BACKUP)
+    patched = os.path.join(work, PATCHED)
+    sheet = os.path.join(work, SHEET)
+    manifest_path = patched + ".json"
+    backup_flash = os.path.join(backup, "wolfmixFlash.bin")
+    provenance, detail = manifest_state(backup)
+    if provenance != "verified":
+        raise ValueError(
+            f"backup is not verified by {MANIFEST}"
+            + (f" ({detail})" if detail else "")
+        )
+    try:
+        with open(manifest_path, encoding="utf-8") as stream:
+            manifest = json.load(stream)
+        source = manifest["source"]
+        result = manifest["result"]
+        ids = manifest["ids"]
+        windows = manifest["windows"]
+        expected_changed = manifest["bytesChanged"]
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise ValueError(f"unreadable patch manifest: {error}") from None
+    if os.path.basename(source.get("path", "")) != "wolfmixFlash.bin":
+        raise ValueError("the patch source is not wolfmixFlash.bin")
+    if result.get("file") != PATCHED:
+        raise ValueError(f"the patch result must be named {PATCHED}")
+    if not ids or any(not isinstance(value, int) or isinstance(value, bool)
+                      for value in ids):
+        raise ValueError("the patch manifest has no valid gobo ids")
+    try:
+        with open(backup_flash, "rb") as stream:
+            before = stream.read()
+        with open(patched, "rb") as stream:
+            after = stream.read()
+    except OSError as error:
+        raise ValueError(f"unreadable upload input: {error}") from None
+    digest_before = hashlib.sha256(before).hexdigest()
+    digest_after = hashlib.sha256(after).hexdigest()
+    if (source.get("sha256"), source.get("size")) != (digest_before, len(before)):
+        raise ValueError("the verified backup does not match the patch source")
+    if (result.get("sha256"), result.get("size")) != (digest_after, len(after)):
+        raise ValueError("the patched flash does not match its manifest")
+    library = Library(backup_flash)
+    expected_windows = [
+        [library.ptrs[value] - library.base,
+         library.ptrs[value] - library.base + ICON]
+        for value in sorted(ids)
+    ]
+    if windows != expected_windows:
+        raise ValueError("the manifest windows do not match its gobo ids")
+    changed = gobo_write.verify(before, after, library, ids)
+    if not changed or changed != expected_changed:
+        raise ValueError("the changed-byte count does not match the manifest")
+    if not os.path.isfile(sheet) or os.path.getmtime(sheet) < os.path.getmtime(patched):
+        raise ValueError("the contact sheet is missing or older than the patched flash")
+    return after, {
+        "size": len(after),
+        "sha256": digest_after,
+        "ids": sorted(ids),
+        "bytesChanged": changed,
+        "backupFilesVerified": detail,
+    }
+
+
 def gates(work, flash):
     """[(label, green, detail)] in the order of the recipe's steps."""
     bundle = os.path.dirname(flash)
@@ -186,14 +255,12 @@ def next_step(states, work, flash):
     patched = os.path.join(work, PATCHED)
     red = next((e for e in states if not e[1]), None)
     if red is None:
-        return ("sheet approved by the operator? then the device "
-                "preconditions, and the upload by hand:\n"
-                "  python3 tools/wolfmix.py profiles | tail -3   "
-                "# a complete read, otherwise restart the W1\n"
-                "  python3 tools/wolfmix.py settings             "
-                "# wlinkActivated must be false\n"
-                "  # then docs/gobo-icons.md: mains power, saved project, "
-                "wtoolsMode=2, and the safety net\n"
+        return ("sheet approved by the operator? connect mains power, close "
+                "WTOOLS, then run the guarded upload:\n"
+                f"  python3 tools/wolfmix.py gobo-upload {work} "
+                "--confirm-mains-power\n"
+                "  # project save, WLINK, firmware and complete profile "
+                "inventory are checked before the first chunk\n"
                 "  # names and order afterwards, if needed: "
                 "docs/gobo-icons.md §6")
     step = red[0][0]
@@ -344,7 +411,7 @@ def self_test():
         assert state("3 sheet") is True
 
         text, green = report(work, flash)
-        assert green and "wlinkActivated" in text and "profiles" in text
+        assert green and "gobo-upload" in text and "confirm-mains-power" in text
     print("ok — 4 gates, each red then green, the live bundle checked against "
           "its manifest in all three states, the patched flash's chain of "
           "hashes verified, refusal at the head of the report")

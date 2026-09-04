@@ -6,7 +6,7 @@ reused under which terms. Anyone building on this needs to know which is which.
 ## Original work
 
 Every **byte-level** claim in `tools/`, `SPEC.md` and `research/` comes from
-two sources and nothing else:
+three locally retained sources:
 
 1. **Our own corpus** — `.wpj` files produced by our own WTOOLS installation and
    our own W1, hashed in `corpus/SHA256SUMS`.
@@ -15,8 +15,17 @@ two sources and nothing else:
    record. Each one is a line in [`research/evidence.md`](research/evidence.md),
    with its date, its status, and the snapshot directory whose hashes are in
    `corpus/SHA256SUMS`.
+3. **Our own parallel interoperability archive** — targeted offline analysis of
+   the WTOOLS copy installed and licensed on this machine. For UPLOAD-07, 22
+   selected function ranges are bound directly to App image SHA-256
+   `f3466a2d070ddb3107f85922093dbddb981ce859b33511f1f9271b4e44a54923`
+   and checked against independent disassembly. Only interface facts needed for
+   the independently written client are carried here; no vendor code,
+   decompiler output or application dump is distributed.
 
-No byte of any third-party implementation was read, disassembled or inspected.
+The local archive is outside this repository and its captures, application
+images and generated reconstruction remain private. The frozen hashes and the
+resulting event/framing facts are the provenance published here.
 
 **Correction, 2026-08-31.** An earlier revision of this paragraph said
 *everything* came from those two sources "and nothing else", and then the

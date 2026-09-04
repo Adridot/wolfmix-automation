@@ -24,6 +24,7 @@ Usage :
   python3 tools/wolfmix.py mode presets
   python3 tools/wolfmix.py watch-mode
   python3 tools/wolfmix.py dmx-envelope before.json --seconds 12
+  python3 tools/wolfmix.py gobo-upload /path/to/gobo-work --confirm-mains-power
   python3 tools/wolfmix.py self-test
 
 WTOOLS must be closed: the serial port is exclusive.
@@ -39,19 +40,22 @@ import tempfile
 import uuid
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import gobo_run
 from wolfmix_protocol import (
     ACTING_MODES, ALLOWED_OUTGOING_EVENTS, DMX_PACKET, GET_PROFILE,
     GET_PROFILE_LIST, GET_PROJECT_LIST, GET_SETTINGS, HEADER_SIZE,
     MODES_MOVING_SCREEN, MODES_SCREEN_INERT, MUTATING_EVENTS, NAMED_MODES,
-    PRESET_ID_MAX, ProtocolError, SET_MODE, SET_PRESET, TESTED_FIRMWARE,
+    PRESET_ID_MAX, ProtocolError, SET_FLASH_DATA, SET_MODE, SET_PRESET,
+    TESTED_FIRMWARE,
     VERSION, WolfmixError, build_frame, decode_dmx_packet, decode_item_list,
     decode_profile, decode_settings, encode_project, encode_protobuf_field,
-    encode_request_uuid, experiment_identity, index_payload, preset_payload,
-    print_json, protobuf_fields, resolve_mode, screen_follows
+    encode_request_uuid, experiment_identity, flash_chunk_payload, index_payload,
+    preset_payload, print_json, protobuf_fields, resolve_mode, screen_follows
 )
 from wolfmix_device import (
     WolfmixConnection, discover_port, dmx_envelope, fetch_project,
-    monitor_dmx, require_success, watch_mode
+    monitor_dmx, require_success, resource_flash_state, upload_resource_flash,
+    watch_mode
 )
 
 
@@ -172,6 +176,12 @@ def self_test():
     assert build_frame(1, SET_PRESET, index_payload(23)) == (
         struct.pack(">BIHH", VERSION, HEADER_SIZE + 1, 1, SET_PRESET) + b"\x17"
     )
+    flash_payload = flash_chunk_payload(b"abc", 10, 4)
+    assert flash_payload == struct.pack(">III", 3, 10, 4) + b"abc"
+    assert build_frame(2, SET_FLASH_DATA, flash_payload) == (
+        struct.pack(">BIHH", VERSION, HEADER_SIZE + len(flash_payload),
+                    2, SET_FLASH_DATA) + flash_payload
+    )
     for out_of_range in (-1, 256):
         try:
             index_payload(out_of_range)
@@ -201,7 +211,7 @@ def self_test():
     assert screen_follows(4) is True and screen_follows(26) is True
     assert screen_follows(0) is False and screen_follows(5) is False
     assert screen_follows(29) is None
-    # No firmware operation is reachable: the allowlist is the only way out.
+    # No executable-firmware operation is reachable: the allowlist is the only way out.
     assert MUTATING_EVENTS <= ALLOWED_OUTGOING_EVENTS
 
     class FakeGate(WolfmixConnection):
@@ -332,6 +342,19 @@ def build_parser():
                       help="accept a raw index instead of a name; raw indexes "
                            "reach screens the panel menu does not expose and "
                            "some act on entry — see MODE-40/42")
+    upload = commands.add_parser(
+        "gobo-upload",
+        help="upload a locally verified gobo resource flash without WTOOLS",
+    )
+    upload.add_argument(
+        "directory",
+        help="gobo working directory containing backup/, flash-custom.bin, "
+             "its manifest and sheet.png",
+    )
+    upload.add_argument(
+        "--confirm-mains-power", action="store_true",
+        help="confirm that the host is on mains power for the complete upload",
+    )
     commands.add_parser("self-test", help="run protocol checks without hardware")
     return parser
 
@@ -344,6 +367,16 @@ def main(argv=None):
         experiment_uuid, name = experiment_identity(args.label)
         print_json({"label": args.label, "uuid": experiment_uuid, "name": name})
         return 0
+    upload_data = upload_plan = None
+    if args.command == "gobo-upload":
+        if not args.confirm_mains_power:
+            raise WolfmixError(
+                "gobo-upload requires --confirm-mains-power before opening the port"
+            )
+        try:
+            upload_data, upload_plan = gobo_run.upload_plan(args.directory)
+        except ValueError as error:
+            raise WolfmixError(f"Gobo upload preflight failed: {error}") from error
     if args.timeout <= 0:
         raise WolfmixError("--timeout must be greater than zero")
     if args.command in ("dmx", "watch-mode") and args.seconds < 0:
@@ -359,6 +392,7 @@ def main(argv=None):
     with WolfmixConnection(
         port, timeout=args.timeout,
         allow_untested_firmware=args.allow_untested_firmware,
+        allow_resource_flash=args.command == "gobo-upload",
     ) as connection:
         if args.command == "settings":
             print_json(decode_settings(connection.request(GET_SETTINGS)))
@@ -418,6 +452,28 @@ def main(argv=None):
                                     and index in NAMED_MODES.values(),
                         "screenFollows": screen_follows(index),
                         "wolfmixMode": settings["wolfmixMode"]})
+        elif args.command == "gobo-upload":
+            baseline = resource_flash_state(connection)
+            progress_mark = [-1]
+
+            def progress(done, total):
+                mark = done * 10 // total
+                if mark != progress_mark[0]:
+                    progress_mark[0] = mark
+                    print(f"resource flash: {done * 100 // total}%", file=sys.stderr)
+
+            chunks = upload_resource_flash(connection, upload_data, progress)
+            after = resource_flash_state(connection)
+            if after != baseline:
+                raise ProtocolError(
+                    f"Controller state changed during upload: {baseline} -> {after}"
+                )
+            print_json({
+                **upload_plan,
+                "chunks": chunks,
+                "controller": after,
+                "restartRequired": True,
+            })
         elif args.command == "watch-mode":
             watch_mode(connection, args.interval, args.seconds)
     return 0

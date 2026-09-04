@@ -3,9 +3,9 @@
 End-to-end recipe, every step device-confirmed on firmware 2.0.18 on
 2026-08-30 (RENAME-01/SORT-01 in `SPEC.md` §3.4 for the page edits). A
 **resource flash** carries the interface's graphics and is not executable
-firmware — [`../LEGAL.md`](../LEGAL.md) states that boundary, and this
-repository never writes the controller's flash itself: it prepares a copy and
-verifies it, WTOOLS uploads it. Three independent layers:
+firmware — [`../LEGAL.md`](../LEGAL.md) states that boundary. This repository
+prepares, verifies and can upload only a copy whose diff is confined to declared
+gobo icon windows. Three independent layers:
 
 | Layer | What changes | Where it lives | Tool |
 |---|---|---|---|
@@ -85,61 +85,30 @@ WOLFMIX_FLASH=$G/flash-custom.bin python3 tools/gobo_library.py \
 
 ## 5. Upload
 
-The controller's flash is written by WTOOLS, from the copy you just verified.
-Before anything: **a verified backup of the original bundle, outside the WTOOLS
-folder** — copy it to `$G/backup`; WTOOLS rewrites `wm-fw-bundle-2.0.18/` on
-every update, and `gobo_run.py` re-checks on every run both the SHA-256 of the
-copy against the live bundle **and** the live bundle against the manifest it
-ships with (see the net, below).
-
-Preconditions, all four:
+The controller can receive the verified copy directly, with WTOOLS closed:
 
 ```bash
-python3 tools/wolfmix.py profiles | tail -3   # complete read; if truncated, restart the W1
-python3 tools/wolfmix.py settings             # wlinkActivated must be false
+python3 tools/wolfmix.py gobo-upload "$G" --confirm-mains-power
 ```
 
-- **`profiles` must answer completely** — the line count equals
-  `fixtureProfileCount`. A truncated read happened once (2026-08-30) and was
-  repaired by a restart; never write on a partial read.
-- **WLINK off.** It is read-only and fails the write at 17% or 99%
-  ([forum t=718](https://forum.wolfmix.com/viewtopic.php?t=718)).
-- **The host machine on mains.** A write cut by a shutdown is the one scenario
-  with no net.
-- **The loaded project saved.** WTOOLS refuses otherwise: *Failed to update
-  firmware — Save project before updating.*
+The command refuses before opening the port unless all local gates pass:
 
-Then reveal the control. `Upload Flash` only exists in WTOOLS' Full Debug mode,
-which the SHIFT+CMD+D menu does not offer; the application accepts the mode as
-a preference:
+- `$G/backup/changelog.json` verifies the backup image by SHA-256;
+- `flash-custom.bin` and its manifest have the declared hashes and sizes;
+- every changed byte is inside the icon windows named by the manifest;
+- `sheet.png` exists and is newer than the patched image;
+- the operator explicitly confirms mains power.
 
-```bash
-defaults write com.nicolaudiegroup.wtools flutter.wtoolsMode -int 2   # reveals the button
-defaults write com.nicolaudiegroup.wtools flutter.wtoolsMode -int 0   # back to stock
-```
+It then checks that the project is saved, WLINK is off, the firmware is one of
+the measured versions and the complete profile inventory is readable. Event
+`0x24` sends acknowledged 16 KiB chunks, each prefixed by `chunk size`, `total
+size` and `offset` as three big-endian uint32 values. Event `0x19`, the separate
+executable-firmware path, is not allowlisted anywhere in this repository
+(UPLOAD-07).
 
-WTOOLS must be closed for either, and restarted after. In mode 2,
-**`Upload Firmware` sits right next to `Upload Flash`** — read the label out
-loud before clicking. Select `$G/flash-custom.bin`.
-
-**The W1 screen then sticks at "updating firmware 1/2 writing data 99%". This
-is not a crash** — reproduced 2 times out of 2. The normal path pushes two
-files where `Upload Flash` sends one, so the screen's state machine never
-closes; the device keeps answering the protocol throughout (`getSettings` and
-`getProjectList` come back complete, which a chip mid-erase would not do).
-Check the `setFlashDataChunks` have stopped in the WTOOLS log, then restart the
-W1 normally: the overlay lifts and the new flash loads.
-
-That log is the only instrument on this side of the link, and it **rotates per
-launch**: `~/Library/Application Support/com.nicolaudiegroup.wtools/logs/`
-keeps five files, `wtools_logs_0.log` being the current run, and every start of
-WTOOLS pushes the oldest one out. Copy the whole folder somewhere outside this
-repository **before** launching WTOOLS again — five launches and the trace of
-your upload is gone. The files carry the controller's serial number, which is
-why `*.log` is git-ignored here and why the copy stays out of the tree.
-
-Afterwards, put `wtoolsMode` back to 0, and re-read `settings` and `profiles`:
-`firmwareVer`, `fixtureProfileCount` and `projectCount` must be what they were.
+After the last acknowledged chunk, the command re-reads the firmware version,
+profile count and project count and refuses a changed baseline. Restart the W1
+normally to clear the update overlay and load the new icons.
 
 ### The net, by severity
 
@@ -201,12 +170,11 @@ projecting its own motif.
   form re-writes them byte for byte — and re-upload after every update.
   The `mask:` path from the 1024² sources gives a *similar* image, not the
   same bytes, once the tool's resampling has changed.
-- **Why this repository will not send the flash itself.** The write message
-  is known by name and count only — the debug log names it, and carries no
-  byte of it — and the screen calls a flash-only upload *updating firmware
-  1/2*: the same writer may carry executable firmware, and a guessed header
-  is the one failure with no net. Until one upload has been captured on the
-  wire, the click stays WTOOLS's (UPLOAD-06).
+- **Why the direct uploader is narrow.** Targeted analysis of the exact WTOOLS
+  2.0.2 image closed UPLOAD-06: resource event `0x24` and firmware event `0x19`
+  are separate, and the former's 12-byte prefix is fully determined. The CLI
+  still accepts only a gobo manifest whose byte diff re-verifies against the
+  backed-up original; it is not a general flash writer (UPLOAD-07).
 
 - An RGB export with no alpha lands opaque; `mask:` exists so you never hand
   the tool a flattened icon by accident.

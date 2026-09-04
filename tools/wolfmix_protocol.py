@@ -52,6 +52,8 @@ RETURN_PROGRESS = 20
 
 GET_SETTINGS = 21
 
+SET_FLASH_DATA = 36
+
 SET_MODE = 39
 
 SET_PRESET = 41
@@ -59,6 +61,8 @@ SET_PRESET = 41
 SKIP_PRESET = 43
 
 RESTART = 44
+
+FLASH_CHUNK_SIZE = 0x4000
 
 EXPERIMENT_NAMESPACE = uuid.UUID("d7ad3c90-367d-5eef-a8bb-f523c6f96d9a")
 
@@ -83,6 +87,7 @@ ALLOWED_OUTGOING_EVENTS = {
     DELETE_PROJECT,
     SET_PROJECT,
     GET_SETTINGS,
+    SET_FLASH_DATA,
     SET_MODE,
     SET_PRESET,
     SKIP_PRESET,
@@ -98,6 +103,7 @@ MUTATING_EVENTS = {
     ENABLE_USB_DMX,
     DELETE_PROJECT,
     SET_PROJECT,
+    SET_FLASH_DATA,
     SET_MODE,
     SET_PRESET,
     SKIP_PRESET,
@@ -181,6 +187,7 @@ EVENT_NAMES = {
     RETURN_STATUS: "RETURN_STATUS",
     RETURN_PROGRESS: "RETURN_PROGRESS",
     GET_SETTINGS: "GET_SETTINGS",
+    SET_FLASH_DATA: "SET_FLASH_DATA",
     SET_MODE: "SET_MODE",
     SET_PRESET: "SET_PRESET",
     SKIP_PRESET: "SKIP_PRESET",
@@ -566,6 +573,20 @@ def preset_payload(value):
             "200-255 is unprobed and is not sent"
         )
     return index_payload(value)
+
+def flash_chunk_payload(chunk, total_size, offset):
+    """External-resource flash chunk observed in WTOOLS 2.0.2 (UPLOAD-07)."""
+    if not isinstance(chunk, bytes) or not chunk:
+        raise WolfmixError("A flash chunk must be non-empty bytes")
+    if len(chunk) > FLASH_CHUNK_SIZE:
+        raise WolfmixError(
+            f"A flash chunk cannot exceed {FLASH_CHUNK_SIZE} bytes"
+        )
+    if not 0 < total_size <= 0xFFFFFFFF:
+        raise WolfmixError("Flash size must fit in an unsigned 32-bit integer")
+    if not 0 <= offset < total_size or offset + len(chunk) > total_size:
+        raise WolfmixError("Flash chunk falls outside the declared image")
+    return struct.pack(">III", len(chunk), total_size, offset) + chunk
 
 def resolve_mode(value, experimental=False):
     """A measured mode by name, or a raw index behind --experimental."""

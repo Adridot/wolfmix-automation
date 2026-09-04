@@ -5,7 +5,8 @@ A table of 800 30-byte entries at the end of `wolfmixFlash.bin`:
 `ptr u32 LE | 6 bytes (colour/flags) | 20-byte NUL-terminated name`. Each `ptr`
 points at a 1728-byte icon = 24x24 px, RGB565 LE + 8-bit alpha. The entry's
 index IS the gobo id read from `145.f2` in the .wpj and from `userNum` in the
-fixture profile. Nothing is written, here or anywhere else.
+fixture profile. This module is read-only; the guarded device upload lives in
+`wolfmix.py`.
 
 The icons are the manufacturer's work: renders stay outside the repository.
 """

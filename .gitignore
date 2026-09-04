@@ -35,6 +35,14 @@ research/vendor/
 # de les copier hors de l'arbre avant qu'ils tournent.
 *.log
 
+# Raw USB and serial captures may contain the controller serial number and a
+# complete vendor resource image. They are evidence kept locally, never source.
+*.pcap
+*.pcapng
+*.usbmon
+*serial_tx_capture.bin
+*serial_rx_capture.bin
+
 # Flash images and firmware bundles: the manufacturer's, or a patched copy of
 # it. Prepared and verified locally, never distributed (LEGAL.md).
 **/wm-fw-bundle*/

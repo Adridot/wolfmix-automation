@@ -50,7 +50,7 @@ message.
 |---|---|
 | EXP-05, EXP-05bis, EXP-06, EXP-07 (2026-08-31) | The variant-B/C campaign: the Rosetta alignment, the FX **banks per effect**, the refuted base-0/base-1 discriminator, and the three single-variable differentials written by the device. §1 still describes B and C by their envelope only. |
 | GOBO-01 (2026-08-30) | Where the gobo icon library lives — 800 entries at the tail of the resource flash, the entry index being the id in `145.f2`. §3.4 describes the palette without it. |
-| UPLOAD-01, UPLOAD-02, UPLOAD-03, UPLOAD-04 (2026-08-31) | The channel that writes the resource flash: a tty and not raw USB, the 1 + 179 message geometry inferred from the vendor's own log, the installed bundle verified against the manifest it ships with, and the contradiction between two sessions refused at their first message and an upload published `device-confirmed`. §10.2 describes the link without that upload on it; nothing here describes the flash bundle at all; and the question of whether executable firmware shares the message is open, which is why no write path follows. |
+| UPLOAD-01, UPLOAD-02, UPLOAD-03, UPLOAD-04 (2026-08-31), UPLOAD-05, UPLOAD-06, UPLOAD-07 (2026-09-04) | The full resource-flash evidence chain is not consolidated here: tty channel, log-derived count, bundle manifest, prior uploads and update replacement. §10.2 now contains UPLOAD-07's exact host-side framing and closes the old firmware/resource-message ambiguity, but the first run of the new direct uploader is still pending. |
 | PROFILE-01 (2026-08-31), PROFILE-02, PROFILE-03, PROFILE-04 (2026-09-01) | Reading one fixture profile off the controller: `GET_PROFILE`'s reply layout, the sweep of 221 profiles that found no unnamed field and refuted three of the first pass's sub-readings, the preset `f4` axis settled against `ssl2.CIBLE_PRESET`, and the fact that the locally-authored profiles are served too. §10.2 describes the link without this read on it, and §7's record 116 now names the same key space (PROFILE-05, consolidated) without saying where the other side of it is read. |
 | GUARD-01 (2026-08-31) | The nine bench measures of the write-path guards. They constrain the tools, not the format, so this may end up belonging in `docs/` rather than here — that decision is itself pending. |
 
@@ -1979,6 +1979,26 @@ firmware never parses: SETP-01's `f1` = id, and PRESET-07's `f2` = entry
 position clamped to the last entry. PRESET-07 was wrong on both halves — not
 that field, and not a position. Its **file-side** results are untouched: the
 `f19` id formula, gaps tolerated, and the manual open.
+
+#### External resource flash — **[observed host interface]**
+
+WTOOLS 2.0.2 uses event **36 (`0x24`)** for external-resource flash data and
+event **25 (`0x19`)** for executable firmware. The two paths are distinct
+(UPLOAD-07); executable firmware remains outside the outgoing allowlist.
+
+The resource event carries raw bytes rather than protobuf. Each request is
+acknowledged before the next is sent, and the payload is:
+
+```text
+uint32be chunk_size | uint32be total_size | uint32be chunk_offset | chunk bytes
+```
+
+The maximum chunk is 16,384 bytes. These facts are bound to exact function
+ranges in the installed App image and independently disassembled, but the new
+client path has not yet written the device. Its framing is therefore observed,
+not device-confirmed. `wolfmix.py gobo-upload` exposes it only after verifying
+the vendor bundle manifest, backup, patched-image manifest, operator-reviewed
+sheet and a byte diff confined to the declared gobo icon windows.
 
 **No reachable event reloads the live copy** (RELOAD-04). A WTOOLS push does
 not, `store` + `RESTART` under the same UUID does not, and only a manual open

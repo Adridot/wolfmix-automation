@@ -38,14 +38,14 @@ read an abstention as a pass, and do not "fix" it by inventing test data.
 | Invariant | Why |
 |---|---|
 | **No new dependencies.** Standard library only. | Portability, and the ability to audit every line. |
-| **Never commit `*.wpj`, `*.wm`, `*.wmx`, `*.pdf`, vendor extractions (`research/vendor/`), DMX captures (`corpus/**/dmx/`, `.wolfmix-state/`), or the local `.wpj-private-names` list.** | They carry the manufacturer's factory content and someone's real show — [`LEGAL.md`](LEGAL.md). `.gitignore` enforces it; never work around it with `git add -f`. |
+| **Never commit `*.wpj`, `*.wm`, `*.wmx`, `*.pdf`, vendor extractions (`research/vendor/`), USB/serial captures, DMX captures (`corpus/**/dmx/`, `.wolfmix-state/`), or the local `.wpj-private-names` list.** | They carry the manufacturer's factory content, device identifiers or someone's real show — [`LEGAL.md`](LEGAL.md). `.gitignore` enforces it; never work around it with `git add -f`. |
 | **Never write a real venue, client, project, group or device name into a tracked file.** Use the neutral labels the tree already uses: `rig-a`/`rig-b`/`rig-c`, `<group-A name>`, serial withheld. | `make check` fails on it — `tools/wpj_privacy.py` greps every tracked file against a list that lives outside the repository. This is the invariant most often broken by accident, including by writing a new research section. |
 | **Unknown bytes pass through verbatim.** | A record with no schema round-trips exactly. `wpj_codec.decode` returns `{"raw": hex}` rather than a partial decode. |
 | **Writes never overwrite.** Output opens with mode `x`. | An overwritten project is an unrecoverable show. |
 | **Nothing leaves the machine.** No upload, no third-party API, no telemetry. | Rule 4, and the evidence chain depends on it. |
-| **No executable-firmware operations, ever.** The outgoing event allowlist in `tools/wolfmix.py` is exhaustive by design, and no code path uploads firmware. | A bricked controller is not recoverable from here. |
-| **A resource flash is not firmware.** `wolfmixFlash.bin` carries the interface's graphics. It is read, patched into a **copy** and verified here — backed up first, hash-anchored by a manifest, and uploaded by WTOOLS itself, never by this repository. | The distinction is what makes the gobo pipeline legitimate; see [`LEGAL.md`](LEGAL.md). |
-| **Do not write to a connected device** except through `wolfmix_experiment.py`, which uses its own derived UUIDs. | Ordinary projects must never be touched. |
+| **No executable-firmware operations, ever.** The outgoing event allowlist in `tools/wolfmix.py` is exhaustive by design. Event `0x19` is never allowlisted and no code path accepts or uploads `wolfmixFirmware.bin`. | A bricked controller is not recoverable from here. |
+| **A resource flash is not firmware.** `wolfmixFlash.bin` carries the interface's graphics. A patched copy may be uploaded only by `wolfmix.py gobo-upload`, after a manifest-verified backup, exact source/result hashes, an operator-reviewed sheet and a byte diff confined to the declared gobo windows. Arbitrary flash images are refused. | The dedicated resource event `0x24` and executable-firmware event `0x19` are distinct in the measured WTOOLS interface; see [`LEGAL.md`](LEGAL.md). |
+| **Do not write to a connected device** except through `wolfmix_experiment.py`, which uses its own derived UUIDs, or the guarded `gobo-upload` resource path above. | Ordinary projects and arbitrary device memory must never be touched. |
 | **Never invent a name for an unconfirmed value.** | Ambiguity is recorded as a list of candidates. An absent field is *absent*, never `0` or `off`. |
 
 ## Evidence vocabulary
@@ -197,7 +197,9 @@ eleven `f30` colour-spread modes were settled that way in an hour, read-only.
 
 No circumvention of a protection measure — one that guards a licence, an
 entitlement, an activation or firmware authenticity — no licence/activation/
-entitlement work, no redistribution of vendor material, no firmware operation.
+entitlement work, no redistribution of vendor material, no executable-firmware
+operation. The dedicated external-resource upload remains limited by the gobo
+window gates above.
 If a request heads that way, stop and say so; the reasoning is in
 [`LEGAL.md`](LEGAL.md).
 

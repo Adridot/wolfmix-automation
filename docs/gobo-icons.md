@@ -201,6 +201,12 @@ projecting its own motif.
   form re-writes them byte for byte — and re-upload after every update.
   The `mask:` path from the 1024² sources gives a *similar* image, not the
   same bytes, once the tool's resampling has changed.
+- **Why this repository will not send the flash itself.** The write message
+  is known by name and count only — the debug log names it, and carries no
+  byte of it — and the screen calls a flash-only upload *updating firmware
+  1/2*: the same writer may carry executable firmware, and a guessed header
+  is the one failure with no net. Until one upload has been captured on the
+  wire, the click stays WTOOLS's (UPLOAD-06).
 
 - An RGB export with no alpha lands opaque; `mask:` exists so you never hand
   the tool a flattened icon by accident.

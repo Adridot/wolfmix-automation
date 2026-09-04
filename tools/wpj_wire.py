@@ -33,6 +33,20 @@ class WireError(ValueError):
     """What was read does not have the shape it claimed."""
 
 
+def encode_varint(value: int) -> bytes:
+    """Encode an unsigned varint; callers retain their input validation.
+
+    This preserves the protocol encoder's bytes/exception behavior, including
+    bool inputs. The semantic codec rejects bool before calling this function.
+    """
+    result = bytearray()
+    while value > 0x7F:
+        result.append((value & 0x7F) | 0x80)
+        value >>= 7
+    result.append(value)
+    return bytes(result)
+
+
 def read_varint(buf, i):
     """(value, next offset). Refuses a truncated or absurd varint."""
     value = shift = 0
@@ -101,8 +115,12 @@ def walk(buf, depth=0, max_depth=6):
     return out
 
 
-def parse_container(data):
-    """Child records of the root container: (index, type, offset, payload)."""
+def parse_container(data, *, source=None):
+    """Child records: (index, type, offset, payload).
+
+    A source label preserves Wpj's absolute-offset ValueError diagnostics;
+    the wire inspector uses relative-offset WireError diagnostics.
+    """
     if len(data) < BODY_OFF + ROOT_HEADER:
         raise WireError(f"fichier trop court : {len(data)} octets, "
                         f"{BODY_OFF + ROOT_HEADER} minimum")
@@ -119,10 +137,14 @@ def parse_container(data):
     records, i, index = [], 0, 0
     while i < len(body):
         if i + ROOT_HEADER > len(body):
+            if source is not None:
+                raise ValueError(f"{source}: truncated record header at {start + i}")
             raise WireError(f"truncated record header at {i}")
         size = int.from_bytes(body[i:i + 4], "little")
         record_type = int.from_bytes(body[i + 4:i + 6], "little")
         if i + ROOT_HEADER + size > len(body):
+            if source is not None:
+                raise ValueError(f"{source}: truncated record at {start + i}")
             raise WireError(f"truncated record of type {record_type} at {i}")
         records.append((index, record_type, start + i + ROOT_HEADER,
                         body[i + ROOT_HEADER:i + ROOT_HEADER + size]))

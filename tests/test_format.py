@@ -9,6 +9,7 @@ import wpj_codec
 import wpj_coverage
 import wpj_wire
 import wpjlib
+import wolfmix_protocol
 
 from . import fixtures
 
@@ -58,6 +59,23 @@ class TruncatedFile(unittest.TestCase):
         with self.assertRaises(wpj_wire.WireError):
             wpj_wire.parse_container(bytes(data))
 
+    def test_project_reader_preserves_its_stricter_boundary_and_diagnostics(self):
+        good = fixtures.project_bytes()
+        body = good[20:] + b"extra"
+        trailing = hashlib.sha1(body).digest() + body
+        self.assertEqual(wpj_wire.parse_container(trailing),
+                         wpj_wire.parse_container(good))
+        with self.assertRaisesRegex(ValueError, "not a root container"):
+            wpjlib.Wpj.from_bytes(trailing)
+        for inner, message in ((b"xx", "record header"),
+                               (struct.pack("<IH", 8, 101) + b"x", "record")):
+            body = good[20:64] + struct.pack("<IH", len(inner), 100) + inner
+            data = hashlib.sha1(body).digest() + body
+            with self.assertRaises(ValueError) as caught:
+                wpjlib.Wpj.from_bytes(data, "<cut>")
+            self.assertIs(type(caught.exception), ValueError)
+            self.assertEqual(str(caught.exception), f"<cut>: truncated {message} at 70")
+
 
 class Varints(unittest.TestCase):
     """Reading refuses what cannot terminate; writing refuses what is not a
@@ -99,6 +117,26 @@ class Varints(unittest.TestCase):
             encoded = wpj_codec._wvarint(value)
             self.assertEqual(wpj_wire.read_varint(encoded, 0),
                              (value, len(encoded)))
+
+    def test_protocol_adapter_keeps_its_input_contract(self):
+        for value, expected in ((False, b"\x00"), (True, b"\x01"),
+                                (127, b"\x7f"), (128, b"\x80\x01"),
+                                (300, b"\xac\x02")):
+            self.assertEqual(wolfmix_protocol.encode_varint(value), expected)
+        for value, error in ((-1, ValueError), ("3", TypeError),
+                             (3.0, TypeError), (None, TypeError)):
+            with self.assertRaises(error):
+                wolfmix_protocol.encode_varint(value)
+
+    def test_schema_lookup_preserves_neutral_fields_and_wire_order(self):
+        schema = {19: ("id", "v"), 25: ("name", "str")}
+        self.assertEqual(wpj_codec.field_number(schema, "id"), 19)
+        self.assertEqual(wpj_codec.field_number(schema, "f7"), 7)
+        with self.assertRaises(KeyError):
+            wpj_codec.field_number(schema, "missing")
+        self.assertEqual(sorted(["name", "f7", "id"],
+                                key=lambda key: wpj_codec.field_number(schema, key)),
+                         ["f7", "id", "name"])
 
 
 class RefusedOverwrite(unittest.TestCase):

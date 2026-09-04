@@ -424,12 +424,17 @@ def _wvarint(v):
         raise ValueError(f"varint: integer expected, got {v!r}")
     if v < 0:
         raise ValueError(f"varint: negative value {v}")
-    out = bytearray()
-    while True:
-        b = v & 0x7F; v >>= 7
-        out.append(b | (0x80 if v else 0))
-        if not v:
-            return bytes(out)
+    return wpj_wire.encode_varint(v)
+
+
+def field_number(schema, key):
+    """Resolve a semantic key or a neutral fN key to its wire number."""
+    for number, (name, _) in schema.items():
+        if name == key:
+            return number
+    if key.startswith("f") and key[1:].isdigit():
+        return int(key[1:])
+    raise KeyError(key)
 
 
 # Two 2026-09-01 renames are deliberately NOT in this table: `105.f1`

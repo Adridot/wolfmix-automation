@@ -475,12 +475,7 @@ def print_json(value, compact=False):
                      indent=None if compact else 2), flush=compact)
 
 def encode_varint(value):
-    result = bytearray()
-    while value > 0x7F:
-        result.append((value & 0x7F) | 0x80)
-        value >>= 7
-    result.append(value)
-    return bytes(result)
+    return wpj_wire.encode_varint(value)
 
 def encode_protobuf_field(number, wire_type, value):
     tag = encode_varint((number << 3) | wire_type)

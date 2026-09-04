@@ -16,6 +16,8 @@ import os
 import struct
 import sys
 
+import wpj_wire
+
 CORPUS_ENV = "WPJ_CORPUS"
 CORPUS_DEFAUT = "corpus"
 
@@ -68,15 +70,8 @@ class Wpj:
         if root_type != ROOT_TYPE or BODY_OFF + 6 + root_len != len(d):
             raise ValueError(f"{source}: not a root container type 100 "
                              f"(type={root_type}, length={root_len})")
-        records, i, end = [], BODY_OFF + 6, len(d)
-        while i < end:
-            if i + 6 > end:
-                raise ValueError(f"{source}: truncated record header at {i}")
-            ln, typ = struct.unpack_from("<IH", d, i)
-            if i + 6 + ln > end:
-                raise ValueError(f"{source}: truncated record at {i}")
-            records.append((typ, d[i + 6 : i + 6 + ln]))
-            i += 6 + ln
+        records = [(typ, payload) for _, typ, _, payload
+                   in wpj_wire.parse_container(d, source=source)]
         return cls(d[20:BODY_OFF], records)
 
     def body(self):

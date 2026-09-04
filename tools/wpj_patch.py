@@ -55,12 +55,7 @@ def _dec(w, typ, occ=0):
 
 
 def _numero(schema, cle):
-    for f, (nom, _) in schema.items():
-        if nom == cle:
-            return f
-    if cle.startswith("f") and cle[1:].isdigit():
-        return int(cle[1:])
-    raise KeyError(cle)
+    return wpj_codec.field_number(schema, cle)
 
 
 def _ordonne(d, schema):

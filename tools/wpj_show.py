@@ -507,10 +507,10 @@ def _cree_preset(ctx, d165, pid, pe):
     schema = wpj_codec.SCHEMAS[165][5][1]
 
     def numero(cle):
-        for f, (nom, _) in schema.items():
-            if nom == cle:
-                return f
-        return int(cle[1:])
+        try:
+            return wpj_codec.field_number(schema, cle)
+        except KeyError:
+            return int(cle[1:])  # Preserve this caller's legacy fallback.
     cible = {k: cible[k] for k in sorted(cible, key=numero)}
     d165["presets"].append(cible)
     return cible

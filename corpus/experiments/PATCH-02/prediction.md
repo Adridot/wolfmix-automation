@@ -28,6 +28,17 @@ same rig patched by hand; the DMX predictions below are derived from the file
 instead (COV-16's rule), which is stricter and costs no gesture. The twin
 stays optional, for a refusal that needs a control.
 
+## A second variable, found at the port
+
+The controller reports firmware **2.0.19** — every measurement in this
+repository was made on 2.0.18, and the local bundle is still 2.0.18. The
+runner refused the upload on that ground; the upload proceeds under the
+untested-firmware flag, deliberately: the write goes to a derived UUID behind
+a snapshot, so it is reversible. But the reading rule changes — a **refusal**
+here has two candidate causes (the compiled patch, the firmware) and does not
+refute the compiler on its own; a **success** is the first row of the 2.0.19
+cell in `research/versions.md`, and not a statement about 2.0.18.
+
 ## Procedure
 
 1. `wolfmix_experiment.py init candidate.wpj --label patch02` — snapshot,

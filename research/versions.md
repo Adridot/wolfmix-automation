@@ -7,7 +7,7 @@
 | Easy View 2 | 22.805.0.17 | `CFBundleVersion` alone (2024-01-11) |
 | EasyViewConnect | no version declared | its `Info.plist` says nothing |
 | macOS | 26.6.2 (25G83) | `sw_vers` |
-| W1 Mk1 firmware | 2.0.18 | `GET_SETTINGS` field 14, device connected |
+| W1 Mk1 firmware | **2.0.19** since 2026-09-04 — 2.0.18 for every measurement before that date | `GET_SETTINGS` field 14, device connected; PATCH-02 is the first measurement on 2.0.19 |
 | `wpj-toolkit` | commit `2bd0ee3` (2026-08-14) | external, not re-verified since |
 | Cached W1 firmware bundle | 2.0.18, channel `debug`, `fwDate` 2026-07-07 | `~/Library/Application Support/com.nicolaudiegroup.wtools/wm-fw-bundle-2.0.18/` — the image is encrypted; only `changelog.json` is readable (FW-01) |
 

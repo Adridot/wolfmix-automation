@@ -1,5 +1,7 @@
 # Security policy
 
+Reader: Security reporters. Question: How should I report a security concern?
+
 This project has no server, no service and no user accounts. "Security" here
 means three specific things.
 

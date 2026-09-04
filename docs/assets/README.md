@@ -1,5 +1,7 @@
 # Assets
 
+Reader: Documentation maintainers. Question: Which assets are used and where did they come from?
+
 Three files, and two of them are referenced by nothing in the tree on purpose.
 
 | File | Used by |

@@ -1,5 +1,7 @@
 # Talking to the W1
 
+Reader: Controller operators. Question: How do I operate and recover the USB workflows?
+
 Two tools, one below the other. `wolfmix.py` is a client for the controller's
 USB serial protocol. `wolfmix_experiment.py` builds transactions on top of it.
 
@@ -38,25 +40,9 @@ Executable-firmware event 25 (`0x19`) is deliberately absent. `GET_PROFILE` gain
 first call site with the `profile` command; `SKIP_PRESET`, `ENABLE_ENGINE`
 and `DISABLE_ENGINE` are allowlisted and still have none.
 
-**`SET_PRESET` and `SET_MODE` do not carry protobuf.** Firmware 2.0.18 reads
-`payload[0]` as the index: one raw byte, nothing else. A protobuf-shaped
-`[tag, value]` pair makes the controller read the *tag* — `f1=<anything>`
-recalls id 8, `f2=<anything>` id 16. For `preset`, the byte is the preset
-**id** (`id = (page-1)*20 + (slot-1)`), not the entry position, and **an id
-above the highest one present does nothing** — no floor, no clamp to the last
-entry, no wrap to the first, no modulo (RECALL-04). **An id inside an
-*interior* gap does nothing either** — id 90, in the hole between 81 and 100,
-left the frame identical on all 2048 channels while the four rival readings
-each predicted a different measured frame (RECALL-05). That is the case a
-generated bank creates. **A present id above 127 is recalled exactly** — byte
-140 and byte 141 each rendered their own cue to the channel, while byte 228,
-where no preset exists, stayed a no-op; that kills the 7-bit-truncation reading
-on two distinct measured frames (RECALL-06). The reachable domain is the
-panel's own, **0–199**. Bytes 200–255 are unprobed.
-For `mode`, the index is usually the mode reached, but not always —
-index 40 lands on 42 — and a raw index can open a screen the panel menu does
-not expose, some of which act on entry (mode 42 tries to read a USB medium).
-See [`research/evidence.md`](../research/evidence.md), RAW-01 and RECALL-03.
+For short control events, use the [USB reference](../SPEC.md#usb): it defines
+the raw-byte contract, preset identity and range, and the measured mode behavior.
+Do not send raw indexes to a controller in service: some screens act on entry.
 
 A recall changes what the controller is playing, live. It writes nothing:
 `projectChanged` stays false. **Recalls sent close together can be swallowed**:
@@ -233,48 +219,11 @@ selection gesture on that screen.
 
 ### Recalling a preset over USB — the payload is not protobuf
 
-The short events do **not** carry protobuf. For `SET_MODE` (39) and
-`SET_PRESET` (41) the firmware reads **`payload[0]` as the index** and parses
-nothing — device-confirmed, 2026-08-27.
-
-That was found by sweeping `SET_MODE`'s fields: sending `f1=0` … `f4=0`
-selected modes 8, 16, 24 and 32 — which are exactly the protobuf **tag bytes**
-`0x08 0x10 0x18 0x20`. The device had been reading our tag as the index all
-along, so the value behind it could never matter.
-
-With a one-byte payload both events behave:
-
-| Event | Sent | Result |
-|---|---|---|
-| `SET_MODE` | one byte: 0, 5, 26, 16, 0 (decimal) | modes 0, 5, 26, 16, 0 — **5 of 5** |
-| `SET_PRESET` | one byte: 1, 5, 1, 5, 1 (decimal) | two stable fingerprints, each repeat identical to the channel |
-
-**Addressed, deterministic, hands-off preset recall works.** And mode 26 —
-`main menu → Open`, the screen whose manual use reloads a project — is
-reachable remotely.
-
-This supersedes two earlier readings on this page. RECALL-01 and RECALL-02
-measured correctly and concluded that the event carried no target; the real
-situation was that we had never sent one. What stays refuted as written is
-`f1` = id (SETP-01) and `f2` = clamped entry position (PRESET-07) — both
-described a protobuf the firmware does not read.
-
-Both questions this paragraph used to leave open are now closed. The byte is
-the **id**, not the entry position: ids 99 and 114 recall two different
-presets, where a position reading makes both of them out of range and so
-identical (RECALL-03). And a **second byte is not read** — the one payload
-that seemed to prove otherwise was undone by its own control shot, and a fade
-parameter is excluded by the transient (RAW-02).
-
-An absent id is now closed on both sides: nothing happens, whether the id sits
-above the highest one present (RECALL-04, bytes 7, 50 and 200) or inside an
-interior hole (RECALL-05, id 90 between 81 and 100 — the frame stayed identical
-on all 2048 channels, and the four rivals each predicted a different measured
-frame). And a **present** id beyond 127 is reachable: the byte is read as-is,
-bit 7 included, over the panel's whole range 0–199 (RECALL-06). Off the recall
-layer the cue behaves like any other — outside the groups it addresses, an
-id ≥ 128 leaves the same 2048 channels as an id < 128. `SET_PROJECT` and the
-long events remain protobuf; the raw-byte reading is for the short ones.
+Use `python3 tools/wolfmix.py preset ID`. The
+[device-confirmed USB reference](../SPEC.md#usb) owns the one-byte payload,
+id range, absent-id behavior and refutations of earlier protobuf readings.
+It also records why a second byte is not a fade parameter. Long project events
+remain protobuf; this distinction applies to the short control events.
 
 ### Campaign manifest
 

@@ -1,5 +1,7 @@
 # Code of conduct
 
+Reader: Community participants. Question: What conduct and reporting process apply?
+
 This is a small research project. The rules are short because the situations
 are few.
 

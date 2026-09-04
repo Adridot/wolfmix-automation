@@ -1,5 +1,7 @@
 # `show.json` — the edit spec
 
+Reader: Show authors. Question: Which edits and bounds does the compiler accept?
+
 The input format of `tools/wpj_show.py compile`. It is an **edit spec**, not a
 show description: it names a donor `.wpj` and the handful of fields to change
 in it. Everything not named is preserved byte for byte.
@@ -13,15 +15,10 @@ see [`corpus.md`](corpus.md).
 
 ## Why template-based
 
-Creating a record from scratch is not something the compiler does. A
-**position** or a **palette entry** you edit must already exist in the donor;
-nothing has been measured about synthesising one. A **preset** may be created,
-by cloning one of the donor's with `template`: PRESET-01, 06 and 07 showed that
-appending a well-formed entry with a free id works, is accepted, and survives
-store, restart and a cold reopen — `165.f1` gates nothing and is left verbatim
-(85 entries loaded with `f1` = 81). Creation is append-only: the new id must
-exceed every id in the donor, which is what both measured additions did. Gaps
-in the id sequence load fine.
+Positions and palette entries must already exist in the donor. A preset may
+be cloned with `template`, using an id above every existing id. The
+[device-confirmed creation rules](../SPEC.md#preset-creation) give the evidence,
+loader constraints and history of the retracted deletion claim.
 
 Pick a donor that already has the positions and pads you need — that constraint
 is rule 2 ("read before write") applied to editing. The **patch** is the one
@@ -66,7 +63,7 @@ Addressed by `id`, which is the linear preset index
 |---|---|---|---|
 | `id` | int | ≥ 0 | **required** — an existing preset in the donor, or a new id above every existing one when `template` is given |
 | `template` | int | ≥ 0 | id of the donor preset to **clone** into a new entry. Only on an id the donor does not have; refused on one it does. The clone carries every unknown field verbatim, which is the point. Preset 0 omits its id field; a clone of it gains one, in wire order (RECALL-07). |
-| `name` | string | **≤ 19 UTF-8 bytes** | preset name. **Enforced** — past 19 bytes the *whole project* refuses to open on the device (device-confirmed, PRESET-05), and auto-verify could not see it: the value reads back fine. |
+| `name` | string | **≤ 19 UTF-8 bytes** | preset name; enforced because of the [device-confirmed loader limit](../SPEC.md#preset-names), which byte-level auto-verification cannot detect. |
 | `positions` | int[8] | ≥ 0 | position index per group A–H |
 | `dimmers` | int[8] | 0–255 | dimmer per group A–H, as a **percentage of 255** — the output is `f5 + (v/255)·(f6 − f5)` through the channel's travel limits, and on a fixture with colour channels it scales the colour instead. Device-confirmed (GEN-02), **but silent unless the controller setting `store group dimmers in preset` is on** — see the gates below. |
 | `content_mask` | int | 0–63 | `f10`, the six `PRESET EDIT` toggles: bit 0 `COLOR`, 1 `MOVE`, 2 `BEAM`, 3 `GOBO`, 4 `LIVE EDIT`, 5 `OTHER`. A **set** bit means the toggle is **off**. device-confirmed, F4-02. |

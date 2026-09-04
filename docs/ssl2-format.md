@@ -1,5 +1,7 @@
 # The SSL2 fixture-profile format
 
+Reader: Fixture-profile implementers. Question: What SSL2 structure and acceptance evidence are known?
+
 An `.ssl2` file is one XML document under one stream cipher. It describes a
 fixture: its brand and name, a physical block, and one or more DMX modes, each
 a list of typed channels, each channel a list of presets over DMX ranges.

@@ -1,5 +1,7 @@
 # Your fixture's real gobos on the W1 screen
 
+Reader: Controller operators. Question: How do I replace and verify gobo icons?
+
 End-to-end recipe, every step device-confirmed — on firmware 2.0.18 on
 2026-08-30 (RENAME-01/SORT-01 in `SPEC.md` §3.4 for the page edits), the
 direct upload on 2.0.19 on 2026-09-04 (UPLOAD-08). A
@@ -101,11 +103,9 @@ The command refuses before opening the port unless all local gates pass:
 - the operator explicitly confirms mains power.
 
 It then checks that the project is saved, WLINK is off, the firmware is one of
-the measured versions and the complete profile inventory is readable. Event
-`0x24` sends acknowledged 16 KiB chunks, each prefixed by `chunk size`, `total
-size` and `offset` as three big-endian uint32 values. Event `0x19`, the separate
-executable-firmware path, is not allowlisted anywhere in this repository
-(UPLOAD-07).
+the measured versions and the complete profile inventory is readable. The
+[resource-flash reference](../SPEC.md#resource-flash) owns the device-confirmed
+chunk layout and the distinction from the forbidden executable-firmware event.
 
 After the last acknowledged chunk, the command re-reads the firmware version,
 profile count and project count and refuses a changed baseline. The W1 screen

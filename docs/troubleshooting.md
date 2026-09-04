@@ -1,5 +1,7 @@
 # Troubleshooting
 
+Reader: CLI users. Question: What does this failure mean and what should I do?
+
 ## Files
 
 **`… : ABSTAINED — no corpus in corpus/, nothing was verified`**, and
@@ -51,9 +53,8 @@ below `correlated`. The accepted set is in [`show-format.md`](show-format.md).
 
 **`must exist in the donor`**
 Creating a position or palette entry from scratch has never been validated on a
-device — this message only fires for those two. A **preset** may be created:
-appending an entry with an id above every id in the donor is device-confirmed
-(PRESET-01/06/07), so pass `template` instead. Otherwise pick a donor project that
+device — this message only fires for those two. A **preset** may be created with
+`template` under the [device-confirmed creation rules](../SPEC.md#preset-creation). Otherwise pick a donor project that
 already has the slot.
 
 **`self-verify: records changed outside the edit`**

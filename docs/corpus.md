@@ -1,5 +1,7 @@
 # Bringing your own corpus
 
+Reader: New users. Question: How do I supply local specimens without publishing them?
+
 No Wolfmix project file ships with this repository, and none ever will — see
 [`../LEGAL.md`](../LEGAL.md) for why. Every tool therefore works against a
 corpus **you** supply, from your own installation and your own controller.

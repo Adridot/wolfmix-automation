@@ -1,5 +1,7 @@
 # Legal position
 
+Reader: Users and redistributors. Question: Which analysis and publication boundaries apply?
+
 What this repository contains, what it deliberately does not, and why.
 
 This project is independent black-box research on a file format its

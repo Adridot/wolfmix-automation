@@ -4,6 +4,8 @@
 
 # wolfmix-automation
 
+Reader: New users and contributors. Question: Where do I start, and where is each authoritative answer?
+
 **Read, decode, diff and rebuild Wolfmix `.wpj` project files — and drive a Wolfmix W1 over USB — from the command line.**
 
 *Offline. Python standard library only. No dependencies, no uploads, no guessing.*
@@ -89,22 +91,10 @@ python3 tools/wpj_show.py compile show.json donor.wpj out.wpj
 
 ## The tools
 
-Run any of them with **no arguments** to execute its self-check — except
-`wolfmix.py` and `wolfmix_experiment.py`, which take it as a subcommand
-(`python3 tools/wolfmix.py self-test`). The rest — the identity checker, the
-diff, the position model, the readers, and the guards that keep the tree
-honest — plus every flag and exit code: [`docs/tools.md`](docs/tools.md).
-
-| Tool | One line |
-|---|---|
-| [`wpjlib.py`](tools/wpjlib.py) | The container: TLV split, reassembly, SHA-1 recomputed, byte-identical round trip. |
-| [`wpj_codec.py`](tools/wpj_codec.py) | Semantic JSON ↔ bytes per record type; `decode` verifies its own round trip or falls back to raw hex. |
-| [`wpj_show.py`](tools/wpj_show.py) | The show compiler: an edit spec applied to a donor, auto-verified. |
-| [`wpj_generate.py`](tools/wpj_generate.py) | The show generator: moods, energy and groups in, a preset bank out — the rig read from the donor. |
-| [`wpj_patch.py`](tools/wpj_patch.py) | The patch compiler: profiles, addresses and groups in, the eight patch records out — no donor carries the patch. |
-| [`wolfmix.py`](tools/wolfmix.py) | The device: settings, projects, download, live DMX, envelopes, mode watch, preset recall and guarded gobo-resource upload. |
-| [`wolfmix_experiment.py`](tools/wolfmix_experiment.py) | Transactional experiments: snapshot → deploy → verify → restore on failure. |
-| [`gobo_run.py`](tools/gobo_run.py) | The gobo-icon pipeline's gates — four of them, each red until its step is really done. |
+The [tool reference](docs/tools.md) groups the stable `tools/*.py` commands
+by format, composition, device, resources and verification. It documents
+arguments, output and exit codes. Run `make check` for the aggregate gate;
+USB clients use an explicit `self-test` subcommand.
 
 ## The rules that shape the code
 
@@ -112,45 +102,55 @@ These five explain both what is here and what is deliberately missing.
 
 | # | Rule | Consequence you will notice |
 |---|---|---|
-| 1 | **Experimental truth** | Every claim carries a status: `observed → hypothesized → correlated → validated → device-confirmed` |
+| 1 | **Experimental truth** | Use the [evidence rules](SPEC.md#evidence-rules) and record the measurement in the ledger |
 | 2 | **Read before write** | A field becomes writable only after a byte-identical round trip *and* a differential validation *and* acceptance downstream |
 | 3 | **Hardware is sacred** | No executable-firmware operations, no fuzzing; the resource uploader accepts only a manifest-verified gobo diff and is off by default |
 | 4 | **Local only** | Nothing leaves the machine — no upload, no third-party API, ever |
 | 5 | **Honest compatibility** | "Compatible" means a tested cell in [`research/versions.md`](research/versions.md), nothing more |
 
-Three properties hold at every stage of a write: unknown bytes **pass through
-verbatim**, outputs open with mode `x` so a write **never overwrites**, and
-nothing is stored on the controller except by the experiment runner under its
-own derived UUIDs, or by the guarded gobo-resource uploader described above.
+The [writing rules](SPEC.md#10-writing-rules) govern file preservation and
+verification; [device transactions](docs/device.md) govern stored projects.
+Rule 2 above is deliberately stricter than the compiler's `correlated` threshold:
+it describes the downstream acceptance standard, not the complete writable-key
+list. Consult the [edit specification](docs/show-format.md) for that list.
 
 ## Repository map
 
-```text
-SPEC.md              the format, byte by byte, evidence status per claim
-research/evidence.md the ledger: every finding, one line each
-LEGAL.md · PROVENANCE.md   what is not distributed, and where the rest came from
-AGENTS.md            orientation for coding agents
-tools/ · tests/      the implementation, and what it refuses
-docs/                task-oriented guides
-corpus/              your own projects go here; ships only hashes and recipes
-```
+The [documentation map](#documentation) is the entry point. `tools/` contains
+the executable proof, `tests/` the corpus-free refusal checks, and `corpus/`
+your private specimens plus published hashes and experiment recipes.
 
 ## Documentation
 
-| Document | Read it when |
-|---|---|
-| [`docs/corpus.md`](docs/corpus.md) | you are starting out and need files to work on |
-| [`docs/tools.md`](docs/tools.md) | you want the CLI surface, flags and exit codes |
-| [`docs/show-format.md`](docs/show-format.md) · [`docs/generator.md`](docs/generator.md) | you are writing a `show.json`, or want one written from an intention |
-| [`docs/device.md`](docs/device.md) | you are talking to a real controller |
-| [`docs/gobo-icons.md`](docs/gobo-icons.md) | you want your fixture's real gobo shapes on the W1 screen |
-| [`docs/methodology.md`](docs/methodology.md) | you want to *add* a finding, not just use one |
-| [`docs/troubleshooting.md`](docs/troubleshooting.md) | something printed a message you did not expect |
-| [`SPEC.md`](SPEC.md) · [`research/evidence.md`](research/evidence.md) | you need the bytes, or what measured them |
-| [`LEGAL.md`](LEGAL.md) · [`PROVENANCE.md`](PROVENANCE.md) | you are reusing, forking or publishing any of this |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) · [`SECURITY.md`](SECURITY.md) | you are sending something back |
+Reader: choose the row matching your task. Question: where is the authoritative
+answer, and what evidence supports it?
 
-**Reading this repository automatically?** Start with [`AGENTS.md`](AGENTS.md).
+Navigation follows [Diátaxis](https://diataxis.fr/start-here/): learning,
+practical tasks, reference and explanation. Existing paths remain stable.
+The current byte-level claim belongs in `SPEC.md`; guides link to it. Historical
+measurements remain in `research/` and the frozen experiments rather than being
+rewritten to agree with today's interpretation.
+
+| Need | Reader's question | Direct destination |
+|---|---|---|
+| Tutorial | How do I run my first check and inspect a project? | [Quick start](#quick-start) |
+| How-to | Where do I get my own specimens? | [Corpus](docs/corpus.md) |
+| How-to | How do I operate the USB client safely? | [Device](docs/device.md) |
+| How-to | How do I replace gobo icons and recover? | [Gobo icons](docs/gobo-icons.md) |
+| How-to | What should I do about this error? | [Troubleshooting](docs/troubleshooting.md) |
+| Reference | What are the commands and module groups? | [Tools](docs/tools.md) |
+| Reference | What can I put in an edit specification? | [Show format](docs/show-format.md) |
+| Reference | How do I describe moods and energy? | [Generator input](docs/generator.md) |
+| Reference | What do the bytes mean, at what proof status? | [WPJ specification](SPEC.md) |
+| Reference | How are fixture profiles encoded? | [SSL2 format](docs/ssl2-format.md) |
+| Explanation | How do I establish or retract a finding? | [Methodology](docs/methodology.md) |
+| Evidence | What was measured, and what was withdrawn? | [Evidence ledger](research/evidence.md) |
+| Evidence | Which software and firmware were tested? | [Versions](research/versions.md) |
+| Evidence | What is the record-120 defect and its reproduction? | [Historical bug report](docs/report-record-120.md) |
+| Provenance | What may be reused, and where did it come from? | [Legal](LEGAL.md), [Provenance](PROVENANCE.md) |
+| Contribution | How do I contribute or report a security issue? | [Contributing](CONTRIBUTING.md), [Security](SECURITY.md), [Code of conduct](CODE_OF_CONDUCT.md) |
+| Automation | What instructions govern repository changes? | [Agent instructions](AGENTS.md) |
+| Assets | What artwork belongs to the documentation? | [Asset notes](docs/assets/README.md) |
 
 ## Contributing
 

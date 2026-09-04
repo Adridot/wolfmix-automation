@@ -1,5 +1,7 @@
 # Provenance
 
+Reader: Reviewers and redistributors. Question: Where did the code and external claims come from?
+
 What in this repository is original, what comes from elsewhere, and what may be
 reused under which terms. Anyone building on this needs to know which is which.
 

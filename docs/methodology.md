@@ -1,27 +1,16 @@
 # Methodology
 
+Reader: Experiment authors. Question: How do I establish, challenge and retract a claim?
+
 How a claim gets into [`SPEC.md`](../SPEC.md), and what it takes to move it up.
 This is the part of the repository that matters most: the tools are small, the
 discipline is the product.
 
 ## Evidence statuses
 
-Every statement carries one. Nothing is asserted without one.
-
-| Status | Meaning |
-|---|---|
-| `observed` | seen in the bytes, no interpretation |
-| `hypothesized` | an interpretation is proposed, not yet tested |
-| `correlated` | consistent across independent files |
-| `validated` | confirmed by a single-variable differential experiment |
-| `device-confirmed` | the resulting file was accepted by a W1 |
-
-Three rules go with the ladder:
-
-- **Never name an unconfirmed enum value.** A number stays a number.
-- **Ambiguity is recorded, not resolved.** Two candidate readings mean two
-  candidates listed, not a coin flip.
-- **An absent field is absent.** Never reported as `0` or `off`.
+Use the [canonical evidence vocabulary](../SPEC.md#evidence-rules). Each claim
+keeps its status and uncertainty; promotion requires new evidence, not a more
+confident paraphrase.
 
 ## Counting the corpus honestly
 

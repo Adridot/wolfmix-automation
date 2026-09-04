@@ -1,10 +1,28 @@
 # Tool reference
 
+Reader: CLI users and developers. Question: Which command or module owns this operation?
+
 Every tool is a standalone `python3` script in `tools/`, standard library only.
 Run them **from the repository root** — the self-checks resolve `corpus/`
 relative to the working directory.
 
-Three conventions hold everywhere:
+## Module groups
+
+Each existing file keeps its command and import name. Shared format operations
+belong in `wpj_wire`, schema operations in `wpj_codec`, and project IO in
+`wpjlib`. The independent `wpj_inspect` oracle must not import those readers.
+
+| Group | Modules |
+|---|---|
+| Format | `wpjlib`, `wpj_wire`, `wpj_codec`, `wpj_bc`, `wpj_inspect`, `wpj_api`, `wpj_diff`, `wpj_position` |
+| Composition | `wpj_show`, `wpj_generate`, `wpj_patch` |
+| Device | `wolfmix`, `wolfmix_protocol`, `wolfmix_device`, `wolfmix_transaction`, `wolfmix_experiment` |
+| Resources | `gobo_library`, `gobo_write`, `gobo_run`, `ssl2` |
+| Verification | `check`, `wpj_identities`, `wpj_coverage`, `wpj_privacy`, `wpj_links`, `wpj_counts`, `wpj_evidence` |
+
+## Conventions
+
+The following conventions hold across these groups:
 
 - **Run with no arguments = self-check.** Each tool proves its own invariant and
   exits non-zero if it cannot. Some prove it over your corpus (`wpjlib`,
@@ -57,10 +75,8 @@ Tool output strings are partly still in French; the JSON keys are stable.
 
 ## `wpjlib.py` — variant-A container
 
-The read/write core. Splits a file into raw TLV records without interpreting
-them, reassembles with lengths and the SHA-1 header recomputed, and preserves
-bytes 20–0x3F (the 44-byte opaque prefix) verbatim; the 6-byte root header at
-0x40 is recomputed from the reassembled body.
+The project IO interface to the [variant-A container](../SPEC.md#container).
+It preserves opaque bytes and writes only to a new path.
 
 ```python
 import wpjlib
@@ -78,8 +94,7 @@ self-check: it globs `**/*.wpj` under `$WPJ_CORPUS` (default `corpus/`).
 
 **Invariant:** an unmodified record is re-emitted byte for byte, so load+save
 without an edit produces a byte-identical file. Self-check: every variant-A file
-in the corpus (45 of the 51 `.wpj` on the development machine — the other six
-are variant B/C and out of scope for this library).
+in the supplied corpus; variants B/C are out of scope.
 
 ```bash
 python3 tools/wpjlib.py     # self-check
@@ -100,30 +115,11 @@ and it verifies that itself before returning. If a type has no schema, or the
 protobuf is unexpected, it returns `{"raw": "<hex>"}` — never a partial or
 approximate decode.
 
-Naming: a field whose meaning is proven gets a semantic key (`name`, `profile`,
-`effect`, …); an unidentified field keeps a neutral `fN` key. An absent field is
-absent from the dict — never a synthesised `0`.
-
-Decoded today: 101, 102, 105, **106**, **110**, 111, 115, 116, 120, 125, 130,
-135, 140, 145, 150, 151, **155**, 160, **161**, 165 <!--types:decoded--> —
-20 <!--count:decoded-->.
-`python3 tools/wpj_counts.py --print` prints the split, and `wpj_codec.SCHEMAS`
-is the source of truth for it.
-
-Note on 105: the keys are `offset_106` and `entry_count_106`, not an address and a
-channel count — see `SPEC.md` §7. The old names were a misreading.
-
-Passthrough (round-tripped as opaque hex): 0 <!--count:passthrough--> record
-types. The `types:passthrough` list that stood here is gone with the last
-entry — a `types:` marker with nothing in front of it claims nothing, which
-`wpj_counts.py` refuses; the count above is what makes the gate react if a
-record ever moves back. Record 161 was the last one and got a schema on
-2026-09-01. **That did not answer SPEC.md's Q8.** The schema names one field,
-`items`, which says field 5 is the repeated entry list and nothing more; the
-three packed arrays of 188 varints inside keep neutral keys, so `wpj_coverage`
-counts them `partial` and not `read`. What it buys is a diff that can point at
-which of the 564 values moved instead of at 190 bytes of hex — a schema types
-bytes, it does not read them.
+See [evidence rules](../SPEC.md#evidence-rules) for semantic names and absent
+fields, and [coverage](../SPEC.md#coverage) for the distinction between decoding
+bytes and understanding them. The current decoded/passthrough inventory is
+printed by `python3 tools/wpj_counts.py --print`; `wpj_codec.SCHEMAS` is its
+executable source.
 
 The self-check reads only the corpus you supply. It does **not** scan your
 WTOOLS installation; copy what you want tested into the corpus root instead.
@@ -197,51 +193,12 @@ python3 tools/wpj_coverage.py --names       # every read name by status and weig
 python3 tools/wpj_coverage.py               # self-check, part of `make check`
 ```
 
-Four buckets whose sum is asserted to be the file, byte for byte:
-
-| Bucket | What lands there |
-|---|---|
-| `read` | a field a `wpj_codec.SCHEMAS` entry **names**, tag and length included, plus the container bytes §2 and §9 identify |
-| `inert` | a field with no name that carries **one value in the whole corpus**, declared in `INERT_FIELDS` with that value |
-| `partial` | a field inside a schema'd record that no schema names and that is not inert — it varies, and nothing reads it |
-| `unknown` | the payload of a record with no schema, and any record whose protobuf does not parse |
-
-**`read` and `inert` are printed separately and never added.** `read` says what
-a field means; `inert` says only that the field never says anything different,
-which is a statement about the *corpus* and not about the field — exactly what
-naming one `constant_1` would smuggle in. The difference is that this one is
-checked: the declared value is verified on every file, and a second value
-raises `InertBroken` and stops the run rather than quietly widening the bucket.
-`116.profiles.f6` is 1 on ninety occurrences and **3** on one; it is not in the
-table, and that is the line the table draws. "100 %" here would mean
-`read + inert = 100` with nothing partial and nothing unknown.
-
-A field whose bytes are understood in **pieces** is declared as a split in the
-schema — `("split", ((6, "profile_mask"), (1, "f4b6")))` on `125.f4` — and each
-piece is attributed on its own: six bytes `read`, one `partial`. Inside a split
-it is `PROOF` and not the schema that licenses `read`, so a piece named without
-a ledger id undercounts instead of lying.
-
-Before this existed, "the format is mostly decoded" was an opinion. It is now a
-number the gate recomputes on whatever corpus is present.
-
-**The number is not a proof, and the tool says so itself.** `read` counts bytes
-a *name* covers, not bytes a *measurement* covers — so every named path carries
-a status and a ledger id in `PROOF`, the self-check refuses a name that has
-neither, and the report breaks `read` down by status. A field promoted into the
-codec without evidence makes `make check` fail rather than making the percentage
-go up, which is the only thing that keeps the figure worth quoting.
-
-`--names` turns that into a **worklist**: every read name, grouped by the status
-of what names it and sorted by how much of the file it carries, weakest evidence
-last. It is the answer to "what is worth measuring next", and it is printed
-rather than written down because it moves every time something is measured — a
-document stating it would be stale by the following experiment. What it shows
-today is that the heaviest `correlated` names are not scattered: four of the top
-six are inside record 165, and three of those — `bpm_division`, `link_order`,
-`speed_source` — carry enum labels cross-referenced from an external project and
-have **never been measured here** (§5), which is trap 2 sitting in plain sight
-on 4 % of the corpus.
+The [coverage reference](../SPEC.md#coverage) defines `read`, `inert`,
+`partial` and `unknown`, the byte accounting and the proof-status breakdown.
+A second value in an `INERT_FIELDS` entry raises `InertBroken`; a name without
+an evidence id fails the self-check. `--names` prints the current measurement
+worklist, grouped by status and weighted by bytes, rather than freezing it in
+a document.
 
 ## `wpj_inspect.py` — variant B/C wire walk
 
@@ -315,25 +272,11 @@ python3 tools/wpj_show.py verify base.wpj out.wpj     # list differing records
 python3 tools/wpj_show.py                             # self-check
 ```
 
-Applies a JSON edit spec to a donor project. A position or palette entry being
-edited must already exist in the donor; everything else is preserved byte for
-byte by `wpjlib`. A **preset** may also be created, by cloning one of the
-donor's with the `template` key — appending a well-formed `165.f5` entry with a
-free, larger id is device-confirmed (PRESET-01/06/07), and `165.f1` is left
-verbatim because it gates nothing.
-
-Preset names are capped at **19 UTF-8 bytes** and the compiler now rejects a
-longer one: past that the *whole project* refuses to open on the device
-(PRESET-05), and the value reads back fine, so nothing downstream would catch
-it. The same cap guards gobo pad names.
-
-The **gobo page** is edited the same way (`SPEC.md` §3.4, RENAME-01/SORT-01):
-`gobo_names` writes pad names into `145.f3`, and `gobo_order` — the complete
-id list of the wheel — permutes the record-111 wheel ranges and rewrites the
-palette consistently, names travelling with their gobos and glyphs
-resequenced. A wheel shared by a second group is refused as unmeasured. See
-[`show-format.md`](show-format.md) and, for the whole icon pipeline,
-[`gobo-icons.md`](gobo-icons.md).
+Applies an [edit specification](show-format.md) to a donor. Positions and
+palette entries must exist; presets may be cloned with `template` under the
+[device-confirmed creation rules](../SPEC.md#preset-creation). The input reference
+owns the accepted keys, bounds and refusal conditions, including the unmeasured
+conservative gobo-name cap. For the icon workflow, use [Gobo icons](gobo-icons.md).
 
 After writing, it reloads its own output (revalidating the SHA-1), re-decodes
 every edited record, checks each requested value reads back, and confirms that
@@ -399,26 +342,10 @@ not a defect.
 python3 tools/wpj_position.py     # self-check, part of `make check`
 ```
 
-Computes the DMX a recalled position emits, from the project file alone:
-
-```
-pct_group(k) = (1 − FAN) + k × (2·FAN − 1) / (n − 1)     pan, k = fixture rank
-pct_group    = TILT                                       tilt
-pct          = clamp(pct_group + offset, 0, 1)            offset from record 151
-DMX16        = borne16(f5) + pct × (borne16(f6) − borne16(f5))
-```
-
-Five records feed the formula — 150 for the group's FAN/PAN/TILT, 115 and the
-address order for the rank, 151 through the `150.f1`/`f2` slice for the
-per-fixture offset, 106 for the travel limits, 105 to find the channels — and
-two more, 110 and 116, are walked to resolve which channel is which.
-
-The self-check replays four DMX captures taken on the device: 24 predicted
-channels, **tilt exact everywhere, pan exact everywhere but one** — the lyre at
-DMX 0 on `Crowd`, where the ramp lands a hair above a boundary (39424 = coarse
-154) and the device emits 153. No capture is distributed — only
-the measured values are frozen in the source, which makes the model verifiable
-with no hardware and breaks loudly if someone "simplifies" it.
+Computes the DMX of a recalled position from the project alone. The
+[device-confirmed position model](../SPEC.md#position-model) owns the formula,
+record dependencies, measurement scope and known rounding miss. The self-check
+replays the frozen measured values without needing distributed captures.
 
 ## `wpj_privacy.py` — the anonymisation guard
 

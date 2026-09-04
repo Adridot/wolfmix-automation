@@ -1,5 +1,7 @@
 # Contributing
 
+Reader: Contributors. Question: What evidence and checks must accompany a contribution?
+
 The bar here is **evidence, not code style**. This repository documents a file
 format nobody publishes; its only value is that every claim in it can be
 traced back to something that was actually measured. A patch is judged on
@@ -40,9 +42,8 @@ information:
    screen you read it from. Hashes of the before/after files, **never the files
    themselves**.
 3. **The versions** — controller model and firmware, WTOOLS version, OS.
-4. **The status reached**, from the ladder in
-   [`SPEC.md`](SPEC.md): `observed → hypothesized → correlated → validated →
-   device-confirmed`. Say why it does not reach the next one.
+4. **The status reached**, using [SPEC's evidence rules](SPEC.md#evidence-rules).
+   Say why it does not reach the next one.
 
 A refutation is a contribution. Several entries in `research/` exist only to
 record that something is *not* what it looked like, and they saved more time
@@ -54,8 +55,8 @@ than the confirmations.
 |---|---|
 | Standard library only | No dependency has ever been needed; adding one costs every user. |
 | `make check` passes, byte-identical round-trip intact | It is the acceptance test, not a formality. |
-| Unknown bytes stay verbatim | A record with no schema must round-trip exactly. Never emit a partial decode. |
-| No invented names for unconfirmed values | Ambiguity is recorded as a list of candidates. An absent field is *absent*, never `0`. |
+| Preserve the [writing rules](SPEC.md#10-writing-rules) | Round-trip verification must include unknown bytes and untouched records. |
+| Follow the [evidence rules](SPEC.md#evidence-rules) | Keep uncertainty and absent values explicit. |
 | Fields below `correlated` are not writable | That is why `size`/`fade`/`phase` are readable only. |
 | **No project file, vendor document or extracted resource in a commit** | See [`LEGAL.md`](LEGAL.md). `.gitignore` catches the common cases; do not work around it. |
 

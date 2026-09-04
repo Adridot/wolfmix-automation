@@ -1,5 +1,7 @@
 # Wolfmix `.wpj` — wire format specification
 
+Reader: Format implementers. Question: What is known about each byte, with what evidence?
+
 Independent reverse-engineering notes for Wolfmix project files. Not affiliated
 with, endorsed by, or sponsored by Wolfmix or Nicolaudie.
 
@@ -115,6 +117,8 @@ Candidates: HMAC, hash of the plaintext, derived key. Out of scope here.
 
 ---
 
+<a id="container"></a>
+
 ## 2. Variant A container — **[device-confirmed]**
 
 ```
@@ -179,6 +183,8 @@ Record 145 carries none: its 20 slots are implicit (§3.4). And `165.f1` is
 **not** the count — it disagrees on 19 files, always low by exactly the entries
 a preset capture appended (81 against 83, 81 against 85), so whatever it
 counts, it is not the entries present.
+
+<a id="coverage"></a>
 
 ### How much of a file is read — **[correlated]**
 
@@ -258,6 +264,8 @@ Each record carries exactly 20 items whatever the rig: **20 palette slots per
 group**, not a per-group fixture list. Most are untouched factory content —
 `140[4..7]`, `145[1..7]` and `150[1..7]` are byte-identical across all corpus
 files, 4 independent rigs and two writers.
+
+<a id="position-palettes"></a>
 
 ### 3.2 Type 150 — static POSITION palettes — **[device-confirmed]**
 
@@ -383,6 +391,8 @@ consumes one of the group's twenty pads, and those pads are the ones the
 operator has under their fingers. The show generator therefore still picks the
 nearest existing pad rather than writing one (`docs/generator.md`).
 
+<a id="gobo-palettes"></a>
+
 ### 3.4 Type 145 — static GOBO palettes — **[device-confirmed]**
 
 Same family, but **no `field 1` count** — the 20 slots are implicit.
@@ -457,6 +467,8 @@ Experiment ACC-01: a file whose only edit was this string was accepted by WTOOLS
 1.6.3 and by the W1 (fw 2.0.18) and stored byte-identically.
 
 ---
+
+<a id="presets"></a>
 
 ## 5. Type 165 — presets
 
@@ -577,6 +589,8 @@ rather than round.
 Full experiment record, including the eight predictions published before each
 capture, in [`research/evidence.md`](research/evidence.md).
 
+<a id="content-mask"></a>
+
 ### 5.3 The content mask is `f10`, not `f4` — **[device-confirmed]**
 
 The `PRESET EDIT` screen's six toggles are `165.f10`, and a set bit means the
@@ -651,6 +665,8 @@ above 62 in 3697 presets.
 `f15` is **HOLD**, 1000 ↔ `00:01.00`, consistent on six screens but never varied
 — **[correlated]**.
 
+<a id="engine-masks"></a>
+
 ### 5.4 `f16` — twelve 9-bit group masks — **[correlated 45/45]**
 
 `f16`'s packed varints are the **bytes of a little-endian bit field**, the same
@@ -707,6 +723,8 @@ followed `f16` — which is why its Color FX was ignored.
 engine 0 active implies `f4` bit 3, engine 1 bit 2, engine 2 bit 4, on every
 preset of every file. The implication is one-directional — a page may permit an
 engine none of its presets uses.
+
+<a id="second-engine"></a>
 
 ### 5.4b The second FX engine has no proven group mask — **[correlated 45/45]**
 
@@ -976,6 +994,8 @@ completely accounted for.
 Whether a preset carries flash state at all is a Settings toggle (`Include Flash
 buttons in Preset`), not a property of the file format.
 
+<a id="preset-names"></a>
+
 ### 5.8 Preset names are capped at 19 UTF-8 bytes — **[device-confirmed]**
 
 A name of 23 bytes does not get truncated and the entry is not dropped: the
@@ -986,6 +1006,8 @@ name as the sole cause (PRESET-05, PRESET-06).
 No name in the 3697-preset corpus exceeds 19 bytes, and
 `tools/wpj_identities.py` asserts it on every file so a generator cannot
 regress past it.
+
+<a id="fx-fields"></a>
 
 ### FX submessage — shared by Beam, Color and Move
 
@@ -1785,6 +1807,8 @@ screen." A writer that sets both must **compose** them. Never measured here —
 the position model below is device-confirmed on **pan and tilt**, and the focus
 offset has no DMX capture behind it.
 
+<a id="position-model"></a>
+
 ### The position model, end to end — **[device-confirmed]**
 
 **The `PAN` term was missing until 2026-09-01 (COV-36).** The pan line above
@@ -1872,6 +1896,8 @@ rejects, or worse, silently corrupt a show.
    unknown fields, not a measured constraint. The exception is record 165: a
    preset **is** added by appending a well-formed `f5` entry — see §10.1.
 
+<a id="preset-creation"></a>
+
 ### 10.1 Adding a preset — **[device-confirmed]**
 
 An earlier revision of this document said the device deletes preset entries it
@@ -1889,6 +1915,8 @@ entries intact. What a generator must respect instead, all measured:
 
 The failure mode is loud and total — "Error opening project", not a silently
 dropped entry — which makes this one of the safer things to get wrong.
+
+<a id="live-copy"></a>
 
 ### The live copy is not the file — **[device-confirmed]**
 
@@ -1951,6 +1979,8 @@ retry. So a writer must verify in both directions: read the project back after
 storing it, and be prepared to retry a rejected store rather than treating the
 rejection as a verdict on the file.
 
+<a id="usb"></a>
+
 ### 10.2 Driving the device over USB — **[device-confirmed]**
 
 `SET_PRESET` (41) and `SET_MODE` (39) **do not carry protobuf**. The firmware
@@ -1979,6 +2009,8 @@ firmware never parses: SETP-01's `f1` = id, and PRESET-07's `f2` = entry
 position clamped to the last entry. PRESET-07 was wrong on both halves — not
 that field, and not a position. Its **file-side** results are untouched: the
 `f19` id formula, gaps tolerated, and the manual open.
+
+<a id="resource-flash"></a>
 
 #### External resource flash — **[device-confirmed]** (UPLOAD-07, UPLOAD-08)
 
@@ -2117,6 +2149,8 @@ What it settles is the instrument: `dmx-envelope` is used as a differential
 oracle throughout `research/`, and a window of N seconds is 25 N frames
 whatever the engine is doing — which is what makes "did this change alter the
 output at all" a fair question rather than a race with an animation.
+
+<a id="patch-compiler"></a>
 
 ### 10.3 Compiling a patch — **[device-confirmed]** (PATCH-01, PATCH-02)
 

@@ -1,5 +1,7 @@
 # `intent.json` — the show generator
 
+Reader: Show authors. Question: How do I describe moods for the generator?
+
 The input of `tools/wpj_generate.py compose`. Where
 [`show.json`](show-format.md) names fields, this names **intentions**: a list
 of moods with an energy, a colour and the groups they light. The generator
@@ -101,28 +103,17 @@ record 140 deliberately and say which pad you are spending.
 
 ## The trap this exists to avoid
 
-Three gates decide whether a clean compile does anything at all, and one of
-them is not in the file:
+Check `store group dimmers in preset` in the controller's Settings menu before
+using generated dimmers. The generator writes the content mask with `COLOR`
+and `OTHER` on, `MOVE`/`BEAM` per family, `GOBO` off and `LIVE EDIT` per its
+input key; it clones a donor whose engine masks already fit.
 
-| Gate | What it does | Handled how |
-|---|---|---|
-| `store group dimmers in preset`, a **controller setting** | with it off, every `dimmers` value in the project is silent, whatever the file says (GEN-02, device-confirmed) | **not in the file** — check the Settings menu before blaming the show |
-| `165.f10`, content mask — a **set** bit means the toggle is **off** | bit 1 (`MOVE`) written by us **is** honoured (RECALL-05, validated). Bit 5 (`OTHER`) gates the group dimmers and nothing else a static cue carries — proven by writing the bit and nothing else, 18 channels moved and only those (FW-03, validated) | written: `COLOR` and `OTHER` on, `MOVE`/`BEAM` per family, `GOBO` off, `LIVE EDIT` per the `live_edit` key |
-| `165.f16`, the engine group masks | an FX edit is invisible for an engine that is off | **not written** — the generator clones a donor preset that already has the right engines |
-
-`f16` is duplicated by `color_fx_active`/`move_fx_active`, and writing one without
-the other produces a preset the device renders differently from what the file
-says (ACC-03). Cloning sidesteps the engine slices; it does **not** sidestep
-slice 5, the mask of the groups the preset addresses. A clone inherits its
-template's slice 5, and that mask describes the template's cue, not the clone's:
-of our six appended presets the device's own save corrected **five** from the
-inherited 255 to **2** (= B) and **7** (= A+B+C), the sixth being the control
-whose cue really did light all eight groups (GEN-03, validated -- but on that
-**one** save, and the second-Beam-engine reading still contests it: `SPEC.md`
-5.4 and 5.4b). Nothing broke, the clones recalled correctly before the device
-rewrote them, but do not read `f16` as fully handled by cloning. That is why the
-generator
-picks a template instead of assembling a preset from nothing.
+The measured behavior belongs in the [content-mask reference](../SPEC.md#content-mask)
+and [engine-mask reference](../SPEC.md#engine-masks). Cloning does not establish
+that every inherited mask describes the new cue: the addressed-group slice was
+rewritten on a device save (GEN-03, validated), and the
+[second-engine experiment](../SPEC.md#second-engine) records the later rival
+reading and its refutation. Keep that limit in mind when choosing a template.
 
 ## What it will not compose
 

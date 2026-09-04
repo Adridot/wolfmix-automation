@@ -1,5 +1,7 @@
 # AGENTS.md
 
+Reader: Coding agents. Question: Which invariants and sources govern a change?
+
 Orientation for coding agents and automated contributors. Humans: this is a
 condensed version of [`README.md`](README.md) + [`docs/methodology.md`](docs/methodology.md).
 
@@ -50,24 +52,13 @@ read an abstention as a pass, and do not "fix" it by inventing test data.
 
 ## Evidence vocabulary
 
-Every claim in `SPEC.md` and `research/` carries one status. Respect it when
-you write or cite anything:
+Use [SPEC's evidence rules](SPEC.md#evidence-rules) and
+[methodology](docs/methodology.md#evidence-statuses). Never silently promote a
+claim, resolve candidates by guessing, or turn absence into a value.
 
-`observed` → `hypothesized` → `correlated` → `validated` → `device-confirmed`
-
-- `correlated` = consistent across **independent** files. Derived files (our own
-  writer's output, repeated saves of one project) are not independent evidence.
-- `validated` = a single-variable differential experiment.
-- `device-confirmed` = a file *we generated* was accepted downstream, or the
-  behaviour was measured on the controller itself.
-
-A field may be written by the tools only at `correlated` or better — the
-threshold the code enforces (`tools/wpj_show.py`), and why the unattributed FX
-fields are readable but not writable. Note that [`README.md`](README.md) rule 2
-states a stricter one (round-trip *and* differential validation *and* acceptance
-downstream); the two texts disagree, and the disagreement is deliberate — rule 2
-describes what earns a `device-confirmed` field, the code's threshold is what it
-takes to be writable at all.
+The code permits writing at `correlated` or better; README rule 2 deliberately
+states the stricter downstream acceptance standard. Preserve that distinction
+and the [actual writable surface](docs/show-format.md).
 
 ## Where truth lives
 
@@ -124,74 +115,20 @@ a finding the ledger has taken back.
 
 ## Adding a finding
 
-1. Change **one** variable, in the vendor editor or on the device.
-2. `python3 tools/wpj_diff.py before.wpj after.wpj`.
-3. Write it up in `research/` with the manipulation, the **hashes** (not the
-   files), firmware and WTOOLS versions, and the status reached.
-4. If the reading implies a count, an offset or a derivation, encode it in
-   `tools/wpj_identities.py` — an arithmetic identity is checkable forever, by
-   anyone, without hardware.
-   If it moves a record between decoded and passthrough, change
-   `wpj_codec.SCHEMAS` / `PASSTHROUGH` and let `make check` tell you which
-   documents now lie: figures marked `<!--count:…-->` are checked against the
-   code, never trusted.
-   If what you found is that a field **never varies**, that is not a name and
-   it does not go in a schema. Declare it in `wpj_coverage.INERT_FIELDS` with
-   its value: the gate then verifies that value on every file and stops the run
-   the day a second one appears, which is trap 1 armed instead of suffered.
-   Two values is not one — `116.profiles.f6` and `102.f11` stay out.
-5. `make check` must still pass.
+Follow the [differential protocol](docs/methodology.md#the-differential-protocol)
+and [contribution requirements](CONTRIBUTING.md#adding-or-correcting-a-format-claim).
+Read the [five known traps](docs/methodology.md#five-traps-that-have-already-cost-time)
+before designing a probe. Publish and commit the prediction before measuring.
 
-A refutation is a result. `research/` contains several, and they are written up
-with the same care as the confirmations. A published status can also go **back
-down**: RECALL-01 (2026-08-27) withdrew a `device-confirmed` reading and, with
-it, four negatives that had rested on the same discriminator. The same day,
-GEN-02 sent `165.f10` bit 5 (`OTHER`) from `device-confirmed` back to
-`hypothesized` — the dimmer silence it was thought to explain turned out to be
-a controller setting that had been off the whole time, and one cause is enough.
-It climbed back to `validated` only once FW-03 wrote that bit and nothing else
-(2026-08-27), which is the point: a status goes back up by measurement, not by
-the passage of time.
-When a status falls,
-follow the cascade and mark everything it touched as no longer established —
-neither confirmed nor refuted is an honest state, and it is the one that keeps
-the next experiment honest too.
+A count, offset or derivation belongs in `tools/wpj_identities.py`. A schema
+change belongs in `wpj_codec.SCHEMAS` / `PASSTHROUGH`; `wpj_counts.py` checks
+marked documentation figures. An unnamed field that never varies belongs in
+`wpj_coverage.INERT_FIELDS`, with its observed value, never a guessed name.
+`make check` must still pass.
 
-### Publish the prediction before you measure
-
-This is now the dominant method here, and roughly seventeen entries in the
-registry are written that way: state what the reading predicts — which channel,
-which value, which screen, and a rough probability — **commit it**, then
-measure. It costs nothing and it is the only protection against reading a
-confirmation into an ambiguous result after the fact. Several of those
-predictions were wrong, and each was worth more than a vague success.
-
-### Five traps that have already cost time
-
-Each of these has been paid for at least once, some three times. The full
-account, with the experiments that produced them, is in
-[`docs/methodology.md`](docs/methodology.md).
-
-1. **A field uniform across the whole corpus may still be per-group, or
-   per-anything.** Uniformity over thousands of samples is evidence about the
-   *corpus*, not the field. It has happened five times; the defence is a write,
-   not more counting.
-2. **A field that already carries a name is not a field that was measured.**
-   The most expensive mistake of 2026-08-30, made twice in one session. When a
-   reading resists, list the fields you excluded *because they had names*.
-3. **Creating a preset does not save the project** — and the converse is false
-   too: a save can increment the version counter and change nothing. It is a
-   **negative** oracle only. Misread three times, in all three directions.
-4. **A probe that cannot separate "nothing moved" from "the same thing was
-   repainted" proves nothing.** That is how preset recalls were first read as
-   inert.
-5. **An equality with a simpler explanation is not evidence.** When a whole
-   family of values behaves identically, suspect the **encoding** before the
-   semantics.
-
-Much of the format can also be measured **without writing anything**: set a
-control on the device, capture `wolfmix.py dmx-envelope`, compare. Five of the
-eleven `f30` colour-spread modes were settled that way in an hour, read-only.
+When a status falls, follow the [retraction cascade](docs/methodology.md#a-status-can-go-back-down)
+and preserve the ledger's historical account. Independent observations outrank
+repeated saves and outputs of our own writer.
 
 ## What this project will not do
 

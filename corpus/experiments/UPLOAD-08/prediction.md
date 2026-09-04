@@ -33,3 +33,14 @@ What refuses without a net: a status other than success on a chunk after
 the first — the write stops there and the image on the device is partial
 until the next upload, from here or from WTOOLS's own update path, which
 rewrites the factory image (UPLOAD-05). That path is the net.
+
+## Results, the write (2026-09-04, 23:2x)
+
+| # | Outcome |
+|---|---|
+| U1 | **held** — the first chunk acknowledged in 157 ms; no `UNSAVED_PROJECT` |
+| U2 | **held** — 179 chunks acknowledged in 28.4 s; gap median **158 ms**, max 176 ms — the vendor's own cadence, 163 ms (UPLOAD-02) |
+| U3 | **held** — firmware 2.0.19, 3 364 profiles, 6 projects, before and after |
+
+No erase pause is visible on the first chunk: whatever the device does before
+writing, it does it inside the same 160 ms. U4 and U5 follow the restart.

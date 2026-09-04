@@ -487,9 +487,6 @@ def _cree_preset(ctx, d165, pid, pe):
                    if isinstance(p, dict) and p.get("id", 0) == mid), None)
     if modele is None:
         raise ValueError(f"{ctx}: template {mid} is absent from the donor")
-    if "id" not in modele:
-        raise ValueError(f"{ctx}: template {mid} does not write its id "
-                         "(id 0 omits the field) — pick another template")
     maxi = max(p.get("id", 0) for p in d165["presets"] if isinstance(p, dict))
     if pid <= maxi:
         raise ValueError(f"{ctx}: tail creation only, the id must exceed "
@@ -505,6 +502,16 @@ def _cree_preset(ctx, d165, pid, pe):
               file=sys.stderr)
     cible = copy.deepcopy(modele)
     cible["id"] = pid
+    # preset 0 omits its id field, so a clone of it gains one: keep the wire
+    # order by field number, which is how the device writes every entry
+    schema = wpj_codec.SCHEMAS[165][5][1]
+
+    def numero(cle):
+        for f, (nom, _) in schema.items():
+            if nom == cle:
+                return f
+        return int(cle[1:])
+    cible = {k: cible[k] for k in sorted(cible, key=numero)}
     d165["presets"].append(cible)
     return cible
 

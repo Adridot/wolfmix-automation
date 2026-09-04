@@ -11,7 +11,7 @@ so a recall has something to change.
 PATCH-03): one preset created by `template`, id **1** (page 1, slot 2), named
 `Rappel bleu`, `static_color` = pad 4 on A–H, everything else cloned from
 preset 0. `wpj_show.py verify`: record 165 is the only record that differs.
-Candidate sha256 `…`.
+Candidate sha256 `c8ca68230fcc9f32…`.
 
 ## Procedure
 

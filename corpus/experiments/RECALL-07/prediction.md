@@ -35,3 +35,19 @@ Candidate sha256 `c8ca68230fcc9f32…`.
 The byte sent is the **id** (RECALL-03); 1 is a present id, so the recall is
 addressed. If C2 fails while C1 holds, the recall mechanism is what 2.0.19
 changed, and that is the finding.
+
+## Results (2026-09-04, firmware 2.0.19)
+
+| # | Outcome |
+|---|---|
+| C1 | **not captured as planned** — the first `dmx-envelope` after the reopen timed out (the third time today for a first capture after a panel action); the frame taken after the return to preset 0 is identical to `rest-v2.json` |
+| C2 | **held exactly** — pars at 101/111/121: `255 60 0 255 0 0 255 0 4 127` |
+| C3 | **held exactly** — bar: `68 0 · 60 0 255 · 60 0 255 · 60 0 255` |
+| C4 | **held** — colour wheels 9 and 25 from **88 to 112**; pan, tilt, shutter, dimmer, focus untouched |
+| C5 | **held exactly** — after `preset 0`, not one of 512 channels differs from `rest-v2.json` |
+
+Twenty-six channels moved on `preset 1` and every one of them is a colour
+channel the compiled 106 names. The recall by id (RECALL-03) holds on
+2.0.19, and the show compiler's `template` creation with it: a preset cloned
+from id 0 — which omits its id field — carries its own in wire order and the
+device recalls it.

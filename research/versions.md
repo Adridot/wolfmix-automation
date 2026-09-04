@@ -26,7 +26,7 @@ the public 2.0.x. The ACC-series experiments predate it, under WTOOLS 1.6.3.
 | Firmware | Measured | What held |
 |---|---|---|
 | 2.0.18 | every finding dated before 2026-09-04 | the whole ledger |
-| 2.0.19 | 2026-09-04: PATCH-02, PATCH-03, FW-04 | a compiled patch opens and survives the device's save byte for byte; record-120 defaults at rest; the 25 Hz clock; the verified store; `GET_SETTINGS` and `GET_PROFILE` with no unknown field; `SET_MODE` read back; the resource-flash write, 179 chunks at the vendor's cadence (UPLOAD-08). **Not** replayed: a preset recall, the panel's mode map, the gobo page — the one thing the vendor's changelog names |
+| 2.0.19 | 2026-09-04: PATCH-02, PATCH-03, FW-04, UPLOAD-08, RECALL-07 | a compiled patch opens and survives the device's save byte for byte; record-120 defaults at rest; the 25 Hz clock; the verified store; `GET_SETTINGS` and `GET_PROFILE` with no unknown field; `SET_MODE` read back; the resource-flash write, 179 chunks at the vendor's cadence (UPLOAD-08); a preset recall by id with a colour discriminator (RECALL-07). **Not** replayed: the panel's mode map, and the gobo page beyond the eleven silhouettes — the one thing the vendor's changelog names |
 
 ## Local corpus — frozen copies, hashes in `corpus/SHA256SUMS`
 

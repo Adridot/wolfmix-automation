@@ -65,7 +65,7 @@ Addressed by `id`, which is the linear preset index
 | Key | Type | Bounds | Meaning |
 |---|---|---|---|
 | `id` | int | ≥ 0 | **required** — an existing preset in the donor, or a new id above every existing one when `template` is given |
-| `template` | int | ≥ 0 | id of the donor preset to **clone** into a new entry. Only on an id the donor does not have; refused on one it does. The clone carries every unknown field verbatim, which is the point. |
+| `template` | int | ≥ 0 | id of the donor preset to **clone** into a new entry. Only on an id the donor does not have; refused on one it does. The clone carries every unknown field verbatim, which is the point. Preset 0 omits its id field; a clone of it gains one, in wire order (RECALL-07). |
 | `name` | string | **≤ 19 UTF-8 bytes** | preset name. **Enforced** — past 19 bytes the *whole project* refuses to open on the device (device-confirmed, PRESET-05), and auto-verify could not see it: the value reads back fine. |
 | `positions` | int[8] | ≥ 0 | position index per group A–H |
 | `dimmers` | int[8] | 0–255 | dimmer per group A–H, as a **percentage of 255** — the output is `f5 + (v/255)·(f6 − f5)` through the channel's travel limits, and on a fixture with colour channels it scales the colour instead. Device-confirmed (GEN-02), **but silent unless the controller setting `store group dimmers in preset` is on** — see the gates below. |

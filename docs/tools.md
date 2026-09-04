@@ -385,10 +385,13 @@ serves `wpj_show.py` / `wpj_generate.py` as their donor.
 
 After writing it reloads the file, runs all 24 identities and the anomaly
 detectors, and checks every compiled record reads back; on any failure the
-output is deleted. **The trap:** the corpus proves the *bytes*, not the
-device — PATCH-02, the one open at the panel, is unrun. And a fixture added to
-group B by this tool is clean where the device's own add drops an entry
-(COV-53): a difference from the device that is a correction, not a defect.
+output is deleted. PATCH-02 opened one on the W1 (firmware 2.0.19): six
+fixtures, the frame as compiled, the device's own save byte-identical. **The
+trap:** the panel showed what no file check could — a group's pages come from
+record 125's capability flags (COV-68), which the compiler now derives. And a
+fixture added to group B by this tool is clean where the device's own add
+drops an entry (COV-53): a difference from the device that is a correction,
+not a defect.
 
 ## `wpj_position.py` — the position model, executable
 

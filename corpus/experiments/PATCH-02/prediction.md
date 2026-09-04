@@ -89,5 +89,48 @@ What the frame says beyond the sheet, 1-based channels, from `rest.json`:
 - **bar at 200**: 68 0 · 255 127 0 · 255 127 0 · 255 127 0 — the same colour on each of the **three cells**, which is the three-block layout read correctly.
 
 A patch whose roles were wrong would put a colour on a wheel or a dimmer on a
-fine channel; none of the 41 non-zero channels is misplaced. **Not device-
-confirmed yet**: steps 4 (the no-change save and the read-back) are unrun.
+fine channel; none of the 41 non-zero channels is misplaced.
+
+## Results, step 4 — the device's writer over a patch it did not write
+
+P3 closed by the operator at the panel: six fixtures, as expected. Then one
+no-change save on the W1, `arm`, download: version `…534 → …535`, 10 815
+bytes both, **every record byte-identical** but 101 — which carries the
+runner's own `WMX EXP patch02` rename, not the device's hand. 24/24
+identities, 0 anomalies.
+
+| # | Outcome |
+|---|---|
+| P6 | **held** — 105/106/110/111/116 byte-identical |
+| P7 | **held** — 120 byte-identical, **73 entries**, none dropped |
+| P8 | **held** — 115 unchanged, no `slot_id` allocated |
+| P9 | **held** — 125 unchanged, 161's head 63 |
+
+**Device-confirmed, on firmware 2.0.19.** And the operator saw the one thing
+the file could not show: **`MOVE FX` is selectable on the pars.** The
+compiler wrote `125`'s four flags `f1 f2 f5 f7` on every non-empty group,
+copied from a fresh project whose two groups both held moving heads. On the
+corpus the flags follow the group's *features* — see COV-68 — and the pars
+should carry `f1 f2` only. That is PATCH-03's single variable.
+
+## PATCH-03 — the flags, one variable (BEFORE measuring)
+
+`candidate-v2.wpj`: the same `rig.json`, rebuilt after COV-68 — the compiler
+now derives 125's flags from the group's features. `wpj_show.py verify`
+against `candidate.wpj`: **record 125 is the only record that differs**.
+Group A (heads) keeps `has_intensity has_color has_gobo has_move`; groups B
+(pars) and C (bar) carry `has_intensity has_color` only.
+
+Procedure: `deploy candidate-v2.wpj --label patch02 --case PATCH-03` —
+verified twice, restart, one frame — then **operator:** reopen
+`WMX EXP patch02` at the panel and look at the pages offered per group.
+
+| # | Prediction | p |
+|---|---|---|
+| Q1 | `MOVE FX` and the gobo page are **no longer offered** on groups B and C | 0.8 |
+| Q2 | both still offered on group A | 0.9 |
+| Q3 | colour still offered on all three | 0.9 |
+| Q4 | the frame at rest is unchanged from `rest.json` | 0.8 |
+
+If Q1 fails with Q2–Q4 holding, the flags are not what gates the pages and
+COV-68 stays a corpus correlation without a meaning.

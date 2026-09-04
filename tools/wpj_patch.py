@@ -39,6 +39,8 @@ ROUES = (11, 12)           # 106 roles whose f5/f6 are the wheel's 111 slice
 AXES = (1, 2)              # pan and tilt: f5/f6 are the fixture's travel limits
 PLEINE_COURSE = (0, 255)   # what a fresh patch writes for them (COV-24, stage0)
 GOBO_WHEEL = 8             # 110.f4 of a gobo wheel
+DIMMER, MOUVEMENT = 7, {1, 2}
+COULEUR = {5, 25, 26, 27, 31, 32, 33}   # the colour wheel counts (COV-68)
 UNIVERS = 512
 GROUPES = "ABCDEFGH"
 
@@ -164,11 +166,9 @@ def rig_du_fichier(w):
             if ent.get("role", 0) in AXES:
                 fx["limits"][ent["role"]] = (ent.get("limit_low", 0),
                                              ent.get("limit_high", 0))
-    groupes = []
-    for g in p125:
-        d = {a: b for a, b in g.items() if a != "mask"}
+    groupes = [{"name": g["name"]} if "name" in g else {} for g in p125]
+    for d, g in zip(groupes, p125):
         d["f4_tail"] = g["mask"]["f4_tail"]
-        groupes.append(d)
     ordre = p115.get("display_order")
     return {"profiles": list(range(len(p116))), "fixtures": fixtures,
             "gobo_names": [[g.get("name") for g in _dec(w, 145, gi).get("gobos", [])]
@@ -317,10 +317,18 @@ def compiler(paquets, rig):
     e125 = []
     for gi in range(9):
         g = dict(rig["groups"][gi]) if gi < len(rig["groups"]) else {}
-        masque = 0
+        masque, traits = 0, set()
         for fx in fixtures:
             if fx["group"] == gi:
                 masque |= 1 << fx["profile"]
+                traits |= {c["champs"].get("feature", 0)
+                           for c in profils[fx["profile"]]["canaux"]}
+        # the four flags are the group's capabilities (COV-68): a par group
+        # given has_gobo/has_move is offered MOVE FX at the panel (PATCH-02)
+        g.update(has_intensity=int(bool(traits & (COULEUR | {DIMMER}))),
+                 has_color=int(bool(traits & COULEUR)),
+                 has_gobo=int(GOBO_WHEEL in traits),
+                 has_move=int(bool(traits & MOUVEMENT)))
         g["mask"] = {"profile_mask": masque, "f4_tail": g.pop("f4_tail", 0)}
         e125.append(_ordonne(_sans_zero(g), _sous(125, "groups")))
     # 145 ×8
@@ -467,8 +475,6 @@ def construire(rig, sortie):
     noms = rig.get("groups", {})
     for gi in range(9):
         g = {}
-        if any(fx["group"] == gi for fx in fixtures):
-            g.update(f1=1, f2=1, f5=1, f7=1)     # the fresh project's pattern
         if gi < 8 and GROUPES[gi] in noms:
             g["name"] = noms[GROUPES[gi]]
         g["f4_tail"] = skel125[gi]["mask"]["f4_tail"] if gi < len(skel125) else 56
@@ -555,8 +561,8 @@ def main(argv=None):
             return 1
         print(f"{args.out}: {len(fixtures)} fixtures, {len(profils)} profiles, "
               f"identities verified, sha256 {empreinte}")
-        print("next: open it once on the W1 — Main Menu > Projects — and check "
-              "the FIXTURES screen before trusting it with a show (PATCH-02 is unrun)")
+        print("next: open it once on the W1 — Main Menu > Projects. PATCH-02 opened "
+              "one on firmware 2.0.19; check the FIXTURES screen all the same")
         return 0
     demo()
     return 0

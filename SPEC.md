@@ -1428,6 +1428,15 @@ Both fields are unattributed again, separately, and nothing else falls with the
 coupling because nothing was ever named on it. What survives from COV-22 is its
 own refutation: the byte does not track preset creation, and it moves back.
 
+**The four flags are the group's capabilities — [correlated] (COV-68).**
+`has_intensity` (`f1`) when a profile of the group has a dimmer or a colour
+channel, `has_color` (`f2`) a colour channel — the colour wheel counts —
+`has_gobo` (`f5`) a gobo wheel, `has_move` (`f7`) pan/tilt: 1026 of 1026
+corpus groups. They gate the panel's pages — a par group given `f5`/`f7`
+offers `MOVE FX` (PATCH-02), and PATCH-03 is the single-variable check. A
+writer derives them; whether a stale flag survives a fixture's removal, as
+the mask's bits do, is unmeasured.
+
 ### 7.3 Record 130 is the DMX IN mapping table — **[device-confirmed]**
 
 The `Mappings` screen (mode 43) binds an incoming DMX channel to a controller
@@ -2084,7 +2093,7 @@ oracle throughout `research/`, and a window of N seconds is 25 N frames
 whatever the engine is doing — which is what makes "did this change alter the
 output at all" a fair question rather than a race with an animation.
 
-### 10.3 Compiling a patch — **[correlated]** (PATCH-01)
+### 10.3 Compiling a patch — **[device-confirmed]** (PATCH-01, PATCH-02)
 
 `tools/wpj_patch.py` writes the eight patch record types and the eight 145
 palettes from three inputs per fixture — a **profile**, a **DMX address**, a
@@ -2102,15 +2111,16 @@ byte-identical on all nine records; the 28 others each carry a named anomaly.
 | 106 | blocks in **fixture-index** order; wheels' `f5`/`f6` recomputed (COV-65), axes' limits per fixture, `0…255` when unset |
 | 115 | address, profile, group, `f5 = 65535`; **never `f6`/`f7`** (COV-63); `slot_id` omitted, as twelve corpus files do |
 | 120 | per-profile template in **DMX order**, pairing from `110.f1`/`f5` (COV-67, COV-57), the occupancy map from the addresses |
-| 125 | the profile mask exact — the device's accumulates (COV-26) — flags and tail as operator data |
+| 125 | the profile mask exact — the device's accumulates (COV-26) — the four capability flags from the features (COV-68), the tail as operator data |
 | 145 ×8 | the wheel's ranges after the open slot (§3.4), names by pad |
 | 161 | the fixture mask in item 0 (COV-45); 151 emptied and 150's slices cleared |
 
-**Not device-confirmed.** No compiled patch has been opened on the W1:
-PATCH-02 is the planned measurement, and `105.f1` (`library_id`), the omitted
-`slot_id` and record 125's flags are the three fields that could refuse it.
-A skeleton carrying record 160 is refused — its macros aim at fixtures that no
-longer exist.
+**Opened on the W1 — firmware 2.0.19 (PATCH-02).** Six fixtures listed, the
+frame at rest reads as compiled on all three profiles, and one no-change save
+at the panel returned every patch record byte-identical. What the file could
+not show, the panel did: 125's flags copied from a fresh project offered
+`MOVE FX` on the pars, which is how COV-68 was read. A skeleton carrying
+record 160 is refused — its macros aim at fixtures that no longer exist.
 
 ## 11. Open questions
 
@@ -2138,7 +2148,7 @@ changelog.
 | Q9 | **Which of the two paths the panel follows.** `SET_MODE` and the front-panel keys move the device differently (SCREEN-03), and nothing has measured which one the displayed screen tracks. | A capture where the two disagree and the panel is watched. |
 | Q10 | **The colour engine's `f2` at 150 and 200.** `f2` is the fade, and above 100 it is move's `Flick` — but the manual gives colour no `Flick`. | The residual of L9, and the only part of the FX submessage that does not read cleanly. |
 | Q11 | **Variants B and C below the top level.** EXP-06 aligned profiles, patch, preset names and the FX banks against a variant-A twin, which is far more than "only the top level is mapped" — but it is one pair, and the campaign was never run out. | Its own campaign, on more than one pair. |
-| Q13 | **A compiled patch on the device.** `wpj_patch.py` reproduces the device's own patch records on every clean corpus file, but no file it built has been opened on the W1. | PATCH-02: one build, one open, one `FIXTURES` photograph, one DMX envelope. |
+| ~~Q13~~ | **Closed 2026-09-04.** A compiled patch opens on the W1, reads as compiled on DMX and survives the device's own save byte for byte (PATCH-02, firmware 2.0.19). What it left is 125's capability flags, read from the corpus the same day (COV-68) and awaiting PATCH-03. | — |
 | Q12 | **Transposition off this rig.** §3.4's palette rule, and most of the static layer, were measured on **one** group of **one** profile. Nothing contradicts the general rule; nothing tests it either. | A second rig. |
 
 ## References

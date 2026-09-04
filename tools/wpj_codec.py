@@ -300,9 +300,11 @@ SCHEMAS = {
     # key — it moves in the same save as record 161's shared tail without
     # either deriving from the other, and COV-22 refuted the preset-count
     # reading it had.
-    125: {1: _COUNT, 5: ("groups", {
+    125: {1: _COUNT, 5: ("groups", {1: ("has_intensity", "v"), 2: ("has_color", "v"),
+           
         4: ("mask", ("split", ((6, "profile_mask"), ("varint", "f4_tail")))),
-        8: ("name", "str")})},
+        5: ("has_gobo", "v"), 7: ("has_move", "v"),
+           8: ("name", "str")})},
     135: {1: _COUNT, 5: ("pads", _PAD)},
     # f2 = the group index 0-7 (A-H), absent for A. SPEC §3.1 retracted the
     # earlier "page" reading in prose on three device readings; the codec

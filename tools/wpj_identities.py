@@ -1033,6 +1033,30 @@ def _anomalie_116_doublon(w):
         vus[u] = i
 
 
+def _anomalie_125_drapeaux(w):
+    """A group's capability flags not following its profiles' features
+    (COV-68): 1026 of 1026 device-written groups follow them; the first two
+    files that did not were written here, and the panel offered MOVE FX on
+    pars (PATCH-02)."""
+    p110, p115, p116 = _items(w, 110), _items(w, 115), _items(w, 116)
+    for gi, g in enumerate(_items(w, 125)):
+        traits = set()
+        for fx in p115:
+            if fx.get("f4", 0) != gi:
+                continue
+            pr = p116[fx.get("f3", 0)]
+            off = pr.get("f3", 0)
+            traits |= {p110[off + j].get("f4", 0) for j in range(pr.get("f2", 0))}
+        couleur = bool(traits & {5, 25, 26, 27, 31, 32, 33})
+        attendu = {"f1": couleur or 7 in traits, "f2": couleur,
+                   "f5": 8 in traits, "f7": bool(traits & {1, 2})}
+        for champ, present in attendu.items():
+            if (champ in g) != present:
+                return (f"125[{gi}]: {champ} {'set' if champ in g else 'absent'} "
+                        f"on a group whose features {'do not ' if champ in g else ''}"
+                        f"call for it")
+
+
 # Equalities a **well-formed** project satisfies and the identities above no
 # longer assert, because a device-written file broke each of them and the
 # identity had to fall back to containment (COV-32, COV-37). They are not
@@ -1041,7 +1065,8 @@ def _anomalie_116_doublon(w):
 # would fail on the very captures that record the defect.
 ANOMALIES = (_anomalie_comptes, _anomalie_tranches, _anomalie_120_patch,
              _anomalie_151_groupe, _anomalie_120_alignement,
-             _anomalie_roues_106, _anomalie_120_vide, _anomalie_116_doublon)
+             _anomalie_roues_106, _anomalie_120_vide, _anomalie_116_doublon,
+             _anomalie_125_drapeaux)
 
 
 def controler(chemin):

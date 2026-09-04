@@ -37,10 +37,13 @@ import os
 import struct
 import sys
 import tempfile
+import time
 import uuid
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gobo_run
+
+FLASH_TIMEOUT_FLOOR = 30.0   # seconds per acknowledged chunk, gobo-upload only
 from wolfmix_protocol import (
     ACTING_MODES, ALLOWED_OUTGOING_EVENTS, DMX_PACKET, GET_PROFILE,
     GET_PROFILE_LIST, GET_PROJECT_LIST, GET_SETTINGS, HEADER_SIZE,
@@ -389,8 +392,13 @@ def main(argv=None):
         encode_request_uuid(args.uuid)      # never open a port for a bad UUID
 
     port = args.port or discover_port()
+    timeout = args.timeout
+    if args.command == "gobo-upload":
+        # the vendor acknowledges a chunk in 163 ms (UPLOAD-02), but nothing
+        # has timed the first one, which may erase before it writes
+        timeout = max(timeout, FLASH_TIMEOUT_FLOOR)
     with WolfmixConnection(
-        port, timeout=args.timeout,
+        port, timeout=timeout,
         allow_untested_firmware=args.allow_untested_firmware,
         allow_resource_flash=args.command == "gobo-upload",
     ) as connection:
@@ -454,15 +462,18 @@ def main(argv=None):
                         "wolfmixMode": settings["wolfmixMode"]})
         elif args.command == "gobo-upload":
             baseline = resource_flash_state(connection)
-            progress_mark = [-1]
+            progress_mark, stamps = [-1], []
 
             def progress(done, total):
+                stamps.append(time.monotonic())
                 mark = done * 10 // total
                 if mark != progress_mark[0]:
                     progress_mark[0] = mark
                     print(f"resource flash: {done * 100 // total}%", file=sys.stderr)
 
+            started = time.monotonic()
             chunks = upload_resource_flash(connection, upload_data, progress)
+            gaps = sorted(b - a for a, b in zip(stamps, stamps[1:]))
             after = resource_flash_state(connection)
             if after != baseline:
                 raise ProtocolError(
@@ -471,6 +482,10 @@ def main(argv=None):
             print_json({
                 **upload_plan,
                 "chunks": chunks,
+                "seconds": round(stamps[-1] - started, 3) if stamps else 0,
+                "firstChunkMs": round((stamps[0] - started) * 1000) if stamps else None,
+                "gapMsMedian": round(gaps[len(gaps) // 2] * 1000) if gaps else None,
+                "gapMsMax": round(gaps[-1] * 1000) if gaps else None,
                 "controller": after,
                 "restartRequired": True,
             })

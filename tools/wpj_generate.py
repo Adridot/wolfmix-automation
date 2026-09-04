@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Show generator: an intention + the rig read from the donor → a .wpj.
 
+Module group: Composition. Reference: docs/show-format.md.
+
 What this composes is a show's **preset bank**: one mood of the intention
 becomes a named preset, placed on a free page, with its static colour, its
 per-group dimmers, its position and its FX. The rig is not described by hand —
@@ -23,6 +25,8 @@ Usage:
   wpj_generate.py compose intention.json out.wpj    [--spec spec.json]
   wpj_generate.py                                   self-check (corpus)
 """
+
+from __future__ import annotations
 import json
 import os
 import sys
@@ -83,7 +87,7 @@ def _moteurs(preset):
     return [(gros >> (9 * i)) & 0x1FF for i in range(12)]
 
 
-def lire_rig(chemin):
+def lire_rig(chemin: str) -> dict[str, object]:
     """The rig as the donor carries it: groups, fixtures, positions, palettes,
     and the presets usable as templates."""
     w = wpjlib.Wpj.load(chemin)
@@ -119,7 +123,7 @@ def lire_rig(chemin):
             "id_max": max(p.get("id", 0) for p in presets)}
 
 
-def modeles(rig):
+def modeles(rig: dict[str, object]) -> dict[str, int]:
     """family → id of the donor preset that carries it (the smallest id)."""
     trouves = {}
     for p in rig["presets"]:
@@ -173,7 +177,7 @@ def _famille_disponible(voulue, dispo):
                      f"quieter one; families found: {sorted(dispo)}")
 
 
-def composer(intention):
+def composer(intention: dict[str, object]) -> tuple[dict[str, object], list[str]]:
     """intention → (spec for wpj_show.compiler, a line-by-line report)."""
     wpj_show.cles(intention, _INTENTION_CLES, "intention")
     if "base" not in intention:
@@ -317,7 +321,7 @@ def _positions(nom, voulue, rig, lus, modele):
 
 # --- sorties -----------------------------------------------------------------
 
-def imprime_rig(rig):
+def imprime_rig(rig: dict[str, object]) -> None:
     print(f"donneur : {rig['fichier']}")
     print(f"presets : {len(rig['presets'])}, id max {rig['id_max']} "
           f"(page {rig['id_max'] // PADS + 1}); first free page: "
@@ -344,7 +348,7 @@ def imprime_rig(rig):
               + (f"  « {nom} »" if nom else ""))
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     import argparse
     parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     commandes = parseur.add_subparsers(dest="commande")
@@ -380,7 +384,7 @@ def main(argv=None):
     return 0
 
 
-def demo():
+def demo() -> None:
     """Composes a three-mood show on the first usable donor."""
     for base in wpjlib.corpus_files():
         try:

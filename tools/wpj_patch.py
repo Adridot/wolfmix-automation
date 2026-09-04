@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Compile a DMX patch into a variant-A project — no donor carries the patch.
 
+Module group: Composition. Reference: docs/show-format.md.
+
 The patch is eight record types the device derives from three things: a
 **profile**, a **DMX address** and a **group** per fixture. This tool derives
 them the same way, from profile *packages* read off projects the device wrote:
@@ -25,6 +27,9 @@ its slice of record 111, not travel limits (COV-65).
   wpj_patch.py build rig.json out.wpj        compile, write (mode x), verify
   wpj_patch.py                               self-check on the corpus
 """
+
+from __future__ import annotations
+from os import PathLike
 import argparse
 import json
 import os
@@ -74,7 +79,7 @@ def _sous(typ, cle):
 
 # --- packages: a profile as the device wrote it ------------------------------
 
-def paquets(w):
+def paquets(w: wpjlib.Wpj) -> list[dict[str, object]]:
     """The packages of one variant-A project, indexed like its record 116.
 
     `blocs`, `library_id`, `drapeaux_115` and `gabarit_120` come from the first
@@ -143,7 +148,7 @@ def paquets(w):
     return out
 
 
-def rig_du_fichier(w):
+def rig_du_fichier(w: wpjlib.Wpj) -> dict[str, object]:
     """The rig a file describes, in the form `compiler` takes — the oracle's
     input, so the partial fields of 125 and the 115 flags travel through."""
     p115 = _dec(w, 115)
@@ -222,7 +227,10 @@ def _occupation(occupe):
     return runs
 
 
-def compiler(paquets, rig):
+def compiler(
+    paquets: list[dict[str, object]],
+    rig: dict[str, object],
+) -> dict[int, list[tuple[int, bytes]]]:
     """rig -> {typ: [(occ, payload)]} for 105 106 110 111 115 116 120 125 and
     the eight 145. `paquets` is a list, `rig["profiles"]` indexes into it.
     Raises on a profile without a full package."""
@@ -362,7 +370,7 @@ def _canonique_115(w):
     return wpj_codec.encode(115, d)
 
 
-def compare(w):
+def compare(w: wpjlib.Wpj) -> dict[int, bool | None]:
     """{typ: True/False/None} — identical, different, or not attempted."""
     res = {t: None for t in TYPES}
     try:
@@ -377,7 +385,7 @@ def compare(w):
     return res
 
 
-def demo():
+def demo() -> None:
     """Every corpus file with no anomaly must rebuild byte-identical.
 
     Files a defect marks — the COV-53 drop, the WTOOLS split, an erased 120,
@@ -427,7 +435,10 @@ def _resout(paquets_dispo, ref):
                      f"known: {sorted(pk['name'] for pk in paquets_dispo.values())}")
 
 
-def construire(rig, sortie):
+def construire(
+    rig: dict[str, object],
+    sortie: str | PathLike[str],
+) -> tuple[str, list[str], list[dict[str, object]]]:
     """rig.json -> a project. Returns the sha256 of what was written."""
     for cle in rig:
         if cle not in ("skeleton", "profiles_from", "fixtures", "groups", "name",
@@ -534,7 +545,7 @@ def _imprime_paquets(fichiers):
                   f"{blocs} block(s)  library_id {pk['library_id']}  {etat}")
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd")
     p = sub.add_parser("profiles", help="the packages some projects carry")

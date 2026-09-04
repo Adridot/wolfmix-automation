@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """A minimal, template-based show compiler (on wpjlib + wpj_codec).
 
+Module group: Composition. Reference: docs/show-format.md.
+
 The principle: we ALWAYS start from an existing variant-A donor project and
 apply a JSON edit spec. Everything the spec does not name is preserved byte for
 byte by wpjlib. An edited position or palette entry must already exist in the
@@ -17,6 +19,10 @@ Usage:
   wpj_show.py verify base.wpj out.wpj     list the records that differ
   wpj_show.py                             self-check (corpus, leaves no trace)
 """
+
+from __future__ import annotations
+from os import PathLike
+from collections.abc import Iterable, Mapping
 import copy
 import json
 import os
@@ -101,7 +107,7 @@ def _normalise_mapping(entree):
 CANAL_MAX = 512              # the panel encoder's bound, measured
 
 
-def cles(d, permises, contexte):
+def cles(d: Mapping[str, object], permises: Iterable[str], contexte: str) -> None:
     """Public: `wpj_generate` validates its intentions with the same rules."""
     inconnues = [k for k in d if k not in permises]
     retirees = {k: wpj_codec.remplacante(k) for k in inconnues
@@ -115,13 +121,13 @@ def cles(d, permises, contexte):
                          f"allowed: {list(permises)}")
 
 
-def borne(contexte, nom, v, lo, hi):
+def borne(contexte: str, nom: str, v: int, lo: int, hi: int) -> int:
     if not isinstance(v, int) or isinstance(v, bool) or not lo <= v <= hi:
         raise ValueError(f"{contexte} : {nom}={v!r} hors bornes [{lo}, {hi}]")
     return v
 
 
-def liste8(contexte, nom, v, lo, hi):
+def liste8(contexte: str, nom: str, v: list[int], lo: int, hi: int) -> list[int]:
     if not isinstance(v, list) or len(v) != 8:
         raise ValueError(f"{contexte}: {nom} must be a list of 8 integers")
     return [borne(contexte, f"{nom}[{i}]", x, lo, hi) for i, x in enumerate(v)]
@@ -149,7 +155,7 @@ def _pads_vers_masques(contexte, pads8):
     return list(bits.to_bytes(NB_GROUPES * PADS_PAR_GROUPE // 8, "little"))
 
 
-def masques_vers_pads(v20):
+def masques_vers_pads(v20: list[int]) -> list[list[int]] | None:
     """The inverse of _pads_vers_masques: the 20 bytes → 8 pad lists."""
     if not isinstance(v20, list) or any(not isinstance(x, int) or not 0 <= x < 256
                                         for x in v20):
@@ -160,7 +166,10 @@ def masques_vers_pads(v20):
             for g in range(NB_GROUPES)]
 
 
-def compiler(spec, sortie):
+def compiler(
+    spec: dict[str, object],
+    sortie: str | PathLike[str],
+) -> list[tuple[int, int, int, int]]:
     """Applies the spec to the donor, writes the output, self-verifies.
     Returns the diff list [(type, occ, size_before, size_after)]."""
     cles(spec, _SHOW_CLES, "show")
@@ -531,7 +540,10 @@ def _verif_preset(d165, pid, attendu):
     return True
 
 
-def verifier(base, sortie):
+def verifier(
+    base: str | PathLike[str],
+    sortie: str | PathLike[str],
+) -> list[tuple[int, int, int, int]]:
     """Returns the records that differ: [(type, occ, size_before, size_after)]."""
     a, b = wpjlib.Wpj.load(base), wpjlib.Wpj.load(sortie)
     if [t for t, _ in a.records] != [t for t, _ in b.records]:
@@ -553,7 +565,7 @@ def _imprime(diffs):
         print(f"type {t} occ {occ}: {la} -> {lb} bytes")
 
 
-def demo():
+def demo() -> None:
     """Looks for a usable donor in the local corpus; abstains otherwise.
 
     No .wpj ships with this repository (docs/corpus.md): the self-check takes
@@ -770,7 +782,7 @@ def _demo_sur(base):
           + os.path.basename(base), file=sys.stderr)
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     import argparse
     parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     commandes = parseur.add_subparsers(dest="commande")

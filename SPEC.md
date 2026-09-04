@@ -1434,8 +1434,9 @@ channel, `has_color` (`f2`) a colour channel — the colour wheel counts —
 `has_gobo` (`f5`) a gobo wheel, `has_move` (`f7`) pan/tilt: 1026 of 1026
 corpus groups. They gate the panel's pages: a par group given `f5`/`f7`
 offers `MOVE FX` (PATCH-02), and with record 125 as the only variable the
-page greys out when `has_move` goes — **device-confirmed** for that flag
-(PATCH-03), the other three at the corpus's word. A writer derives them;
+page greys out when `has_move` goes, and the gobo page when `has_gobo` goes —
+**device-confirmed** for those two (PATCH-03), the other two at the corpus's
+word. A writer derives them;
 whether a stale flag survives a fixture's removal, as the mask's bits do, is
 unmeasured.
 

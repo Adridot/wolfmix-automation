@@ -163,8 +163,9 @@ writer must expect. Pads 7–17 carry the library's numbered ring icons for ids
 icon and the three padding slots look alike on screen. The five feature tabs
 (`ROTATE` selected, then focus, prism, zoom, iris) are there, `A ROTATE 0 %`
 at the foot, B/C/D beside it. Whether B and C are greyed or merely
-unselected cannot be read off a photograph; only a tap would say, so
-`has_gobo` stays at the corpus's word. No photograph is kept in the tree.
+unselected cannot be read off a photograph; the operator then tapped B and
+**it refused the selection** — `has_gobo` device-confirmed. No photograph is
+kept in the tree.
 
 The operator's objection — «the bar is supposed to have move» — is about the
 profile, not the flag: `LED BAR 252 RGB` carries no pan/tilt feature in

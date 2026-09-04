@@ -188,7 +188,7 @@ PROOF = {
     ("125", "profile_mask"): (DEVICE, "COV-26"),
     ("125", "has_intensity"): (CORRELATED, "COV-68"),
     ("125", "has_color"): (CORRELATED, "COV-68"),
-    ("125", "has_gobo"): (CORRELATED, "COV-68"),
+    ("125", "has_gobo"): (DEVICE, "PATCH-03"),
     ("125", "has_move"): (DEVICE, "PATCH-03"),
 
     ("130", "mappings"): (DEVICE, "MAP-02"),

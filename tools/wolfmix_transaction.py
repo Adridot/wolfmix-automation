@@ -107,8 +107,11 @@ def load_state(state_root, label, kind="exp"):
         raise protocol.WolfmixError("Experiment state identity mismatch")
     return root, state_file, state
 
-def connect(port=None, timeout=8.0):
-    return device.WolfmixConnection(port or device.discover_port(), timeout)
+def connect(port=None, timeout=8.0, allow_untested_firmware=False):
+    """The same gate as `wolfmix.py`: a firmware this repository has never
+    measured refuses every state change unless the caller says so."""
+    return device.WolfmixConnection(port or device.discover_port(), timeout,
+                                    allow_untested_firmware=allow_untested_firmware)
 
 def preflight(connection):
     settings = protocol.decode_settings(connection.request(protocol.GET_SETTINGS))

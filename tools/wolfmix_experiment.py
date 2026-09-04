@@ -137,7 +137,7 @@ def watch(args):
     previous, previous_version = None, None
     print(f"Watching {state['name']}; save on the W1 to see a diff. Ctrl-C to stop.",
           file=sys.stderr)
-    with connect(args.port, args.timeout) as connection:
+    with connect(args.port, args.timeout, args.allow_untested_firmware) as connection:
         while True:
             item = next(
                 (i for i in project_list(connection) if i.get("uuid") == state["uuid"]),
@@ -179,7 +179,7 @@ def initialize(args):
     stored_project = False
     port = args.port or device.discover_port()
     try:
-        with connect(port, args.timeout) as connection:
+        with connect(port, args.timeout, args.allow_untested_firmware) as connection:
             settings = preflight(connection)
             snapshot = snapshot_all(
                 connection, root / "snapshots" / f"initial-{utc_id()}", settings
@@ -239,7 +239,7 @@ def arm(args):
             "Arming requires --loaded-on-controller after opening the experiment "
             "project on the W1"
         )
-    with connect(args.port, args.timeout) as connection:
+    with connect(args.port, args.timeout, args.allow_untested_firmware) as connection:
         settings = preflight(connection)
         item = next(
             (item for item in project_list(connection) if item.get("uuid") == state["uuid"]),
@@ -279,7 +279,7 @@ def deploy_one(args, candidate_path, case_id):
     previous = None
     restart_identity = None
     try:
-        with connect(port, args.timeout) as connection:
+        with connect(port, args.timeout, args.allow_untested_firmware) as connection:
             before_settings = preflight(connection)
             identity = {"serialNumber": state["controllerSerial"],
                         "firmwareVer": state.get("firmware")}
@@ -380,7 +380,7 @@ def clear_rollback(args):
 
 def status(args):
     root, state_file, state = load_state(args.state_dir, args.label, args.namespace)
-    with connect(args.port, args.timeout) as connection:
+    with connect(args.port, args.timeout, args.allow_untested_firmware) as connection:
         settings = protocol.decode_settings(connection.request(protocol.GET_SETTINGS))
         item = next(
             (item for item in project_list(connection) if item.get("uuid") == state["uuid"]),
@@ -428,6 +428,10 @@ def self_test(_args):
 def parser():
     result = argparse.ArgumentParser(description=__doc__)
     result.add_argument("--port")
+    result.add_argument("--allow-untested-firmware", action="store_true",
+                        help="allow state changes on a firmware this repository "
+                             "has never measured (PATCH-02 met 2.0.19); the "
+                             "refusal is the default, as in wolfmix.py")
     result.add_argument("--timeout", type=float, default=8.0)
     result.add_argument("--restart-timeout", type=float, default=20.0)
     result.add_argument("--state-dir", default=DEFAULT_STATE_ROOT)

@@ -1,7 +1,8 @@
 # Your fixture's real gobos on the W1 screen
 
-End-to-end recipe, every step device-confirmed on firmware 2.0.18 on
-2026-08-30 (RENAME-01/SORT-01 in `SPEC.md` §3.4 for the page edits). A
+End-to-end recipe, every step device-confirmed — on firmware 2.0.18 on
+2026-08-30 (RENAME-01/SORT-01 in `SPEC.md` §3.4 for the page edits), the
+direct upload on 2.0.19 on 2026-09-04 (UPLOAD-08). A
 **resource flash** carries the interface's graphics and is not executable
 firmware — [`../LEGAL.md`](../LEGAL.md) states that boundary. This repository
 prepares, verifies and can upload only a copy whose diff is confined to declared
@@ -107,8 +108,10 @@ executable-firmware path, is not allowlisted anywhere in this repository
 (UPLOAD-07).
 
 After the last acknowledged chunk, the command re-reads the firmware version,
-profile count and project count and refuses a changed baseline. Restart the W1
-normally to clear the update overlay and load the new icons.
+profile count and project count and refuses a changed baseline. The W1 screen
+sits at *updating firmware 1/2 … 99 %* meanwhile and still answers the
+protocol. Restart it — the panel, or `RESTART` over USB — to clear the overlay
+and load the new icons. Measured: 179 chunks in 28 s, 158 ms each (UPLOAD-08).
 
 ### The net, by severity
 

@@ -44,3 +44,13 @@ rewrites the factory image (UPLOAD-05). That path is the net.
 
 No erase pause is visible on the first chunk: whatever the device does before
 writing, it does it inside the same 160 ms. U4 and U5 follow the restart.
+
+## Results, after the restart
+
+| # | Outcome |
+|---|---|
+| U4 | **held** — the screen showed *updating firmware 1/2 … 99 %* during the write and answered the protocol from the gobo page (mode 8) |
+| U5 | **held** — after `RESTART` over USB, the eleven silhouettes are back on pads 7–17 of group A |
+
+Five of five. The direct uploader is **device-confirmed** on 2.0.19, and the
+click in WTOOLS is no longer part of the recipe.

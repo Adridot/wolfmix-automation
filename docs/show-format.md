@@ -24,7 +24,10 @@ exceed every id in the donor, which is what both measured additions did. Gaps
 in the id sequence load fine.
 
 Pick a donor that already has the positions and pads you need — that constraint
-is rule 2 ("read before write") applied to editing.
+is rule 2 ("read before write") applied to editing. The **patch** is the one
+layer that can now be compiled with no donor at all: `wpj_patch.py`
+([`tools.md`](tools.md)) builds it from profiles, addresses and groups, and its
+output is a donor for this compiler.
 
 Scope is records 101, 165, 150 and 135, at evidence status `correlated` or
 better. `f29` (gobos) stays out of scope although it is device-confirmed,

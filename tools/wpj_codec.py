@@ -185,7 +185,7 @@ _CHANNEL_ROLE = {1: ("range_start", "v"), 2: ("dmx_channel", "v"),
 # says "f2 = feature enum, f4 = default value"; the identities are what run.
 # `f1` = 1 on 568 of the corpus's channels and absent on the rest — a flag with
 # no reading, left as a neutral key.
-_CHANNEL = {2: ("range_count", "v"), 3: ("offset_111", "v"),
+_CHANNEL = {1: ("pair_member", "v"), 2: ("range_count", "v"), 3: ("offset_111", "v"),
             4: ("feature", "v"), 5: ("principal_channel", "v")}
 
 # 155: the four FX sequences, SPEC §8. `f2` says which engine owns the sequence

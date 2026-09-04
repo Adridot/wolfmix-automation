@@ -143,6 +143,7 @@ PROOF = {
     ("106", "limit_high"): (DEVICE, "POS-01"),
 
     ("110", "channels"): (CORRELATED, "§7.6"),
+    ("110", "pair_member"): (CORRELATED, "COV-67"),
     ("110", "range_count"): (CORRELATED, "§3.4"),
     ("110", "offset_111"): (CORRELATED, "§7"),
     ("110", "feature"): (DEVICE, "COV-25"),
@@ -324,7 +325,6 @@ INERT_FIELDS = {
     "115.fixtures.f5": (65535, 1633),    # a sentinel, on the face of it
     "130.mappings.f8": (1, 830),
     "130.mappings.f7": (1, 746),
-    "110.channels.f1": (1, 680),
     "160.macros.f2": (1, 564),
     "116.profiles.f1": (1, 272),
     "125.groups.f1": (1, 265),

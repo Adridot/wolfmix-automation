@@ -965,6 +965,74 @@ def _anomalie_120_alignement(w):
                     f"where record 110 says {c110[ci].get('f5', 0)}")
 
 
+def _anomalie_roues_106(w):
+    """A wheel entry of 106 whose `f5`/`f6` are not its channel's slice of 111
+    (COV-65).
+
+    On the two wheel roles, 11 and 12, `f5` is the wheel channel's global
+    `110.f3` offset and `f6` its `110.f2` range count — 1224 of 1224 entries on
+    the device-written corpus. The files that break it are the WTOOLS-split
+    lineage, where the entry points at another copy of the same profile."""
+    p105, p106 = _items(w, 105), _items(w, 106)
+    p110, p115, p116 = _items(w, 110), _items(w, 115), _items(w, 116)
+    for e in p105:
+        fx = p115[e.get("f5", 0)]
+        base, off = fx.get("f2", 0), p116[fx.get("f3", 0)].get("f3", 0)
+        for k in range(e.get("f4", 0), e.get("f4", 0) + e.get("f7", 0)):
+            ent = p106[k]
+            if ent.get("f4", 0) not in (11, 12):
+                continue
+            ci = off + ent.get("f2", 0) - base
+            if ci >= len(p110):
+                return f"106[{k}]: wheel entry outside record 110"
+            c = p110[ci]
+            if (ent.get("f5", 0), ent.get("f6", 0)) != (c.get("f3", 0), c.get("f2", 0)):
+                return (f"106[{k}]: wheel slice ({ent.get('f5', 0)}, {ent.get('f6', 0)}) "
+                        f"against 110[{ci}] = ({c.get('f3', 0)}, {c.get('f2', 0)})")
+
+
+def _anomalie_120_vide(w):
+    """A fixture's whole block of record 120 empty, on a profile the device
+    always values (BUG-01, *rig-c-bug*: every fixture but the first).
+
+    Pan, tilt, dimmer and the colour features write `f1`/`f4` on every clean
+    file (COV-16, COV-57); a block of bare `{}` over such a profile is not a
+    fixture with nothing to say, it is the erasure `research/rig-c-bug.md`
+    describes."""
+    try:
+        ch = _items(w, 120)
+    except KeyError:
+        return
+    fx, prof, p110 = _items(w, 115), _items(w, 116), _items(w, 110)
+    pos = 0
+    for i in sorted(range(len(fx)), key=lambda k: (fx[k].get("f2", 0), k)):
+        pr = prof[fx[i].get("f3", 0)]
+        off, n = pr.get("f3", 0), pr.get("f2", 0)
+        bloc = ch[pos:pos + n]
+        pos += n
+        if len(bloc) < n:
+            return
+        if any(p110[off + j].get("f4", 0) in (1, 2, 7, 25, 26, 27, 31, 32, 33)
+               for j in range(n)) and not any(bloc):
+            return (f"120: the block of the fixture at {fx[i].get('f2', 0)} is "
+                    f"{n} empty entries on a profile that values its channels")
+
+
+def _anomalie_116_doublon(w):
+    """One profile catalogued twice — the WTOOLS 2.0.2 split (COV-30).
+
+    A `FIXTURE SETUP` session in the vendor's editor duplicates a profile's
+    catalogue entry, misplaces `f12`, and leaves record 120 six entries long;
+    a duplicated `f9` is the cheapest marker of that lineage."""
+    vus = {}
+    for i, pr in enumerate(_items(w, 116)):
+        u = pr.get("f9")
+        u = u.get("hex") if isinstance(u, dict) else u
+        if u is not None and u in vus:
+            return f"116[{i}]: the same profile as 116[{vus[u]}]"
+        vus[u] = i
+
+
 # Equalities a **well-formed** project satisfies and the identities above no
 # longer assert, because a device-written file broke each of them and the
 # identity had to fall back to containment (COV-32, COV-37). They are not
@@ -972,7 +1040,8 @@ def _anomalie_120_alignement(w):
 # so they belong to the per-file check and never to the corpus sweep, which
 # would fail on the very captures that record the defect.
 ANOMALIES = (_anomalie_comptes, _anomalie_tranches, _anomalie_120_patch,
-             _anomalie_151_groupe, _anomalie_120_alignement)
+             _anomalie_151_groupe, _anomalie_120_alignement,
+             _anomalie_roues_106, _anomalie_120_vide, _anomalie_116_doublon)
 
 
 def controler(chemin):

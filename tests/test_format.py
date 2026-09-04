@@ -126,19 +126,20 @@ class InertAndSplit(unittest.TestCase):
         return fixtures.project_bytes(records=((typ, payload),),
                                       prefix=fixtures.prefix_bytes())
 
-    def _record_110(self, f1):
-        """Record 110 with one channel whose f1 carries `f1`."""
+    def _record_116(self, f1):
+        """Record 116 with one profile whose f1 carries `f1`. (Record 110's
+        `f1` played this part until COV-67 read it — `pair_member`.)"""
         item = bytes((8, f1))                        # field 1, varint
         return bytes((8, 1)) + bytes((0x2a, len(item))) + item
 
     def test_a_declared_inert_field_is_counted_inert(self):
-        acc = wpj_coverage.coverage(self._project(110, self._record_110(1)))
-        self.assertEqual(acc[(wpj_coverage.INERT, "110.channels.f1")], 2)
+        acc = wpj_coverage.coverage(self._project(116, self._record_116(1)))
+        self.assertEqual(acc[(wpj_coverage.INERT, "116.profiles.f1")], 2)
         self.assertEqual(wpj_coverage.totals(acc)[wpj_coverage.PARTIAL], 0)
 
     def test_a_second_value_stops_the_run(self):
         with self.assertRaises(wpj_coverage.InertBroken):
-            wpj_coverage.coverage(self._project(110, self._record_110(2)))
+            wpj_coverage.coverage(self._project(116, self._record_116(2)))
 
     def test_inert_broken_is_not_a_valueerror(self):
         """The corpus walk catches ValueError to skip variants B and C. If this

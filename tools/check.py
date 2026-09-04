@@ -42,6 +42,7 @@ CONTROLES = [
     ("ssl2", ["python3", "tools/ssl2.py"]),
     ("wpj_show", ["python3", "tools/wpj_show.py"]),
     ("wpj_generate", ["python3", "tools/wpj_generate.py"]),
+    ("wpj_patch", ["python3", "tools/wpj_patch.py"]),
     ("wpj_api", ["python3", "tools/wpj_api.py"]),
     ("wpj_identities", ["python3", "tools/wpj_identities.py"]),
     ("wpj_coverage", ["python3", "tools/wpj_coverage.py"]),

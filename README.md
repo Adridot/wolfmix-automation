@@ -69,7 +69,7 @@ keep them. Full guide: [`docs/corpus.md`](docs/corpus.md).
 make check
 ```
 
-It ends with a summary — 20 <!--count:checks--> checks, and a line naming
+It ends with a summary — 21 <!--count:checks--> checks, and a line naming
 every one that abstained.
 
 > [!IMPORTANT]
@@ -101,6 +101,7 @@ honest — plus every flag and exit code: [`docs/tools.md`](docs/tools.md).
 | [`wpj_codec.py`](tools/wpj_codec.py) | Semantic JSON ↔ bytes per record type; `decode` verifies its own round trip or falls back to raw hex. |
 | [`wpj_show.py`](tools/wpj_show.py) | The show compiler: an edit spec applied to a donor, auto-verified. |
 | [`wpj_generate.py`](tools/wpj_generate.py) | The show generator: moods, energy and groups in, a preset bank out — the rig read from the donor. |
+| [`wpj_patch.py`](tools/wpj_patch.py) | The patch compiler: profiles, addresses and groups in, the eight patch records out — no donor carries the patch. |
 | [`wolfmix.py`](tools/wolfmix.py) | The device: settings, projects, download, live DMX, envelopes, mode watch, preset recall. |
 | [`wolfmix_experiment.py`](tools/wolfmix_experiment.py) | Transactional experiments: snapshot → deploy → verify → restore on failure. |
 | [`gobo_run.py`](tools/gobo_run.py) | The gobo-icon pipeline's gates — four of them, each red until its step is really done. |

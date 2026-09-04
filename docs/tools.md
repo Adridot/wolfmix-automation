@@ -360,6 +360,36 @@ that file is the audit trail: it names every field written.
 
 Format reference: [`generator.md`](generator.md).
 
+## `wpj_patch.py` — patch compiler
+
+```bash
+python3 tools/wpj_patch.py profiles a.wpj b.wpj     # the profile packages those files carry
+python3 tools/wpj_patch.py build rig.json out.wpj   # compile, write (mode x), verify
+python3 tools/wpj_patch.py                          # self-check: the corpus rebuilt
+```
+
+The one step no donor could give: **fixtures**. A `rig.json` names a
+skeleton, the projects to read profiles from, and one line per fixture; the
+patch — records 105/106/110/111/115/116/120/125 and the eight gobo palettes —
+is compiled from that alone (`SPEC.md` §10.3, PATCH-01). The output then
+serves `wpj_show.py` / `wpj_generate.py` as their donor.
+
+| Key | Meaning |
+|---|---|
+| `skeleton` | **required** — a project of yours for everything that is not the patch; a project the W1 created from nothing is the right one. Refused if it carries record 160 |
+| `profiles_from` | projects whose profiles may be used (default: the skeleton). A profile is usable when that file holds a clean fixture of it |
+| `fixtures[]` | `profile` (name or UUID), `dmx` (1-based, as the panel shows it), `group` (`"A"`…`"H"`) |
+| `groups` | `{"A": "Pars", …}` group names |
+| `gobo_names` | `{"A": {"<gobo id>": "Etoile"}}` pad names per group |
+| `name` | project name |
+
+After writing it reloads the file, runs all 24 identities and the anomaly
+detectors, and checks every compiled record reads back; on any failure the
+output is deleted. **The trap:** the corpus proves the *bytes*, not the
+device — PATCH-02, the one open at the panel, is unrun. And a fixture added to
+group B by this tool is clean where the device's own add drops an entry
+(COV-53): a difference from the device that is a correction, not a defect.
+
 ## `wpj_position.py` — the position model, executable
 
 ```bash

@@ -1432,10 +1432,12 @@ own refutation: the byte does not track preset creation, and it moves back.
 `has_intensity` (`f1`) when a profile of the group has a dimmer or a colour
 channel, `has_color` (`f2`) a colour channel — the colour wheel counts —
 `has_gobo` (`f5`) a gobo wheel, `has_move` (`f7`) pan/tilt: 1026 of 1026
-corpus groups. They gate the panel's pages — a par group given `f5`/`f7`
-offers `MOVE FX` (PATCH-02), and PATCH-03 is the single-variable check. A
-writer derives them; whether a stale flag survives a fixture's removal, as
-the mask's bits do, is unmeasured.
+corpus groups. They gate the panel's pages: a par group given `f5`/`f7`
+offers `MOVE FX` (PATCH-02), and with record 125 as the only variable the
+page greys out when `has_move` goes — **device-confirmed** for that flag
+(PATCH-03), the other three at the corpus's word. A writer derives them;
+whether a stale flag survives a fixture's removal, as the mask's bits do, is
+unmeasured.
 
 ### 7.3 Record 130 is the DMX IN mapping table — **[device-confirmed]**
 
@@ -2148,7 +2150,7 @@ changelog.
 | Q9 | **Which of the two paths the panel follows.** `SET_MODE` and the front-panel keys move the device differently (SCREEN-03), and nothing has measured which one the displayed screen tracks. | A capture where the two disagree and the panel is watched. |
 | Q10 | **The colour engine's `f2` at 150 and 200.** `f2` is the fade, and above 100 it is move's `Flick` — but the manual gives colour no `Flick`. | The residual of L9, and the only part of the FX submessage that does not read cleanly. |
 | Q11 | **Variants B and C below the top level.** EXP-06 aligned profiles, patch, preset names and the FX banks against a variant-A twin, which is far more than "only the top level is mapped" — but it is one pair, and the campaign was never run out. | Its own campaign, on more than one pair. |
-| ~~Q13~~ | **Closed 2026-09-04.** A compiled patch opens on the W1, reads as compiled on DMX and survives the device's own save byte for byte (PATCH-02, firmware 2.0.19). What it left is 125's capability flags, read from the corpus the same day (COV-68) and awaiting PATCH-03. | — |
+| ~~Q13~~ | **Closed 2026-09-04.** A compiled patch opens on the W1, reads as compiled on DMX and survives the device's own save byte for byte (PATCH-02, firmware 2.0.19). What it left is 125's capability flags, read from the corpus the same day (COV-68) and confirmed for `has_move` by PATCH-03. | — |
 | Q12 | **Transposition off this rig.** §3.4's palette rule, and most of the static layer, were measured on **one** group of **one** profile. Nothing contradicts the general rule; nothing tests it either. | A second rig. |
 
 ## References

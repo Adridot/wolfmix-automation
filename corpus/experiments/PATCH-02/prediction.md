@@ -134,3 +134,29 @@ verified twice, restart, one frame — then **operator:** reopen
 
 If Q1 fails with Q2–Q4 holding, the flags are not what gates the pages and
 COV-68 stays a corpus correlation without a meaning.
+
+**Deploy, as it went.** The store and its first verification passed; the
+reconnect after the restart opened the port without the 2.0.19 flag, so the
+second verification, the frame and the rollback were all refused, and the
+runner marked a failed rollback. A download by hand showed the controller
+holding `candidate-v2` exactly (101 apart), version `…012711`, 10 807 bytes;
+the state was cleared, the flag threaded through those two paths, and Q4's
+frame is captured by hand after the reopen.
+
+## Results, PATCH-03
+
+| # | Outcome |
+|---|---|
+| Q1 | **held** for `MOVE FX` — greyed on B and C, operator at the panel; the gobo page was not reported |
+| Q2, Q3 | not contradicted; the operator reported the change, not the pages that stayed |
+| Q4 | **held** — `rest-v2.json`, 200 frames, 0 animated, 41 non-zero channels, **not one differs** from `rest.json` |
+
+One record changed between the two candidates, 125, and one thing changed at
+the panel: `has_move` gates `MOVE FX`. **Device-confirmed** for that flag;
+`has_gobo`, `has_color` and `has_intensity` stay at the corpus's word.
+
+The operator's objection — «the bar is supposed to have move» — is about the
+profile, not the flag: `LED BAR 252 RGB` carries no pan/tilt feature in
+record 110, and in *rig-b*, written by the device, the group holding that bar
+carries `has_intensity has_color` and nothing else. The compiler did what
+the device does.

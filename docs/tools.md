@@ -40,11 +40,19 @@ The following conventions hold across these groups:
   and fails on **an import the standard library does not have** — the
   repository's first invariant, which until now was a promise in three
   documents and a habit in the code.
-- **`wpj_links.py` checks the cross-references.** Every Markdown link in a
-  tracked document must land on a tracked path; a renamed file that leaves a
+- **`wpj_links.py` checks the cross-references.** Every local Markdown link in a
+  tracked document must land on a tracked path and, when supplied, an existing
+  section anchor; a renamed file or section that leaves a
   document pointing at nothing fails `make check`. It also checks **finding
   ids**: every `ACC-01`-shaped citation anywhere in the tree must resolve to an
   entry in [`research/evidence.md`](../research/evidence.md).
+- **The architecture gate checks maintainability declarations.** Public
+  functions and class methods in `tools/` and `tests/` must have parameter and
+  return annotations; private helpers and function-local test doubles are out
+  of scope. Tools declare their module group, and the independent inspector
+  cannot import the production reader. Maintained root/docs pages name their
+  reader and question and have a direct README link. Historical reports and
+  evidence are exempt. This is annotation coverage, not static type checking.
 - **`wpj_counts.py` checks the figures.** Counts that move as the work moves
   — decoded and passthrough records, identities, checks — are computed from
   the code. A document that states one marks it with `<!--count:name-->` or

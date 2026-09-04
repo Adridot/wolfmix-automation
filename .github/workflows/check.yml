@@ -24,8 +24,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The measured floor and a current one. `tools/check.py` shells out to
-        # `python3`, so the matrix reaches every self-check, not just this
+        # The measured floor and a current one. `tools/check.py` uses its own
+        # interpreter, so the matrix reaches every self-check, not just this
         # step's interpreter.
         python-version: ['3.10', '3.14']
     steps:

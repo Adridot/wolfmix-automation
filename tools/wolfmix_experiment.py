@@ -15,7 +15,6 @@ on the W1, then run `arm`. Everything after that is automatic.
 
 from __future__ import annotations
 from os import PathLike
-import wolfmix_device as device
 import argparse
 import datetime
 import io

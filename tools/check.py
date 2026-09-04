@@ -27,6 +27,7 @@ absent, and their hardware-free checks are separate `self-test` subcommands.
 from __future__ import annotations
 from collections.abc import Sequence
 import argparse
+import ast
 import os
 import subprocess
 import sys
@@ -63,15 +64,77 @@ CONTROLES = [
 ]
 
 # What the summary counts: the subprocesses above, plus the in-process
-# stdlib-only step below. `wpj_counts.py` reads this rather than len(CONTROLES),
+# stdlib-only and architecture steps below. `wpj_counts.py` reads this rather than len(CONTROLES),
 # so a document quoting the number cannot drift from what a run prints.
-NOMBRE_DE_CONTROLES = len(CONTROLES) + 1
+NOMBRE_DE_CONTROLES = len(CONTROLES) + 2
 
 PASSE, ABSTENU, ECHEC = "passed", "abstained", "failed"
 
 # The repository's first invariant had no gate until now: "standard library
 # only" was a promise in three documents and a habit in the code.
 NOTRES = ("tools", "tests")
+
+
+def architecture_errors(root: Path = Path(RACINE)) -> list[str]:
+    """Check public annotations, module ownership and maintained-doc navigation.
+
+    This checks declarations, not type correctness. Nested function-local test
+    doubles and private helpers are not public interfaces. Historical reports,
+    research and corpus predictions are deliberately outside the doc policy.
+    """
+    from wpj_links import cibles, resoudre
+
+    errors = []
+    for folder in NOTRES:
+        for path in sorted((root / folder).rglob("*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"), str(path))
+            label = path.relative_to(root)
+            doc = ast.get_docstring(tree) or ""
+            if not doc:
+                errors.append(f"{label}: missing module docstring")
+            if folder == "tools":
+                groups = ("Format", "Composition", "Device", "Resources", "Verification")
+                if not any(f"Module group: {group}." in doc for group in groups):
+                    errors.append(f"{label}: missing recognized module group")
+                if path.name == "wpj_inspect.py":
+                    for node in ast.walk(tree):
+                        names = ([a.name for a in node.names] if isinstance(node, ast.Import)
+                                 else [node.module or ""] if isinstance(node, ast.ImportFrom)
+                                 else [])
+                        if any(n.split(".")[0] in ("wpj_wire", "wpjlib", "wpj_codec")
+                               for n in names):
+                            errors.append(f"{label}:{node.lineno}: oracle imports production reader")
+            declarations = list(tree.body)
+            for node in tree.body:
+                if isinstance(node, ast.ClassDef):
+                    declarations.extend(node.body)
+            for node in declarations:
+                if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                if node.name.startswith("_") and not node.name.endswith("__"):
+                    continue
+                arguments = node.args.posonlyargs + node.args.args + node.args.kwonlyargs
+                arguments += [a for a in (node.args.vararg, node.args.kwarg) if a]
+                missing = [a.arg for a in arguments
+                           if a.arg not in ("self", "cls") and a.annotation is None]
+                if node.returns is None:
+                    missing.append("return")
+                if missing:
+                    errors.append(f"{label}:{node.lineno}: {node.name} lacks annotations: "
+                                  + ", ".join(missing))
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    linked = {resoudre("README.md", target) for _, target in cibles(readme)}
+    documents = sorted(root.glob("*.md")) + sorted((root / "docs").rglob("*.md"))
+    for path in documents:
+        label = path.relative_to(root).as_posix()
+        if label == "docs/report-record-120.md":
+            continue  # Historical report; its wording and status remain frozen.
+        introduction = "\n".join(path.read_text(encoding="utf-8").splitlines()[:15])
+        if "Reader:" not in introduction or "Question:" not in introduction:
+            errors.append(f"{label}: missing Reader: / Question: introduction")
+        if label != "README.md" and label not in linked:
+            errors.append(f"{label}: no direct link from README.md")
+    return errors
 
 
 def imports_hors_stdlib() -> list[tuple[Path, int, str]]:
@@ -82,7 +145,6 @@ def imports_hors_stdlib() -> list[tuple[Path, int, str]]:
     it. `sys.stdlib_module_names` is the authority — it is what this
     interpreter actually ships.
     """
-    import ast
     trouves = []
     for dossier in NOTRES:
         for chemin in sorted(Path(RACINE, dossier).rglob("*.py")):
@@ -106,6 +168,8 @@ def imports_hors_stdlib() -> list[tuple[Path, int, str]]:
 
 def executer(commande: Sequence[str]) -> tuple[int, str]:
     """(exit code, combined output). The output is echoed as it is captured."""
+    # Keep the selected interpreter throughout a Python-version matrix.
+    commande = [sys.executable, *commande[1:]] if commande[0] == "python3" else commande
     resultat = subprocess.run(commande, cwd=RACINE, text=True,
                               stdout=subprocess.PIPE,
                               stderr=subprocess.STDOUT)
@@ -165,6 +229,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ok — {NOMBRE_DE_CONTROLES} checks in this run, none of them "
               "needs a dependency")
         resultats.append(("stdlib-only", PASSE, ""))
+    print("--- architecture: public interfaces and documentation entry points")
+    problems = architecture_errors()
+    for problem in problems:
+        print(problem, file=sys.stderr)
+    resultats.append(("architecture", ECHEC if problems else PASSE, ""))
+    if not problems:
+        print("ok — public annotations, module groups, independent oracle and documentation map")
     for nom, commande in CONTROLES:
         print(f"--- {nom}: {' '.join(commande)}")
         etat, ligne = classer(*executer(commande))

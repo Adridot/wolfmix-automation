@@ -14,9 +14,9 @@ An oracle that shares its code with what it verifies only proves that code
 agrees with itself. The other duplications are gone: this file replaces
 `tlv.py` and `dump.py`.
 
-Every refusal is a `WireError` (a `ValueError`): never an assertion — those
-vanish under `python3 -O` — and never a standard-library exception passed
-through as-is.
+Read refusals use `WireError` (a `ValueError`), except for the source-labeled
+container adapter which preserves Wpj's `ValueError` diagnostics. No assertion
+validates input — those vanish under `python3 -O`.
 
 Usage :
   wpj_wire.py project.wpj            the container's record inventory

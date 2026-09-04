@@ -256,7 +256,7 @@ class Element:
         return f"<{self.tag} {len(self.attrs)} attrs, {len(self.enfants)} enfants>"
 
 
-def parse(xml: bytes, source: str = '<xml>') -> Element:
+def parse(xml: bytes | str, source: str = '<xml>') -> Element:
     """XML bytes → Element tree. Raises rather than reading a file partly."""
     if isinstance(xml, bytes):
         xml = xml.decode("latin-1")

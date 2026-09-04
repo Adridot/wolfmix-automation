@@ -71,3 +71,23 @@ time on the same skeleton, in this order: `105.f1` (library_id), the omitted
 `115.f9`, record 125's flags. One variable per upload.
 
 > No offset encoder, no preset, no FX is touched anywhere in this sheet.
+
+## Results, steps 1–3 (2026-09-04, firmware 2.0.19)
+
+| # | Outcome |
+|---|---|
+| P1 | **held** — stored as `WMX EXP patch02`, uuid `46642f4b-…`, 10 815 bytes, verified by download |
+| P2 | **held** — the project opens; operator-reported at the panel |
+| P3 | **held** — six fixtures listed; operator-reported, photograph pending |
+| P4 | **held exactly** — `rest.json`, 200 frames at 25.0 Hz, 0 animated channels: 109/119/129 = **4**, 110/120/130 = **127**, 200 = **68** |
+| P5 | **refuted, and explained by the frame** — pan 102 / tilt 128 on the head at 001, pan 153 / tilt 128 at 017: the two heads sit **fanned** around 127.5, so the skeleton's position layer drives them as two members of group A |
+
+What the frame says beyond the sheet, 1-based channels, from `rest.json`:
+
+- **head at 001**: 102 128 102 0 · 0 0 **241 220** 88 0 · 0 0 127 0 **192** 0 — shutter and dimmer at the record-120 defaults, the colour wheel at 88 and channel 13 at 127 driven by engines, focus at its default;
+- **pars at 101 / 111 / 121**, identical: **255 255 127 0 0 255 0** 0 4 127 — dimmer, red, green, blue, white, amber, uv addressed on the exact channels the compiled 106 names, a static colour (R 255, G 127, A 255) applied to all three;
+- **bar at 200**: 68 0 · 255 127 0 · 255 127 0 · 255 127 0 — the same colour on each of the **three cells**, which is the three-block layout read correctly.
+
+A patch whose roles were wrong would put a colour on a wheel or a dimmer on a
+fine channel; none of the 41 non-zero channels is misplaced. **Not device-
+confirmed yet**: steps 4 (the no-change save and the read-back) are unrun.

@@ -1,0 +1,7 @@
+{
+  "base": "corpus/experiments/PATCH-02/candidate-v2.wpj",
+  "presets": [
+    {"id": 1, "template": 0, "name": "Rappel bleu",
+     "static_color": [[4], [4], [4], [4], [4], [4], [4], [4]]}
+  ]
+}

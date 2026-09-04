@@ -1,0 +1,15 @@
+{
+  "skeleton": "corpus/experiments/PATCH-02/clean-v9.wpj",
+  "profiles_from": ["corpus/projects/rig-b.wpj", "corpus/experiments/PATCH-02/clean-v9.wpj"],
+  "name": "PATCH-02",
+  "groups": {"A": "Lyres", "B": "Pars", "C": "Barre"},
+  "gobo_names": {"A": {"425": "Etoile"}},
+  "fixtures": [
+    {"profile": "Lyre ZQ02244",        "dmx": 1,   "group": "A"},
+    {"profile": "Lyre ZQ02244",        "dmx": 17,  "group": "A"},
+    {"profile": "6x18W 6in1 RGBAW UV", "dmx": 101, "group": "B"},
+    {"profile": "6x18W 6in1 RGBAW UV", "dmx": 111, "group": "B"},
+    {"profile": "6x18W 6in1 RGBAW UV", "dmx": 121, "group": "B"},
+    {"profile": "LED BAR 252 RGB",     "dmx": 200, "group": "C"}
+  ]
+}

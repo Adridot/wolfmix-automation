@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Writes gobo icons into a copy of the W1's flash image.
 
+Module group: Resources. Reference: docs/tools.md.
+
 The exact inverse of `gobo_library.Library.icon()`: an icon is a 1728-byte
 block, 24x24 pixels, 3 interleaved bytes per pixel — RGB565 little-endian then
 8-bit alpha. The size is fixed and the table's pointers are absolute: we
@@ -20,6 +22,10 @@ image generator produces from "white motif on a black background".
 
 The stock icons are the manufacturer's work: nothing is extracted here.
 """
+
+from __future__ import annotations
+from os import PathLike
+from collections.abc import Callable, Iterable, Mapping, Sequence
 import collections
 import datetime
 import hashlib
@@ -36,12 +42,15 @@ from gobo_library import ICON, SIDE, Library, find_flash, write_png
 PIXELS = SIDE * SIDE
 
 
-def raw_icon(lib, gobo_id):
+Pixel = tuple[int, int, int, int]
+
+
+def raw_icon(lib: Library, gobo_id: int) -> bytes:
     off = lib.ptrs[gobo_id] - lib.base
     return lib.data[off:off + ICON]
 
 
-def decode_raw(raw):
+def decode_raw(raw: bytes) -> list[Pixel]:
     """1728 bytes → 576 (r, g, b, a) quadruples on 8 bits."""
     out = []
     for i in range(0, ICON, 3):
@@ -53,7 +62,7 @@ def decode_raw(raw):
     return out
 
 
-def encode(pixels):
+def encode(pixels: Sequence[Pixel]) -> bytes:
     """576 quadruplets (r, g, b, a) → 1728 octets.
 
     The +127 rounding is what makes the round trip exact: truncation would
@@ -70,7 +79,7 @@ def encode(pixels):
     return bytes(out)
 
 
-def read_png(path):
+def read_png(path: str | PathLike[str]) -> tuple[int, int, list[Pixel]]:
     """Minimal PNG reader: 8 bits per channel, RGB or RGBA, non-interlaced."""
     with open(path, "rb") as flux:
         data = flux.read()
@@ -148,7 +157,12 @@ def read_png(path):
     return width, height, pixels
 
 
-def downscale(width, height, pixels, value):
+def downscale(
+    width: int,
+    height: int,
+    pixels: Sequence[Pixel],
+    value: Callable[[Pixel], tuple[int, ...]],
+) -> list[tuple[int, ...]]:
     """Area average of an N×N square down to 24×24, one value per source pixel.
 
     `value` extracts what gets averaged: a tuple (channels) or a scalar. The
@@ -174,7 +188,7 @@ def downscale(width, height, pixels, value):
     return out
 
 
-def load_image(path):
+def load_image(path: str | PathLike[str]) -> list[Pixel]:
     """A PNG with no alpha channel makes the icon fully opaque: the stock icons
     are cut out, so exporting as RGB flattens that cut-out away."""
     width, height, pixels = read_png(path)
@@ -183,7 +197,7 @@ def load_image(path):
     return downscale(width, height, pixels, lambda p: p)
 
 
-def load_mask(path):
+def load_mask(path: str | PathLike[str]) -> list[Pixel]:
     """Silhouette: luminance × alpha of the source PNG → alpha channel, shape
     rendered in white. The inverse of a flat "white on black"."""
     width, height, pixels = read_png(path)
@@ -193,7 +207,7 @@ def load_mask(path):
     return [(255, 255, 255, v[0]) for v in lum]
 
 
-def solid(spec):
+def solid(spec: str) -> list[Pixel]:
     """`#RRGGBB` → a solid, opaque icon."""
     if len(spec) != 7:
         raise ValueError(f"colour expected as #RRGGBB, got \"{spec}\"")
@@ -201,7 +215,7 @@ def solid(spec):
     return [(r, g, b, 255)] * PIXELS
 
 
-def patch(lib, edits):
+def patch(lib: Library, edits: Mapping[int, Sequence[Pixel]]) -> bytes:
     """edits: {gobo_id: pixels} → the modified flash image, same length.
 
     Refuses any icon whose pointer is shared: in the 2.0.18 table, "Open"
@@ -224,7 +238,7 @@ def patch(lib, edits):
     return bytes(data)
 
 
-def verify(before, after, lib, ids):
+def verify(before: bytes, after: bytes, lib: Library, ids: Iterable[int]) -> int:
     """The diff must fit exactly inside the targeted icons' windows."""
     if len(before) != len(after):
         raise ValueError("the flash image's length changed")
@@ -240,11 +254,18 @@ def verify(before, after, lib, ids):
                for x, y in zip(before[lo:hi], after[lo:hi]))
 
 
-def sha256(donnees):
+def sha256(donnees: bytes) -> str:
     return hashlib.sha256(donnees).hexdigest()
 
 
-def manifeste(source, lib, sortie, data, edits, changed):
+def manifeste(
+    source: str | PathLike[str],
+    lib: Library,
+    sortie: str | PathLike[str],
+    data: bytes,
+    edits: Mapping[int, Sequence[Pixel]],
+    changed: int,
+) -> dict[str, object]:
     """What it takes to prove later that this copy came from that bundle.
 
     Length alone proves nothing: any file of the same size used to pass the
@@ -265,7 +286,7 @@ def manifeste(source, lib, sortie, data, edits, changed):
     }
 
 
-def ecrire(sortie, data, contenu):
+def ecrire(sortie: str | PathLike[str], data: bytes, contenu: dict[str, object]) -> None:
     """The patched file then its manifest; either one alone is useless."""
     with open(sortie, "xb") as handle:
         handle.write(data)
@@ -278,9 +299,7 @@ def ecrire(sortie, data, contenu):
         raise
 
 
-def self_test(path):
-    # Quantisation must be reversible over the whole range, or the round trip
-    # would hold only by luck on the manufacturer's icons.
+def self_test(path: str | PathLike[str]) -> None:
     for v in range(32):
         assert ((v * 255 // 31) * 31 + 127) // 255 == v, v
     for v in range(64):
@@ -416,7 +435,7 @@ def _parseur():
     return parseur
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     parseur = _parseur()
     args = parseur.parse_args(argv)
     path = find_flash(args.flash or os.environ.get("WOLFMIX_FLASH"))

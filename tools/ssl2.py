@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Read, write and generate Nicolaudie `.ssl2` fixture profiles.
 
+Module group: Resources. Reference: docs/tools.md.
+
 An `.ssl2` file is XML under AraCrypt, a three-LFSR stream cipher. Why that is
 read here at all, and the four conditions it depends on, is `LEGAL.md`; the
 format itself is `docs/ssl2-format.md`. Nothing from the vendor's library is
@@ -18,6 +20,10 @@ Three layers, each with its own oracle:
 
 `verify` runs the first two over the local library and is the self-check.
 """
+
+from __future__ import annotations
+from os import PathLike
+from collections.abc import Iterable, Iterator, Sequence
 import argparse
 import copy
 import glob
@@ -93,7 +99,7 @@ def _keystream(n, key=CLE_DEFAUT):
 _CACHE = {}
 
 
-def transforme(data, key=CLE_DEFAUT):
+def transforme(data: bytes, key: str = CLE_DEFAUT) -> bytes:
     """Encrypt or decrypt: the same operation, on the NUL caveat below."""
     n = len(data)
     if not n:
@@ -120,7 +126,7 @@ class VersionNonPriseEnCharge(ValueError):
     library is full of these, and calling them corrupt would be a lie."""
 
 
-def classe(clair):
+def classe(clair: bytes) -> str | None:
     """What a decrypted payload is: "v3", "v2", or None if it is not SSL2.
 
     The prolog cannot carry this: `VERSION="2"` files have no `<?xml` at all,
@@ -133,7 +139,7 @@ def classe(clair):
     return f"v{version.group(1).decode()}" if version else "v?"
 
 
-def charge_xml(chemin, key=CLE_DEFAUT):
+def charge_xml(chemin: str | PathLike[str], key: str = CLE_DEFAUT) -> bytes:
     """Decrypt a file, and say precisely what it is when we cannot read it."""
     with open(chemin, "rb") as flux:
         clair = dechiffre(flux.read(), key)
@@ -158,12 +164,12 @@ BIBLIO_DEFAUT = "/Applications/Easy View/ScanLibrary"
 ABSTENTION = "ABSTAINED"
 
 
-def fichiers_biblio():
+def fichiers_biblio() -> list[str]:
     racine = os.environ.get(BIBLIO_ENV) or BIBLIO_DEFAUT
     return sorted(glob.glob(os.path.join(racine, "**", "*.ssl2"), recursive=True))
 
 
-def pas_de_biblio():
+def pas_de_biblio() -> None:
     racine = os.environ.get(BIBLIO_ENV) or BIBLIO_DEFAUT
     print(f"ssl2: {ABSTENTION} — aucune bibliothèque dans {racine}, rien n'a "
           f"été vérifié (voir docs/ssl2-format.md)", file=sys.stderr)
@@ -194,11 +200,11 @@ _ATTR = re.compile(r'\s+([A-Z0-9]+)="([^"]*)"')
 # Bytes travel as latin-1 text: every byte round-trips, and a name the vendor
 # stored as mojibake stays the bytes it was rather than being "fixed" on the
 # way through. `vers_utf8`/`depuis_utf8` are the two doors in and out.
-def depuis_utf8(s):
+def depuis_utf8(s: str) -> str:
     return s.encode("utf-8").decode("latin-1")
 
 
-def vers_utf8(s):
+def vers_utf8(s: str) -> str:
     return s.encode("latin-1").decode("utf-8", "replace")
 
 
@@ -208,7 +214,13 @@ class Element:
     __slots__ = ("tag", "attrs", "enfants", "vide", "avant", "fin", "blancfin",
                  "prologue", "queue")
 
-    def __init__(self, tag, attrs=None, enfants=None, vide=None):
+    def __init__(
+        self,
+        tag: str,
+        attrs: dict[str, str] | None = None,
+        enfants: list[Element] | None = None,
+        vide: bool | None = None,
+    ) -> None:
         self.tag = tag
         # Whitespace as it was found: `avant` precedes this element's `<`,
         # `fin` precedes its `</`. On the root, `prologue` and `queue` hold the
@@ -227,24 +239,24 @@ class Element:
         # one byte and it is the difference between a round trip and a diff.
         self.blancfin = " " if self.vide else ""
 
-    def __getitem__(self, nom):
+    def __getitem__(self, nom: str) -> str:
         return self.attrs[nom]
 
-    def get(self, nom, defaut=None):
+    def get(self, nom: str, defaut: str | int | None = None) -> str | int | None:
         return self.attrs.get(nom, defaut)
 
-    def trouve(self, tag):
+    def trouve(self, tag: str) -> Iterator[Element]:
         """Every descendant with this tag, in document order."""
         for e in self.enfants:
             if e.tag == tag:
                 yield e
             yield from e.trouve(tag)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<{self.tag} {len(self.attrs)} attrs, {len(self.enfants)} enfants>"
 
 
-def parse(xml, source="<xml>"):
+def parse(xml: bytes, source: str = '<xml>') -> Element:
     """XML bytes → Element tree. Raises rather than reading a file partly."""
     if isinstance(xml, bytes):
         xml = xml.decode("latin-1")
@@ -288,7 +300,7 @@ def parse(xml, source="<xml>"):
     return racine
 
 
-def write(racine):
+def write(racine: Element) -> bytes:
     """Element tree → XML bytes. Deterministic: no option, no choice."""
     morceaux = [racine.prologue]
 
@@ -311,14 +323,14 @@ def write(racine):
     return "".join(morceaux).encode("latin-1")
 
 
-def charge(chemin, key=CLE_DEFAUT):
+def charge(chemin: str | PathLike[str], key: str = CLE_DEFAUT) -> Element:
     """A `.ssl2` on disk → the parsed tree, root checked."""
     racine = parse(charge_xml(chemin, key), chemin)
     verifie_racine(racine, chemin)
     return racine
 
 
-def verifie_racine(racine, source="<xml>"):
+def verifie_racine(racine: Element, source: str = '<xml>') -> Element:
     """What this codec claims to understand, and nothing wider.
 
     The online store also serves VERSION="2" and files that are not well-formed
@@ -337,7 +349,7 @@ def verifie_racine(racine, source="<xml>"):
     return racine
 
 
-def echappe(s):
+def echappe(s: str) -> str:
     """Escape a value for an attribute. Used by the generator, never by the
     codec: the corpus's own escaping passes through verbatim."""
     return (s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
@@ -628,13 +640,13 @@ NUM_CANAL = {nom.lower(): n for n, (nom, _, _) in TYPE_CANAL.items()}
 NUM_PRESET = {nom.lower(): n for n, (nom, _, _) in TYPE_PRESET.items()}
 
 
-def num_canal(nom):
+def num_canal(nom: str | int) -> int:
     """A channel type by name or by number. Refuses anything else — an unknown
     type would be written into the file and silently mean something."""
     return _num(nom, NUM_CANAL, TYPE_CANAL, "canal")
 
 
-def num_preset(nom):
+def num_preset(nom: str | int) -> int:
     return _num(nom, NUM_PRESET, TYPE_PRESET, "preset")
 
 
@@ -759,7 +771,7 @@ MARQUEUR_FIN = "µ".encode("utf-8").decode("latin-1")     # « Âµ »
 NOM_FIN = "{} (" + MARQUEUR_FIN + ")"
 
 
-def genere(description):
+def genere(description: dict[str, object]) -> Element:
     """A description → the Element tree of a profile. Deterministic: the same
     description gives the same bytes, which is what makes a diff meaningful."""
     nom = _texte(description, "name")
@@ -818,10 +830,10 @@ class _Globaux:
     bookkeeping and cannot be read off a file, so this uses `(type, name)`.
     """
 
-    def __init__(self, graine):
+    def __init__(self, graine: str) -> None:
         self.graine, self.par_cle, self.canaux = graine, {}, []
 
-    def lien(self, el):
+    def lien(self, el: Element) -> str:
         """The UID of `el`'s global entry, creating it on first sight."""
         cle = (el["SSLCHANNELTYPE"], el["SSLCHANNELNAME"])
         uid = self.par_cle.get(cle)
@@ -831,7 +843,7 @@ class _Globaux:
             self.canaux.append(_copie_globale(el, uid))
         return uid
 
-    def element(self):
+    def element(self) -> Element:
         return Element("SSLGCHANNELS", {"SSLNBCHANNEL": str(len(self.canaux))},
                        self.canaux, vide=not self.canaux)
 
@@ -1160,7 +1172,7 @@ def _texte(description, cle):
     return valeur
 
 
-def compare(a, b, chemin="", sortie=None):
+def compare(a: Element, b: Element, chemin: str = '', sortie: list[str] | None = None) -> list[str]:
     """Structural diff of two profiles: what differs, where, and how.
 
     Not a text diff — the point is to say "this attribute is missing" or "this
@@ -1193,7 +1205,7 @@ def compare(a, b, chemin="", sortie=None):
     return sortie
 
 
-def recalcule_enums(fichiers):
+def recalcule_enums(fichiers: Iterable[str | PathLike[str]]) -> dict[str, object]:
     """Recount every table from a library. What `enums` compares them to.
 
     Four accumulators, one pass:
@@ -1261,7 +1273,7 @@ def _normalise(nom):
     return _PONCTU.sub(" ", _INDEX.sub("", nom).lower()).strip()
 
 
-def compare_enums(fichiers):
+def compare_enums(fichiers: Iterable[str | PathLike[str]]) -> int:
     """Print the recomputed tables against the embedded ones.
 
     A number the library has and the table does not (or the reverse) is a
@@ -1379,7 +1391,7 @@ def _compare_defauts(mesure):
     return ecarts
 
 
-def verifie(fichiers, bavard=False):
+def verifie(fichiers: Sequence[str | PathLike[str]], bavard: bool = False) -> tuple[int, int, int]:
     """The oracle: decrypt → parse → write → encrypt, back to the same bytes.
 
     Both round trips at once, on real files, because they fail differently: a
@@ -1656,7 +1668,7 @@ def _auto_test(echantillon=400):
           file=sys.stderr)
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--cle", default=CLE_DEFAUT, help="clé AraCrypt")
     sous = ap.add_subparsers(dest="commande")

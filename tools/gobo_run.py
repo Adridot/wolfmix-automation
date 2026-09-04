@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """The gobo job, guided: where the working directory stands, and what is next.
 
+Module group: Resources. Reference: docs/tools.md.
+
 The six steps of `docs/gobo-icons.md` each belong to a tool of this repository.
 What belonged to nobody were the gates *between* them — and on real hardware a
 skipped step is expensive. This tool patches nothing, talks to no device and
@@ -34,6 +36,9 @@ operator's: silhouettes, patched flash and contact sheet are their fixture's
 data and never enter this repository (LEGAL.md) — a directory under the
 repository tree is refused.
 """
+
+from __future__ import annotations
+from os import PathLike
 import glob
 import hashlib
 import json
@@ -52,7 +57,7 @@ BACKUP, PATCHED, SHEET = "backup", "flash-custom.bin", "sheet.png"
 MANIFEST = "changelog.json"
 
 
-def sha256(path):
+def sha256(path: str | PathLike[str]) -> str:
     digest = hashlib.sha256()
     with open(path, "rb") as stream:
         for block in iter(lambda: stream.read(1 << 20), b""):
@@ -60,19 +65,19 @@ def sha256(path):
     return digest.hexdigest()
 
 
-def digests(directory):
+def digests(directory: str | PathLike[str]) -> dict[str, str]:
     """{name: sha256} of the files directly under `directory`."""
     names = sorted(os.listdir(directory))
     return {n: sha256(os.path.join(directory, n)) for n in names
             if os.path.isfile(os.path.join(directory, n))}
 
 
-def under(path, parent):
+def under(path: str | PathLike[str], parent: str | PathLike[str]) -> bool:
     parent = os.path.realpath(parent)
     return os.path.realpath(path).startswith(parent + os.sep)
 
 
-def manifest_state(bundle):
+def manifest_state(bundle: str | PathLike[str]) -> tuple[str, int | str | None]:
     """The live bundle against the manifest it ships with — three outcomes.
 
     Not a boolean: ("absent", None) when there is nothing to check against,
@@ -96,7 +101,7 @@ def manifest_state(bundle):
     return "verified", len(listed)
 
 
-def gate_backup(backup, bundle):
+def gate_backup(backup: str | PathLike[str], bundle: str | PathLike[str]) -> tuple[bool, str]:
     provenance, what = manifest_state(bundle)
     if provenance == "diverges":
         return False, (f"the live bundle contradicts its own {MANIFEST} at "
@@ -118,7 +123,7 @@ def gate_backup(backup, bundle):
     return True, f"{len(live)} files, {len(live)} matching SHA-256, {checked}"
 
 
-def gate_patched(patched, flash):
+def gate_patched(patched: str | PathLike[str], flash: str | PathLike[str]) -> tuple[bool, str]:
     """The chain installed bundle → manifest → the file that goes in the device.
 
     Length proves nothing: an arbitrary file of the same size used to pass this
@@ -153,7 +158,7 @@ def gate_patched(patched, flash):
                   f"{len(manifest.get('ids', []))} icon(s), chain verified")
 
 
-def upload_plan(work):
+def upload_plan(work: str | PathLike[str]) -> tuple[bytes, dict[str, object]]:
     """Return a flash image only after the complete local upload proof passes."""
     if os.path.realpath(work) == os.path.realpath(REPO) or under(work, REPO):
         raise ValueError("the gobo working directory must be outside the repository")
@@ -220,7 +225,7 @@ def upload_plan(work):
     }
 
 
-def gates(work, flash):
+def gates(work: str | PathLike[str], flash: str | PathLike[str]) -> list[tuple[str, bool, str]]:
     """[(label, green, detail)] in the order of the recipe's steps."""
     bundle = os.path.dirname(flash)
     backup = os.path.join(work, BACKUP)
@@ -249,7 +254,11 @@ def gates(work, flash):
     return states
 
 
-def next_step(states, work, flash):
+def next_step(
+    states: list[tuple[str, bool, str]],
+    work: str | PathLike[str],
+    flash: str | PathLike[str],
+) -> str | None:
     """The text of the next step: the first red gate, or the device."""
     bundle = os.path.dirname(flash)
     patched = os.path.join(work, PATCHED)
@@ -284,7 +293,7 @@ def next_step(states, work, flash):
             f"      sheet {os.path.join(work, SHEET)} 342,343")
 
 
-def report(work, flash):
+def report(work: str | PathLike[str], flash: str | PathLike[str]) -> tuple[str, bool]:
     states = gates(work, flash)
     width = max(len(e[0]) for e in states)
     lines = [f"working directory  {work}",
@@ -295,7 +304,7 @@ def report(work, flash):
     return "\n".join(lines), all(e[1] for e in states)
 
 
-def self_test():
+def self_test() -> None:
     import tempfile
     with tempfile.TemporaryDirectory() as tmp:
         bundle = os.path.join(tmp, "wm-fw-bundle-2.0.18")
@@ -426,7 +435,7 @@ def _parser():
     return parser
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.directory is None:
         self_test()

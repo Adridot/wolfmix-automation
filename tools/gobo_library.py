@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """The W1's gobo icon library, read from the local flash image (read-only).
 
+Module group: Resources. Reference: docs/tools.md.
+
 A table of 800 30-byte entries at the end of `wolfmixFlash.bin`:
 `ptr u32 LE | 6 bytes (colour/flags) | 20-byte NUL-terminated name`. Each `ptr`
 points at a 1728-byte icon = 24x24 px, RGB565 LE + 8-bit alpha. The entry's
@@ -10,6 +12,10 @@ fixture profile. This module is read-only; the guarded device upload lives in
 
 The icons are the manufacturer's work: renders stay outside the repository.
 """
+
+from __future__ import annotations
+from os import PathLike
+from collections.abc import Iterator, Sequence
 import glob
 import os
 import struct
@@ -30,7 +36,7 @@ FLASH_GLOBS = (
 )
 
 
-def version_tuple(chemin):
+def version_tuple(chemin: str) -> tuple[int, ...]:
     """`wm-fw-bundle-2.0.18` → (2, 0, 18); with no number, (-1,) — never chosen
     over a readable version. Lexical order put 2.0.9 after 2.0.18."""
     nom = os.path.basename(os.path.dirname(chemin))
@@ -39,7 +45,7 @@ def version_tuple(chemin):
     return tuple(int(m) for m in morceaux) if morceaux else (-1,)
 
 
-def flash_bundles():
+def flash_bundles() -> list[str]:
     """Every installed flash image, the most recent one first."""
     trouves = []
     for pattern in FLASH_GLOBS:
@@ -47,7 +53,7 @@ def flash_bundles():
     return sorted(set(trouves), key=version_tuple, reverse=True)
 
 
-def find_flash(path=None, version=None):
+def find_flash(path: str | None = None, version: str | None = None) -> str | None:
     """The flash image to read: the one named, the one of a requested version,
     or the most recent installed."""
     if path:
@@ -60,7 +66,7 @@ def find_flash(path=None, version=None):
 
 
 class Library:
-    def __init__(self, path):
+    def __init__(self, path: str | PathLike[str]) -> None:
         with open(path, "rb") as flux:
             self.data = flux.read()
         anchor = self.data.find(ANCHOR)
@@ -78,7 +84,7 @@ class Library:
     def _ptr(self, off):
         return struct.unpack_from("<I", self.data, off)[0] if off >= 0 else 0
 
-    def check_id(self, gobo_id):
+    def check_id(self, gobo_id: int) -> int:
         """Python would index -1 onto the last entry and raise past 800: both
         are refusals here, with the range spelled out."""
         if not isinstance(gobo_id, int) or isinstance(gobo_id, bool):
@@ -89,12 +95,12 @@ class Library:
                 f"0-{TABLE_LEN - 1}")
         return gobo_id
 
-    def name(self, gobo_id):
+    def name(self, gobo_id: int) -> str:
         self.check_id(gobo_id)
         off = self.table + gobo_id * ENTRY + 10
         return self.data[off:off + 20].split(b"\x00")[0].decode("latin1")
 
-    def icon(self, gobo_id):
+    def icon(self, gobo_id: int) -> bytes:
         """Renders the icon as 24x24 RGB, flattened onto black."""
         self.check_id(gobo_id)
         raw = self.data[self.ptrs[gobo_id] - self.base:][:ICON]
@@ -108,7 +114,7 @@ class Library:
         return bytes(out)
 
 
-def write_png(path, width, height, rgb):
+def write_png(path: str | PathLike[str], width: int, height: int, rgb: bytes) -> None:
     rows = b"".join(b"\x00" + rgb[y * width * 3:(y + 1) * width * 3]
                     for y in range(height))
 
@@ -125,7 +131,13 @@ def write_png(path, width, height, rgb):
                   + chunk(b"IEND", b""))
 
 
-def sheet(lib, ids, path, scale=4, cols=20):
+def sheet(
+    lib: Library,
+    ids: Sequence[int],
+    path: str | PathLike[str],
+    scale: int = 4,
+    cols: int = 20,
+) -> None:
     rows = (len(ids) + cols - 1) // cols
     cell = SIDE * scale
     width, height = cols * cell, rows * cell
@@ -144,7 +156,10 @@ def sheet(lib, ids, path, scale=4, cols=20):
     write_png(path, width, height, bytes(buf))
 
 
-def palette(lib, wpj):
+def palette(
+    lib: Library,
+    wpj: str | PathLike[str],
+) -> Iterator[tuple[int, list[tuple[int | None, str | None]]]]:
     """A project's gobo palettes (record 145), id → icon name."""
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from wpj_wire import load, walk
@@ -168,7 +183,7 @@ def palette(lib, wpj):
             yield group, pads
 
 
-def self_test(path):
+def self_test(path: str | PathLike[str]) -> None:
     lib = Library(path)
     assert lib.base == 0x10100000, hex(lib.base)
     for gobo_id, expected in ((0, "Open"), (342, "Gobo01"), (352, "Gobo11"),
@@ -195,7 +210,7 @@ def self_test(path):
     print(f"ok — {TABLE_LEN} entries, {len(set(lib.ptrs))} distinct icons")
 
 
-def annonce_bundle(path):
+def annonce_bundle(path: str) -> str:
     """Say which one was picked: several bundles can coexist."""
     autres = [b for b in flash_bundles() if b != path]
     if autres and not os.environ.get("WOLFMIX_FLASH"):
@@ -223,7 +238,7 @@ def _parseur():
     return parseur
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     parseur = _parseur()
     args = parseur.parse_args(argv)
     commande = args.commande or "self-test"

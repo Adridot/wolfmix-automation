@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """The W1's protocol: frames, events, protobuf, decoding.
 
+Module group: Device. Reference: docs/device.md.
+
 Nothing here touches a port or a file — only bytes and dicts. That is what
 makes this module readable on its own, and testable with no device.
 
@@ -8,6 +10,9 @@ The domains that bound what may be sent live here too: the outgoing event
 allowlist, the mutations subject to the firmware gate, the panel's own recall
 range, and the named modes.
 """
+
+from __future__ import annotations
+from collections.abc import Iterator
 import json
 import os
 import struct
@@ -164,7 +169,7 @@ MODES_MOVING_SCREEN = {1, 3, 4, 26}
 
 MODES_SCREEN_INERT = {0, 5, 16}
 
-def screen_follows(index):
+def screen_follows(index: int) -> bool | None:
     """True / False / None (never measured) — SCREEN-02."""
     if index in MODES_MOVING_SCREEN:
         return True
@@ -279,14 +284,14 @@ class WolfmixError(Exception):
 class ProtocolError(WolfmixError):
     """Raised for malformed or rejected protocol messages."""
 
-def read_varint(data, offset=0):
+def read_varint(data: bytes, offset: int = 0) -> tuple[int, int]:
     """The shared production reader, with this module's error type."""
     try:
         return wpj_wire.read_varint(data, offset)
     except wpj_wire.WireError as error:
         raise ProtocolError(str(error)) from None
 
-def protobuf_fields(data):
+def protobuf_fields(data: bytes) -> Iterator[tuple[int, int, int | bytes]]:
     """Yield ``(field_number, wire_type, value)`` tuples.
 
     One wire reader for the whole repository (``wpj_wire``); only the error
@@ -297,7 +302,7 @@ def protobuf_fields(data):
     except wpj_wire.WireError as error:
         raise ProtocolError(str(error)) from None
 
-def decode_packed_varints(data):
+def decode_packed_varints(data: bytes) -> list[int]:
     values = []
     offset = 0
     while offset < len(data):
@@ -305,7 +310,7 @@ def decode_packed_varints(data):
         values.append(value)
     return values
 
-def decode_settings(data):
+def decode_settings(data: bytes) -> dict[str, object]:
     result = {
         name: ([] if kind == "packed_uint" else "" if kind == "string"
                else False if kind == "bool" else 0.0 if kind == "float" else 0)
@@ -340,7 +345,7 @@ def decode_settings(data):
         result["unknownFields"] = inconnus
     return result
 
-def format_uuid(value):
+def format_uuid(value: bytes) -> str:
     if len(value) != 16:
         return value.hex()
     hex_value = value.hex()
@@ -393,12 +398,12 @@ def _profile_fields(data, table):
     return result
 
 
-def decode_profile(data):
+def decode_profile(data: bytes) -> dict[str, object]:
     """One fixture profile as the controller hands it over — GET_PROFILE."""
     return _profile_fields(data, PROFILE_FIELDS)
 
 
-def decode_item(data, profile=False):
+def decode_item(data: bytes, profile: bool = False) -> dict[str, object]:
     result = {}
     for number, wire_type, value in protobuf_fields(data):
         if number == 1 and wire_type == 2:
@@ -413,14 +418,14 @@ def decode_item(data, profile=False):
             result["size"] = value
     return result
 
-def decode_item_list(data, profile=False):
+def decode_item_list(data: bytes, profile: bool = False) -> list[dict[str, object]]:
     return [
         decode_item(value, profile=profile)
         for number, wire_type, value in protobuf_fields(data)
         if number == 1 and wire_type == 2
     ]
 
-def decode_project(data):
+def decode_project(data: bytes) -> dict[str, object]:
     project = {}
     for number, wire_type, value in protobuf_fields(data):
         if number == 1 and wire_type == 2:
@@ -437,7 +442,7 @@ def decode_project(data):
         raise ProtocolError("Project response contains no data")
     return project
 
-def decode_status(data):
+def decode_status(data: bytes) -> dict[str, object]:
     result = {"success": False, "description": ""}
     for number, wire_type, value in protobuf_fields(data):
         if number == 1 and wire_type == 0:
@@ -450,7 +455,7 @@ def decode_status(data):
             result["code"] = value
     return result
 
-def decode_dmx_packet(data):
+def decode_dmx_packet(data: bytes) -> dict[str, object]:
     packet = {}
     for number, wire_type, value in protobuf_fields(data):
         if number == 1 and wire_type == 2:
@@ -462,7 +467,7 @@ def decode_dmx_packet(data):
         raise ProtocolError("Malformed DMX packet")
     return packet
 
-def build_frame(message_id, event, payload=b""):
+def build_frame(message_id: int, event: int, payload: bytes = b'') -> bytes:
     if event not in ALLOWED_OUTGOING_EVENTS:
         raise ProtocolError(
             f"Outgoing event {EVENT_NAMES.get(event, event)} is not allowlisted"
@@ -470,14 +475,14 @@ def build_frame(message_id, event, payload=b""):
     size = HEADER_SIZE + len(payload)
     return struct.pack(">BIHH", VERSION, size, message_id, event) + payload
 
-def print_json(value, compact=False):
+def print_json(value: object, compact: bool = False) -> None:
     print(json.dumps(value, ensure_ascii=False, separators=(",", ":") if compact else None,
                      indent=None if compact else 2), flush=compact)
 
-def encode_varint(value):
+def encode_varint(value: int) -> bytes:
     return wpj_wire.encode_varint(value)
 
-def encode_protobuf_field(number, wire_type, value):
+def encode_protobuf_field(number: int, wire_type: int, value: int | bytes) -> bytes:
     tag = encode_varint((number << 3) | wire_type)
     if wire_type == 0:
         return tag + encode_varint(value)
@@ -487,14 +492,14 @@ def encode_protobuf_field(number, wire_type, value):
         return tag + value
     raise AssertionError("Unsupported self-test wire type")
 
-def encode_request_uuid(value):
+def encode_request_uuid(value: str) -> bytes:
     try:
         raw_uuid = uuid.UUID(value).bytes
     except ValueError as error:
         raise WolfmixError(f"Invalid UUID: {value}") from error
     return encode_protobuf_field(1, 2, raw_uuid)
 
-def managed_identity(label, kind="exp"):
+def managed_identity(label: str, kind: str = 'exp') -> tuple[str, str]:
     """(derived UUID, name) of a managed project. Deterministic, never random.
 
     This is what keeps an ordinary project from ever being written: the target
@@ -513,15 +518,15 @@ def managed_identity(label, kind="exp"):
     return str(uuid.uuid5(EXPERIMENT_NAMESPACE, graine)), nom
 
 
-def is_managed_name(name):
+def is_managed_name(name: str) -> bool:
     return name.startswith(tuple(MANAGED_PREFIXES.values()))
 
 
-def experiment_identity(label):
+def experiment_identity(label: str) -> tuple[str, str]:
     """The experiment namespace — the historical case."""
     return managed_identity(label, "exp")
 
-def encode_project(project_uuid, version, name, data):
+def encode_project(project_uuid: str, version: int, name: str, data: bytes) -> bytes:
     try:
         raw_uuid = uuid.UUID(project_uuid).bytes
     except ValueError as error:
@@ -543,7 +548,7 @@ def encode_project(project_uuid, version, name, data):
         encode_protobuf_field(5, 2, data),
     ))
 
-def index_payload(value):
+def index_payload(value: int) -> bytes:
     """Payload for the short events: firmware 2.0.18 reads ``payload[0]``.
 
     These events are NOT protobuf. Sending a protobuf-shaped ``[tag, value]``
@@ -560,7 +565,7 @@ def index_payload(value):
         raise WolfmixError("Index must be between 0 and 255")
     return bytes([value])
 
-def preset_payload(value):
+def preset_payload(value: int) -> bytes:
     """Recall id, bounded to the panel's own range."""
     if not 0 <= value <= PRESET_ID_MAX:
         raise WolfmixError(
@@ -569,7 +574,7 @@ def preset_payload(value):
         )
     return index_payload(value)
 
-def flash_chunk_payload(chunk, total_size, offset):
+def flash_chunk_payload(chunk: bytes, total_size: int, offset: int) -> bytes:
     """External-resource flash chunk observed in WTOOLS 2.0.2 (UPLOAD-07)."""
     if not isinstance(chunk, bytes) or not chunk:
         raise WolfmixError("A flash chunk must be non-empty bytes")
@@ -583,7 +588,7 @@ def flash_chunk_payload(chunk, total_size, offset):
         raise WolfmixError("Flash chunk falls outside the declared image")
     return struct.pack(">III", len(chunk), total_size, offset) + chunk
 
-def resolve_mode(value, experimental=False):
+def resolve_mode(value: str, experimental: bool = False) -> int:
     """A measured mode by name, or a raw index behind --experimental."""
     key = str(value).strip().lower().replace("-", " ").replace(" ", "_")
     if key in NAMED_MODES:

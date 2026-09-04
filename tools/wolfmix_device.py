@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
 """The serial link to the W1, and the operations built on top of it.
 
+Module group: Device. Reference: docs/device.md.
+
 The firmware gate lives in `WolfmixConnection.send`: a caller cannot forget it.
 The port is exclusive — with WTOOLS open nothing gets through — and
 `port_holders` says so with the offending process's name rather than an errno.
 """
+
+from __future__ import annotations
+from os import PathLike
+from collections.abc import Callable
+from types import TracebackType
 import datetime
 import fcntl
 import glob
@@ -30,7 +37,7 @@ from wolfmix_protocol import (
     FLASH_CHUNK_SIZE, is_managed_name, managed_identity, print_json,
 )
 
-def discover_port():
+def discover_port() -> str:
     ports = sorted(glob.glob("/dev/cu.usbmodem*"))
     if not ports:
         raise WolfmixError("No USB modem port found; connect the Wolfmix W1")
@@ -41,7 +48,7 @@ def discover_port():
         )
     return ports[0]
 
-def port_holders(path):
+def port_holders(path: str | PathLike[str]) -> list[tuple[int, str]]:
     """Return processes already holding the serial port on macOS."""
     lsof = shutil.which("lsof")
     if not lsof:
@@ -59,8 +66,13 @@ def port_holders(path):
     return holders
 
 class WolfmixConnection:
-    def __init__(self, path, timeout=5.0, allow_untested_firmware=False,
-                 allow_resource_flash=False):
+    def __init__(
+        self,
+        path: str,
+        timeout: float = 5.0,
+        allow_untested_firmware: bool = False,
+        allow_resource_flash: bool = False,
+    ) -> None:
         self.path = path
         self.timeout = timeout
         self.fd = None
@@ -70,7 +82,7 @@ class WolfmixConnection:
         self.allow_resource_flash = allow_resource_flash
         self.firmware = None
 
-    def __enter__(self):
+    def __enter__(self) -> WolfmixConnection:
         holders = port_holders(self.path)
         if holders:
             details = ", ".join(f"{name} (PID {pid})" for pid, name in holders)
@@ -102,15 +114,20 @@ class WolfmixConnection:
             raise WolfmixError(f"Cannot open {self.path}: {error}") from error
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         self.close()
 
-    def close(self):
+    def close(self) -> None:
         if self.fd is not None:
             os.close(self.fd)
             self.fd = None
 
-    def write_all(self, data):
+    def write_all(self, data: bytes) -> None:
         offset = 0
         deadline = time.monotonic() + self.timeout
         while offset < len(data):
@@ -122,7 +139,7 @@ class WolfmixConnection:
                 continue
             offset += os.write(self.fd, data[offset:])
 
-    def read_frame(self, timeout=None):
+    def read_frame(self, timeout: float | None = None) -> tuple[int, int, int, bytes]:
         deadline = time.monotonic() + (self.timeout if timeout is None else timeout)
         while True:
             if len(self.buffer) >= HEADER_SIZE:
@@ -148,7 +165,7 @@ class WolfmixConnection:
                     raise WolfmixError("Wolfmix connection closed")
                 self.buffer.extend(chunk)
 
-    def request(self, event, payload=b""):
+    def request(self, event: int, payload: bytes = b'') -> bytes:
         message_id = self.send(event, payload)
         deadline = time.monotonic() + self.timeout
         while True:
@@ -175,7 +192,7 @@ class WolfmixConnection:
                 )
             return payload
 
-    def check_firmware(self):
+    def check_firmware(self) -> str | None:
         """Refuse a state change on a firmware nobody here has measured.
 
         Read once, cached, and checked in ``send`` rather than in each caller:
@@ -194,7 +211,7 @@ class WolfmixConnection:
             "changes are refused — pass --allow-untested-firmware to proceed"
         )
 
-    def send(self, event, payload=b""):
+    def send(self, event: int, payload: bytes = b'') -> int:
         """Write one complete request without waiting for its response."""
         if event == SET_FLASH_DATA and not self.allow_resource_flash:
             raise WolfmixError(
@@ -213,7 +230,7 @@ class WolfmixConnection:
         self.write_all(build_frame(message_id, event, payload))
         return message_id
 
-def monitor_dmx(connection, seconds):
+def monitor_dmx(connection: WolfmixConnection, seconds: float) -> None:
     settings = decode_settings(connection.request(GET_SETTINGS))
     enabled_by_us = not settings.get("dmxUsbSendState", False)
     if enabled_by_us:
@@ -281,7 +298,7 @@ def monitor_dmx(connection, seconds):
             except WolfmixError as error:
                 print(f"warning: could not disable USB DMX: {error}", file=sys.stderr)
 
-def watch_mode(connection, interval, seconds):
+def watch_mode(connection: WolfmixConnection, interval: float, seconds: float) -> None:
     """Report every change of Settings.wolfmixMode; never writes to the W1.
 
     Ground truth for the WM_MODE_* enum: the operator walks the controller
@@ -304,7 +321,7 @@ def watch_mode(connection, interval, seconds):
             previous = mode
         time.sleep(interval)
 
-def dmx_envelope(connection, seconds):
+def dmx_envelope(connection: WolfmixConnection, seconds: float) -> dict[str, object]:
     """Per-channel min/max of the DMX output over a window.
 
     A single frame is not comparable between runs because effects animate. The
@@ -375,7 +392,11 @@ def dmx_envelope(connection, seconds):
         "max": high,
     }
 
-def fetch_project(connection, project_uuid, attempts=3):
+def fetch_project(
+    connection: WolfmixConnection,
+    project_uuid: str,
+    attempts: int = 3,
+) -> dict[str, object]:
     """Download one project, guarding against serial corruption.
 
     The link is not error-free: a 43 KB transfer has been observed returning
@@ -404,7 +425,7 @@ def fetch_project(connection, project_uuid, attempts=3):
         f"Project download did not verify after {attempts} attempts: {last_error}"
     )
 
-def require_success(payload, operation):
+def require_success(payload: bytes, operation: str) -> dict[str, object]:
     status = decode_status(payload)
     if not status["success"]:
         raise ProtocolError(
@@ -412,7 +433,7 @@ def require_success(payload, operation):
         )
     return status
 
-def resource_flash_state(connection):
+def resource_flash_state(connection: WolfmixConnection) -> dict[str, object]:
     """Verify the controller-side preconditions and return their baseline."""
     settings = decode_settings(connection.request(GET_SETTINGS))
     firmware = settings.get("firmwareVer")
@@ -440,7 +461,11 @@ def resource_flash_state(connection):
         "projectCount": settings.get("projectCount"),
     }
 
-def upload_resource_flash(connection, data, progress=None):
+def upload_resource_flash(
+    connection: WolfmixConnection,
+    data: bytes,
+    progress: Callable[[int, int], None] | None = None,
+) -> int:
     """Write one verified resource image, one acknowledged chunk at a time."""
     if not isinstance(data, bytes) or not data:
         raise WolfmixError("Refusing to upload an empty resource flash")
@@ -461,8 +486,14 @@ def upload_resource_flash(connection, data, progress=None):
             progress(offset + len(chunk), len(data))
     return chunks
 
-def store_managed_project(connection, label, data, version=None, attempts=3,
-                          kind="exp"):
+def store_managed_project(
+    connection: WolfmixConnection,
+    label: str,
+    data: bytes,
+    version: int | None = None,
+    attempts: int = 3,
+    kind: str = 'exp',
+) -> dict[str, object]:
     """Upload a project, retrying when the controller rejects the transfer.
 
     The link corrupts large transfers in both directions. A corrupted upload is
@@ -495,7 +526,12 @@ def store_managed_project(connection, label, data, version=None, attempts=3,
         "status": status,
     }
 
-def remove_managed_project(connection, label, project_list=None, kind="exp"):
+def remove_managed_project(
+    connection: WolfmixConnection,
+    label: str,
+    project_list: list[dict[str, object]] | None = None,
+    kind: str = 'exp',
+) -> dict[str, object]:
     project_uuid, name = managed_identity(label, kind)
     projects = project_list
     if projects is None:

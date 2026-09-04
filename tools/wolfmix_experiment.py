@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Campaigns and experiments on a W1, without WTOOLS.
 
+Module group: Device. Reference: docs/device.md.
+
 This runner does one thing the production client does not: reproducible
 campaigns — one case, one deployment, one DMX capture, one journal entry.
 Everything about persistent writing (identity, archive, verified upload,
@@ -10,6 +12,10 @@ One manual bootstrap remains: firmware 2.0.18 exposes no USB command for
 selecting a project. Run `init`, open the resulting `WMX EXP ...` project once
 on the W1, then run `arm`. Everything after that is automatic.
 """
+
+from __future__ import annotations
+from os import PathLike
+import wolfmix_device as device
 import argparse
 import datetime
 import io
@@ -35,7 +41,7 @@ from wolfmix_transaction import (
     restart,
 )
 
-def warn_about_dimmers(data):
+def warn_about_dimmers(data: bytes) -> None:
     """A preset that writes group dimmers is inert unless the controller's
     Settings menu has ``store group dimmers in preset`` ON (GEN-02). That
     condition lives in the device, not in the project, so a perfectly
@@ -54,7 +60,7 @@ def warn_about_dimmers(data):
               "the condition lives in the device, not in the project",
               file=sys.stderr)
 
-def capture_dmx(connection):
+def capture_dmx(connection: device.WolfmixConnection) -> dict[str, object]:
     settings = protocol.decode_settings(connection.request(protocol.GET_SETTINGS))
     enabled_by_us = not settings["dmxUsbSendState"]
     try:
@@ -72,7 +78,7 @@ def capture_dmx(connection):
                 connection.request(protocol.DISABLE_USB_DMX), "Disabling USB DMX"
             )
 
-def record_fields(payload):
+def record_fields(payload: bytes) -> dict[int, int | str] | None:
     """Top-level protobuf fields of a record, or None when it does not parse."""
     try:
         return {
@@ -82,7 +88,7 @@ def record_fields(payload):
     except (protocol.ProtocolError, IndexError):
         return None
 
-def describe_change(record_type, before, after):
+def describe_change(record_type: int, before: bytes, after: bytes) -> list[str]:
     """One human-readable line per changed field, or per changed byte."""
     lines = []
     old_fields, new_fields = record_fields(before), record_fields(after)
@@ -106,7 +112,7 @@ def describe_change(record_type, before, after):
         return [f"  type {record_type}: " + ", ".join(changed[:12])]
     return [f"  type {record_type}: {len(before)} -> {len(after)} bytes"]
 
-def diff_projects(before, after):
+def diff_projects(before: bytes, after: bytes) -> list[str]:
     lines = []
     if before.prefix != after.prefix:
         # Prefix bytes 20..27 are the uint64 project version, already reported
@@ -124,7 +130,7 @@ def diff_projects(before, after):
             lines += describe_change(record_type, old, new)
     return lines
 
-def watch(args):
+def watch(args: argparse.Namespace) -> None:
     """Report what each controller-side save changes, as it happens.
 
     Polls the project list, which is cheap, and downloads only when the
@@ -164,7 +170,7 @@ def watch(args):
                 previous, previous_version = current, item["version"]
             time.sleep(args.interval)
 
-def initialize(args):
+def initialize(args: argparse.Namespace) -> None:
     project_uuid, name = protocol.managed_identity(args.label, args.namespace)
     # Before the port is opened: is the target a UUID we derive ourselves?
     tx.require_managed_uuid(project_uuid, args.label, args.namespace)
@@ -233,7 +239,7 @@ def initialize(args):
         raise
 
 
-def arm(args):
+def arm(args: argparse.Namespace) -> None:
     _, state_file, state = load_state(args.state_dir, args.label, args.namespace)
     if not args.loaded_on_controller:
         raise protocol.WolfmixError(
@@ -254,7 +260,11 @@ def arm(args):
     atomic_json(state_file, state)
     protocol.print_json({"armed": True, "uuid": state["uuid"], "name": state["name"]})
 
-def deploy_one(args, candidate_path, case_id):
+def deploy_one(
+    args: argparse.Namespace,
+    candidate_path: str | PathLike[str],
+    case_id: str,
+) -> dict[str, object]:
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", case_id):
         raise protocol.WolfmixError(
             "Case IDs may only contain letters, digits, dots, underscores, and hyphens"
@@ -356,10 +366,10 @@ def deploy_one(args, candidate_path, case_id):
                                      run_dir / "before.wpj", args.namespace)
         raise
 
-def deploy(args):
+def deploy(args: argparse.Namespace) -> None:
     deploy_one(args, args.project, args.case)
 
-def campaign(args):
+def campaign(args: argparse.Namespace) -> None:
     manifest_path = Path(args.manifest).resolve()
     manifest = read_json(manifest_path)
     cases = manifest.get("cases")
@@ -371,7 +381,7 @@ def campaign(args):
         project = (manifest_path.parent / case["project"]).resolve()
         deploy_one(args, project, case["id"])
 
-def clear_rollback(args):
+def clear_rollback(args: argparse.Namespace) -> None:
     _, state_file, state = load_state(args.state_dir, args.label, args.namespace)
     pending = state.pop("rollbackFailed", None)
     if pending is None:
@@ -381,7 +391,7 @@ def clear_rollback(args):
     atomic_json(state_file, state)
     protocol.print_json({"cleared": pending})
 
-def status(args):
+def status(args: argparse.Namespace) -> None:
     root, state_file, state = load_state(args.state_dir, args.label, args.namespace)
     with connect(args.port, args.timeout, args.allow_untested_firmware) as connection:
         settings = protocol.decode_settings(connection.request(protocol.GET_SETTINGS))
@@ -398,9 +408,7 @@ def status(args):
         "baseline": str(root / state["baseline"]),
     })
 
-def self_test(_args):
-    # No project file is distributed with this repository (docs/corpus.md);
-    # the file-backed half of the check runs only on a local corpus.
+def self_test(_args: argparse.Namespace | None) -> None:
     sample = next(iter(wpjlib.corpus_files()), None)
     if sample is None:
         wpjlib.pas_de_corpus("wolfmix_experiment")
@@ -428,7 +436,7 @@ def self_test(_args):
     assert name.startswith(protocol.EXPERIMENT_NAME_PREFIX)
     print("self-test OK")
 
-def parser():
+def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
     result.add_argument("--port")
     result.add_argument("--allow-untested-firmware", action="store_true",
@@ -486,7 +494,7 @@ def parser():
     self_test_parser.set_defaults(handler=self_test)
     return result
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
     if args.timeout <= 0 or args.restart_timeout <= 0:
         raise protocol.WolfmixError("Timeouts must be greater than zero")

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Persistent writing to the W1, and what makes it reversible.
 
+Module group: Device. Reference: docs/device.md.
+
 One route leads to the controller's projects, and it goes through here:
 
     identity verified
@@ -17,6 +19,9 @@ exactly what we cannot get back.
 
 With no argument this file runs its self-check — it touches no device.
 """
+
+from __future__ import annotations
+from os import PathLike
 import datetime
 import hashlib
 import io
@@ -34,7 +39,7 @@ import wpj_codec
 import wpjlib
 
 
-def require_managed_uuid(project_uuid, label, kind="exp"):
+def require_managed_uuid(project_uuid: str, label: str, kind: str = 'exp') -> tuple[str, str]:
     """Refuse any UUID this repository did not derive itself.
 
     This is the repository's invariant, and it is checked **before** the port
@@ -51,15 +56,15 @@ def require_managed_uuid(project_uuid, label, kind="exp"):
 
 DEFAULT_STATE_ROOT = ".wolfmix-state"
 
-def utc_id():
+def utc_id() -> str:
     return datetime.datetime.now(datetime.timezone.utc).strftime(
         "%Y%m%dT%H%M%S.%fZ"
     )
 
-def sha256(data):
+def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
-def atomic_json(path, value):
+def atomic_json(path: str | PathLike[str], value: object) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
@@ -70,11 +75,14 @@ def atomic_json(path, value):
         os.fsync(stream.fileno())
     os.replace(temporary, path)
 
-def read_json(path):
+def read_json(path: str | PathLike[str]) -> object:
     with Path(path).open(encoding="utf-8") as stream:
         return json.load(stream)
 
-def validate_project(path, project_name=None):
+def validate_project(
+    path: str | PathLike[str],
+    project_name: str | None = None,
+) -> tuple[Path, bytes]:
     path = Path(path).resolve()
     project = wpjlib.Wpj.load(path)
     if project_name is not None:
@@ -89,12 +97,20 @@ def validate_project(path, project_name=None):
         data = path.read_bytes()
     return path, data
 
-def state_paths(state_root, label, kind="exp"):
+def state_paths(
+    state_root: str | PathLike[str],
+    label: str,
+    kind: str = 'exp',
+) -> tuple[Path, Path]:
     project_uuid, _ = protocol.managed_identity(label, kind)
     root = Path(state_root).resolve() / project_uuid
     return root, root / "state.json"
 
-def load_state(state_root, label, kind="exp"):
+def load_state(
+    state_root: str | PathLike[str],
+    label: str,
+    kind: str = 'exp',
+) -> tuple[Path, Path, dict[str, object]]:
     root, state_file = state_paths(state_root, label, kind)
     if not state_file.exists():
         raise protocol.WolfmixError(
@@ -107,13 +123,17 @@ def load_state(state_root, label, kind="exp"):
         raise protocol.WolfmixError("Experiment state identity mismatch")
     return root, state_file, state
 
-def connect(port=None, timeout=8.0, allow_untested_firmware=False):
+def connect(
+    port: str | None = None,
+    timeout: float = 8.0,
+    allow_untested_firmware: bool = False,
+) -> device.WolfmixConnection:
     """The same gate as `wolfmix.py`: a firmware this repository has never
     measured refuses every state change unless the caller says so."""
     return device.WolfmixConnection(port or device.discover_port(), timeout,
                                     allow_untested_firmware=allow_untested_firmware)
 
-def preflight(connection):
+def preflight(connection: device.WolfmixConnection) -> dict[str, object]:
     settings = protocol.decode_settings(connection.request(protocol.GET_SETTINGS))
     if settings["projectChanged"]:
         raise protocol.WolfmixError(
@@ -123,13 +143,17 @@ def preflight(connection):
         raise protocol.WolfmixError("The controller is locked")
     return settings
 
-def project_list(connection):
+def project_list(connection: device.WolfmixConnection) -> list[dict[str, object]]:
     return protocol.decode_item_list(connection.request(protocol.GET_PROJECT_LIST))
 
-def download_project(connection, project_uuid):
+def download_project(connection: device.WolfmixConnection, project_uuid: str) -> dict[str, object]:
     return device.fetch_project(connection, project_uuid)
 
-def verify_project(connection, expected_uuid, expected_data):
+def verify_project(
+    connection: device.WolfmixConnection,
+    expected_uuid: str,
+    expected_data: bytes,
+) -> dict[str, object]:
     project = download_project(connection, expected_uuid)
     expected_records = wpjlib.Wpj.from_bytes(expected_data, "expected project").records
     downloaded_records = wpjlib.Wpj.from_bytes(
@@ -142,7 +166,11 @@ def verify_project(connection, expected_uuid, expected_data):
     project["recordsIdentical"] = True
     return project
 
-def snapshot_all(connection, destination, settings):
+def snapshot_all(
+    connection: device.WolfmixConnection,
+    destination: str | PathLike[str],
+    settings: dict[str, object],
+) -> dict[str, object]:
     destination = Path(destination)
     destination.mkdir(parents=True, exist_ok=False)
     items = project_list(connection)
@@ -165,11 +193,16 @@ def snapshot_all(connection, destination, settings):
     atomic_json(destination / "manifest.json", manifest)
     return manifest
 
-def archive_manifest(item, data, filename):
+def archive_manifest(item: dict[str, object], data: bytes, filename: str) -> dict[str, object]:
     return {**item, "sha256": sha256(data), "file": filename,
             "archivedAt": datetime.datetime.now(datetime.timezone.utc).isoformat()}
 
-def publish_archive(target, manifest_path, item, data):
+def publish_archive(
+    target: str | PathLike[str],
+    manifest_path: str | PathLike[str],
+    item: dict[str, object],
+    data: bytes,
+) -> None:
     """Write the project, read it back, then publish its manifest.
 
     The manifest is the commit marker of the pair: a run killed before it is
@@ -190,7 +223,7 @@ def publish_archive(target, manifest_path, item, data):
     os.replace(temporary, target)
     atomic_json(manifest_path, archive_manifest(item, data, target.name))
 
-def archive_projects(connection, root):
+def archive_projects(connection: device.WolfmixConnection, root: str | PathLike[str]) -> list[str]:
     """Archive every controller project we do not already hold, keyed (uuid, version).
 
     The snapshot taken by ``init`` is not enough: it happens once, and a project
@@ -227,7 +260,11 @@ def archive_projects(connection, root):
         added.append(target.name)
     return added
 
-def check_identity(settings, expected, moment):
+def check_identity(
+    settings: dict[str, object],
+    expected: dict[str, object],
+    moment: str,
+) -> dict[str, object]:
     """Refuse a controller that is not the one this run started on."""
     for key in ("serialNumber", "firmwareVer"):
         wanted = expected.get(key)
@@ -238,7 +275,13 @@ def check_identity(settings, expected, moment):
             )
     return settings
 
-def mark_rollback_failed(state_dir, label, error, restore, kind="exp"):
+def mark_rollback_failed(
+    state_dir: str | PathLike[str],
+    label: str,
+    error: Exception | str,
+    restore: str | PathLike[str],
+    kind: str = 'exp',
+) -> None:
     """A failed restore is a state, not a log line: no further deploy runs."""
     _, state_file = state_paths(state_dir, label, kind)
     try:
@@ -258,22 +301,24 @@ def mark_rollback_failed(state_dir, label, error, restore, kind="exp"):
         file=sys.stderr,
     )
 
-def restart(connection):
-    # The firmware resets its USB device immediately and cannot reliably return
-    # a response. A successful complete write is the restart acknowledgement.
+def restart(connection: device.WolfmixConnection) -> tuple[int, int, int]:
     device = os.fstat(connection.fd)
     connection.send(protocol.RESTART)
     return device.st_dev, device.st_ino, device.st_rdev
 
-def device_identity(port):
+def device_identity(port: str) -> tuple[int, int, int] | None:
     try:
         device = os.stat(port)
     except OSError:
         return None
     return device.st_dev, device.st_ino, device.st_rdev
 
-def wait_for_controller(port, timeout=20.0, disconnected_identity=None,
-                        allow_untested_firmware=False):
+def wait_for_controller(
+    port: str,
+    timeout: float = 20.0,
+    disconnected_identity: tuple[int, int, int] | None = None,
+    allow_untested_firmware: bool = False,
+) -> device.WolfmixConnection:
     deadline = time.monotonic() + timeout
     last_error = None
     if disconnected_identity is not None:
@@ -308,9 +353,15 @@ def wait_for_controller(port, timeout=20.0, disconnected_identity=None,
         f"Wolfmix did not reconnect after restart: {last_error}"
     )
 
-def restore_previous(port, label, previous, disconnected_identity=None,
-                     expected_identity=None, kind="exp",
-                     allow_untested_firmware=False):
+def restore_previous(
+    port: str,
+    label: str,
+    previous: dict[str, object] | None,
+    disconnected_identity: tuple[int, int, int] | None = None,
+    expected_identity: dict[str, object] | None = None,
+    kind: str = 'exp',
+    allow_untested_firmware: bool = False,
+) -> None:
     connection = wait_for_controller(
         port, disconnected_identity=disconnected_identity,
         allow_untested_firmware=allow_untested_firmware,
@@ -359,7 +410,7 @@ def restore_previous(port, label, previous, disconnected_identity=None,
     finally:
         connection.close()
 
-def self_check():
+def self_check() -> None:
     """No device: a fake link, temporary directories, and refusals."""
     # archive_projects: incremental, transactional, and fail-closed.
     downloads = [0]

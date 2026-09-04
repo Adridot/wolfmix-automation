@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """The production client for the W1: read it, drive its live state, download.
 
+Module group: Device. Reference: docs/device.md.
+
 This file is the **command line**. What it calls lives elsewhere:
 
   wolfmix_protocol.py     frames, events, protobuf, decoding, domains
@@ -29,6 +31,8 @@ Usage :
 
 WTOOLS must be closed: the serial port is exclusive.
 """
+
+from __future__ import annotations
 import argparse
 import hashlib
 import io
@@ -62,7 +66,7 @@ from wolfmix_device import (
 )
 
 
-def self_test():
+def self_test() -> None:
     settings_payload = b"".join((
         encode_protobuf_field(1, 0, 1),
         encode_protobuf_field(3, 0, 0),
@@ -290,7 +294,7 @@ def self_test():
 
     print("self-test OK")
 
-def build_parser():
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", help="USB serial port; auto-detected by default")
     parser.add_argument("--timeout", type=float, default=5.0,
@@ -361,7 +365,7 @@ def build_parser():
     commands.add_parser("self-test", help="run protocol checks without hardware")
     return parser
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "self-test":
         self_test()

@@ -123,7 +123,7 @@ def gate_backup(backup: str | PathLike[str], bundle: str | PathLike[str]) -> tup
     return True, f"{len(live)} files, {len(live)} matching SHA-256, {checked}"
 
 
-def gate_patched(patched: str | PathLike[str], flash: str | PathLike[str]) -> tuple[bool, str]:
+def gate_patched(patched: str, flash: str | PathLike[str]) -> tuple[bool, str]:
     """The chain installed bundle → manifest → the file that goes in the device.
 
     Length proves nothing: an arbitrary file of the same size used to pass this

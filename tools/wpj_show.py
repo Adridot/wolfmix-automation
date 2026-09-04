@@ -22,7 +22,7 @@ Usage:
 
 from __future__ import annotations
 from os import PathLike
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Mapping
 import copy
 import json
 import os
@@ -107,7 +107,7 @@ def _normalise_mapping(entree):
 CANAL_MAX = 512              # the panel encoder's bound, measured
 
 
-def cles(d: Mapping[str, object], permises: Iterable[str], contexte: str) -> None:
+def cles(d: Mapping[str, object], permises: Collection[str], contexte: str) -> None:
     """Public: `wpj_generate` validates its intentions with the same rules."""
     inconnues = [k for k in d if k not in permises]
     retirees = {k: wpj_codec.remplacante(k) for k in inconnues

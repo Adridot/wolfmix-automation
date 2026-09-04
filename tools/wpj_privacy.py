@@ -26,7 +26,7 @@ Usage:
 
 from __future__ import annotations
 from os import PathLike
-from collections.abc import Iterable
+from collections.abc import Collection, Iterable
 import os
 import re
 import subprocess
@@ -82,7 +82,7 @@ def fichiers_interdits(chemins: Iterable[str]) -> list[str]:
 
 def controle(
     chemins: Iterable[str | PathLike[str]],
-    regles: Iterable[re.Pattern[str]],
+    regles: Collection[re.Pattern[str]],
 ) -> list[tuple[str | PathLike[str], int, str]]:
     """Returns the (file, line, pattern) triples that violate the list."""
     trouves = []

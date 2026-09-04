@@ -286,7 +286,7 @@ def manifeste(
     }
 
 
-def ecrire(sortie: str | PathLike[str], data: bytes, contenu: dict[str, object]) -> None:
+def ecrire(sortie: str, data: bytes, contenu: dict[str, object]) -> None:
     """The patched file then its manifest; either one alone is useless."""
     with open(sortie, "xb") as handle:
         handle.write(data)

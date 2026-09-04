@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Reader for .wpj variants B and C (WTOOLS serialisation). READ-ONLY.
 
+Module group: Format. Reference: SPEC.md.
+
 Trois dispositions partagent l'extension .wpj (registre, « Trois variantes ») :
   A  SHA-1 + conteneur TLV        — dumps appareil ; wpjlib/wpj_codec
   B  SHA-1 + protobuf at offset 20 — current WTOOLS projects (field 1 = 7 or 8)
@@ -16,6 +18,9 @@ Usage :
   wpj_bc.py project.wpj      decode to JSON on stdout
   wpj_bc.py                  self-check over the corpus (abstains without one)
 """
+
+from __future__ import annotations
+from os import PathLike
 import glob
 import hashlib
 import json
@@ -27,7 +32,7 @@ import wpj_wire
 import wpjlib
 
 
-def variante(data):
+def variante(data: bytes) -> str | None:
     """'A', 'B', 'C' ou None (fichier non reconnu)."""
     if len(data) > 0x46 and data[:20] == hashlib.sha1(data[20:]).digest():
         if int.from_bytes(data[0x44:0x46], "little") == 100:
@@ -40,7 +45,7 @@ def variante(data):
         return None
 
 
-def charger(path):
+def charger(path: str | PathLike[str]) -> tuple[str, bytes]:
     """(variant, protobuf body) of a B or C file. ValueError on A/unreadable."""
     data = open(path, "rb").read()
     v = variante(data)
@@ -91,7 +96,7 @@ def _str(chunk, f):
     return d.get(f) if isinstance(d.get(f), str) else None
 
 
-def projet_vers_dict(path):
+def projet_vers_dict(path: str) -> dict[str, object]:
     """Decodes the identified fields (statuses: registry); the rest as counts."""
     var, body = charger(path)
     top = {}
@@ -237,7 +242,7 @@ def _refus():
             assert "field 2" in str(err), err
 
 
-def demo():
+def demo() -> None:
     _refus()
     files = wpjlib.corpus_files()
     if not files:

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """The DMX output of a recalled position, computed from the project alone.
 
+Module group: Format. Reference: SPEC.md.
+
 The model was measured channel by channel (registry, POS-01…07):
 
     pct_groupe(k) = PAN + etalement(FAN, k, n) - 0.5        pan, k = rang
@@ -17,25 +19,27 @@ hardware and breaks if anyone "simplifies" it.
 
 Usage: python3 tools/wpj_position.py   (from the repository root)
 """
+
+from __future__ import annotations
 import sys
 
 PLEINE_ECHELLE = 65535
 DEMI_ECHELLE = 65536          # record 150 stores its fractions over 65536
 
 
-def borne16(octet):
+def borne16(octet: int) -> float:
     """A travel limit (106.f5/f6), one byte, on the 16-bit scale."""
     return octet / 255 * PLEINE_ECHELLE
 
 
-def etalement(fan, rang, effectif):
+def etalement(fan: float, rang: int, effectif: int) -> float:
     """The FAN ramp of rank k — from (1-FAN) to FAN, centred on 0.5."""
     if effectif < 2:
         return 0.5
     return (1 - fan) + rang * (2 * fan - 1) / (effectif - 1)
 
 
-def fraction_pan(pan, fan, rang, effectif):
+def fraction_pan(pan: float, fan: float, rang: int, effectif: int) -> float:
     """The pan fraction of rank k: the FAN ramp **offset by the slot's PAN**.
 
     The ramp is centred on 0.5, so the slot's own PAN shifts it: a group at
@@ -58,22 +62,20 @@ def fraction_pan(pan, fan, rang, effectif):
     return pan + etalement(fan, rang, effectif) - 0.5
 
 
-def dmx16(f5, f6, pct):
+def dmx16(f5: int, f6: int, pct: float) -> int:
     """The 16-bit value emitted for a fraction, clamped by the travel limits."""
     pct = min(1.0, max(0.0, pct))
     bas, haut = borne16(f5), borne16(f6)
     return round(bas + pct * (haut - bas))
 
 
-def canal(f5, f6, pct):
+def canal(f5: int, f6: int, pct: float) -> tuple[int, int]:
     """(high byte, low byte) of the 16-bit pair."""
     v = dmx16(f5, f6, pct)
     return v >> 8, v & 0xFF
 
 
-def demo():
-    # POS-01/02: Crowd then Ceiling on group A, six moving heads.
-    # (f5 pan, f6 pan, f6 tilt) per head, in DMX address order.
+def demo() -> None:
     lyres = [(133, 201, 142), (133, 190, 142), (151, 204, 77),
              (151, 204, 77), (128, 202, 127), (128, 202, 127)]
     captures = [

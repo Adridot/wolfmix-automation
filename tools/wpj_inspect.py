@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Inspecteur .wpj lecture seule.
+"""Independent read-only WPJ wire inspector.
+
+Module group: Format. Reference: SPEC.md.
 
 Walks the protobuf wire format of a "WTOOLS-shaped" .wpj and emits a JSON tree
 (fields, wire types, values). No invented semantics: field names are numbers,
@@ -10,6 +12,8 @@ Format status: the wire format was validated on 6/6 large local .wpj files
 (2026-08-25). Small .wpj files (device dumps?) do NOT parse — the tool says so
 and exits with an error rather than guessing.
 """
+
+from __future__ import annotations
 import json
 import sys
 import hashlib
@@ -17,7 +21,7 @@ import hashlib
 MAX_DEPTH_DEFAULT = 6
 
 
-def read_varint(buf, i):
+def read_varint(buf: bytes, i: int) -> tuple[int, int]:
     v = shift = 0
     while True:
         if i >= len(buf):
@@ -32,7 +36,7 @@ def read_varint(buf, i):
             raise ValueError(f"varint too long at {i}")
 
 
-def walk(buf, depth, max_depth):
+def walk(buf: bytes, depth: int, max_depth: int) -> list[dict[str, object]]:
     """Returns a list of fields, or raises ValueError if this is not protobuf."""
     i, out = 0, []
     while i < len(buf):
@@ -84,7 +88,7 @@ def walk(buf, depth, max_depth):
     return out
 
 
-def inspect(path, max_depth=MAX_DEPTH_DEFAULT):
+def inspect(path: str, max_depth: int = MAX_DEPTH_DEFAULT) -> dict[str, object]:
     data = open(path, "rb").read()
     # variant C: protobuf from 0; variant B: SHA-1 (20 B) then protobuf
     entete = len(data) > 20 and data[:20] == hashlib.sha1(data[20:]).digest()
@@ -108,7 +112,7 @@ def inspect(path, max_depth=MAX_DEPTH_DEFAULT):
     }
 
 
-def demo():
+def demo() -> None:
     """Self-check on a protobuf message built by hand."""
     msg = bytes([0x08, 0x06, 0x12, 0x03]) + b"abc" + bytes([0x1A, 0x02, 0x08, 0x01])
     out = walk(msg, 0, 3)

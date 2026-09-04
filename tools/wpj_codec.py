@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """The semantic JSON ↔ bytes codec for variant-A TLV records (on wpjlib).
 
+Module group: Format. Reference: SPEC.md.
+
 The safety contract: decode(type, payload) returns a JSON-compatible dict whose
 encode(type, dict) reproduces the EXACT bytes. decode checks that round trip
 itself; on failure (unsupported type, unexpected protobuf) it returns
@@ -14,6 +16,8 @@ Representation:
 - an absent field is absent from the dict (≠ an explicit zero); the dict's
   order is the wire order.
 """
+
+from __future__ import annotations
 import json
 import sys
 import uuid
@@ -417,6 +421,9 @@ _rvarint = wpj_wire.read_varint          # one varint reader for the repository
                                          # existing `except` clauses still catch)
 
 
+Schema = dict[int, tuple[str, "str | Schema | tuple[str, tuple[tuple[int, str], ...]]"]]
+
+
 def _wvarint(v):
     # -1 would not terminate (the arithmetic shift stays at -1) and True would
     # encode as 1 without anyone asking for it.
@@ -427,7 +434,7 @@ def _wvarint(v):
     return wpj_wire.encode_varint(v)
 
 
-def field_number(schema, key):
+def field_number(schema: Schema, key: str) -> int:
     """Resolve a semantic key or a neutral fN key to its wire number."""
     for number, (name, _) in schema.items():
         if name == key:
@@ -488,7 +495,7 @@ CLES_RETIREES = {
 }
 
 
-def remplacante(cle):
+def remplacante(cle: str) -> str | None:
     """The English name of a retired French key, or None."""
     return CLES_RETIREES.get(cle)
 
@@ -640,13 +647,13 @@ def _emit(f, genre, v):
 
 # --- API ---------------------------------------------------------------------
 
-def encode(typ, d):
+def encode(typ: int, d: dict[str, object]) -> bytes:
     if set(d) == {"raw"}:
         return bytes.fromhex(d["raw"])
     return _encode_msg(d, SCHEMAS.get(typ, {}))
 
 
-def decode(typ, payload):
+def decode(typ: int, payload: bytes) -> dict[str, object]:
     if typ in SCHEMAS:
         try:
             d = _decode_msg(payload, SCHEMAS[typ])
@@ -657,7 +664,7 @@ def decode(typ, payload):
     return {"raw": payload.hex()}
 
 
-def projet_vers_dict(path):
+def projet_vers_dict(path: str) -> dict[str, object]:
     w = wpjlib.Wpj.load(path)
     return {"fichier": path, "prefixe": w.prefix.hex(),
             "records": [{"type": t, **decode(t, p)} for t, p in w.records]}
@@ -665,7 +672,7 @@ def projet_vers_dict(path):
 
 # --- the fidelity proof ------------------------------------------------------
 
-def demo():
+def demo() -> None:
     files = wpjlib.corpus_files()
     if not files:
         return wpjlib.pas_de_corpus("wpj_codec")

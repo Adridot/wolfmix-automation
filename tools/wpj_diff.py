@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 """A minimal binary diff, for single-variable experiments.
 
+Module group: Format. Reference: SPEC.md.
+
 Usage: wpj_diff.py avant.wpj apres.wpj
 Emits the byte ranges that differ (offset, length, hex before/after). When the
 sizes differ, it attempts a naive realignment on the common suffix.
 """
+
+from __future__ import annotations
+from os import PathLike
 import sys
 
 
-def ranges(a, b):
+def ranges(a: bytes | bytearray, b: bytes | bytearray) -> list[tuple[int, int]]:
     """The differing ranges between two buffers of the same size."""
     out, start = [], None
     for i in range(len(a)):
@@ -23,7 +28,7 @@ def ranges(a, b):
     return out
 
 
-def main(pa, pb):
+def main(pa: str | PathLike[str], pb: str | PathLike[str]) -> None:
     a, b = open(pa, "rb").read(), open(pb, "rb").read()
     print(f"{pa}: {len(a)} octets / {pb}: {len(b)} octets")
     if len(a) != len(b):
@@ -45,7 +50,7 @@ def main(pa, pb):
         print(f"  0x{s:06x}+{e-s}: {a[s:e][:32].hex(' ')}  ->  {b[s:e][:32].hex(' ')}")
 
 
-def demo():
+def demo() -> None:
     assert ranges(b"abcdef", b"abXdeY") == [(2, 3), (5, 6)]
     assert ranges(b"same", b"same") == []
     print("self-check ok", file=sys.stderr)

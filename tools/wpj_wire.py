@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Lecteur wire de production : varints, champs protobuf, conteneur TLV.
+"""Production wire reader: varints, protobuf fields and the TLV container.
+
+Module group: Format. Reference: SPEC.md.
 
 Two wire implementations coexist here **on purpose** (AGENTS.md, "one
 documented exception to no-repetition"):
@@ -21,12 +23,19 @@ Usage :
   wpj_wire.py project.wpj 165,150    the protobuf tree of those types
   wpj_wire.py                        self-check
 """
+
+from __future__ import annotations
+from os import PathLike
+from collections.abc import Iterator
 import hashlib
 import sys
 
 BODY_OFF = 0x40          # the opaque prefix is bytes 20..0x40
 ROOT_TYPE = 100
 ROOT_HEADER = 6          # longueur u32 + type u16
+
+
+WireNode = tuple[int, str, int | bytes | bytearray] | tuple[int, str, bytes | bytearray, list["WireNode"] | None]
 
 
 class WireError(ValueError):
@@ -47,7 +56,7 @@ def encode_varint(value: int) -> bytes:
     return bytes(result)
 
 
-def read_varint(buf, i):
+def read_varint(buf: bytes | bytearray, i: int) -> tuple[int, int]:
     """(value, next offset). Refuses a truncated or absurd varint."""
     value = shift = 0
     while True:
@@ -63,7 +72,7 @@ def read_varint(buf, i):
             raise WireError(f"varint too long at {i}")
 
 
-def fields(buf):
+def fields(buf: bytes | bytearray) -> Iterator[tuple[int, int, int | bytes | bytearray]]:
     """Top-level fields: (number, wire type, value).
 
     The value is an int for a varint and the raw bytes for the other three
@@ -92,7 +101,7 @@ def fields(buf):
         yield number, wire_type, value
 
 
-def walk(buf, depth=0, max_depth=6):
+def walk(buf: bytes | bytearray, depth: int = 0, max_depth: int = 6) -> list[WireNode]:
     """Tree: [(field, 'v'|'len'|'f32'|'f64', value[, subtree])].
 
     A `len` block is retried as a sub-message; when it does not parse, the
@@ -115,7 +124,7 @@ def walk(buf, depth=0, max_depth=6):
     return out
 
 
-def parse_container(data, *, source=None):
+def parse_container(data: bytes, *, source: str | None = None) -> list[tuple[int, int, int, bytes]]:
     """Child records: (index, type, offset, payload).
 
     A source label preserves Wpj's absolute-offset ValueError diagnostics;
@@ -153,7 +162,7 @@ def parse_container(data, *, source=None):
     return records
 
 
-def load(path):
+def load(path: str | PathLike[str]) -> tuple[bytes, list[tuple[int, int, int, bytes]]]:
     """(bytes, records) of a variant-A file, SHA-1 header verified."""
     with open(path, "rb") as flux:
         data = flux.read()
@@ -162,7 +171,7 @@ def load(path):
     return data, parse_container(data)
 
 
-def fmt_tree(tree, indent=0, maxlen=64):
+def fmt_tree(tree: list[WireNode], indent: int = 0, maxlen: int = 64) -> list[str]:
     """The tree as readable lines — text when it is text, hex otherwise."""
     lines = []
     for entry in tree:
@@ -191,7 +200,7 @@ def fmt_tree(tree, indent=0, maxlen=64):
     return lines
 
 
-def self_check():
+def self_check() -> None:
     message = bytes([0x08, 0x06, 0x12, 0x03]) + b"abc" + bytes([0x1A, 0x02, 0x08, 0x01])
     assert list(fields(message)) == [
         (1, 0, 6), (2, 2, b"abc"), (3, 2, b"\x08\x01")]
@@ -234,7 +243,7 @@ def self_check():
           "named refusals, no assertion")
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     import argparse
     parseur = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parseur.add_argument("fichier", nargs="?",

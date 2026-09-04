@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """The read/write core of variant-A .wpj files (SHA-1 + TLV container).
 
+Module group: Format. Reference: SPEC.md.
+
 The safety principle — "read before write":
 - load() cuts the file into raw TLV records, interpreting nothing.
 - save() reassembles: lengths recomputed, SHA-1 header recomputed, bytes
@@ -10,6 +12,9 @@ The safety principle — "read before write":
   over the whole corpus.
 - Writing always goes to a NEW file, never over an existing one.
 """
+
+from __future__ import annotations
+from os import PathLike
 import glob
 import hashlib
 import os
@@ -25,7 +30,7 @@ ROOT_TYPE = 100
 BODY_OFF = 0x40  # root container; the opaque prefix is bytes 20..0x40
 
 
-def corpus_files(motif="**/*.wpj"):
+def corpus_files(motif: str = '**/*.wpj') -> list[str]:
     """Fichiers de corpus locaux. Racine : $WPJ_CORPUS, sinon ./corpus.
 
     No .wpj file ships with this repository (see docs/corpus.md): the
@@ -42,24 +47,24 @@ def corpus_files(motif="**/*.wpj"):
 ABSTENTION = "ABSTAINED"
 
 
-def pas_de_corpus(outil):
+def pas_de_corpus(outil: str) -> None:
     print(f"{outil}: {ABSTENTION} — no corpus in "
           f"{os.environ.get(CORPUS_ENV) or CORPUS_DEFAUT}/, nothing was "
           f"verified (see docs/corpus.md)", file=sys.stderr)
 
 
 class Wpj:
-    def __init__(self, prefix, records):
+    def __init__(self, prefix: bytes, records: list[tuple[int, bytes]]) -> None:
         self.prefix = prefix          # bytes 20..0x46 (prefix + root TLV header, raw)
         self.records = records        # list[(type:int, payload:bytes)]
 
     @classmethod
-    def load(cls, path):
+    def load(cls, path: str | PathLike[str]) -> Wpj:
         with open(path, "rb") as flux:
             return cls.from_bytes(flux.read(), str(path))
 
     @classmethod
-    def from_bytes(cls, d, source="<bytes>"):
+    def from_bytes(cls, d: bytes, source: str = '<bytes>') -> Wpj:
         """Parse a variant-A project from bytes without creating a file."""
         if len(d) < BODY_OFF + 6:
             raise ValueError(f"{source}: too short for a variant-A project "
@@ -74,20 +79,20 @@ class Wpj:
                    in wpj_wire.parse_container(d, source=source)]
         return cls(d[20:BODY_OFF], records)
 
-    def body(self):
+    def body(self) -> bytes:
         inner = b"".join(struct.pack("<IH", len(p), t) + p for t, p in self.records)
         return (self.prefix
                 + struct.pack("<IH", len(inner), ROOT_TYPE)
                 + inner)
 
-    def save(self, path):
+    def save(self, path: str | PathLike[str]) -> str:
         body = self.body()
         data = hashlib.sha1(body).digest() + body
         with open(path, "xb") as f:  # 'x': refuses to overwrite
             f.write(data)
         return hashlib.sha256(data).hexdigest()
 
-    def replace(self, typ, new_payload, occurrence=0):
+    def replace(self, typ: int, new_payload: bytes, occurrence: int = 0) -> None:
         """Replace the payload of the n-th occurrence of a type."""
         n = 0
         for idx, (t, _) in enumerate(self.records):
@@ -98,7 +103,7 @@ class Wpj:
                 n += 1
         raise KeyError(f"type {typ} occurrence {occurrence} absent")
 
-    def get(self, typ, occurrence=0):
+    def get(self, typ: int, occurrence: int = 0) -> bytes:
         n = 0
         for t, p in self.records:
             if t == typ:
@@ -108,7 +113,7 @@ class Wpj:
         raise KeyError(f"type {typ} occurrence {occurrence} absent")
 
 
-def demo():
+def demo() -> None:
     files = corpus_files()
     if not files:
         return pas_de_corpus("wpjlib")

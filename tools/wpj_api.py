@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Inspect JSON matching the wpj-toolkit schema (MIT), computed locally.
 
+Module group: Format. Reference: SPEC.md.
+
 Goal: emit the same response shape as WPJ Studio's `POST /api/v1/inspect`
 WPJ Studio (`modelVersion`, `project`, `presets[]`, `fixtures`, `validation`,
 `unknown_tlvs`) so that tooling written against that schema works here — no
@@ -19,6 +21,8 @@ Usage :
   wpj_api.py project.wpj    inspect JSON on stdout
   wpj_api.py                self-check over the corpus
 """
+
+from __future__ import annotations
 import hashlib
 import json
 import os
@@ -73,7 +77,7 @@ def _preset(p):
     return out
 
 
-def inspect(path):
+def inspect(path: str) -> dict[str, object]:
     data = open(path, "rb").read()
     issues, warnings = [], []
     checksum_ok = len(data) > 20 and data[:20] == hashlib.sha1(data[20:]).digest()
@@ -122,7 +126,7 @@ def inspect(path):
             "x_records": [{"type": t, **d} for t, d, _ in dec]}
 
 
-def demo():
+def demo() -> None:
     files = wpjlib.corpus_files()
     if not files:
         return wpjlib.pas_de_corpus("wpj_api")

@@ -155,6 +155,17 @@ One record changed between the two candidates, 125, and one thing changed at
 the panel: `has_move` gates `MOVE FX`. **Device-confirmed** for that flag;
 `has_gobo`, `has_color` and `has_intensity` stay at the corpus's word.
 
+**The gobo page, photographed afterwards (group A, `Lyres`).** Twenty pads:
+pad 1 reads **`Etoile`** — the name the compiler wrote into `145.f3` for gobo
+id 425 — and pads 2–20 read the firmware's own `Gobo N`, as §3.4 says a
+writer must expect. Pads 7–17 carry the library's numbered ring icons for ids
+342–352; pads 2–6 and 18–20 a plain white disc — the five slots without an
+icon and the three padding slots look alike on screen. The five feature tabs
+(`ROTATE` selected, then focus, prism, zoom, iris) are there, `A ROTATE 0 %`
+at the foot, B/C/D beside it. Whether B and C are greyed or merely
+unselected cannot be read off a photograph; only a tap would say, so
+`has_gobo` stays at the corpus's word. No photograph is kept in the tree.
+
 The operator's objection — «the bar is supposed to have move» — is about the
 profile, not the flag: `LED BAR 252 RGB` carries no pan/tilt feature in
 record 110, and in *rig-b*, written by the device, the group holding that bar

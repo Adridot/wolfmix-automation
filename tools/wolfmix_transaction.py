@@ -272,7 +272,8 @@ def device_identity(port):
         return None
     return device.st_dev, device.st_ino, device.st_rdev
 
-def wait_for_controller(port, timeout=20.0, disconnected_identity=None):
+def wait_for_controller(port, timeout=20.0, disconnected_identity=None,
+                        allow_untested_firmware=False):
     deadline = time.monotonic() + timeout
     last_error = None
     if disconnected_identity is not None:
@@ -292,7 +293,9 @@ def wait_for_controller(port, timeout=20.0, disconnected_identity=None):
         connection = None
         try:
             candidate = port if Path(port).exists() else device.discover_port()
-            connection = device.WolfmixConnection(candidate, timeout=1.5)
+            connection = device.WolfmixConnection(
+                candidate, timeout=1.5,
+                allow_untested_firmware=allow_untested_firmware)
             connection.__enter__()
             protocol.decode_settings(connection.request(protocol.GET_SETTINGS))
             return connection
@@ -306,9 +309,11 @@ def wait_for_controller(port, timeout=20.0, disconnected_identity=None):
     )
 
 def restore_previous(port, label, previous, disconnected_identity=None,
-                     expected_identity=None, kind="exp"):
+                     expected_identity=None, kind="exp",
+                     allow_untested_firmware=False):
     connection = wait_for_controller(
-        port, disconnected_identity=disconnected_identity
+        port, disconnected_identity=disconnected_identity,
+        allow_untested_firmware=allow_untested_firmware,
     )
     restart_identity = None
     try:
@@ -332,7 +337,8 @@ def restore_previous(port, label, previous, disconnected_identity=None,
     finally:
         connection.close()
     connection = wait_for_controller(
-        port, disconnected_identity=restart_identity
+        port, disconnected_identity=restart_identity,
+        allow_untested_firmware=allow_untested_firmware,
     )
     try:
         if expected_identity:

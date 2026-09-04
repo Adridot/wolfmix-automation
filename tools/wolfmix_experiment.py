@@ -221,7 +221,8 @@ def initialize(args):
         if stored_project:
             try:
                 restore_previous(port, args.label, previous,
-                                 kind=args.namespace)
+                                 kind=args.namespace,
+                                 allow_untested_firmware=args.allow_untested_firmware)
             except Exception as rollback_error:
                 mark_rollback_failed(
                     args.state_dir, args.label, rollback_error,
@@ -305,7 +306,8 @@ def deploy_one(args, candidate_path, case_id):
             restart_identity = restart(connection)
 
         connection = wait_for_controller(
-            port, args.restart_timeout, restart_identity
+            port, args.restart_timeout, restart_identity,
+            allow_untested_firmware=args.allow_untested_firmware,
         )
         try:
             after_settings = check_identity(
@@ -347,6 +349,7 @@ def deploy_one(args, candidate_path, case_id):
                 restore_previous(
                     port, args.label, previous, restart_identity,
                     expected_identity=identity, kind=args.namespace,
+                    allow_untested_firmware=args.allow_untested_firmware,
                 )
             except Exception as rollback_error:
                 mark_rollback_failed(args.state_dir, args.label, rollback_error,

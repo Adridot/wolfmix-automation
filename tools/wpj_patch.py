@@ -181,7 +181,7 @@ def rig_du_fichier(w):
 
 def _palette_145(paquets_groupe, noms=()):
     """The gobo pads of a group: the wheel's ranges after the open slot, up to
-    the first range of another function (COV-66). `noms` names pads by
+    the first range of another function (SPEC §3.4). `noms` names pads by
     position — operator data, never derived."""
     ids = []
     for pk in paquets_groupe:

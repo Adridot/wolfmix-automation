@@ -195,6 +195,13 @@ projecting its own motif.
 
 ## The traps
 
+- **A firmware update erases your icons.** The normal update pushes the
+  vendor's flash after the firmware (UPLOAD-05, on 2.0.19). Keep the exact
+  24×24 renders — `gobo_library.py sheet` shows them, the `id=img.png` plain
+  form re-writes them byte for byte — and re-upload after every update.
+  The `mask:` path from the 1024² sources gives a *similar* image, not the
+  same bytes, once the tool's resampling has changed.
+
 - An RGB export with no alpha lands opaque; `mask:` exists so you never hand
   the tool a flattened icon by accident.
 - Fine detail (wing veins, thin outlines) dies at 24 px — regenerate that one

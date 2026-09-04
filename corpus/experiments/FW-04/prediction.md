@@ -42,3 +42,16 @@ byte sent.
 
 If R1 or R2 fails, the new field is recorded under its neutral number and the
 cell says which message grew.
+
+## Results (2026-09-04, evening)
+
+| # | Outcome |
+|---|---|
+| R1 | **held** — 20 fields, `firmwareVer` `2.0.19`, no `unknownFields` |
+| R2 | **held** — 23 profiles read (the three of PATCH-02 and 20 drawn at random, seed 20260904, from the 3 364 on the device), **none** with an `unknownFields` anywhere in its tree |
+| R3 | **held** — reported mode `5` after `SET_MODE presets`, `0` after `SET_MODE home` |
+
+Seven readings replayed on 2.0.19, seven held. `2.0.19` joins the tested
+firmware list, and the gate that refused it — rightly, four times in one
+evening — closes behind it. What the cell does not say: nothing about the
+gobo page, which is the one thing the vendor changed.

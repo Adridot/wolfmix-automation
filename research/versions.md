@@ -9,7 +9,7 @@
 | macOS | 26.6.2 (25G83) | `sw_vers` |
 | W1 Mk1 firmware | **2.0.19** since 2026-09-04 — 2.0.18 for every measurement before that date | `GET_SETTINGS` field 14, device connected; PATCH-02 is the first measurement on 2.0.19 |
 | `wpj-toolkit` | commit `2bd0ee3` (2026-08-14) | external, not re-verified since |
-| Cached W1 firmware bundle | 2.0.18, channel `debug`, `fwDate` 2026-07-07 | `~/Library/Application Support/com.nicolaudiegroup.wtools/wm-fw-bundle-2.0.18/` — the image is encrypted; only `changelog.json` is readable (FW-01) |
+| Cached W1 firmware bundle | 2.0.19, channel `debug`, built 2026-09-01 — and 2.0.18 beside it | `~/Library/Application Support/com.nicolaudiegroup.wtools/wm-fw-bundle-2.0.19/` — the image is encrypted; only `changelog.json` is readable (FW-01) |
 
 The firmware is **read off the device**, not cited. **The trap**: field 13
 (`firmwareVersion`, a float) reads 0.0 on this firmware — read field 14
@@ -20,6 +20,13 @@ The firmware is **read off the device**, not cited. **The trap**: field 13
 replaced the stable install. The honest compatibility consequence: **everything
 measured after 2026-08-14 was measured against a beta**, and is not promised on
 the public 2.0.x. The ACC-series experiments predate it, under WTOOLS 1.6.3.
+
+## Firmware cells — what «compatible» means here (README rule 5)
+
+| Firmware | Measured | What held |
+|---|---|---|
+| 2.0.18 | every finding dated before 2026-09-04 | the whole ledger |
+| 2.0.19 | 2026-09-04: PATCH-02, PATCH-03, FW-04 | a compiled patch opens and survives the device's save byte for byte; record-120 defaults at rest; the 25 Hz clock; the verified store; `GET_SETTINGS` and `GET_PROFILE` with no unknown field; `SET_MODE` read back. **Not** replayed: a preset recall, the panel's mode map, the gobo page — the one thing the vendor's changelog names |
 
 ## Local corpus — frozen copies, hashes in `corpus/SHA256SUMS`
 

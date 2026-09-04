@@ -104,7 +104,7 @@ MUTATING_EVENTS = {
     RESTART,
 }
 
-TESTED_FIRMWARE = ("2.0.18",)
+TESTED_FIRMWARE = ("2.0.18", "2.0.19")   # 2.0.19: FW-04, the cell in research/versions.md
 
 # The panel's own range. 200-255 has only ever produced the no-op an absent id
 # produces, which a byte masked at the far end would produce too (RECALL-06):

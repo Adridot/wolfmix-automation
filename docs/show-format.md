@@ -35,7 +35,7 @@ stay out of the writer: rule 2 wants a byte-identical round-trip *and*
 acceptance downstream before a field becomes writable, and neither has been done
 on them. They are readable through the codec.
 
-Keys are French, matching the codec's key names.
+Keys are English, matching the codec's current schema names.
 
 ## Top level
 

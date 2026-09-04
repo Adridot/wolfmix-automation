@@ -144,11 +144,11 @@ def modeles(rig: dict[str, object]) -> dict[str, int]:
 def _couleur(valeur):
     v = valeur.lstrip("#") if isinstance(valeur, str) else None
     if not v or len(v) != 6:
-        raise ValueError(f"couleur {valeur!r} : attendu « #rrggbb »")
+        raise ValueError(f"color {valeur!r}: expected '#rrggbb'")
     try:
         return tuple(int(v[i:i + 2], 16) for i in (0, 2, 4))
     except ValueError:
-        raise ValueError(f"couleur {valeur!r} : attendu « #rrggbb »") from None
+        raise ValueError(f"color {valeur!r}: expected '#rrggbb'") from None
 
 
 def _pad_le_plus_proche(palette, rgb):
@@ -164,7 +164,7 @@ def _palier(energie):
     for maxi, famille, dimmer, effet, vitesse in PALIERS:
         if energie <= maxi:
             return famille, dimmer, effet, vitesse
-    raise ValueError(f"energie {energie} hors de [0, 100]")
+    raise ValueError(f"energy {energie} outside [0, 100]")
 
 
 def _famille_disponible(voulue, dispo):
@@ -197,14 +197,14 @@ def composer(intention: dict[str, object]) -> tuple[dict[str, object], list[str]
 
     presets, rapport = [], []
     for n, amb in enumerate(intention.get("moods", [])):
-        wpj_show.cles(amb, _AMBIANCE_CLES, f"ambiance {n}")
+        wpj_show.cles(amb, _AMBIANCE_CLES, f"mood {n}")
         nom = amb.get("name", f"CUE {n + 1}")
-        energie = wpj_show.borne(f"ambiance {nom!r}", "energy",
+        energie = wpj_show.borne(f"mood {nom!r}", "energy",
                                   amb.get("energy", 50), 0, 100)
         famille, dimmer, effet, vitesse = _palier(energie)
         if "dimmer" in amb:               # energy says activity, not
             dimmer = wpj_show.borne(      # brightness: an explicit override
-                f"ambiance {nom!r}", "dimmer", amb["dimmer"], 0, 255)
+                f"mood {nom!r}", "dimmer", amb["dimmer"], 0, 255)
         famille = _famille_disponible(famille, dispo)
         _, mouvement, faisceau = FAMILLES[famille]
         modele = amb.get("template", dispo[famille])
@@ -247,7 +247,7 @@ def composer(intention: dict[str, object]) -> tuple[dict[str, object], list[str]
         rapport.append(f"id {pid:3d} (page {pid // PADS + 1} slot "
                        f"{pid % PADS + 1:2d})  {_coupe(nom):<19s}  "
                        f"energy {energie:3d}  {famille:<18s} template {modele:3d}  "
-                       f"groupes {''.join(GROUPES[g] for g in lus) or '-':<8s} "
+                       f"groups {''.join(GROUPES[g] for g in lus) or '-':<8s} "
                        f"pad {pads[lus[0]][0] if lus and pads[lus[0]] else '-'}")
 
     spec = {"base": intention["base"], "presets": presets}
@@ -258,13 +258,13 @@ def composer(intention: dict[str, object]) -> tuple[dict[str, object], list[str]
 
 def _index_groupe(nom, lettre):
     if not isinstance(lettre, str) or lettre.upper() not in GROUPES:
-        raise ValueError(f"ambiance {nom!r} : groupe {lettre!r} hors de A–H")
+        raise ValueError(f"mood {nom!r}: group {lettre!r} outside A–H")
     return GROUPES.index(lettre.upper())
 
 
 def _coupe(nom):
     """Truncates on a UTF-8 boundary: past 19 bytes, the project
-    ENTIER refuse de s'ouvrir (PRESET-05)."""
+    cannot be opened at all (PRESET-05)."""
     b = nom.encode("utf-8")[:wpj_show.NOM_MAX_OCTETS]
     while b:
         try:
@@ -302,7 +302,7 @@ def _positions(nom, voulue, rig, lus, modele):
     """The index of the named position, per group. Record 150 exists once per
     group, so the index can differ from one group to the next. A group that is
     off keeps the template's: otherwise we would move
-    projecteurs noirs."""
+    fixtures whose dimmers are off."""
     src = next((p for p in rig["presets"] if p.get("id", 0) == modele), {})
     defaut = src.get("positions") or [0] * len(GROUPES)
     sortie = []
@@ -313,28 +313,28 @@ def _positions(nom, voulue, rig, lus, modele):
         elif voulue in table:
             sortie.append(table[voulue])
         else:
-            raise ValueError(f"ambiance {nom!r} : position {voulue!r} absente "
-                             f"of group {GROUPES[g]}; available: "
+            raise ValueError(f"mood {nom!r}: position {voulue!r} missing "
+                             f"from group {GROUPES[g]}; available: "
                              f"{sorted(table)}")
     return sortie
 
 
-# --- sorties -----------------------------------------------------------------
+# --- output -----------------------------------------------------------------
 
 def imprime_rig(rig: dict[str, object]) -> None:
-    print(f"donneur : {rig['fichier']}")
+    print(f"donor: {rig['fichier']}")
     print(f"presets : {len(rig['presets'])}, id max {rig['id_max']} "
           f"(page {rig['id_max'] // PADS + 1}); first free page: "
           f"{rig['id_max'] // PADS + 2}")
-    print("\ngroupes")
+    print("\ngroups")
     for g, fixtures in rig["groups"].items():
         if not fixtures:
             continue
         detail = ", ".join(f"{f['profile']} ×{sum(1 for x in fixtures if x['profile'] == f['profile'])}"
                            for f in {x["profile"]: x for x in fixtures}.values())
         adr = ", ".join(str(f["dmx_address"]) for f in fixtures)
-        print(f"  {GROUPES[g]} : {len(fixtures):2d} luminaires — {detail}")
-        print(f"      adresses DMX (1-based) : {adr}")
+        print(f"  {GROUPES[g]} : {len(fixtures):2d} fixtures — {detail}")
+        print(f"      DMX addresses (1-based): {adr}")
     print("\nnamed positions, per group")
     for g, table in enumerate(rig["positions"]):
         if rig["groups"][g] and table:
@@ -401,7 +401,7 @@ def _demo_sur(base):
     assert peuples, "donor with no populated group"
     intention = {"base": base, "name": "WMX GEN DEMO",
                  "moods": [
-                     {"name": "ouverture douce", "energy": 10,
+                     {"name": "soft opening", "energy": 10,
                       "color": "#ff0000",
                       "groups": [GROUPES[peuples[0]]]},
                      {"name": "build-up", "energy": 60, "color": "#0000ff"},
@@ -455,7 +455,7 @@ def _demo_sur(base):
         # an unknown position is refused, with the list of known ones
         try:
             composer({**intention, "moods": [
-                {"name": "x", "energy": 50, "position": "Nulle Part"}]})
+                {"name": "x", "energy": 50, "position": "Nowhere"}]})
             raise AssertionError("unknown position: an error was expected")
         except ValueError:
             pass
@@ -467,5 +467,5 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except (ValueError, KeyError, OSError) as e:
-        print(f"erreur : {e}", file=sys.stderr)
+        print(f"error: {e}", file=sys.stderr)
         sys.exit(1)

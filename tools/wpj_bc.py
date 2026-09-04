@@ -33,7 +33,7 @@ import wpjlib
 
 
 def variante(data: bytes) -> str | None:
-    """'A', 'B', 'C' ou None (fichier non reconnu)."""
+    """'A', 'B', 'C' or None (unrecognized file)."""
     if len(data) > 0x46 and data[:20] == hashlib.sha1(data[20:]).digest():
         if int.from_bytes(data[0x44:0x46], "little") == 100:
             return "A"
@@ -52,7 +52,7 @@ def charger(path: str | PathLike[str]) -> tuple[str, bytes]:
     if v == "A":
         raise ValueError("variante A : utiliser wpjlib/wpj_codec")
     if v is None:
-        raise ValueError("ni TLV ni protobuf : fichier non reconnu")
+        raise ValueError("neither TLV nor protobuf: unrecognized file")
     return v, (data[20:] if v == "B" else data)
 
 
@@ -183,7 +183,7 @@ def _identites(body):
     def blob(f):
         trouve = next((v for wt, v in top.get(f, []) if wt == 2), None)
         if trouve is None:
-            raise ValueError(f"champ {f} absent : fichier B/C incomplet")
+            raise ValueError(f"field {f} missing: incomplete B/C file")
         return trouve
 
     prof_ch = [_msg(b).get(5, 0)

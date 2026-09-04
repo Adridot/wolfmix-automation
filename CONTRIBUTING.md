@@ -65,9 +65,11 @@ New non-trivial logic leaves one runnable check behind — a `demo()` guarded by
 
 ## Language
 
-`research/` is the author's lab notebook and is in French. `SPEC.md`,
-`LEGAL.md`, `PROVENANCE.md`, `docs/`, `README.md` and this file are in English.
-Contribute in either; do not mass-translate the other.
+Write all repository content in English, including identifiers, comments,
+docstrings, tool messages, examples and agent instructions. Operator
+conversations remain in French. Follow the translation and evidence rules in
+[`AGENTS.md`](AGENTS.md#existing-conventions); changing language does not
+change an observation or its status.
 
 ## Automated contributors
 

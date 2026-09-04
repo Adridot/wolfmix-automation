@@ -24,15 +24,15 @@ research/vendor/
 *.ssl2
 *.ssl2.xml
 
-# Liste locale des noms réels interdits (tools/wpj_privacy.py).
+# Local list of forbidden real names (tools/wpj_privacy.py).
 .wpj-private-names
 
 # Vendor documents and binaries kept locally for reference, never committed.
 *.pdf
 
-# Journaux de WTOOLS. Ils portent le numéro de série du contrôleur — exactement
-# ce que tools/wpj_privacy.py refuse dans un fichier suivi — et docs/ demande
-# de les copier hors de l'arbre avant qu'ils tournent.
+# WTOOLS logs carry the controller serial number, which tools/wpj_privacy.py
+# rejects in tracked files. The guides in docs/ require copying these logs
+# outside the tree before log rotation.
 *.log
 
 # Raw USB and serial captures may contain the controller serial number and a
@@ -51,7 +51,7 @@ research/vendor/
 **/flash-custom.bin
 **/flash-custom.bin.json
 
-# OpenSpec (npx @fission-ai/openspec init --tools claude) : outillage local
-# de développement piloté par spec, pas du contenu du dépôt.
+# OpenSpec (npx @fission-ai/openspec init --tools claude): local tooling for
+# specification-driven development, excluded from repository content.
 .claude/
 openspec/

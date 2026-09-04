@@ -9,7 +9,7 @@ The model was measured channel by channel (registry, POS-01…07):
     etalement     = (1 - FAN) + k * (2*FAN - 1) / (n - 1)   the FAN ramp
     pct_groupe    = TILT                                    tilt
     pct           = clamp(pct_groupe + offset, 0, 1)        offset = record 151
-    borne16(f)    = f / 255 * 65535                         f = 106.f5 ou f6
+    borne16(f)    = f / 255 * 65535                         f = 106.f5 or f6
     DMX16         = borne16(f5) + pct * (borne16(f6) - borne16(f5))
 
 The self-check replays the four DMX captures of that session: 24 channels

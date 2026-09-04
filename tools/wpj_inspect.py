@@ -7,7 +7,7 @@ Walks the protobuf wire format of a "WTOOLS-shaped" .wpj and emits a JSON tree
 (fields, wire types, values). No invented semantics: field names are numbers,
 and unknown bytes come out as hex.
 
-Usage: wpj_inspect.py fichier.wpj [--depth N] > out.json
+Usage: wpj_inspect.py file.wpj [--depth N] > out.json
 Format status: the wire format was validated on 6/6 large local .wpj files
 (2026-08-25). Small .wpj files (device dumps?) do NOT parse — the tool says so
 and exits with an error rather than guessing.

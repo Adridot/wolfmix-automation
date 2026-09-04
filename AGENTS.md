@@ -68,9 +68,8 @@ research/evidence.md   the ledger: every finding, one line each — date, what
                  and status downgrades are written out in full at the top.
                  Every id cited anywhere in the tree must resolve to an entry;
                  `make check` fails when one does not.
-research/        the lab notebook. ALWAYS the most current. Mostly English
-                 since its type-102 entry; the oldest and newest sections
-                 are French.
+research/        the lab notebook. ALWAYS the most current. Historical
+                 observations retain their evidence status when translated.
 SPEC.md          the consolidated English read of research/. May lag.
 docs/            task-oriented guides for users.
 tools/           the implementation. Self-checks are the ground truth.
@@ -120,10 +119,14 @@ a finding the ledger has taken back.
 
 ### Existing conventions
 
-- **Language:** mixed on purpose. Tool output strings are French. `SPEC.md`,
-  `LEGAL.md`, `PROVENANCE.md`, `docs/` and `README.md` are English. `research/`
-  is both — English since the type-102 entry, French before it and in the newest
-  entries. Keep each file in the language it is in rather than mass-translating.
+- **Language:** write all repository content in English: documentation, code
+  identifiers, comments, docstrings, diagnostics, CLI help, examples and agent
+  instructions. Review every added or changed line for this requirement.
+  Conversations with the operator remain in French. Translate prose without
+  changing measured values, hashes, evidence IDs or statuses. A translation
+  supplies no new evidence. Existing API names and frozen archives require the
+  operator's migration decision before changing their contracts. Preserve
+  Unicode coverage in tests; English-only prose does not mean ASCII-only data.
 - **Codec keys:** a proven field gets a semantic key (`name`, `profile`,
   `effect`); an unidentified one keeps a neutral `fN` key. Renaming `fN` → a
   guess is exactly the failure mode this repository exists to avoid.

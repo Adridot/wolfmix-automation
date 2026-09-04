@@ -30,7 +30,7 @@ def ranges(a: bytes | bytearray, b: bytes | bytearray) -> list[tuple[int, int]]:
 
 def main(pa: str | PathLike[str], pb: str | PathLike[str]) -> None:
     a, b = open(pa, "rb").read(), open(pb, "rb").read()
-    print(f"{pa}: {len(a)} octets / {pb}: {len(b)} octets")
+    print(f"{pa}: {len(a)} bytes / {pb}: {len(b)} bytes")
     if len(a) != len(b):
         # common suffix, to estimate the inserted/deleted region
         n = 0

@@ -55,7 +55,7 @@ def _keystream(n, key=CLE_DEFAUT):
     is one stream from offset 0, and that is the only way it is used here.
     """
     if not key:
-        raise ValueError("clé vide")
+        raise ValueError("empty key")
     cle = key.encode("latin-1") if isinstance(key, str) else bytes(key)
     etat = _CACHE.get(cle)
     if etat is None:
@@ -145,14 +145,14 @@ def charge_xml(chemin: str | PathLike[str], key: str = CLE_DEFAUT) -> bytes:
         clair = dechiffre(flux.read(), key)
     quoi = classe(clair)
     if quoi is None:
-        raise ValueError(f"{chemin} : le contenu déchiffré ne contient pas "
-                         f"<DLMFILE — ce n'est pas un .ssl2 (ou la clé est "
-                         f"fausse) ; il commence par {clair[:24]!r}")
+        raise ValueError(f"{chemin} : decrypted content does not contain "
+                         f"<DLMFILE — not an .ssl2 file (or the key is "
+                         f"wrong); it starts with {clair[:24]!r}")
     if quoi != "v3":
         raise VersionNonPriseEnCharge(
-            f"{chemin} : SSL2 {quoi} (TYPE=SSLLIBRARY2008 sur cette version), "
-            f"non décodé ici — seul VERSION=\"3\" l'est. Le fichier est "
-            f"valide, c'est le codec qui s'arrête")
+            f"{chemin} : SSL2 {quoi} (TYPE=SSLLIBRARY2008 in this version), "
+            f"not decoded here — only VERSION=\"3\" is. The file is "
+            f"valid; this codec does not support it")
     return clair
 
 
@@ -171,8 +171,8 @@ def fichiers_biblio() -> list[str]:
 
 def pas_de_biblio() -> None:
     racine = os.environ.get(BIBLIO_ENV) or BIBLIO_DEFAUT
-    print(f"ssl2: {ABSTENTION} — aucune bibliothèque dans {racine}, rien n'a "
-          f"été vérifié (voir docs/ssl2-format.md)", file=sys.stderr)
+    print(f"ssl2: {ABSTENTION} — no library in {racine}, nothing was "
+          f"verified (see docs/ssl2-format.md)", file=sys.stderr)
 
 
 # --- XML codec -------------------------------------------------------------
@@ -253,7 +253,7 @@ class Element:
             yield from e.trouve(tag)
 
     def __repr__(self) -> str:
-        return f"<{self.tag} {len(self.attrs)} attrs, {len(self.enfants)} enfants>"
+        return f"<{self.tag} {len(self.attrs)} attrs, {len(self.enfants)} children>"
 
 
 def parse(xml: bytes | str, source: str = '<xml>') -> Element:
@@ -262,40 +262,40 @@ def parse(xml: bytes | str, source: str = '<xml>') -> Element:
         xml = xml.decode("latin-1")
     tete = _PROLOG.match(xml)
     if not tete:
-        raise ValueError(f"{source} : prologue inattendu {xml[:40]!r}")
+        raise ValueError(f"{source} : unexpected prologue {xml[:40]!r}")
     prologue = tete.group(0)
     pos, pile, racine = tete.end(), [], None
     for m in _BALISE.finditer(xml, pos):
         blanc = xml[pos:m.start()]
         if blanc.strip():
-            raise ValueError(f"{source} : contenu hors balise à l'offset "
+            raise ValueError(f"{source} : content outside a tag at offset "
                              f"{pos} : {blanc[:40]!r}")
         pos = m.end()
         ferme, tag, corps, blancfin, vide = m.groups()
         if ferme:
             if not pile or pile[-1].tag != tag:
-                raise ValueError(f"{source} : </{tag}> ferme "
-                                 f"{pile[-1].tag if pile else 'rien'}")
+                raise ValueError(f"{source} : </{tag}> closes "
+                                 f"{pile[-1].tag if pile else 'nothing'}")
             pile.pop().fin = blanc
             continue
         e = Element(tag, _ATTR.findall(corps), vide=bool(vide))
         e.avant, e.blancfin = blanc, blancfin
         if len(e.attrs) != len(_ATTR.findall(corps)):
-            raise ValueError(f"{source} : attribut répété dans <{tag}>")
+            raise ValueError(f"{source} : duplicate attribute in <{tag}>")
         if pile:
             pile[-1].enfants.append(e)
         elif racine is None:
             racine = e
         else:
-            raise ValueError(f"{source} : deuxième racine <{tag}>")
+            raise ValueError(f"{source} : second root <{tag}>")
         if not vide:
             pile.append(e)
     if xml[pos:].strip():
-        raise ValueError(f"{source} : queue non balisée {xml[pos:][:40]!r}")
+        raise ValueError(f"{source} : untagged tail {xml[pos:][:40]!r}")
     if pile:
-        raise ValueError(f"{source} : <{pile[-1].tag}> jamais fermée")
+        raise ValueError(f"{source} : <{pile[-1].tag}> never closed")
     if racine is None:
-        raise ValueError(f"{source} : document vide")
+        raise ValueError(f"{source} : empty document")
     racine.prologue, racine.queue = prologue, xml[pos:]
     return racine
 
@@ -311,7 +311,7 @@ def write(racine: Element) -> bytes:
         if e.vide:
             morceaux.append(e.blancfin + "/>")
             if e.enfants:
-                raise ValueError(f"<{e.tag}> marquée vide mais a des enfants")
+                raise ValueError(f"<{e.tag}> marked empty but has children")
             return
         morceaux.append(e.blancfin + ">")
         for enfant in e.enfants:
@@ -338,13 +338,13 @@ def verifie_racine(racine: Element, source: str = '<xml>') -> Element:
     it would fail quietly — so it is refused here instead.
     """
     if racine.tag != "DLMFILE":
-        raise ValueError(f"{source} : racine <{racine.tag}>, attendu <DLMFILE>")
+        raise ValueError(f"{source} : root <{racine.tag}>, expected <DLMFILE>")
     version, type_ = racine.get("VERSION"), racine.get("TYPE")
     if version != "3":
-        raise ValueError(f"{source} : DLMFILE VERSION={version!r} non pris en "
-                         f"charge (seul VERSION=\"3\" est décodé)")
+        raise ValueError(f"{source} : DLMFILE VERSION={version!r} unsupported "
+                         f"(only VERSION=\"3\" is decoded)")
     if type_ != "SSLLIBRARY":
-        raise ValueError(f"{source} : DLMFILE TYPE={type_!r}, attendu "
+        raise ValueError(f"{source} : DLMFILE TYPE={type_!r}, expected "
                          f"\"SSLLIBRARY\"")
     return racine
 
@@ -359,7 +359,7 @@ def echappe(s: str) -> str:
 # --- Enums -----------------------------------------------------------------
 # Rebuilt from a local library by `ssl2.py enums`, which recomputes both tables
 # and refuses a value it cannot account for. Each entry is
-# `numéro: (lecture, part, n)`:
+# `number: (interpretation, share, n)`:
 #
 #   n     = how many channels/presets in the library carry that number;
 #   part  = what share of them agree on the name, once the obvious variants
@@ -654,14 +654,14 @@ def _num(nom, index, table, quoi):
     if isinstance(nom, int) or (isinstance(nom, str) and nom.isdigit()):
         n = int(nom)
         if n not in table:
-            raise ValueError(f"type de {quoi} {n} absent de la bibliothèque "
-                             f"locale — refusé faute de savoir ce qu'il vaut")
+            raise ValueError(f"{quoi} type {n} missing from the local "
+                             f"library — refused because its meaning is unknown")
         return n
     n = index.get(str(nom).strip().lower())
     if n is None:
         proches = [x for x in index if str(nom).strip().lower() in x]
-        raise ValueError(f"type de {quoi} inconnu : {nom!r}"
-                         + (f" (proche : {', '.join(sorted(proches)[:4])})"
+        raise ValueError(f"unknown {quoi} type: {nom!r}"
+                         + (f" (similar: {', '.join(sorted(proches)[:4])})"
                             if proches else ""))
     return n
 
@@ -686,7 +686,7 @@ def _auto_test_crypto():
     for cle in ("", None, b""):
         try:
             transforme(b"x", cle)
-            raise AssertionError(f"clé {cle!r} acceptée")
+            raise AssertionError(f"key {cle!r} accepted")
         except ValueError:
             pass
 
@@ -701,7 +701,7 @@ def _auto_test_crypto():
 # Everything else — UIDs, counters, indexes, the physical block — is filled in
 # from the shape the library's own `_Generic` fixtures have, because a profile
 # the software refuses is worth nothing. A channel may carry `name`, `icon` and
-# `presets`; a preset carries `type`, `name`, `dmx: [début, fin]`, and
+# `presets`; a preset carries `type`, `name`, `dmx: [start, end]`, and
 # optionally `default` (the DMX value the preset opens on), `defaut: true` (the
 # one preset of the channel the software starts on) and `icon`.
 #
@@ -778,7 +778,7 @@ def genere(description: dict[str, object]) -> Element:
     marque = _texte(description, "brand")
     modes = description.get("modes")
     if not isinstance(modes, list) or not modes:
-        raise ValueError("description : 'modes' doit être une liste non vide")
+        raise ValueError("description : 'modes' must be a non-empty list")
     graine = f"{marque}\n{nom}"
 
     props = dict(DEFAUTS_PROPRIETES)
@@ -786,7 +786,7 @@ def genere(description: dict[str, object]) -> Element:
     supplement = description.get("properties") or {}
     inconnus = set(supplement) - set(props) - {"SSLCATEGORY"}
     if inconnus:
-        raise ValueError(f"properties : attribut(s) inconnu(s) "
+        raise ValueError(f"properties : unknown attribute(s) "
                          f"{', '.join(sorted(inconnus))}")
     for cle, valeur in supplement.items():
         props[cle] = echappe(depuis_utf8(str(valeur)))
@@ -867,13 +867,13 @@ def _copie_globale(el, uid):
 def _genere_mode(graine, index, mode, globaux=None):
     canaux = mode.get("channels")
     if not isinstance(canaux, list) or not canaux:
-        raise ValueError(f"mode {index} : 'channels' doit être une liste non vide")
+        raise ValueError(f"mode {index} : 'channels' must be a non-empty list")
     if len(canaux) > MAX_CANAUX:
         raise ValueError(f"mode {index} : {len(canaux)} canaux, maximum "
                          f"{MAX_CANAUX} (un univers DMX)")
     for i, canal in enumerate(canaux):
         if not isinstance(canal, dict) or "type" not in canal:
-            raise ValueError(f"canal {i} : il faut au moins un 'type'")
+            raise ValueError(f"channel {i}: at least a 'type' is required")
     graine = f"{graine}\nmode{index}"
     types = [num_canal(c["type"]) for c in canaux]
     paires = _apparie(canaux, types)              # {fin: grossier}
@@ -900,7 +900,7 @@ def _genere_mode(graine, index, mode, globaux=None):
 
 
 def _apparie(canaux, types):
-    """`{index du canal fin: index de son grossier}`, from the `fine` key.
+    """`{fine channel index: coarse channel index}`, from the `fine` key.
 
     `fine: true` pairs with the nearest earlier channel of the same type that
     is not itself fine and not already paired — which is what makes both of the
@@ -917,25 +917,25 @@ def _apparie(canaux, types):
                       and j not in pris and not canaux[j].get("fine")]
             if not libres:
                 raise ValueError(
-                    f"canal {i} : 'fine' sans canal grossier libre de type "
-                    f"{TYPE_CANAL[types[i]][0]!r} avant lui — donnez l'index")
+                    f"channel {i}: 'fine' has no available coarse channel of type "
+                    f"{TYPE_CANAL[types[i]][0]!r} before it — provide the index")
             j = libres[-1]
         elif isinstance(fin, int) and not isinstance(fin, bool):
             j = fin
             if not 0 <= j < len(canaux):
-                raise ValueError(f"canal {i} : 'fine' {j} hors du mode "
+                raise ValueError(f"channel {i}: 'fine' {j} outside the mode "
                                  f"(0-{len(canaux) - 1})")
             if j == i:
-                raise ValueError(f"canal {i} : 'fine' pointe sur lui-même")
+                raise ValueError(f"channel {i}: 'fine' points to itself")
             if canaux[j].get("fine"):
-                raise ValueError(f"canal {i} : 'fine' pointe le canal {j}, "
-                                 f"lui-même marqué 'fine'")
+                raise ValueError(f"channel {i}: 'fine' points to channel {j}, "
+                                 f"also marked 'fine'")
         else:
-            raise ValueError(f"canal {i} : 'fine' vaut {fin!r}, attendu true "
-                             f"ou l'index du canal grossier")
+            raise ValueError(f"channel {i}: 'fine' is {fin!r}, expected true "
+                             f"or the coarse channel index")
         if j in pris:
-            raise ValueError(f"canal {i} : le canal {j} est déjà apparié au "
-                             f"canal {[f for f, g in paires.items() if g == j][0]}")
+            raise ValueError(f"channel {i}: channel {j} is already paired with "
+                             f"channel {[f for f, g in paires.items() if g == j][0]}")
         paires[i], _ = j, pris.add(j)
     return paires
 
@@ -971,8 +971,8 @@ def _genere_canal(graine, index, canal, types, tis, paires, grossier, descriptio
     type_ = types[index]
     graine = f"{graine}\ncanal{index}"
     fin, gros = index in paires, grossier.get(index)
-    # 16 bits, câblé dans les deux sens : chacun porte l'index de l'autre, et
-    # les 62 400 paires de la bibliothèque sont symétriques sans exception.
+    # 16-bit pairing is bidirectional: each carries the other's index, and
+    # all 62 400 library pairs are symmetric, without exception.
     if fin:
         autre = paires[index]
     elif gros is not None:
@@ -1022,23 +1022,23 @@ def _preset_par_defaut(presets):
     library. The description may say which; otherwise it is the first."""
     marques = [i for i, p in enumerate(presets) if p.get("defaut")]
     if len(marques) > 1:
-        raise ValueError(f"presets : {len(marques)} marqués 'defaut', un seul "
-                         f"peut l'être")
+        raise ValueError(f"presets : {len(marques)} marked 'defaut'; only one "
+                         f"is allowed")
     return marques[0] if marques else 0
 
 
 def _genere_preset(graine, index, preset, est_defaut, occupe,
                    canal=0, types=(), tis=()):
     if not isinstance(preset, dict) or "type" not in preset:
-        raise ValueError(f"preset {index} : il faut au moins un 'type'")
+        raise ValueError(f"preset {index} : at least a 'type' is required")
     type_ = num_preset(preset["type"])
     debut, fin = _plage(preset, index, occupe)
     par_defaut = preset.get("default", debut)
     if not 0 <= int(par_defaut) <= 255:
-        raise ValueError(f"preset {index} : 'default' {par_defaut} hors 0-255")
+        raise ValueError(f"preset {index} : 'default' {par_defaut} outside 0-255")
     if not debut <= int(par_defaut) <= fin:
-        raise ValueError(f"preset {index} : 'default' {par_defaut} hors de sa "
-                         f"propre plage {debut}-{fin}")
+        raise ValueError(f"preset {index} : 'default' {par_defaut} outside its "
+                         f"own range {debut}-{fin}")
     uid = _uid_element(graine, index, "preset")
     attrs = {
         "SSLPRESETUID": uid, "SSLPRESETTEMPLATEUID": uid,
@@ -1093,8 +1093,8 @@ def _borne(preset, cle, defaut, index):
             or not all(v is None or (isinstance(v, int)
                                      and not isinstance(v, bool))
                        for v in valeur)):
-        raise ValueError(f"preset {index} : {cle!r} doit être [min, max], deux "
-                         f"entiers (ou null) — reçu {valeur!r}")
+        raise ValueError(f"preset {index} : {cle!r} must be [min, max], two "
+                         f"integers (or null) — received {valeur!r}")
     return tuple(None if v is None else str(v) for v in valeur)
 
 
@@ -1109,17 +1109,17 @@ def _couleur(valeur, index):
     if isinstance(valeur, str):
         texte = valeur.lstrip("#")
         if len(texte) != 6 or any(c not in "0123456789abcdefABCDEF" for c in texte):
-            raise ValueError(f"preset {index} : 'color' {valeur!r}, attendu "
-                             f"\"#rrggbb\" ou un entier 0xBBGGRR")
+            raise ValueError(f"preset {index} : 'color' {valeur!r}, expected "
+                             f"\"#rrggbb\" or an integer 0xBBGGRR")
         r, v, b = (int(texte[i:i + 2], 16) for i in (0, 2, 4))
         return str(r | v << 8 | b << 16)
     if isinstance(valeur, int) and not isinstance(valeur, bool):
         if not 0 <= valeur <= 0xFFFFFF:
-            raise ValueError(f"preset {index} : 'color' {valeur} hors "
+            raise ValueError(f"preset {index} : 'color' {valeur} outside "
                              f"0-16777215")
         return str(valeur)
-    raise ValueError(f"preset {index} : 'color' {valeur!r}, attendu \"#rrggbb\" "
-                     f"ou un entier")
+    raise ValueError(f"preset {index} : 'color' {valeur!r}, expected \"#rrggbb\" "
+                     f"or an integer")
 
 
 def _cible(preset, index, type_, canal, types, tis):
@@ -1129,17 +1129,17 @@ def _cible(preset, index, type_, canal, types, tis):
         if cible is None or cible is False:
             return -1
         if not isinstance(cible, int) or isinstance(cible, bool):
-            raise ValueError(f"preset {index} : 'target' {cible!r}, attendu "
-                             f"l'index d'un canal du mode, ou null")
+            raise ValueError(f"preset {index} : 'target' {cible!r}, expected "
+                             f"a channel index in the mode, or null")
         if cible != -1 and not 0 <= cible < len(types):
-            raise ValueError(f"preset {index} : 'target' {cible} hors du mode "
+            raise ValueError(f"preset {index} : 'target' {cible} outside the mode "
                              f"(0-{len(types) - 1})")
         return cible
     vise = CIBLE_PRESET.get(type_)
     if vise is None:
         return -1
     if canal < len(types) and types[canal] == vise:
-        return canal                       # le preset agit sur son propre canal
+        return canal                       # the preset acts on its own channel
     memes = [j for j, t in enumerate(types) if t == vise]
     if not memes:
         return -1
@@ -1151,16 +1151,16 @@ def _plage(preset, index, occupe):
     plage = preset.get("dmx", [0, 255])
     if (not isinstance(plage, (list, tuple)) or len(plage) != 2
             or not all(isinstance(v, int) for v in plage)):
-        raise ValueError(f"preset {index} : 'dmx' doit être [début, fin], "
-                         f"deux entiers — reçu {plage!r}")
+        raise ValueError(f"preset {index} : 'dmx' must be [start, end], "
+                         f"two integers — received {plage!r}")
     debut, fin = plage
     if not 0 <= debut <= fin <= 255:
-        raise ValueError(f"preset {index} : plage DMX {debut}-{fin} invalide "
-                         f"(attendu 0 <= début <= fin <= 255)")
+        raise ValueError(f"preset {index} : invalid DMX range {debut}-{fin} "
+                         f"(expected 0 <= start <= end <= 255)")
     for valeur in range(debut, fin + 1):
         if valeur in occupe:
-            raise ValueError(f"preset {index} : la valeur DMX {valeur} est "
-                             f"déjà prise par le preset {occupe[valeur]}")
+            raise ValueError(f"preset {index} : DMX value {valeur} is "
+                             f"already taken by preset {occupe[valeur]}")
         occupe[valeur] = index
     return debut, fin
 
@@ -1168,7 +1168,7 @@ def _plage(preset, index, occupe):
 def _texte(description, cle):
     valeur = description.get(cle)
     if not isinstance(valeur, str) or not valeur.strip():
-        raise ValueError(f"description : '{cle}' manquant ou vide")
+        raise ValueError(f"description : '{cle}' missing or empty")
     return valeur
 
 
@@ -1182,23 +1182,23 @@ def compare(a: Element, b: Element, chemin: str = '', sortie: list[str] | None =
     sortie = [] if sortie is None else sortie
     ou = f"{chemin}/{a.tag}"
     if a.tag != b.tag:
-        sortie.append(f"{chemin}: <{a.tag}> contre <{b.tag}>")
+        sortie.append(f"{chemin}: <{a.tag}> versus <{b.tag}>")
         return sortie
     for nom in a.attrs:
         if nom not in b.attrs:
-            sortie.append(f"{ou}: {nom} seulement à gauche ({a.attrs[nom]!r})")
+            sortie.append(f"{ou}: {nom} only on the left ({a.attrs[nom]!r})")
         elif a.attrs[nom] != b.attrs[nom]:
-            sortie.append(f"{ou}: {nom} {a.attrs[nom]!r} contre {b.attrs[nom]!r}")
+            sortie.append(f"{ou}: {nom} {a.attrs[nom]!r} versus {b.attrs[nom]!r}")
     for nom in b.attrs:
         if nom not in a.attrs:
-            sortie.append(f"{ou}: {nom} seulement à droite ({b.attrs[nom]!r})")
+            sortie.append(f"{ou}: {nom} only on the right ({b.attrs[nom]!r})")
     if list(a.attrs) != list(b.attrs) and set(a.attrs) == set(b.attrs):
-        sortie.append(f"{ou}: mêmes attributs, ordre différent")
+        sortie.append(f"{ou}: same attributes, different order")
     if a.vide != b.vide:
-        sortie.append(f"{ou}: écrite {'vide' if a.vide else 'ouverte'} contre "
-                      f"{'vide' if b.vide else 'ouverte'}")
+        sortie.append(f"{ou}: written {'empty' if a.vide else 'open'} versus "
+                      f"{'empty' if b.vide else 'open'}")
     if len(a.enfants) != len(b.enfants):
-        sortie.append(f"{ou}: {len(a.enfants)} enfant(s) contre "
+        sortie.append(f"{ou}: {len(a.enfants)} child(ren) versus "
                       f"{len(b.enfants)}")
     for i, (ea, eb) in enumerate(zip(a.enfants, b.enfants)):
         compare(ea, eb, f"{ou}[{i}]", sortie)
@@ -1288,17 +1288,17 @@ def compare_enums(fichiers: Iterable[str | PathLike[str]]) -> int:
         vus = mesure[quoi]
         for num in sorted(set(table) | set(vus)):
             if num not in vus:
-                print(f"{quoi} {num} : dans la table, absent de cette "
-                      f"bibliothèque", file=sys.stderr)
+                print(f"{quoi} {num} : in the table, missing from this "
+                      f"library", file=sys.stderr)
                 ecarts += 1
             elif num not in table:
-                print(f"{quoi} {num} : dans cette bibliothèque, ABSENT DE LA "
+                print(f"{quoi} {num} : in this library, MISSING FROM THE "
                       f"TABLE ({vus[num][0]!r}, n={vus[num][2]})", file=sys.stderr)
                 ecarts += 1
             else:
                 nom, part, n = table[num]
                 vnom, vpart, vn = vus[num]
-                drapeau = " (incertain)" if num in (
+                drapeau = " (uncertain)" if num in (
                     INCERTAINS_CANAL if quoi == "canal" else INCERTAINS_PRESET
                 ) else ""
                 accord = "" if (part, n) == (vpart, vn) else \
@@ -1307,8 +1307,8 @@ def compare_enums(fichiers: Iterable[str | PathLike[str]]) -> int:
                       f"{vpart} %, n={vn}{accord}")
     ecarts += _compare_cibles(mesure)
     ecarts += _compare_defauts(mesure)
-    print(f"{len(mesure['canal'])} types de canal, {len(mesure['preset'])} de "
-          f"preset ; {ecarts} écart(s) de couverture", file=sys.stderr)
+    print(f"{len(mesure['canal'])} channel types, {len(mesure['preset'])} "
+          f"preset types; {ecarts} coverage difference(s)", file=sys.stderr)
     return ecarts
 
 
@@ -1332,26 +1332,26 @@ def _compare_cibles(mesure):
         marque = ""
         if vises / total >= VISE_MIN and ndom / vises >= DOMINANT_MIN:
             derive[tp] = dom
-            marque = "VISEUR"
-        print(f"cible  preset {tp:3} {TYPE_PRESET.get(tp, ('?',))[0][:24]:26} "
-              f"n={total:7}  vise {100 * vises / total:3.0f} %, canal {dom} "
+            marque = "TARGETING"
+        print(f"target preset {tp:3} {TYPE_PRESET.get(tp, ('?',))[0][:24]:26} "
+              f"n={total:7}  targets {100 * vises / total:3.0f} %, channel {dom} "
               f"{TYPE_CANAL.get(dom, ('?',))[0][:18]!r} {100 * ndom / vises:3.0f} "
               f"%  {marque}")
     for tp in sorted(set(derive) | set(CIBLE_PRESET)):
         if derive.get(tp) != CIBLE_PRESET.get(tp):
-            print(f"cible  preset {tp} : la table dit {CIBLE_PRESET.get(tp)}, "
-                  f"cette bibliothèque dit {derive.get(tp)}", file=sys.stderr)
+            print(f"target preset {tp} : the table says {CIBLE_PRESET.get(tp)}, "
+                  f"this library says {derive.get(tp)}", file=sys.stderr)
             ecarts += 1
     ok = n = 0
     for tp, votes in sorted(mesure["regle"].items()):
         ok, n = ok + votes[True], n + votes[True] + votes[False]
         if votes[False]:
             t = votes[True] + votes[False]
-            print(f"règle  preset {tp:3} {TYPE_PRESET.get(tp, ('?',))[0][:24]:26} "
+            print(f"rule   preset {tp:3} {TYPE_PRESET.get(tp, ('?',))[0][:24]:26} "
                   f"{votes[True]}/{t} ({100 * votes[True] / t:.1f} %)")
     if n:
-        print(f"SSLPRESETTARGET : la règle reproduit {ok}/{n} "
-              f"({100 * ok / n:.2f} %) des valeurs de la bibliothèque",
+        print(f"SSLPRESETTARGET : the rule reproduces {ok}/{n} "
+              f"({100 * ok / n:.2f} %) of library values",
               file=sys.stderr)
     return ecarts
 
@@ -1380,11 +1380,11 @@ def _compare_defauts(mesure):
     for tp in sorted(set(derive) | set(DEFAUTS_PRESET)):
         a, b = DEFAUTS_PRESET.get(tp), derive.get(tp)
         if a != b:
-            print(f"défauts preset {tp} : la table dit {a}, cette "
-                  f"bibliothèque dit {b}", file=sys.stderr)
+            print(f"defaults preset {tp} : the table says {a}, this "
+                  f"library says {b}", file=sys.stderr)
             ecarts += 1
         if b is not None:
-            print(f"défaut preset {tp:3} {TYPE_PRESET.get(tp, ('?',))[0][:24]:26} "
+            print(f"default preset {tp:3} {TYPE_PRESET.get(tp, ('?',))[0][:24]:26} "
                   + "  ".join(
                       f"{a2[9:]}={v}({p} %)" for a2, v, p
                       in zip(ATTRS_PRESET, b, parts[tp]) if v is not None))
@@ -1405,16 +1405,16 @@ def verifie(fichiers: Sequence[str | PathLike[str]], bavard: bool = False) -> tu
             clair = dechiffre(brut)
             quoi = classe(clair)
             if quoi is None:
-                raise ValueError(f"déchiffré non-SSL2 ({clair[:16]!r})")
+                raise ValueError(f"decrypted content is not SSL2 ({clair[:16]!r})")
             if quoi != "v3":
                 hors += 1
                 continue
             racine = parse(clair, chemin)
             verifie_racine(racine, chemin)
             if write(racine) != clair:
-                raise ValueError("parse→write non identique")
+                raise ValueError("parse→write is not identical")
             if chiffre(clair) != brut:
-                raise ValueError("chiffrement non identique")
+                raise ValueError("encryption is not identical")
         except (ValueError, OSError) as err:
             echecs += 1
             print(f"ÉCHEC {chemin} : {err}", file=sys.stderr)
@@ -1473,9 +1473,9 @@ def _auto_test_generateur():
                      ("26", "0"), ("27", "0"), ("25", "1")], types
     assert next(r2.trouve("SSLMODE"))["SSLNBCHANNEL"] == "7"
     # A name with an accent goes out as UTF-8, and an & does not break the XML.
-    accent = genere({"name": "Té & Co", "brand": "Ω", "modes": [
-        {"channels": [{"type": "Red", "name": "Rouge é"}]}]})
-    assert b"T\xc3\xa9 &amp; Co" in write(accent)
+    accent = genere({"name": "Café & Co", "brand": "Ω", "modes": [
+        {"channels": [{"type": "Red", "name": "Red é"}]}]})
+    assert b"Caf\xc3\xa9 &amp; Co" in write(accent)
     assert parse(write(accent)) is not None
 
     refus = [
@@ -1483,24 +1483,24 @@ def _auto_test_generateur():
         ({"name": "n", "brand": "b", "modes": []}, "modes"),
         ({"name": "n", "brand": "b", "modes": [{"channels": []}]}, "channels"),
         ({"name": "n", "brand": "b", "modes": [{"channels": [{"type": "Nope"}]}]},
-         "inconnu"),
+         "unknown"),
         ({"name": "n", "brand": "b", "modes": [{"channels": [
             {"type": "Red", "presets": [
                 {"type": "Color", "dmx": [0, 10]},
-                {"type": "Color", "dmx": [10, 20]}]}]}]}, "déjà prise"),
+                {"type": "Color", "dmx": [10, 20]}]}]}]}, "already taken"),
         ({"name": "n", "brand": "b", "modes": [{"channels": [
             {"type": "Red", "presets": [{"type": "Color", "dmx": [10, 5]}]}]}]},
-         "invalide"),
+         "invalid"),
         ({"name": "n", "brand": "b", "modes": [{"channels": [
             {"type": "Red", "presets": [
                 {"type": "Color", "dmx": [0, 5], "defaut": True},
-                {"type": "Color", "dmx": [6, 9], "defaut": True}]}]}]}, "un seul"),
+                {"type": "Color", "dmx": [6, 9], "defaut": True}]}]}]}, "only one"),
         ({"name": "n", "brand": "b", "modes": [{"channels": [
             {"type": "Red", "presets": [
                 {"type": "Color", "dmx": [0, 5], "default": 200}]}]}]},
-         "hors de sa propre plage"),
+         "outside its own range"),
         ({"name": "n", "brand": "b", "properties": {"SSLNOPE": "1"},
-          "modes": [{"channels": [{"type": "Red"}]}]}, "inconnu"),
+          "modes": [{"channels": [{"type": "Red"}]}]}, "unknown"),
         ({"name": "n", "brand": "b", "modes": [{"channels":
             [{"type": "Red"}] * (MAX_CANAUX + 1)}]}, "maximum"),
     ]
@@ -1508,9 +1508,9 @@ def _auto_test_generateur():
         try:
             genere(description)
         except ValueError as err:
-            assert attendu in str(err), f"{attendu!r} absent de {err}"
+            assert attendu in str(err), f"{attendu!r} missing from {err}"
         else:
-            raise AssertionError(f"description acceptée : {attendu}")
+            raise AssertionError(f"description accepted : {attendu}")
 
 
 def _auto_test_16bits():
@@ -1542,30 +1542,30 @@ def _auto_test_16bits():
     mode = next(racine.trouve("SSLMODE"))
     canaux = [c for c in mode.enfants if c.tag == "SSLCHANNEL"]
     assert mode["SSLNBCHANNEL"] == "8" == str(len(canaux))
-    # l'ordre est celui de la description, pas un tri par type ou par paire
+    # order follows the description, without sorting by type or pair
     assert [c["SSLCHANNELTYPE"] for c in canaux] == \
         ["1", "2", "1", "2", "8", "9", "5", "15"]
-    # câblage 16 bits : symétrique, un grossier et un fin, l'un l'index de l'autre
+    # 16-bit pairing: symmetric, one coarse and one fine, each indexing the other
     for i, j in ((0, 2), (1, 3)):
         gros, fin = canaux[i], canaux[j]
         assert (gros["SSLCHANNELMSB"], gros["SSLCHANNELLSB"]) == ("1", "0")
         assert (fin["SSLCHANNELMSB"], fin["SSLCHANNELLSB"]) == ("0", "1")
         assert gros["SSLCHANNEL16BITSINDEX"] == str(j)
         assert fin["SSLCHANNEL16BITSINDEX"] == str(i)
-        # la paire compte pour un : le fin reprend l'index de type du grossier
+        # the pair counts once: the fine half reuses the coarse type index
         assert fin["SSLCHANNELTYPEINDEX"] == gros["SSLCHANNELTYPEINDEX"] == "0"
-        # le marqueur µ, double-encodé comme la bibliothèque le stocke
+        # the µ marker, double-encoded as stored in the library
         assert vers_utf8(fin["SSLCHANNELNAME"]) == \
             NOM_FIN.format(vers_utf8(gros["SSLCHANNELNAME"]))
-    # les octets qui atterrissent dans le fichier sont bien le µ double-encodé
+    # the file bytes contain the double-encoded µ marker
     assert depuis_utf8(MARQUEUR_FIN).encode("latin-1") == b"\xc3\x82\xc2\xb5"
     assert b"Pan (\xc3\x82\xc2\xb5)" in write(racine)
     for c in canaux[4:]:
         assert c["SSLCHANNEL16BITSINDEX"] == "-1"
         assert (c["SSLCHANNELMSB"], c["SSLCHANNELLSB"]) == ("0", "0")
 
-    # SSLGCHANNELS : autant d'entrées que de SSLCHANNELLINKED distincts, la
-    # paire 16 bits comptant pour une — l'identité mesurée sur la bibliothèque.
+    # SSLGCHANNELS: one entry per distinct SSLCHANNELLINKED value, with each
+    # 16-bit pair counting once — the identity measured on the library.
     gc = next(racine.trouve("SSLGCHANNELS"))
     entrees = [c for c in gc.enfants if c.tag == "SSLCHANNEL"]
     liens = {c["SSLCHANNELLINKED"] for c in canaux}
@@ -1578,19 +1578,19 @@ def _auto_test_16bits():
                 e["SSLCHANNEL16BITSINDEX"]) == ("0", "0", "-1")
         for p in e.trouve("SSLPRESET"):
             assert p["SSLPRESETTARGET"] == "-1", p.attrs
-    # sans `gchannels`, rien de tout cela n'apparaît
+    # without `gchannels`, none of this appears
     sans = genere({**d, "gchannels": False})
     assert not list(sans.trouve("SSLGCHANNELS"))
     assert all("SSLCHANNELLINKED" not in c.attrs for c in sans.trouve("SSLCHANNEL"))
 
-    # SSLPRESETTARGET : l'index du canal qui porte l'objet, -1 sinon.
+    # SSLPRESETTARGET: the channel index carrying the object, otherwise -1.
     cibles = {p["SSLPRESETNAME"]: p["SSLPRESETTARGET"]
               for c in canaux for p in c.trouve("SSLPRESET")}
-    assert cibles["CW"] == "4"          # Gobo Wheel Rotation → le canal Gobo
-    assert cibles["Spin"] == "6"        # Color Wheel Rotation → son propre canal
+    assert cibles["CW"] == "4"          # Gobo Wheel Rotation → the Gobo channel
+    assert cibles["Spin"] == "6"        # Color Wheel Rotation → its own channel
     assert cibles["Open"] == cibles["Strobe"] == "-1"
-    # les cinq attributs optionnels : le défaut du type, ou ce que dit la
-    # description, et `null` retire l'attribut au lieu de le mettre à zéro.
+    # the five optional attributes: the type default, or the value in the
+    # description; `null` removes the attribute instead of setting it to zero.
     presets = {p["SSLPRESETNAME"]: p for c in canaux for p in c.trouve("SSLPRESET")}
     assert presets["Open"]["SSLPRESETLEVELMIN"] == "0"
     assert presets["Open"]["SSLPRESETLEVELMAX"] == "255" != \
@@ -1601,12 +1601,12 @@ def _auto_test_16bits():
     assert presets["Red"]["SSLPRESETCOLOR"] == "255"     # #ff0000 → 0xBBGGRR
     assert _couleur("#0000ff", 0) == "16711680" and _couleur("#00ff00", 0) == "65280"
     assert "SSLPRESETLEVELMIN" not in presets["Rotation Off"].attrs
-    # l'ordre des attributs est celui de la bibliothèque
+    # attribute order matches the library
     ordre = [a for a in presets["Red"].attrs
              if a in ATTRS_PRESET or a in ("SSLPRESETSHOWDIMMER", "SSLPRESETID")]
     assert ordre == ["SSLPRESETSHOWDIMMER", "SSLPRESETCOLOR", "SSLPRESETID"], ordre
 
-    # l'appariement explicite, pour les paires non adjacentes déjà croisées
+    # explicit pairing for the non-adjacent pairs already observed
     explicite = genere({"name": "n", "brand": "b", "modes": [{"channels": [
         {"type": "Pan"}, {"type": "Dimmer"}, {"type": "Pan", "fine": 0}]}]})
     ec = [c for c in next(explicite.trouve("SSLMODE")).enfants]
@@ -1615,33 +1615,33 @@ def _auto_test_16bits():
 
     refus = [
         ({"name": "n", "brand": "b", "modes": [{"channels": [
-            {"type": "Red"}, {"type": "Pan", "fine": True}]}]}, "sans canal grossier"),
+            {"type": "Red"}, {"type": "Pan", "fine": True}]}]}, "no available coarse channel"),
         ({"name": "n", "brand": "b", "modes": [{"channels": [
             {"type": "Pan"}, {"type": "Pan", "fine": True},
-            {"type": "Pan", "fine": 0}]}]}, "déjà apparié"),
+            {"type": "Pan", "fine": 0}]}]}, "already paired"),
         ({"name": "n", "brand": "b", "modes": [{"channels": [
-            {"type": "Pan"}, {"type": "Pan", "fine": 7}]}]}, "hors du mode"),
+            {"type": "Pan"}, {"type": "Pan", "fine": 7}]}]}, "outside the mode"),
         ({"name": "n", "brand": "b", "modes": [{"channels": [
-            {"type": "Pan", "fine": 0}]}]}, "sur lui-même"),
+            {"type": "Pan", "fine": 0}]}]}, "to itself"),
         ({"name": "n", "brand": "b", "modes": [{"channels": [
-            {"type": "Pan"}, {"type": "Pan", "fine": "oui"}]}]}, "attendu true"),
+            {"type": "Pan"}, {"type": "Pan", "fine": "yes"}]}]}, "expected true"),
         ({"name": "n", "brand": "b", "modes": [{"channels": [
             {"type": "Red", "presets": [
-                {"type": "Color", "color": "rouge"}]}]}]}, "#rrggbb"),
+                {"type": "Color", "color": "red"}]}]}]}, "#rrggbb"),
         ({"name": "n", "brand": "b", "modes": [{"channels": [
             {"type": "Red", "presets": [
                 {"type": "Color", "param": [1, 2, 3]}]}]}]}, "'param'"),
         ({"name": "n", "brand": "b", "modes": [{"channels": [
             {"type": "Red", "presets": [
-                {"type": "Color", "target": 9}]}]}]}, "hors du mode"),
+                {"type": "Color", "target": 9}]}]}]}, "outside the mode"),
     ]
     for description, attendu in refus:
         try:
             genere(description)
         except ValueError as err:
-            assert attendu in str(err), f"{attendu!r} absent de {err}"
+            assert attendu in str(err), f"{attendu!r} missing from {err}"
         else:
-            raise AssertionError(f"description acceptée : {attendu}")
+            raise AssertionError(f"description accepted : {attendu}")
 
 
 def _auto_test(echantillon=400):
@@ -1658,37 +1658,37 @@ def _auto_test(echantillon=400):
     _auto_test_16bits()
     fichiers = fichiers_biblio()
     if not fichiers:
-        print("ssl2: crypto et générateur ok (hors fichiers)", file=sys.stderr)
+        print("ssl2: crypto and generator ok (without files)", file=sys.stderr)
         return pas_de_biblio()
     ok, echecs, hors = verifie(fichiers[:echantillon])
     if echecs:
-        raise SystemExit(f"ssl2: {echecs} échec(s) sur {ok + echecs}")
-    print(f"self-check ok: générateur, puis aller-retour octet-près sur {ok} fichiers "
-          f"(sur {len(fichiers)} — `ssl2.py verify` les fait tous)",
+        raise SystemExit(f"ssl2: {echecs} failure(s) out of {ok + echecs}")
+    print(f"self-check ok: generator, then byte-exact round-trip on {ok} files "
+          f"(out of {len(fichiers)} — `ssl2.py verify` checks them all)",
           file=sys.stderr)
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--cle", default=CLE_DEFAUT, help="clé AraCrypt")
+    ap.add_argument("--cle", default=CLE_DEFAUT, help="AraCrypt key")
     sous = ap.add_subparsers(dest="commande")
-    for nom, aide in (("decrypt", "un .ssl2 → son XML"),
-                      ("encrypt", "un XML → un .ssl2"),
-                      ("dump", "le XML déchiffré sur la sortie standard")):
+    for nom, aide in (("decrypt", ".ssl2 → its XML"),
+                      ("encrypt", "XML → .ssl2"),
+                      ("dump", "decrypted XML on standard output")):
         s = sous.add_parser(nom, help=aide)
         s.add_argument("entree")
         if nom != "dump":
             s.add_argument("sortie", nargs="?")
-    s = sous.add_parser("verify", help="aller-retour sur toute la bibliothèque")
+    s = sous.add_parser("verify", help="round-trip the entire library")
     s.add_argument("--bavard", action="store_true")
     s.add_argument("fichiers", nargs="*")
-    s = sous.add_parser("enums", help="recalcule les tables et les compare")
+    s = sous.add_parser("enums", help="recompute and compare the tables")
     s.add_argument("fichiers", nargs="*")
-    s = sous.add_parser("gen", help="une description JSON → un .ssl2")
+    s = sous.add_parser("gen", help="JSON description → .ssl2")
     s.add_argument("description")
     s.add_argument("sortie", nargs="?")
-    s.add_argument("--xml", action="store_true", help="écrire le XML en clair")
-    s = sous.add_parser("diff", help="diff structurel entre deux profils")
+    s.add_argument("--xml", action="store_true", help="write plaintext XML")
+    s = sous.add_parser("diff", help="structural diff between two profiles")
     s.add_argument("gauche")
     s.add_argument("droite")
     args = ap.parse_args(argv)
@@ -1703,7 +1703,7 @@ def main(argv: list[str] | None = None) -> int:
         with open(args.entree, "rb") as flux:
             clair = flux.read()
         if not clair.lstrip()[:5].startswith(b"<?xml"):
-            raise SystemExit(f"{args.entree} : ce n'est pas du XML")
+            raise SystemExit(f"{args.entree} : not XML")
         return _ecrit(args.sortie or _suffixe(args.entree, ".ssl2"),
                       chiffre(clair, args.cle))
     if args.commande == "verify":
@@ -1712,8 +1712,8 @@ def main(argv: list[str] | None = None) -> int:
             pas_de_biblio()
             return 3
         ok, echecs, hors = verifie(fichiers, args.bavard)
-        print(f"{ok}/{ok + echecs} aller-retours octet-près"
-              + (f", {hors} hors périmètre (SSL2 v2)" if hors else ""),
+        print(f"{ok}/{ok + echecs} byte-exact round-trips"
+              + (f", {hors} out of scope (SSL2 v2)" if hors else ""),
               file=sys.stderr)
         return 1 if echecs else 0
     if args.commande == "gen":
@@ -1727,7 +1727,7 @@ def main(argv: list[str] | None = None) -> int:
                          charge(args.droite, args.cle))
         for ligne in ecarts:
             print(ligne)
-        print(f"{len(ecarts)} écart(s)", file=sys.stderr)
+        print(f"{len(ecarts)} difference(s)", file=sys.stderr)
         return 0
     if args.commande == "enums":
         fichiers = args.fichiers or fichiers_biblio()
@@ -1749,7 +1749,7 @@ def _ecrit(chemin, data):
     """Never over an existing file — the repository's write rule."""
     with open(chemin, "xb") as flux:
         flux.write(data)
-    print(f"écrit {chemin} ({len(data)} octets)", file=sys.stderr)
+    print(f"wrote {chemin} ({len(data)} bytes)", file=sys.stderr)
     return 0
 
 

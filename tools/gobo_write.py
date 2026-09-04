@@ -63,7 +63,7 @@ def decode_raw(raw: bytes) -> list[Pixel]:
 
 
 def encode(pixels: Sequence[Pixel]) -> bytes:
-    """576 quadruplets (r, g, b, a) → 1728 octets.
+    """576 quadruplets (r, g, b, a) → 1728 bytes.
 
     The +127 rounding is what makes the round trip exact: truncation would
     lose one quantisation step on half the values.
@@ -431,7 +431,7 @@ def _parseur():
         "patch", help="writes a patched COPY of the flash, plus its manifest")
     patch_cmd.add_argument("sortie", help="new file; an existing one is refused")
     patch_cmd.add_argument("edits", nargs="+", metavar="id=source",
-                           help="id=#RRGGBB, id=image.png ou id=mask:image.png")
+                           help="id=#RRGGBB, id=image.png or id=mask:image.png")
     return parseur
 
 

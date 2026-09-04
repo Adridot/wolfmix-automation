@@ -193,7 +193,7 @@ def compiler(
         if not isinstance(nom, str) or not nom:
             raise ValueError("show: 'name' must be a non-empty string")
         rec(101)["name"] = nom
-        verifs.append((101, 0, "nom projet", lambda d, v=nom: d.get("name") == v))
+        verifs.append((101, 0, "project name", lambda d, v=nom: d.get("name") == v))
 
     # --- record 165: presets, addressed by id ---
     for pe in spec.get("presets", []):
@@ -213,9 +213,9 @@ def compiler(
                 raise ValueError(f"{ctx}: the name must be a string")
             octets = len(pe["name"].encode("utf-8"))
             if octets > NOM_MAX_OCTETS:
-                raise ValueError(f"{ctx} : nom de {octets} octets UTF-8 > "
+                raise ValueError(f"{ctx}: name uses {octets} UTF-8 bytes > "
                                  f"{NOM_MAX_OCTETS} — the WHOLE project "
-                                 "refuserait de s'ouvrir (PRESET-05)")
+                                 "would refuse to open (PRESET-05)")
             cible["name"] = pe["name"]
         if "positions" in pe:
             cible["positions"] = liste8(ctx, "positions", pe["positions"],
@@ -306,7 +306,7 @@ def compiler(
             if not isinstance(nom, str) or not nom:
                 raise ValueError(f"{ctx}: the name must be a non-empty string")
             if len(nom.encode("utf-8")) > NOM_MAX_OCTETS:
-                raise ValueError(f"{ctx} : nom > {NOM_MAX_OCTETS} octets "
+                raise ValueError(f"{ctx}: name > {NOM_MAX_OCTETS} bytes "
                                  "UTF-8 — a limit measured on presets "
                                  "(PRESET-05), not measured here, so refused")
             slot = next((s for s in d145.get("gobos", [])
@@ -598,7 +598,7 @@ def _demo_sur(base):
                            "pan": 12345, "tilt": 54321, "fan": 32768}],
             "palette": [{"index": 0, "red": 10, "green": 20, "blue": 30}],
             "mappings": [{"target": "group_dimmer", "group": "B",
-                          "channel": 300},          # deux octets : f5 = 1
+                          "channel": 300},          # two bytes: f5 = 1
                          {"target": "preset", "index": 4, "channel": 40},
                          {"target": "wolf", "channel": 45},
                          {"target": "preset_page", "page": 3, "channel": 101},
@@ -706,7 +706,7 @@ def _demo_sur(base):
                         {"base": base, "presets": [{"id": 9999, "name": "x"}]},
                         {"base": base, "presets": [{"id": 80, "size": 5}]},
                         {"base": base, "palette": [{"index": 999, "red": 1}]},
-                        # nom de 20 octets : tueur device-confirmed
+                        # 20-byte name: device-confirmed project rejection
                         {"base": base, "presets": [{"id": 80,
                                                     "name": "a" * 20}]},
                         # creating below the donor's largest id
@@ -751,7 +751,7 @@ def _demo_sur(base):
                                                      "index": 3, "channel": 5}]}]:
             try:
                 compiler(mauvais, os.path.join(tmp, "err.wpj"))
-                raise AssertionError(f"erreur attendue : {mauvais}")
+                raise AssertionError(f"expected an error: {mauvais}")
             except ValueError:
                 pass
         assert not os.path.exists(os.path.join(tmp, "err.wpj"))
@@ -812,5 +812,5 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except (ValueError, KeyError, OSError) as e:
-        print(f"erreur : {e}", file=sys.stderr)
+        print(f"error: {e}", file=sys.stderr)
         sys.exit(1)

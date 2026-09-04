@@ -131,17 +131,17 @@ def parse_container(data: bytes, *, source: str | None = None) -> list[tuple[int
     the wire inspector uses relative-offset WireError diagnostics.
     """
     if len(data) < BODY_OFF + ROOT_HEADER:
-        raise WireError(f"fichier trop court : {len(data)} octets, "
+        raise WireError(f"file too short: {len(data)} bytes, "
                         f"{BODY_OFF + ROOT_HEADER} minimum")
     length = int.from_bytes(data[BODY_OFF:BODY_OFF + 4], "little")
     root_type = int.from_bytes(data[BODY_OFF + 4:BODY_OFF + 6], "little")
     if root_type != ROOT_TYPE:
-        raise WireError(f"conteneur racine de type {root_type}, "
-                        f"{ROOT_TYPE} attendu")
+        raise WireError(f"root container type {root_type}, "
+                        f"expected {ROOT_TYPE}")
     start = BODY_OFF + ROOT_HEADER
     if start + length > len(data):
-        raise WireError(f"racine de {length} octets, "
-                        f"{len(data) - start} disponibles")
+        raise WireError(f"root has {length} bytes, "
+                        f"{len(data) - start} available")
     body = data[start:start + length]
     records, i, index = [], 0, 0
     while i < len(body):

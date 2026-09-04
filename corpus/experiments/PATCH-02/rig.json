@@ -1,6 +1,6 @@
 {
   "skeleton": "corpus/experiments/PATCH-02/clean-v9.wpj",
-  "profiles_from": ["corpus/projects/rig-b.wpj", "corpus/experiments/PATCH-02/clean-v9.wpj"],
+  "profiles_from": ["corpus/projects/rig-b.wpj", "corpus/experiments/COV-44/rung1-add.wpj"],
   "name": "PATCH-02",
   "groups": {"A": "Lyres", "B": "Pars", "C": "Barre"},
   "gobo_names": {"A": {"425": "Etoile"}},

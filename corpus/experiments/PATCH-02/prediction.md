@@ -9,7 +9,9 @@ first upload, with its probabilities.
 
 `rig.json` in this directory: skeleton = `clean` as it sits on the device
 (version 9, sha256 `ad388a41…`, byte-identical to COV-49 stage 3), profiles
-read from *rig-b* and from the skeleton, six fixtures:
+read from *rig-b* and from COV-44 rung 1 — the skeleton's own 120 carries the
+COV-53 drop, so its head is not a usable package, which the tool said — six
+fixtures:
 
 | # | Profile | Panel DMX | Group |
 |---|---|---|---|
@@ -17,7 +19,7 @@ read from *rig-b* and from the skeleton, six fixtures:
 | 2, 3, 4 | 6x18W 6in1 RGBAW UV (10 ch) | 101, 111, 121 | B «Pars» |
 | 5 | LED BAR 252 RGB (11 ch, **3 blocks**) | 200 | C «Barre» |
 
-Gobo pad 425 of group A named «Etoile». Candidate sha256 `…`, 24/24
+Gobo pad 425 of group A named «Etoile». Candidate sha256 `d462d0c037e6c1d3…`, 24/24
 identities, 0 anomalies. The three profile UUIDs are in the device library
 (`wolfmix.py profiles`, read before this sheet).
 
